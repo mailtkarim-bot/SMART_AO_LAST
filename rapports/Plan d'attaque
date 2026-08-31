@@ -2,8 +2,8 @@
 
 **Date de mise à jour :** 31 août 2026  
 **Branche de référence :** `main` (`16f61b9`)  
-**Branche de travail active :** `feat/arch001-pricing-scenario-projection-20260830`  
-**État :** Phase 1 et Phase 2 terminées ; Phase 3 prête à démarrer.
+**Branche de travail active :** `feat/ccap-cctp-risk-register-20260831`  
+**État :** Phase 1 et Phase 2 terminées ; Phase 3 slice CCAP-CCTP-RISK-01 en cours (lecture paginée terminée).
 
 ---
 
@@ -151,17 +151,35 @@ git commit -m "refactor(arch-001): découple pricing services, nettoie mypy test
 
 ### 3.1 Registre structuré des risques CCAP/CCTP
 **Slice :** `CCAP-CCTP-RISK-01`  
-**Déjà commencé :** commande `RegisterStructuredRisk`, route `POST /api/v1/patron/cases/{case_id}/risks`, migration `0058`.
+**Branche :** `feat/ccap-cctp-risk-register-20260831`  
+**Statut :** lecture patronale paginée terminée ; transitions déjà supportées (`OPEN` → `ACCEPTED`/`MITIGATED`, `ACCEPTED` → `MITIGATED`).
 
-**Suite :**
-- Ajouter la lecture patronale paginée des risques (`decision.risk.read`).
-- Relier un risque à une action de traitement patronale.
-- Ajouter les transitions de traitement (`OPEN` → `MITIGATED` → `ACCEPTED` / `TRANSFERRED`).
+**Déjà en place :**
+- Commande `RegisterStructuredRisk`, route `POST /api/v1/patron/cases/{case_id}/risks`.
+- Commande `TransitionStructuredRiskTreatment`, route `POST /api/v1/patron/cases/{case_id}/risks/{risk_id}/treatment`.
+- Lecture unitaire `GET /api/v1/patron/cases/{case_id}/risks/{risk_id}`.
 
-**Fichiers :**
-- `backend/app/modules/decision/application/risk.py`
+**Ajouté dans ce slice :**
+- `DecisionRiskPage` et protocole `DecisionRiskReader` dans `backend/app/modules/decision/application/ports.py` et `queries.py`.
+- `list_for_case` dans `SqlAlchemyDecisionRiskRepository` avec curseur stable sur `created_at|id` (base64).
+- `PatronDecisionRiskReadService.list_for_case` avec autorisation `DECISION_RISK_READ`.
+- Route `GET /api/v1/patron/cases/{case_id}/risks` et contrat `StructuredRiskPageResponse`.
+- Tests unitaires dans `backend/tests/application/test_decision_risk_read.py` et `backend/tests/api/test_patron_decisions_routes.py`.
+
+**Fichiers modifiés/créés :**
+- `backend/app/modules/decision/application/ports.py`
+- `backend/app/modules/decision/application/queries.py`
+- `backend/app/modules/decision/application/risk_read.py`
 - `backend/app/modules/decision/infrastructure/risk_repository.py`
-- `backend/app/modules/decision/interfaces/http/routes/patron_risks.py`
+- `backend/app/modules/decision/public/risk_contracts.py`
+- `backend/app/interfaces/http/routes/patron_decisions.py`
+- `backend/tests/application/test_decision_risk_read.py`
+- `backend/tests/application/test_decision_risk_treatment.py`
+- `backend/tests/api/test_patron_decisions_routes.py`
+
+**Prochaine action pour ce slice :**
+- Relier un risque à une action de traitement patronale (PatronAction) lors de la transition de traitement.
+- Vérifier si l'état `TRANSFERRED` est métier nécessaire ; sinon clore le slice.
 
 ### 3.2 Croisement CCTP–DPGF–BPU
 **Slice :** `CROSS-DPGF-BPU-01`
@@ -354,7 +372,7 @@ Pour chaque fournisseur, créer un fichier de recette dans `ops/recipes/` et ex�
 ### Commande de push sain pour la branche actuelle
 ```bash
 cd /home/noor/PROJECTS/BTP/SMART_AO_V8
-git push -u origin feat/arch001-pricing-scenario-projection-20260830
+git push -u origin feat/ccap-cctp-risk-register-20260831
 ```
 
 ### Branches à traiter en priorité
@@ -378,14 +396,12 @@ git push -u origin feat/arch001-pricing-scenario-projection-20260830
 
 ## Prochaine action immédiate
 
-Lancer la **Phase 3** avec le premier slice métier : le registre structuré des risques CCAP/CCTP (`CCAP-CCTP-RISK-01`).
+Pousser la branche `feat/ccap-cctp-risk-register-20260831`, ouvrir une PR, puis continuer le slice `CCAP-CCTP-RISK-01` en raccordant la transition de traitement à une action patronale (PatronAction).
 
-Commande de départ :
+Commande de push :
 ```bash
 cd /home/noor/PROJECTS/BTP/SMART_AO_V8
-git checkout main
-git pull origin main
-git checkout -b feat/ccap-cctp-risk-register-20260831
+git push -u origin feat/ccap-cctp-risk-register-20260831
 ```
 
-Puis implémenter la lecture patronale paginée des risques dans `backend/app/modules/decision/application/risk.py` et la route associée.
+Puis ouvrir la PR via l'interface GitHub et attendre la CI verte avant de merger.
