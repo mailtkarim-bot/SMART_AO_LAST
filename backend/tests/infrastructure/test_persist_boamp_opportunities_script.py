@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
+from typing import Any, cast
 
 import pytest
 from app.modules.opportunity.application.boamp_ingestion import OpportunityCandidate
@@ -44,12 +45,12 @@ def test_persistence_script_accepts_only_valid_staging_projection() -> None:
 
 def test_persistence_script_rejects_tampered_fingerprint_and_extra_fields() -> None:
     tampered = _payload()
-    tampered["candidates"][0]["fingerprint_sha256"] = "b" * 64
+    cast(list[dict[str, Any]], tampered["candidates"])[0]["fingerprint_sha256"] = "b" * 64
     with pytest.raises(ValueError, match="fingerprint"):
         persist_script._read_candidates(tampered)
 
     extra = _payload()
-    extra["candidates"][0]["financial_amount"] = "100"
+    cast(list[dict[str, Any]], extra["candidates"])[0]["financial_amount"] = "100"
     with pytest.raises(ValueError, match="allowlist"):
         persist_script._read_candidates(extra)
 

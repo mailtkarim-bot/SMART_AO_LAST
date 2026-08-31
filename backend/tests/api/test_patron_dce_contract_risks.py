@@ -1,12 +1,14 @@
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from typing import Any, cast
 from uuid import uuid4
 
 from app.interfaces.http.routes.consultations import ConsultationSecurityRuntime
 from app.interfaces.http.routes.patron_dce_contract_risks import (
     build_patron_dce_contract_risk_router,
 )
+from app.platform.security.authorization import AuthorizationPolicyPort
 from app.platform.security.context import ActorContext, ActorKind, MembershipState
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -58,10 +60,10 @@ def _client(*, service=None):
     app = FastAPI()
     app.include_router(
         build_patron_dce_contract_risk_router(
-            service=service or _Service(),
+            service=service or cast(Any, _Service()),
             security_runtime=ConsultationSecurityRuntime(
-                context_resolver=_Resolver(),
-                policy=SimpleNamespace(),
+                context_resolver=cast(Any, _Resolver()),
+                policy=cast(AuthorizationPolicyPort, SimpleNamespace()),
             ),
         )
     )

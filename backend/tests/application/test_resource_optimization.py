@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import Any
 from uuid import UUID
 
 import pytest
@@ -38,7 +39,7 @@ def test_cp_sat_assigns_each_demand_once_without_exceeding_capacity() -> None:
 
 def test_cp_sat_is_deterministic_for_same_inputs() -> None:
     optimizer = ResourceAssignmentOptimizer()
-    inputs = {
+    inputs: dict[str, Any] = {
         "demands": (ResourceDemand(id=T1, required_units=1),),
         "supplies": (
             ResourceSupply(id=R1, capacity_units=1),

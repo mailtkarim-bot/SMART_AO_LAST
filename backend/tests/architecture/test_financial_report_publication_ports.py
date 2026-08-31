@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from typing import cast
 from unittest.mock import MagicMock, Mock
 from uuid import uuid4
 
@@ -8,7 +9,7 @@ from app.modules.membership.application.financial_report_publication import (
     PatronFinancialReportPublicationService,
 )
 from app.platform.security.capabilities import Capability
-from app.platform.security.context import ActorKind
+from app.platform.security.context import ActorContext, ActorKind
 
 NOW = datetime(2026, 8, 27, 12, 0, tzinfo=UTC)
 
@@ -45,7 +46,7 @@ def test_financial_publication_service_checks_snapshot_through_reader() -> None:
         reader=reader,
         dispatcher=dispatcher,
         policy=policy,
-    ).publish(actor=actor, command=command, now=NOW)
+    ).publish(actor=cast(ActorContext, actor), command=command, now=NOW)
 
     assert result.result_code == "PUBLISHED"
     reader.exists.assert_called_once_with(

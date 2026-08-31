@@ -216,7 +216,6 @@ class PatronActionWriter:
             aggregate_revision=record.aggregate_revision,
         )
 
-
     def create_from_risk_requirement_link(
         self,
         *,
@@ -278,7 +277,6 @@ class PatronActionWriter:
 
 
 class PatronActionHandler:
-
     """Persist the first version of an explainable patron action."""
 
     def execute(self, *, session: Session, command, context: CommandContext) -> HandlerOutcome:

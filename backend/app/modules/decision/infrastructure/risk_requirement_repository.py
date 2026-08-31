@@ -96,9 +96,7 @@ class SqlAlchemyDecisionRiskRequirementLinkRepository:
             is not None
         )
 
-    def functional_exists(
-        self, *, session: object, tenant_id: UUID, functional_key: str
-    ) -> bool:
+    def functional_exists(self, *, session: object, tenant_id: UUID, functional_key: str) -> bool:
         db_session = cast(Session, session)
         return (
             db_session.scalar(

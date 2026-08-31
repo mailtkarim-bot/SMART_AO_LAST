@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import cast
 from uuid import UUID, uuid4
 
 import pytest
 from app.modules.optimization.application.capacity_planning import (
     CaseCapacityPlan,
     CaseCapacityPlanInput,
+    CaseCapacityPlanningService,
 )
 from app.modules.optimization.application.resource_assignment import (
     ResourceDemand,
@@ -90,7 +92,7 @@ def _command(*, expected_revision: int = 4) -> CapacityRunCommand:
 def test_service_persists_a_non_financial_canonical_snapshot() -> None:
     repository = FakeRepository()
     result = CapacityRunService(
-        planner=FakePlanner(_input(), _plan()),
+        planner=cast(CaseCapacityPlanningService, FakePlanner(_input(), _plan())),
         repository=repository,
     ).execute(_command())
 
@@ -114,7 +116,9 @@ def test_service_rejects_a_stale_source_revision_before_persistence() -> None:
     repository = FakeRepository()
     with pytest.raises(CapacitySourceRevisionConflict, match="revision"):
         CapacityRunService(
-            planner=FakePlanner(_input(source_revision=5), _plan()),
+            planner=cast(
+                CaseCapacityPlanningService, FakePlanner(_input(source_revision=5), _plan())
+            ),
             repository=repository,
         ).execute(_command(expected_revision=4))
     assert repository.records == []
@@ -123,7 +127,7 @@ def test_service_rejects_a_stale_source_revision_before_persistence() -> None:
 def test_service_preserves_repository_replay() -> None:
     repository = FakeRepository(replayed=True)
     result = CapacityRunService(
-        planner=FakePlanner(_input(), _plan()),
+        planner=cast(CaseCapacityPlanningService, FakePlanner(_input(), _plan())),
         repository=repository,
     ).execute(_command())
 

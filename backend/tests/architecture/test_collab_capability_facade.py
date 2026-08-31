@@ -1,10 +1,14 @@
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from typing import cast
 from unittest.mock import Mock
 from uuid import uuid4
 
 from app.modules.membership.application.collab_capability import (
     CollaboratorCapabilityAssessmentService,
+)
+from app.modules.membership.application.collab_capability_commands import (
+    ProposeCapabilityForCaseCommand,
 )
 from app.modules.membership.application.collab_capability_ports import (
     AssignmentProjection,
@@ -52,7 +56,7 @@ def test_facade_proposes_through_reader_port_and_dispatcher() -> None:
 
     result = _service(reader, dispatcher, _authorized_policy()).propose_capability(
         actor=actor,
-        command=command,
+        command=cast(ProposeCapabilityForCaseCommand, command),
         now=NOW,
     )
 

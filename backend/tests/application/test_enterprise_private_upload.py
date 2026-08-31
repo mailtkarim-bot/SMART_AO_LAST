@@ -59,6 +59,9 @@ class MemoryStorage:
         self.deleted.append(storage_key)
         self.objects.pop(storage_key, None)
 
+    async def local_path(self, *, storage_key: str) -> str:
+        return f"/tmp/{storage_key}"
+
 
 class StaticInspector:
     async def detect_media_type(self, *, storage_key: str) -> str:
@@ -73,10 +76,6 @@ class StaticScanner:
     async def scan(self, *, storage_key: str) -> MalwareScanResult:
         self.calls += 1
         return MalwareScanResult(self.verdict, "test-scanner", "test-1", NOW)
-
-
-
-
 
 
 @pytest.fixture(autouse=True)
@@ -366,9 +365,7 @@ def test_private_enterprise_upload_rejects_empty_content(
 
     with pytest.raises(EnterpriseUploadRejectedError):
         asyncio.run(
-            service.upload(
-                actor=actor, upload_id=upload_id, stream=_stream(b""), content_length=0
-            )
+            service.upload(actor=actor, upload_id=upload_id, stream=_stream(b""), content_length=0)
         )
 
     with session_factory() as session:

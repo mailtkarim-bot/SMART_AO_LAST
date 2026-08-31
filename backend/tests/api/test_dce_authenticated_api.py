@@ -62,10 +62,6 @@ class UnusedTokenGenerator:
         return "unused-refresh-token"
 
 
-
-
-
-
 @pytest.fixture(autouse=True)
 def isolate_dce_records(database_engine: sa.Engine) -> None:
     with database_engine.begin() as connection:
@@ -608,12 +604,14 @@ def test_dce_admission_rejected_command_leaves_no_durable_side_effect(
         assert session.scalar(sa.select(sa.func.count()).select_from(DceVersionRecord)) == 0
         assert session.scalar(sa.select(sa.func.count()).select_from(DceDocumentRecord)) == 0
         assert session.scalar(sa.select(sa.func.count()).select_from(CommandReceiptRecord)) == 0
-        assert session.scalar(
-            sa.select(sa.func.count()).select_from(DceStagedObjectRecord).where(
-                DceStagedObjectRecord.state == "CLEAN"
+        assert (
+            session.scalar(
+                sa.select(sa.func.count())
+                .select_from(DceStagedObjectRecord)
+                .where(DceStagedObjectRecord.state == "CLEAN")
             )
-        ) == 2
-
+            == 2
+        )
 
 
 def _staging_payload(*, consultation_id: UUID, consultation_revision: int = 4) -> dict[str, object]:
@@ -653,9 +651,7 @@ def test_dce_staging_preparation_requires_bearer_replays_and_never_exposes_stora
     body = first.json()
     assert body["result_code"] == "DCE_STAGING_PREPARED"
     assert body["staging"]["state"] == "AWAITING_UPLOAD"
-    assert body["staging"]["expires_at"] == str(payload["expires_at"]).replace(
-        "+00:00", "Z"
-    )
+    assert body["staging"]["expires_at"] == str(payload["expires_at"]).replace("+00:00", "Z")
     assert replay.json()["replayed"] is True
     assert replay.json()["event_ids"] == first.json()["event_ids"]
     assert "storage_key" not in body
@@ -765,7 +761,6 @@ def test_dce_staging_rejects_client_supplied_storage_object_id(
         assert session.scalar(sa.select(sa.func.count()).select_from(DceStagedObjectRecord)) == 0
 
 
-
 def _upload_service_factory(root: Path):
     def factory(dispatcher):
         storage = LocalQuarantineStorageAdapter(root=root)
@@ -802,11 +797,14 @@ def test_dce_upload_requires_bearer_streams_to_quarantine_and_returns_no_storage
     assert prepared.status_code == 201
     storage_object_id = prepared.json()["staging"]["storage_object_id"]
 
-    assert client.put(
-        f"/api/v1/dce-staged-objects/{storage_object_id}/content",
-        content=content,
-        headers={"Idempotency-Key": str(uuid4())},
-    ).status_code == 401
+    assert (
+        client.put(
+            f"/api/v1/dce-staged-objects/{storage_object_id}/content",
+            content=content,
+            headers={"Idempotency-Key": str(uuid4())},
+        ).status_code
+        == 401
+    )
 
     response = client.put(
         f"/api/v1/dce-staged-objects/{storage_object_id}/content",

@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from datetime import UTC, date, datetime
 from types import SimpleNamespace
+from typing import Any, cast
 from uuid import UUID
 
 from app.interfaces.http.routes import market_watch as market_watch_route
+from app.interfaces.http.routes.consultations import ConsultationSecurityRuntime
 from app.interfaces.http.routes.market_watch import build_market_watch_router
 from app.modules.market_watch.application.ports import BoampNotice
 from app.modules.market_watch.application.service import PublicNoticeSearchService
@@ -20,7 +22,7 @@ class FakeSearchPort:
         self.failure = failure
         self.calls: list[dict[str, object]] = []
 
-    def search(self, *, text: str, limit: int, offset: int):
+    def search(self, *, text: str, limit: int = 10, offset: int = 0) -> tuple[BoampNotice, ...]:
         self.calls.append({"text": text, "limit": limit, "offset": offset})
         if self.failure is not None:
             raise self.failure
@@ -40,7 +42,7 @@ class FakeSearchPort:
 class FakePolicy:
     def __init__(self, *, allowed: bool = True) -> None:
         self.allowed = allowed
-        self.requests = []
+        self.requests: list[Any] = []
 
     def authorize(self, *, context, request):
         self.requests.append(request)
@@ -55,7 +57,10 @@ def _app(*, port: FakeSearchPort, policy: FakePolicy) -> FastAPI:
     app.include_router(
         build_market_watch_router(
             service=PublicNoticeSearchService(search_port=port),
-            security_runtime=SimpleNamespace(context_resolver=object(), policy=policy),
+            security_runtime=cast(
+                ConsultationSecurityRuntime,
+                SimpleNamespace(context_resolver=object(), policy=policy),
+            ),
         )
     )
     return app

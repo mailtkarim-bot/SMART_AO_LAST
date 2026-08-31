@@ -1,12 +1,13 @@
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from typing import cast
 from unittest.mock import Mock
 from uuid import uuid4
 
 from app.modules.pricing.application.import_commands import CommitPricingImportCommand
 from app.modules.pricing.application.import_service import PricingImportService
 from app.platform.security.capabilities import Capability
-from app.platform.security.context import ActorKind
+from app.platform.security.context import ActorContext, ActorKind
 
 NOW = datetime(2026, 8, 27, 14, 0, tzinfo=UTC)
 
@@ -41,7 +42,7 @@ def test_pricing_import_service_dispatches_without_session_factory() -> None:
     dispatcher.dispatch.return_value = SimpleNamespace(result_code="PRICING_IMPORT_COMMITTED")
 
     result = PricingImportService(dispatcher=dispatcher, policy=policy).commit(
-        actor=actor,
+        actor=cast(ActorContext, actor),
         command=command,
         now=NOW,
     )

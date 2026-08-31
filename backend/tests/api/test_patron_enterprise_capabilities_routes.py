@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from typing import Any, cast
 from uuid import uuid4
 
 import pytest
@@ -13,7 +14,10 @@ from app.platform.events.dispatcher import (
     CommandInProgressError,
     IdempotencyKeyReusedError,
 )
-from app.platform.security.authenticated_context import UnauthenticatedError
+from app.platform.security.authenticated_context import (
+    UnauthenticatedError,
+)
+from app.platform.security.authorization import AuthorizationPolicyPort
 from app.platform.security.context import ActorContext, ActorKind, MembershipState
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -51,7 +55,8 @@ def _actor() -> ActorContext:
 
 def _runtime(*, resolver_error: Exception | None = None) -> ConsultationSecurityRuntime:
     return ConsultationSecurityRuntime(
-        context_resolver=_Resolver(error=resolver_error), policy=SimpleNamespace()
+        context_resolver=cast(Any, _Resolver(error=resolver_error)),
+        policy=cast(AuthorizationPolicyPort, SimpleNamespace()),
     )
 
 
@@ -59,7 +64,7 @@ def _client(*, service=None, resolver_error=None) -> TestClient:
     app = FastAPI()
     app.include_router(
         build_patron_enterprise_capability_router(
-            service=service or _CapabilityService(),
+            service=service or cast(Any, _CapabilityService()),
             security_runtime=_runtime(resolver_error=resolver_error),
         )
     )
@@ -190,7 +195,7 @@ def test_enterprise_capability_routes_map_invalid_context_to_401():
 
 
 def test_create_capability_returns_201_then_200_on_replay():
-    service = _CapabilityService()
+    service = cast(Any, _CapabilityService())
     client = _client(service=service)
     payload = _create_payload()
     company_id = uuid4()
@@ -236,7 +241,7 @@ def test_create_capability_maps_service_errors(error, status_code, detail):
 
 
 def test_add_capability_version_returns_201_then_200_on_replay():
-    service = _CapabilityService()
+    service = cast(Any, _CapabilityService())
     client = _client(service=service)
     capability_id = uuid4()
     payload = _version_payload()

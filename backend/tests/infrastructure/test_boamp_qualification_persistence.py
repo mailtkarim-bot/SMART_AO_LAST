@@ -96,19 +96,23 @@ def test_qualification_is_atomic_idempotent_and_append_only(
     assert replay.event_id == first.event_id
 
     with session_factory() as session:
-        assert session.scalar(
-            sa.select(sa.func.count(BoampOpportunityQualificationRecord.id))
-        ) == 1
-        assert session.scalar(
-            sa.select(sa.func.count(DomainEventRecord.id)).where(
-                DomainEventRecord.event_type == "BoampOpportunityQualified"
+        assert session.scalar(sa.select(sa.func.count(BoampOpportunityQualificationRecord.id))) == 1
+        assert (
+            session.scalar(
+                sa.select(sa.func.count(DomainEventRecord.id)).where(
+                    DomainEventRecord.event_type == "BoampOpportunityQualified"
+                )
             )
-        ) == 1
-        assert session.scalar(
-            sa.select(sa.func.count(OutboxMessageRecord.id)).where(
-                OutboxMessageRecord.topic == "opportunity.boamp.qualification.recorded"
+            == 1
+        )
+        assert (
+            session.scalar(
+                sa.select(sa.func.count(OutboxMessageRecord.id)).where(
+                    OutboxMessageRecord.topic == "opportunity.boamp.qualification.recorded"
+                )
             )
-        ) == 1
+            == 1
+        )
     with pytest.raises(sa.exc.DBAPIError), session_factory.begin() as session:
         session.execute(
             sa.text(

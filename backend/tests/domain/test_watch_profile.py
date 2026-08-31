@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import cast
+
 import pytest
 from app.modules.opportunity.domain.watch_profile import (
     BuyerType,
@@ -46,7 +48,7 @@ def test_profile_rejects_duplicate_or_conflicting_criteria() -> None:
 
 def test_profile_rejects_unknown_values_and_out_of_range_radius() -> None:
     with pytest.raises(ValueError):
-        WatchProfileCriteria(project_types=("UNKNOWN",))  # type: ignore[arg-type]
+        WatchProfileCriteria(project_types=cast(tuple[ProjectType, ...], ("UNKNOWN",)))
 
     with pytest.raises(WatchProfileValidationError, match="between"):
         WatchProfileCriteria(max_radius_km=1_001)

@@ -1,5 +1,6 @@
 from dataclasses import replace
 from io import BytesIO
+from typing import Any, cast
 from uuid import uuid4
 
 import app.modules.pricing.application.import_preview as import_preview_module
@@ -7,7 +8,11 @@ import pytest
 from app.interfaces.http.routes.consultations import ConsultationSecurityRuntime
 from app.interfaces.http.routes.patron_pricing_import import build_patron_pricing_import_router
 from app.modules.pricing.application.import_preview import PricingImportPreviewService
-from app.platform.security.authorization import AuthorizationDecision, AuthorizationPolicy
+from app.platform.security.authenticated_context import AuthenticationContextResolver
+from app.platform.security.authorization import (
+    AuthorizationDecision,
+    AuthorizationPolicy,
+)
 from app.platform.security.capabilities import capabilities_for
 from app.platform.security.context import ActorKind
 from fastapi import FastAPI
@@ -22,7 +27,7 @@ class _DenyPolicy:
         return AuthorizationDecision.denied(reason="test")
 
 
-def _xlsx(rows: list[list[object]]) -> bytes:
+def _xlsx(rows: list[list[Any]]) -> bytes:
     workbook = Workbook()
     sheet = workbook.active
     for row in rows:
@@ -294,14 +299,13 @@ def test_pricing_import_preview_http_contract(session_factory):
         build_patron_pricing_import_router(
             service=PricingImportPreviewService(policy=AuthorizationPolicy()),
             security_runtime=ConsultationSecurityRuntime(
-                context_resolver=_Resolver(), policy=AuthorizationPolicy()
+                context_resolver=cast(AuthenticationContextResolver, _Resolver()),
+                policy=AuthorizationPolicy(),
             ),
         )
     )
     client = TestClient(app)
-    payload = _xlsx(
-        [["Désignation", "Quantité", "Prix unitaire"], ["Lot test", 2, 7.5]]
-    )
+    payload = _xlsx([["Désignation", "Quantité", "Prix unitaire"], ["Lot test", 2, 7.5]])
     response = client.post(
         f"/api/v1/patron/cases/{case_id}/pricing-import/preview?document_kind=BPU",
         files={
@@ -333,7 +337,8 @@ def test_pricing_import_preview_http_contract(session_factory):
         build_patron_pricing_import_router(
             service=PricingImportPreviewService(policy=_DenyPolicy()),
             security_runtime=ConsultationSecurityRuntime(
-                context_resolver=_Resolver(), policy=AuthorizationPolicy()
+                context_resolver=cast(AuthenticationContextResolver, _Resolver()),
+                policy=AuthorizationPolicy(),
             ),
         )
     )
@@ -416,9 +421,7 @@ def test_pricing_import_preview_rejects_zip_bomb_metadata(session_factory, monke
         def infolist(self):
             return [type("Info", (), {"file_size": 50 * 1024 * 1024 + 1})()]
 
-    monkeypatch.setattr(
-        "app.modules.pricing.application.import_preview.ZipFile", _HugeArchive
-    )
+    monkeypatch.setattr("app.modules.pricing.application.import_preview.ZipFile", _HugeArchive)
     with pytest.raises(ValueError, match="IMPORT_ARCHIVE_TOO_LARGE"):
         PricingImportPreviewService(policy=AuthorizationPolicy()).preview(
             actor=actor,

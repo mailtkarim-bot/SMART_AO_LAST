@@ -54,8 +54,7 @@ class DceVersionRecord(RevisionedAggregateRecord, Base):
             name="integrity",
         ),
         sa.CheckConstraint(
-            "classification_readiness IN "
-            "('UNCLASSIFIED', 'PARTIALLY_CLASSIFIED', 'CLASSIFIED')",
+            "classification_readiness IN ('UNCLASSIFIED', 'PARTIALLY_CLASSIFIED', 'CLASSIFIED')",
             name="classification_readiness",
         ),
         sa.CheckConstraint(
@@ -159,9 +158,7 @@ class DceDocumentClassificationRecord(TenantScopedRecord, Base):
             name="fk_dce_doc_class__previous",
             ondelete="RESTRICT",
         ),
-        sa.UniqueConstraint(
-            "tenant_id", "id", name="uq_dce_document_classifications__tenant_id"
-        ),
+        sa.UniqueConstraint("tenant_id", "id", name="uq_dce_document_classifications__tenant_id"),
         sa.Index(
             "ux_dce_document_classifications__current_document",
             "tenant_id",

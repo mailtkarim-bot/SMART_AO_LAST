@@ -183,9 +183,7 @@ class AuditedAuthorizationPolicy:
             else AuditEventType.AUTHZ_DENIED
         )
         severity = (
-            AuditSeverity.INFO
-            if decision.code == "STEP_UP_REQUIRED"
-            else AuditSeverity.WARNING
+            AuditSeverity.INFO if decision.code == "STEP_UP_REQUIRED" else AuditSeverity.WARNING
         )
         with self.session_factory.begin() as session:
             self.writer.record(

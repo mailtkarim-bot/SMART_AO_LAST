@@ -30,9 +30,7 @@ class OptimizationRunRecord(TenantScopedRecord, Base):
             ondelete="RESTRICT",
         ),
         sa.UniqueConstraint("tenant_id", "id", name="uq_optimization_runs__tenant_id"),
-        sa.UniqueConstraint(
-            "tenant_id", "command_id", name="uq_optimization_runs__tenant_command"
-        ),
+        sa.UniqueConstraint("tenant_id", "command_id", name="uq_optimization_runs__tenant_command"),
         sa.UniqueConstraint(
             "tenant_id", "idempotency_key", name="uq_optimization_runs__tenant_idempotency"
         ),

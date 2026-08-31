@@ -135,7 +135,14 @@ class DecisionRiskSnapshot:
     treatment: str
     revision: int
     due_at: datetime | None
+    created_at: datetime
     latest_treatment_evidence: Mapping[str, object] | None
+
+
+@dataclass(frozen=True, slots=True)
+class DecisionRiskPage:
+    items: tuple[DecisionRiskSnapshot, ...]
+    next_cursor: str | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -269,6 +276,17 @@ class DecisionRiskRepository(Protocol):
     def get_current(
         self, *, session: object, tenant_id: UUID, case_id: UUID, risk_id: UUID
     ) -> DecisionRiskSnapshot | None: ...
+
+    def list_for_case(
+        self,
+        *,
+        session: object,
+        tenant_id: UUID,
+        case_id: UUID,
+        limit: int,
+        after_created_at: datetime | None,
+        after_id: UUID | None,
+    ) -> DecisionRiskPage: ...
 
     def transition(
         self, *, session: object, draft: DecisionRiskTreatmentTransitionDraft

@@ -41,9 +41,7 @@ def build_patron_pricing_router(
         "/cases/{case_id}/pricing-scenarios",
         response_model=list[PricingScenarioResponse],
     )
-    def list_scenarios(
-        case_id: UUID, authorization: str | None = Header(default=None)
-    ):
+    def list_scenarios(case_id: UUID, authorization: str | None = Header(default=None)):
         actor = _resolve_context(
             authorization=authorization,
             context_resolver=security_runtime.context_resolver,
@@ -59,8 +57,12 @@ def build_patron_pricing_router(
         return [PricingScenarioResponse(**asdict(item)) for item in scenarios]
 
     def _transition_scenario(
-        *, case_id: UUID, scenario_id: UUID, request: PricingScenarioStateChangeRequest,
-        command_type: str, authorization: str | None,
+        *,
+        case_id: UUID,
+        scenario_id: UUID,
+        request: PricingScenarioStateChangeRequest,
+        command_type: str,
+        authorization: str | None,
     ):
         actor = _resolve_context(
             authorization=authorization,
@@ -198,9 +200,7 @@ def build_patron_pricing_router(
                 status_code=status.HTTP_403_FORBIDDEN, detail="FORBIDDEN"
             ) from error
         except (IdempotencyKeyReusedError, CommandInProgressError) as error:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT, detail=str(error)
-            ) from error
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
         except CommandExecutionError as error:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(error)

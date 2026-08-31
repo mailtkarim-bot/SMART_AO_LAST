@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -27,7 +28,7 @@ class FakeEmbeddingProvider:
     vectors: dict[str, tuple[float, ...]]
     model_id: str = "fake-bge-m3"
 
-    def embed(self, texts: list[str]) -> list[tuple[float, ...]]:
+    def embed(self, texts: Sequence[str]) -> list[tuple[float, ...]]:
         return [self.vectors[text] for text in texts]
 
 

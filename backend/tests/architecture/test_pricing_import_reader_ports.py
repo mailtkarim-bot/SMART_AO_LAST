@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from typing import cast
 from unittest.mock import Mock
 from uuid import uuid4
 
@@ -8,7 +9,7 @@ from app.modules.pricing.application.import_read import (
     PricingImportReadService,
 )
 from app.platform.security.capabilities import Capability
-from app.platform.security.context import ActorKind
+from app.platform.security.context import ActorContext, ActorKind
 
 NOW = datetime(2026, 8, 27, 12, 0, tzinfo=UTC)
 
@@ -39,7 +40,7 @@ def test_pricing_import_read_service_uses_application_reader_port() -> None:
     )
 
     projection = PricingImportReadService(reader=reader, policy=policy).get(
-        actor=actor,
+        actor=cast(ActorContext, actor),
         case_id=case_id,
         batch_id=batch_id,
         now=NOW,

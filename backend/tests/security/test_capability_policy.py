@@ -76,8 +76,9 @@ def test_patron_admin_receives_server_catalog_but_no_claim_based_authority() -> 
     assert Capability.OPPORTUNITY_OBSERVATION_QUALIFY in capabilities
 
 
-def test_collaborator_catalog_never_contains_financial_decision_or_submission_capabilities(
-) -> None:
+def test_collaborator_catalog_never_contains_financial_decision_or_submission_capabilities() -> (
+    None
+):
     capabilities = capabilities_for(ActorKind.COLLABORATEUR)
 
     assert Capability.CONSULTATION_READ in capabilities
@@ -200,8 +201,9 @@ def test_collaborator_with_forged_financial_capability_is_denied_by_abac_classif
     assert decision.code == "AUTHORIZATION_DENIED"
 
 
-def test_collaborator_requires_assignment_scope_action_and_classification_for_case_resource(
-) -> None:
+def test_collaborator_requires_assignment_scope_action_and_classification_for_case_resource() -> (
+    None
+):
     case_id = uuid4()
     context = _context(
         actor_kind=ActorKind.COLLABORATEUR,

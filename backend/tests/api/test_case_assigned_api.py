@@ -39,10 +39,6 @@ class UnusedTokenGenerator:
         return "unused-token"
 
 
-
-
-
-
 @pytest.fixture(autouse=True)
 def isolate_records(database_engine: sa.Engine) -> None:
     with database_engine.begin() as connection:
@@ -54,7 +50,7 @@ def _seed_principal(
     *,
     role: str,
     tenant_id: UUID | None = None,
-) -> tuple[UUID, UUID, UUID]:
+) -> tuple[UUID, UUID, UUID, UUID]:
     tenant_id = tenant_id or uuid4()
     identity_id, membership_id, session_id = uuid4(), uuid4(), uuid4()
     with engine.begin() as connection:
@@ -221,9 +217,7 @@ def test_patron_sees_all_non_archived_cases_of_own_tenant(
     database_engine: sa.Engine,
     session_factory: sessionmaker[Session],
 ) -> None:
-    tenant_id, identity_id, _, session_id = _seed_principal(
-        database_engine, role="PATRON_ADMIN"
-    )
+    tenant_id, identity_id, _, session_id = _seed_principal(database_engine, role="PATRON_ADMIN")
     visible_case = _seed_case(session_factory, tenant_id=tenant_id)
     _seed_case(session_factory, tenant_id=tenant_id)
     _seed_case(session_factory, tenant_id=tenant_id, lifecycle="ARCHIVED")
@@ -278,9 +272,7 @@ def test_collaborator_without_assignment_gets_empty_collection(
     database_engine: sa.Engine,
     session_factory: sessionmaker[Session],
 ) -> None:
-    tenant_id, identity_id, _, session_id = _seed_principal(
-        database_engine, role="COLLABORATEUR"
-    )
+    tenant_id, identity_id, _, session_id = _seed_principal(database_engine, role="COLLABORATEUR")
     _seed_case(session_factory, tenant_id=tenant_id)
     client, tokens = _client(session_factory)
 
@@ -345,9 +337,7 @@ def test_cross_tenant_cases_are_neutral_and_not_returned(
 ) -> None:
     foreign_tenant = uuid4()
     _seed_principal(database_engine, role="PATRON_ADMIN", tenant_id=foreign_tenant)
-    local_tenant, identity_id, _, session_id = _seed_principal(
-        database_engine, role="PATRON_ADMIN"
-    )
+    local_tenant, identity_id, _, session_id = _seed_principal(database_engine, role="PATRON_ADMIN")
     foreign_case = _seed_case(session_factory, tenant_id=foreign_tenant)
     _seed_case(session_factory, tenant_id=local_tenant)
     client, tokens = _client(session_factory)
@@ -369,9 +359,7 @@ def test_collection_is_a_closed_projection_without_forbidden_fields(
     database_engine: sa.Engine,
     session_factory: sessionmaker[Session],
 ) -> None:
-    tenant_id, identity_id, _, session_id = _seed_principal(
-        database_engine, role="PATRON_ADMIN"
-    )
+    tenant_id, identity_id, _, session_id = _seed_principal(database_engine, role="PATRON_ADMIN")
     _seed_case(session_factory, tenant_id=tenant_id)
     client, tokens = _client(session_factory)
 

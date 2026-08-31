@@ -81,12 +81,8 @@ def _message(
 def test_safe_payload_rejects_extra_fields_and_invalid_decision() -> None:
     valid = _message().payload_json
     assert _safe_payload(BOAMP_QUALIFICATION_TOPIC, valid) == valid
-    assert _safe_payload(
-        BOAMP_QUALIFICATION_TOPIC, {**valid, "title": "secret-rich-data"}
-    ) is None
-    assert _safe_payload(
-        BOAMP_QUALIFICATION_TOPIC, {**valid, "decision": "AUTO_CONVERT"}
-    ) is None
+    assert _safe_payload(BOAMP_QUALIFICATION_TOPIC, {**valid, "title": "secret-rich-data"}) is None
+    assert _safe_payload(BOAMP_QUALIFICATION_TOPIC, {**valid, "decision": "AUTO_CONVERT"}) is None
 
 
 def test_safe_payload_accepts_minimal_ingestion_event() -> None:
@@ -209,9 +205,7 @@ def test_build_default_worker_requires_explicit_bus_configuration(monkeypatch) -
         module.build_default_worker()
 
     monkeypatch.setenv("SMART_AO_EXTERNAL_EVENT_BUS_ENABLED", "1")
-    database_url = (
-        "postgresql+psycopg://user:pass@localhost/db"  # pragma: allowlist secret
-    )
+    database_url = "postgresql+psycopg://user:pass@localhost/db"  # pragma: allowlist secret
     monkeypatch.setenv("SMART_AO_DATABASE_URL", database_url)
     monkeypatch.delenv("SMART_AO_EXTERNAL_EVENT_BUS_URL", raising=False)
     monkeypatch.delenv("SMART_AO_EXTERNAL_EVENT_BUS_TOKEN", raising=False)

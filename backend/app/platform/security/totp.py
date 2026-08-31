@@ -82,9 +82,7 @@ class TotpService:
         self._issuer = normalized_issuer
 
     @classmethod
-    def from_environment(
-        cls, *, session_factory: sessionmaker[Session]
-    ) -> TotpService | None:
+    def from_environment(cls, *, session_factory: sessionmaker[Session]) -> TotpService | None:
         raw_key = os.getenv("SMART_AO_TOTP_ENCRYPTION_KEY", "").strip()
         if not raw_key:
             return None
@@ -94,9 +92,7 @@ class TotpService:
             issuer=os.getenv("SMART_AO_TOTP_ISSUER", "SMART_AO"),
         )
 
-    def begin_enrollment(
-        self, *, identity_id: UUID, now: datetime
-    ) -> TotpEnrollmentResult:
+    def begin_enrollment(self, *, identity_id: UUID, now: datetime) -> TotpEnrollmentResult:
         current = _utc(now)
         secret = _new_secret()
         recovery_codes = tuple(_new_recovery_code() for _ in range(_RECOVERY_CODE_COUNT))
@@ -104,9 +100,7 @@ class TotpService:
         expires_at = current + _ENROLLMENT_TTL
         with self._session_factory.begin() as session:
             identity = session.scalar(
-                sa.select(IdentityRecord)
-                .where(IdentityRecord.id == identity_id)
-                .with_for_update()
+                sa.select(IdentityRecord).where(IdentityRecord.id == identity_id).with_for_update()
             )
             if identity is None or identity.lifecycle != "ACTIVE":
                 raise TotpEnrollmentError("IDENTITY_NOT_ACTIVE")

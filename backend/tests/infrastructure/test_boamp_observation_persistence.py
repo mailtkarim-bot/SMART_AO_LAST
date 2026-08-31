@@ -8,6 +8,7 @@ import sqlalchemy as sa
 from app.modules.opportunity.application.boamp_ingestion import OpportunityCandidate
 from app.modules.opportunity.application.boamp_scoring import (
     BoampOpportunityScoringService,
+    ExplainableOpportunityScore,
 )
 from app.modules.opportunity.domain.watch_profile import WatchProfileCriteria
 from app.modules.opportunity.infrastructure.boamp_observation_repository import (
@@ -40,13 +41,11 @@ def _candidate() -> OpportunityCandidate:
     )
 
 
-def _scored() -> tuple[tuple[OpportunityCandidate, object], ...]:
+def _scored() -> tuple[tuple[OpportunityCandidate, ExplainableOpportunityScore], ...]:
     candidate = _candidate()
     score = BoampOpportunityScoringService().score(
         candidate=candidate,
-        criteria=WatchProfileCriteria(
-            keywords=("réhabilitation",), included_departments=("59",)
-        ),
+        criteria=WatchProfileCriteria(keywords=("réhabilitation",), included_departments=("59",)),
         now=NOW,
     )
     return ((candidate, score),)

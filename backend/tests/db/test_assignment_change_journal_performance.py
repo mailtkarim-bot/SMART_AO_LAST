@@ -1,4 +1,5 @@
 from importlib.util import module_from_spec, spec_from_file_location
+from typing import cast
 
 import pytest
 import sqlalchemy as sa
@@ -41,5 +42,5 @@ def test_assignment_change_journal_performance_budget(
     assert result["event_type"] == event_type
     assert result["event_count"] == 1_000
     assert result["recent_read_rows"] == 100
-    assert result["insert_elapsed_ms"] < MAX_INSERT_MILLISECONDS
-    assert result["recent_read_elapsed_ms"] < MAX_RECENT_READ_MILLISECONDS
+    assert cast(float | int, result["insert_elapsed_ms"]) < MAX_INSERT_MILLISECONDS
+    assert cast(float | int, result["recent_read_elapsed_ms"]) < MAX_RECENT_READ_MILLISECONDS

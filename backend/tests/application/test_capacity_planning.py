@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import cast
 from uuid import UUID
 
 import pytest
@@ -10,6 +11,7 @@ from app.modules.optimization.application.capacity_planning import (
     CaseCapacityPlanningService,
 )
 from app.modules.optimization.application.resource_assignment import (
+    ResourceAssignmentOptimizer,
     ResourceAssignmentResult,
     ResourceDemand,
     ResourceSupply,
@@ -72,7 +74,7 @@ def test_service_loads_case_scoped_inputs_and_returns_safe_plan() -> None:
 
     plan = CaseCapacityPlanningService(
         input_port=source,
-        optimizer=optimizer,
+        optimizer=cast(ResourceAssignmentOptimizer, optimizer),
     ).plan(tenant_id=TENANT_ID, case_id=CASE_ID)
 
     assert source.calls == [{"tenant_id": TENANT_ID, "case_id": CASE_ID}]
@@ -118,7 +120,7 @@ def test_service_preserves_infeasible_result_without_fallback() -> None:
 
     plan = CaseCapacityPlanningService(
         input_port=source,
-        optimizer=optimizer,
+        optimizer=cast(ResourceAssignmentOptimizer, optimizer),
     ).plan(tenant_id=TENANT_ID, case_id=CASE_ID)
 
     assert plan.status is SolverStatus.INFEASIBLE

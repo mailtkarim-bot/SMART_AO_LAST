@@ -68,9 +68,9 @@ def test_link_risk_to_confirmed_requirement_emits_sparse_event() -> None:
     repository = _repository()
     command = _command()
 
-    outcome = LinkRiskToRequirementHandler(
-        repository_factory=lambda _session: repository
-    ).execute(session=SimpleNamespace(), command=command, context=_context())
+    outcome = LinkRiskToRequirementHandler(repository_factory=lambda _session: repository).execute(
+        session=SimpleNamespace(), command=command, context=_context()
+    )
 
     draft = repository.create.call_args.kwargs["draft"]
     assert draft.tenant_id == TENANT_ID
@@ -115,9 +115,9 @@ def test_link_rejects_requirement_without_human_confirmation() -> None:
     repository = _repository(confirmed=False)
 
     with pytest.raises(CommandExecutionError, match="DCE_REQUIREMENT_NOT_CONFIRMED"):
-        LinkRiskToRequirementHandler(
-            repository_factory=lambda _session: repository
-        ).execute(session=MagicMock(), command=_command(), context=_context())
+        LinkRiskToRequirementHandler(repository_factory=lambda _session: repository).execute(
+            session=MagicMock(), command=_command(), context=_context()
+        )
 
     repository.create.assert_not_called()
 
@@ -128,9 +128,9 @@ def test_link_rejects_stale_dce_context() -> None:
     repository.case_uses_dce_version.return_value = False
 
     with pytest.raises(CommandExecutionError, match="STALE_DCE_CONTEXT"):
-        LinkRiskToRequirementHandler(
-            repository_factory=lambda _session: repository
-        ).execute(session=MagicMock(), command=_command(), context=_context())
+        LinkRiskToRequirementHandler(repository_factory=lambda _session: repository).execute(
+            session=MagicMock(), command=_command(), context=_context()
+        )
 
     repository.create.assert_not_called()
 
@@ -140,9 +140,9 @@ def test_link_rejects_functional_duplicate() -> None:
     repository = _repository(duplicate=True)
 
     with pytest.raises(CommandExecutionError, match="RISK_REQUIREMENT_LINK_ALREADY_EXISTS"):
-        LinkRiskToRequirementHandler(
-            repository_factory=lambda _session: repository
-        ).execute(session=MagicMock(), command=_command(), context=_context())
+        LinkRiskToRequirementHandler(repository_factory=lambda _session: repository).execute(
+            session=MagicMock(), command=_command(), context=_context()
+        )
 
     repository.create.assert_not_called()
 

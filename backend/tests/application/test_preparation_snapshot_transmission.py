@@ -258,9 +258,7 @@ def test_transmission_handler_rejects_invalid_membership_and_assignment_scope(
         ("document_missing", "TECHNICAL_DOCUMENT_REQUIRED"),
     ],
 )
-def test_snapshot_handler_rejects_incomplete_preparation(
-    mutation: str, error: str
-) -> None:
+def test_snapshot_handler_rejects_incomplete_preparation(mutation: str, error: str) -> None:
     package = SimpleNamespace(
         id=uuid4(),
         tenant_id=uuid4(),
@@ -357,9 +355,10 @@ def test_transmit_handler_rejects_missing_and_already_transmitted_snapshot(
         transmission_id=uuid4(),
         expected_package_revision=4,
     )
-    with pytest.raises(
-        CommandExecutionError, match="SNAPSHOT_NOT_FOUND_OR_FORBIDDEN"
-    ), session_factory.begin() as session:
+    with (
+        pytest.raises(CommandExecutionError, match="SNAPSHOT_NOT_FOUND_OR_FORBIDDEN"),
+        session_factory.begin() as session,
+    ):
         handler.execute(
             session=session,
             command=transmit,

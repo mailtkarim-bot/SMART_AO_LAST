@@ -1,13 +1,17 @@
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from typing import Any, cast
 from uuid import uuid4
 
 import pytest
 from app.interfaces.http.routes.case_dce_reading import build_case_dce_reading_router
 from app.interfaces.http.routes.consultations import ConsultationSecurityRuntime
 from app.modules.dce.application.queries import CaseDceReadingAvailability
-from app.platform.security.authenticated_context import UnauthenticatedError
+from app.platform.security.authenticated_context import (
+    AuthenticationContextResolver,
+    UnauthenticatedError,
+)
 from app.platform.security.context import ActorContext, ActorKind, MembershipState
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -24,10 +28,18 @@ class _Resolver:
         if self.error is not None:
             raise self.error
         return ActorContext(
-            actor_id=uuid4(), identity_id=uuid4(), tenant_id=uuid4(), membership_id=uuid4(),
-            actor_kind=ActorKind.COLLABORATEUR, membership_state=MembershipState.ACTIVE,
-            capabilities=frozenset(), assigned_case_ids=frozenset(), session_id=uuid4(),
-            authenticated_at=NOW, mfa_verified_at=None, correlation_id=uuid4(),
+            actor_id=uuid4(),
+            identity_id=uuid4(),
+            tenant_id=uuid4(),
+            membership_id=uuid4(),
+            actor_kind=ActorKind.COLLABORATEUR,
+            membership_state=MembershipState.ACTIVE,
+            capabilities=frozenset(),
+            assigned_case_ids=frozenset(),
+            session_id=uuid4(),
+            authenticated_at=NOW,
+            mfa_verified_at=None,
+            correlation_id=uuid4(),
         )
 
 
@@ -40,7 +52,7 @@ class _Decision:
 class _Policy:
     def __init__(self, decision: _Decision):
         self.decision = decision
-        self.calls = []
+        self.calls: list[Any] = []
 
     def authorize(self, **kwargs):
         self.calls.append(kwargs)
@@ -88,7 +100,8 @@ class _Runtime:
 
 def _security(*, policy=None, resolver_error=None):
     return ConsultationSecurityRuntime(
-        context_resolver=_Resolver(error=resolver_error), policy=policy or _Policy(_Decision(True))
+        context_resolver=cast(AuthenticationContextResolver, _Resolver(error=resolver_error)),
+        policy=policy or _Policy(_Decision(True)),
     )
 
 
@@ -105,19 +118,35 @@ def _client(*, runtime=None, policy=None, resolver_error=None):
 
 def _available_lookup(case_id):
     requirement = SimpleNamespace(
-        requirement_id=uuid4(), requirement_type="ADMINISTRATIVE",
-        directive_signal="REQUIRED", confirmation_outcome="CONFIRMED",
-        uncertainty_status="NONE", document_family="K_BIS", source_locator_label="page 2",
+        requirement_id=uuid4(),
+        requirement_type="ADMINISTRATIVE",
+        directive_signal="REQUIRED",
+        confirmation_outcome="CONFIRMED",
+        uncertainty_status="NONE",
+        document_family="K_BIS",
+        source_locator_label="page 2",
     )
     reading = _Reading(
-        dce_version_id=uuid4(), lifecycle="REGISTERED", integrity="VERIFIED",
-        classification_readiness="READY", analysis_readiness="READY", source_received_at=NOW,
-        counters=SimpleNamespace(total=3, pending_human_confirmation=0, confirmed=2,
-                                 review_required=1, not_applicable=0),
+        dce_version_id=uuid4(),
+        lifecycle="REGISTERED",
+        integrity="VERIFIED",
+        classification_readiness="READY",
+        analysis_readiness="READY",
+        source_received_at=NOW,
+        counters=SimpleNamespace(
+            total=3, pending_human_confirmation=0, confirmed=2, review_required=1, not_applicable=0
+        ),
         requirements=[requirement],
     )
-    return _Lookup(CaseDceReadingAvailability.AVAILABLE, reading, case_id,
-                   "Réhabilitation école", "ACTIVE", "SUBMISSION", "CURRENT")
+    return _Lookup(
+        CaseDceReadingAvailability.AVAILABLE,
+        reading,
+        case_id,
+        "Réhabilitation école",
+        "ACTIVE",
+        "SUBMISSION",
+        "CURRENT",
+    )
 
 
 def _headers():
@@ -173,8 +202,10 @@ def test_case_dce_reading_returns_neutral_404_for_unknown_case():
 
 @pytest.mark.parametrize(
     ("decision", "status_code", "detail"),
-    [(_Decision(False, 403), 403, "FORBIDDEN"),
-     (_Decision(False, 404), 404, "NOT_FOUND_OR_FORBIDDEN")],
+    [
+        (_Decision(False, 403), 403, "FORBIDDEN"),
+        (_Decision(False, 404), 404, "NOT_FOUND_OR_FORBIDDEN"),
+    ],
 )
 def test_case_dce_reading_maps_authorization_decision(decision, status_code, detail):
     response = _client(policy=_Policy(decision)).get(
@@ -186,8 +217,11 @@ def test_case_dce_reading_maps_authorization_decision(decision, status_code, det
 
 @pytest.mark.parametrize(
     "lookup",
-    [None, _Lookup(CaseDceReadingAvailability.NO_APPLICABLE_DCE, None, uuid4(), "", "", "", ""),
-     _Lookup(CaseDceReadingAvailability.AVAILABLE, None, uuid4(), "", "", "", "")],
+    [
+        None,
+        _Lookup(CaseDceReadingAvailability.NO_APPLICABLE_DCE, None, uuid4(), "", "", "", ""),
+        _Lookup(CaseDceReadingAvailability.AVAILABLE, None, uuid4(), "", "", "", ""),
+    ],
 )
 def test_case_dce_reading_maps_missing_or_unavailable_projection(lookup):
     response = _client(runtime=_Runtime(lookup=lookup)).get(

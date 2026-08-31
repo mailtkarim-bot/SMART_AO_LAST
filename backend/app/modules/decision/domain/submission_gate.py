@@ -58,9 +58,7 @@ def evaluate_submission_gate(
     if snapshot.outcome == "CONDITIONAL_GO":
         if snapshot.condition_status != "SATISFIED" or snapshot.open_condition_count:
             reasons.append("CONDITIONAL_GO_OPEN_CONDITIONS")
-    elif (
-        snapshot.condition_status != "NOT_APPLICABLE" or snapshot.open_condition_count != 0
-    ):
+    elif snapshot.condition_status != "NOT_APPLICABLE" or snapshot.open_condition_count != 0:
         reasons.append("UNEXPECTED_OPEN_CONDITIONS")
     if snapshot.unresolved_risk_action_count:
         reasons.append("UNRESOLVED_RISK_ACTIONS")

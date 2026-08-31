@@ -28,10 +28,6 @@ from sqlalchemy.orm import Session, sessionmaker
 NOW = datetime(2026, 8, 17, 12, 0, tzinfo=UTC)
 
 
-
-
-
-
 @pytest.fixture(autouse=True)
 def isolate_enterprise_records(database_engine: sa.Engine) -> None:
     with database_engine.begin() as connection:

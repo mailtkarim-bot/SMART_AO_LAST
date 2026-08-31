@@ -85,9 +85,7 @@ class OpportunityWatchProfileVersionRecord(TenantScopedRecord, Base):
             name="uq_opportunity_watch_profile_versions__tenant_idempotency",
         ),
         sa.CheckConstraint("version_number >= 1", name="version_number_positive"),
-        sa.CheckConstraint(
-            "jsonb_typeof(criteria_json) = 'object'", name="criteria_object"
-        ),
+        sa.CheckConstraint("jsonb_typeof(criteria_json) = 'object'", name="criteria_object"),
         sa.CheckConstraint("criteria_sha256 ~ '^[a-f0-9]{64}$'", name="criteria_sha256_hex"),
         sa.Index(
             "ix_opportunity_watch_profile_versions__tenant_profile_version",

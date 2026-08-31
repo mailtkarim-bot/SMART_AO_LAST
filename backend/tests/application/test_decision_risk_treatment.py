@@ -66,6 +66,7 @@ def _snapshot(*, treatment: str = "OPEN", revision: int = 1) -> DecisionRiskSnap
         treatment=treatment,
         revision=revision,
         due_at=None,
+        created_at=NOW,
         latest_treatment_evidence=None,
     )
 

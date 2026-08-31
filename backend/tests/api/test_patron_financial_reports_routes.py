@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from typing import Any, cast
 from uuid import uuid4
 
 import pytest
@@ -13,7 +14,10 @@ from app.platform.events.dispatcher import (
     CommandInProgressError,
     IdempotencyKeyReusedError,
 )
-from app.platform.security.authenticated_context import UnauthenticatedError
+from app.platform.security.authenticated_context import (
+    UnauthenticatedError,
+)
+from app.platform.security.authorization import AuthorizationPolicyPort
 from app.platform.security.context import ActorContext, ActorKind, MembershipState
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -51,19 +55,26 @@ def _actor() -> ActorContext:
 
 def _runtime(*, resolver_error=None):
     return ConsultationSecurityRuntime(
-        context_resolver=_Resolver(error=resolver_error), policy=SimpleNamespace()
+        context_resolver=cast(Any, _Resolver(error=resolver_error)),
+        policy=cast(AuthorizationPolicyPort, SimpleNamespace()),
     )
 
 
-def _client(*, service=None, line_service=None, draft_service=None, publication_service=None,
-            resolver_error=None):
+def _client(
+    *,
+    service=None,
+    line_service=None,
+    draft_service=None,
+    publication_service=None,
+    resolver_error=None,
+):
     app = FastAPI()
     app.include_router(
         build_patron_financial_report_router(
-            service=service or _ReportService(),
+            service=service or cast(Any, _ReportService()),
             line_service=line_service or _FinancialCommandService(),
-            draft_creation_service=draft_service or _FinancialCommandService(),
-            publication_service=publication_service or _FinancialCommandService(),
+            draft_creation_service=draft_service or cast(Any, _FinancialCommandService()),
+            publication_service=publication_service or cast(Any, _FinancialCommandService()),
             security_runtime=_runtime(resolver_error=resolver_error),
         )
     )
@@ -76,8 +87,11 @@ def _result(*, code, replayed=False):
         idempotency_key=uuid4(),
         result_code=code,
         aggregate_refs=[
-            {"aggregate_type": "FinancialReportSnapshot", "aggregate_id": str(uuid4()),
-             "aggregate_revision": 2}
+            {
+                "aggregate_type": "FinancialReportSnapshot",
+                "aggregate_id": str(uuid4()),
+                "aggregate_revision": 2,
+            }
         ],
         event_ids=[str(uuid4())],
         replayed=replayed,
@@ -221,7 +235,7 @@ def test_financial_report_routes_map_invalid_context_to_401():
 def test_financial_command_routes_return_201_then_200_replay():
     draft_service = _FinancialCommandService()
     line_service = _FinancialCommandService()
-    publication_service = _FinancialCommandService()
+    publication_service = cast(Any, _FinancialCommandService())
     client = _client(
         draft_service=draft_service,
         line_service=line_service,

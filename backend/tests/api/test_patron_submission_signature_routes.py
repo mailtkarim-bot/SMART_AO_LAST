@@ -6,7 +6,8 @@ import json
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from types import SimpleNamespace
-from uuid import uuid4
+from typing import Any, Protocol, cast
+from uuid import UUID, uuid4
 
 import pytest
 from app.interfaces.http.routes.consultations import ConsultationSecurityRuntime
@@ -18,7 +19,10 @@ from app.platform.events.dispatcher import (
     CommandInProgressError,
     IdempotencyKeyReusedError,
 )
-from app.platform.security.authenticated_context import UnauthenticatedError
+from app.platform.security.authenticated_context import (
+    UnauthenticatedError,
+)
+from app.platform.security.authorization import AuthorizationPolicyPort
 from app.platform.security.context import ActorContext, ActorKind, MembershipState
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -28,6 +32,15 @@ SECRET = "test-signature-secret-0123456789abcdef"  # pragma: allowlist secret
 PROVIDER = "TEST_PROVIDER"
 PACKAGE_ID = uuid4()
 SIGNATURE_ID = uuid4()
+
+
+class _SignatureCommand(Protocol):
+    signer_membership_id: UUID
+    provider: str
+    command_id: UUID
+    idempotency_key: UUID
+    submission_package_id: UUID
+    command_type: str
 
 
 @dataclass
@@ -60,7 +73,8 @@ def _actor() -> ActorContext:
 
 def _runtime(*, resolver_error=None):
     return ConsultationSecurityRuntime(
-        context_resolver=_Resolver(error=resolver_error), policy=SimpleNamespace()
+        context_resolver=cast(Any, _Resolver(error=resolver_error)),
+        policy=cast(AuthorizationPolicyPort, SimpleNamespace()),
     )
 
 
@@ -121,8 +135,8 @@ def _client(*, service=None, read_service=None, callback_secret=SECRET, resolver
     app = FastAPI()
     app.include_router(
         build_patron_submission_signature_router(
-            service=service or _SignatureService(),
-            read_service=read_service or _ReadService(),
+            service=service or cast(Any, _SignatureService()),
+            read_service=read_service or cast(Any, _ReadService()),
             security_runtime=_runtime(resolver_error=resolver_error),
             callback_secret=callback_secret,
         )
@@ -171,7 +185,7 @@ def test_request_signature_requires_bearer():
 
 
 def test_request_signature_returns_201_then_200_on_replay():
-    service = _SignatureService()
+    service = cast(Any, _SignatureService())
     client = _client(service=service)
     payload = _request_payload()
     path = f"/api/v1/patron/submission-packages/{PACKAGE_ID}/signatures"
@@ -184,8 +198,9 @@ def test_request_signature_returns_201_then_200_on_replay():
     assert first.json()["result_code"] == "SUBMISSION_SIGNATURE_REQUESTED"
     assert first.json()["external_submission"] == "NOT_PERFORMED"
     assert replay.json()["replayed"] is True
-    assert service.calls[0]["command"].signer_membership_id is not None
-    assert service.calls[0]["command"].provider == PROVIDER
+    command = cast(_SignatureCommand, service.calls[0]["command"])
+    assert command.signer_membership_id is not None
+    assert command.provider == PROVIDER
 
 
 def test_signature_request_does_not_accept_provider_or_financial_fields():
@@ -222,7 +237,7 @@ def test_callback_requires_valid_hmac(header, status_code, detail):
 
 
 def test_callback_accepts_valid_hmac_and_uses_delivery_id_as_idempotency_key():
-    service = _SignatureService()
+    service = cast(Any, _SignatureService())
     client = _client(service=service)
     body = json.dumps(_callback_payload(), separators=(",", ":")).encode()
 
@@ -234,7 +249,7 @@ def test_callback_accepts_valid_hmac_and_uses_delivery_id_as_idempotency_key():
 
     assert response.status_code == 201
     assert response.json()["result_code"] == "SUBMISSION_SIGNATURE_RECORDED"
-    command = service.calls[0]["command"]
+    command = cast(_SignatureCommand, service.calls[0]["command"])
     assert command.command_id == command.idempotency_key
     assert command.submission_package_id == PACKAGE_ID
 

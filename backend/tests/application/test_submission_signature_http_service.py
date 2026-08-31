@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from typing import cast
 from uuid import uuid4
 
 import pytest
@@ -13,7 +14,7 @@ from app.modules.submission.application.signature_service import (
     SubmissionSignatureReadService,
     SubmissionSignatureService,
 )
-from app.platform.events.dispatcher import CommandExecutionError
+from app.platform.events.dispatcher import CommandDispatcher, CommandExecutionError
 from app.platform.security.context import ActorContext, ActorKind, MembershipState
 
 NOW = datetime(2026, 8, 23, 12, 0, tzinfo=UTC)
@@ -94,7 +95,9 @@ class _Reader:
 def test_signature_service_rejects_invalid_provider_configuration():
     with pytest.raises(ValueError, match="uppercase closed identifier"):
         SubmissionSignatureService(
-            dispatcher=_Dispatcher(), policy=_Policy(), provider="arbitrary provider"
+            dispatcher=cast(CommandDispatcher, _Dispatcher()),
+            policy=_Policy(),
+            provider="arbitrary provider",
         )
 
 
@@ -105,7 +108,7 @@ def test_signature_service_authorizes_and_dispatches_with_server_actor_scope():
     command = _request_command()
 
     result = SubmissionSignatureService(
-        dispatcher=dispatcher,
+        dispatcher=cast(CommandDispatcher, dispatcher),
         policy=policy,
         provider=PROVIDER,
     ).execute(actor=actor, command=command, now=NOW)
@@ -119,7 +122,7 @@ def test_signature_service_authorizes_and_dispatches_with_server_actor_scope():
 
 def test_signature_service_rejects_non_patron_or_inactive_actor():
     service = SubmissionSignatureService(
-        dispatcher=_Dispatcher(), policy=_Policy(), provider=PROVIDER
+        dispatcher=cast(CommandDispatcher, _Dispatcher()), policy=_Policy(), provider=PROVIDER
     )
     command = _request_command()
 
@@ -134,7 +137,7 @@ def test_signature_service_rejects_provider_not_configured_on_server():
 
     with pytest.raises(CommandExecutionError, match="INVALID_PROVIDER"):
         SubmissionSignatureService(
-            dispatcher=_Dispatcher(), policy=_Policy(), provider=PROVIDER
+            dispatcher=cast(CommandDispatcher, _Dispatcher()), policy=_Policy(), provider=PROVIDER
         ).execute(
             actor=_actor(),
             command=command.model_copy(update={"provider": "OTHER_PROVIDER"}),
@@ -145,7 +148,9 @@ def test_signature_service_rejects_provider_not_configured_on_server():
 def test_signature_service_rejects_denied_policy():
     with pytest.raises(PermissionError, match="AUTHORIZATION_DENIED"):
         SubmissionSignatureService(
-            dispatcher=_Dispatcher(), policy=_Policy(allowed=False), provider=PROVIDER
+            dispatcher=cast(CommandDispatcher, _Dispatcher()),
+            policy=_Policy(allowed=False),
+            provider=PROVIDER,
         ).execute(actor=_actor(), command=_request_command(), now=NOW)
 
 
@@ -163,9 +168,9 @@ def test_signature_read_service_authorizes_tenant_scoped_minimal_projection():
     )
     reader = _Reader(projection)
 
-    result = SubmissionSignatureReadService(
-        reader=reader, policy=_Policy()
-    ).read(actor=actor, signature_id=signature_id, now=NOW)
+    result = SubmissionSignatureReadService(reader=reader, policy=_Policy()).read(
+        actor=actor, signature_id=signature_id, now=NOW
+    )
 
     assert result is projection
     assert reader.calls == [{"tenant_id": actor.tenant_id, "signature_id": signature_id}]

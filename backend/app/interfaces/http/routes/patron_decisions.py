@@ -53,6 +53,7 @@ from app.modules.decision.public.patron_contracts import PatronDecisionDossierRe
 from app.modules.decision.public.risk_contracts import (
     RegisterStructuredRiskRequest,
     StructuredRiskCommandResponse,
+    StructuredRiskPageResponse,
     StructuredRiskProjection,
     TransitionStructuredRiskTreatmentRequest,
     TransitionStructuredRiskTreatmentResponse,
@@ -453,6 +454,66 @@ def build_patron_decision_router(
             )
 
     if risk_read_service is not None:
+
+        @router.get(
+            "/cases/{case_id}/risks",
+            response_model=StructuredRiskPageResponse,
+        )
+        def list_risks(
+            case_id: UUID,
+            limit: int = Query(default=25, ge=1, le=100),
+            cursor: str | None = Query(default=None, max_length=512),
+            authorization: str | None = Header(default=None),
+        ) -> StructuredRiskPageResponse:
+            actor = _resolve_context(
+                authorization=authorization,
+                context_resolver=security_runtime.context_resolver,
+            )
+            try:
+                page = risk_read_service.list_for_case(
+                    actor=actor,
+                    case_id=case_id,
+                    limit=limit,
+                    cursor=cursor,
+                    now=datetime.now(tz=UTC),
+                )
+            except PermissionError as error:
+                detail = str(error)
+                if detail == "NOT_FOUND_OR_FORBIDDEN":
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND, detail=detail
+                    ) from error
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN, detail="FORBIDDEN"
+                ) from error
+            except ValueError as error:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="INVALID_CURSOR"
+                ) from error
+            return StructuredRiskPageResponse(
+                items=[
+                    StructuredRiskProjection(
+                        risk_id=snapshot.id,
+                        case_id=snapshot.case_id,
+                        dce_version_id=snapshot.dce_version_id,
+                        risk_code=snapshot.risk_code,
+                        category=snapshot.category,
+                        title=snapshot.title,
+                        severity=snapshot.severity,
+                        likelihood=snapshot.likelihood,
+                        treatment=snapshot.treatment,
+                        revision=snapshot.revision,
+                        due_at=snapshot.due_at,
+                        latest_treatment_evidence=(
+                            dict(snapshot.latest_treatment_evidence)
+                            if snapshot.latest_treatment_evidence is not None
+                            else None
+                        ),
+                    )
+                    for snapshot in page.items
+                ],
+                next_cursor=page.next_cursor,
+            )
 
         @router.get(
             "/cases/{case_id}/risks/{risk_id}",

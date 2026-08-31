@@ -351,10 +351,11 @@ class TransitionStructuredRiskTreatmentHandler:
 def decision_risk_handlers(
     *, repository_factory: Callable[[Any], DecisionRiskRepository]
 ) -> dict[str, CommandHandler]:
+    register_handler = RegisterStructuredRiskHandler(repository_factory=repository_factory)
+    transition_handler = TransitionStructuredRiskTreatmentHandler(
+        repository_factory=repository_factory
+    )
     return {
-        RegisterStructuredRiskCommand.command_type: RegisterStructuredRiskHandler(
-            repository_factory=repository_factory
-        ),
-        TransitionStructuredRiskTreatmentCommand.command_type:
-        TransitionStructuredRiskTreatmentHandler(repository_factory=repository_factory),
+        RegisterStructuredRiskCommand.command_type: register_handler,
+        TransitionStructuredRiskTreatmentCommand.command_type: transition_handler,
     }

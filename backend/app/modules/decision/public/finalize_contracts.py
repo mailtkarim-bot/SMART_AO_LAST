@@ -23,9 +23,7 @@ class FinalizeGoNoGoDecisionRequest(BaseModel):
     idempotency_key: UUID
     correlation_id: UUID | None = None
     expected_revision: int = Field(ge=0)
-    displayed_fingerprint: str = Field(
-        min_length=64, max_length=64, pattern=r"^[0-9a-fA-F]{64}$"
-    )
+    displayed_fingerprint: str = Field(min_length=64, max_length=64, pattern=r"^[0-9a-fA-F]{64}$")
     outcome: Literal["GO", "CONDITIONAL_GO", "NO_GO"]
     justification: str = Field(min_length=1, max_length=4_000)
     conditions: tuple[ConditionalGoConditionRequest, ...] = Field(default=(), max_length=32)

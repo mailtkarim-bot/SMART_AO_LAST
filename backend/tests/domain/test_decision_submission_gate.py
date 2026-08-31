@@ -1,3 +1,5 @@
+from typing import Any
+
 import pytest
 from app.modules.decision.domain.submission_gate import (
     DecisionSubmissionGateSnapshot,
@@ -7,7 +9,7 @@ from app.modules.decision.domain.submission_gate import (
 
 
 def _snapshot(**overrides):
-    values = {
+    values: dict[str, Any] = {
         "lifecycle": "FINALIZED",
         "outcome": "GO",
         "context_status": "FROZEN",
@@ -95,9 +97,7 @@ def test_submission_gate_blocks_invalid_snapshot_values(overrides) -> None:
 
 @pytest.mark.domain
 def test_go_with_contradictory_open_condition_status_is_blocked() -> None:
-    result = evaluate_submission_gate(
-        _snapshot(condition_status="OPEN", open_condition_count=0)
-    )
+    result = evaluate_submission_gate(_snapshot(condition_status="OPEN", open_condition_count=0))
 
     assert result.status is SubmissionGateStatus.BLOCKED
     assert result.reasons == ("UNEXPECTED_OPEN_CONDITIONS",)

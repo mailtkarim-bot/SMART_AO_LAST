@@ -60,9 +60,7 @@ class PrepareEnterpriseDocumentUploadRequest(EnterprisePublicRequest):
     expected_byte_size: int = Field(gt=0, le=2_000_000_000)
     expires_at: datetime
 
-    def to_command(
-        self, *, company_id: UUID
-    ) -> PrepareEnterpriseDocumentUploadCommand:
+    def to_command(self, *, company_id: UUID) -> PrepareEnterpriseDocumentUploadCommand:
         from app.modules.enterprise.application.enterprise_upload_commands import (
             PrepareEnterpriseDocumentUploadCommand,
         )
@@ -119,9 +117,7 @@ class VerifyEnterpriseDocumentRequest(EnterprisePublicRequest):
         "DOCUMENT_DUPLICATE",
     ]
 
-    def to_command(
-        self, *, company_id: UUID, document_id: UUID
-    ) -> VerifyEnterpriseDocumentCommand:
+    def to_command(self, *, company_id: UUID, document_id: UUID) -> VerifyEnterpriseDocumentCommand:
         from app.modules.enterprise.application.enterprise_upload_commands import (
             VerifyEnterpriseDocumentCommand,
         )

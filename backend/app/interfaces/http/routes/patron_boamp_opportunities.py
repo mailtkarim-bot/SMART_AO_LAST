@@ -51,9 +51,7 @@ def build_patron_boamp_opportunity_router(
         prefix="/api/v1/patron/boamp-opportunities",
         tags=["patron-boamp-opportunities"],
     )
-    service = PatronBoampObservationService(
-        repository=runtime.boamp_qualification_repository
-    )
+    service = PatronBoampObservationService(repository=runtime.boamp_qualification_repository)
 
     @router.get("", response_model=BoampObservationListResponse)
     def read_observations(
@@ -218,16 +216,12 @@ def build_patron_boamp_opportunity_router(
         except CommandExecutionError as error:
             code = str(error.__cause__) if isinstance(error.__cause__, ValueError) else str(error)
             http_status = (
-                409
-                if code in {"DUPLICATE_FUNCTIONAL_IDENTITY", "VERSION_CONFLICT"}
-                else 422
+                409 if code in {"DUPLICATE_FUNCTIONAL_IDENTITY", "VERSION_CONFLICT"} else 422
             )
             raise HTTPException(status_code=http_status, detail=code) from error
         except ValueError as error:
             raise HTTPException(status_code=422, detail=str(error)) from error
-        reference = next(
-            item for item in result.aggregate_refs if item["aggregate_type"] == "AFF"
-        )
+        reference = next(item for item in result.aggregate_refs if item["aggregate_type"] == "AFF")
         response = BoampCaseCreationResponse(
             command_id=UUID(result.command_id),
             idempotency_key=UUID(result.idempotency_key),

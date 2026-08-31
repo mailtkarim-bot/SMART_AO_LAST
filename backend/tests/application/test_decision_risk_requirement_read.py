@@ -80,9 +80,7 @@ def test_list_links_rejects_invalid_cursor_before_reader() -> None:
     service, reader, _ = _service()
 
     with pytest.raises(ValueError, match="invalid decision risk link cursor"):
-        service.list_links(
-            actor=_actor(), case_id=CASE_ID, limit=25, cursor="invalid", now=NOW
-        )
+        service.list_links(actor=_actor(), case_id=CASE_ID, limit=25, cursor="invalid", now=NOW)
 
     reader.list_for_case.assert_not_called()
 

@@ -87,9 +87,7 @@ def calculate_cost_basis(inputs: CostBasisInput) -> CostBasisResult:
     )
     gross_margin = inputs.sales_total_minor - total_cost
     gross_margin_rate_bps = (
-        gross_margin * 10_000 // inputs.sales_total_minor
-        if inputs.sales_total_minor
-        else 0
+        gross_margin * 10_000 // inputs.sales_total_minor if inputs.sales_total_minor else 0
     )
     return CostBasisResult(
         sales_total_minor=inputs.sales_total_minor,
@@ -104,12 +102,8 @@ def calculate_cost_basis(inputs: CostBasisInput) -> CostBasisResult:
         gross_margin_minor=gross_margin,
         gross_margin_rate_bps=gross_margin_rate_bps,
         break_even_sales_minor=total_cost,
-        floor_sales_minor=_minimum_sales_for_margin(
-            total_cost, inputs.floor_margin_rate_bps
-        ),
-        target_sales_minor=_minimum_sales_for_margin(
-            total_cost, inputs.target_margin_rate_bps
-        ),
+        floor_sales_minor=_minimum_sales_for_margin(total_cost, inputs.floor_margin_rate_bps),
+        target_sales_minor=_minimum_sales_for_margin(total_cost, inputs.target_margin_rate_bps),
     )
 
 

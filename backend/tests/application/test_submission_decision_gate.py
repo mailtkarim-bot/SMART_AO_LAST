@@ -2,6 +2,7 @@ import hashlib
 import json
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from typing import cast
 from unittest.mock import MagicMock
 from uuid import uuid4
 
@@ -15,7 +16,7 @@ from app.modules.submission.infrastructure.decision_gate_reader import (
     SqlAlchemySubmissionDecisionGateReader,
 )
 from app.platform.events.dispatcher import CommandContext, CommandExecutionError
-from app.platform.security.context import ActorKind
+from app.platform.security.context import ActorContext, ActorKind
 from sqlalchemy.dialects import postgresql
 
 NOW_CASE_ID = uuid4()
@@ -159,7 +160,9 @@ def test_export_blocks_before_storage_read_when_decision_is_not_ready() -> None:
     )
 
     with pytest.raises(CommandExecutionError, match="DECISION_SUBMISSION_BLOCKED"):
-        service.export(actor=actor, submission_package_id=package_id, now=datetime.now(UTC))
+        service.export(
+            actor=cast(ActorContext, actor), submission_package_id=package_id, now=datetime.now(UTC)
+        )
 
     storage.read.assert_not_called()
 

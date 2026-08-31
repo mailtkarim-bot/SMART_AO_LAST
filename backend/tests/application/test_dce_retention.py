@@ -27,10 +27,6 @@ from sqlalchemy.orm import Session, sessionmaker
 NOW = datetime(2026, 8, 13, 17, 0, tzinfo=UTC)
 
 
-
-
-
-
 @pytest.fixture(autouse=True)
 def isolate_dce_retention_records(database_engine: sa.Engine) -> None:
     with database_engine.begin() as connection:
@@ -439,9 +435,12 @@ def test_retention_publish_and_retry_are_idempotent_for_published_message() -> N
     )
 
     assert worker._publish_message(message_id=uuid4(), now=NOW).skipped == 1  # noqa: SLF001
-    assert worker._retry_message(  # noqa: SLF001
-        message_id=uuid4(), now=NOW, error_code="ignored"
-    ).skipped == 1
+    assert (
+        worker._retry_message(  # noqa: SLF001
+            message_id=uuid4(), now=NOW, error_code="ignored"
+        ).skipped
+        == 1
+    )
 
 
 def test_retention_build_default_worker_reads_environment(monkeypatch: pytest.MonkeyPatch) -> None:

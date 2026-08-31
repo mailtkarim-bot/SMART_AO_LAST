@@ -37,9 +37,7 @@ def test_load_results_accepts_identifier_only_report(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize("extra_key", ["text", "excerpt", "embedding", "amount"])
-def test_load_results_rejects_sensitive_or_unknown_fields(
-    tmp_path: Path, extra_key: str
-) -> None:
+def test_load_results_rejects_sensitive_or_unknown_fields(tmp_path: Path, extra_key: str) -> None:
     path = write_json(
         tmp_path / "results.json",
         [

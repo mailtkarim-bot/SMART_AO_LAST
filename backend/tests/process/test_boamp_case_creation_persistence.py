@@ -171,24 +171,33 @@ def test_qualified_signal_creates_one_case_and_replays_durably(
         assert case.tenant_id == tenant_id
         assert case.business_origin == "OPPORTUNITY"
         assert case.origin_reference_id == observation_id
-        assert session.scalar(
-            sa.select(sa.func.count(CommandReceiptRecord.id)).where(
-                CommandReceiptRecord.tenant_id == tenant_id,
-                CommandReceiptRecord.idempotency_key == command.idempotency_key,
+        assert (
+            session.scalar(
+                sa.select(sa.func.count(CommandReceiptRecord.id)).where(
+                    CommandReceiptRecord.tenant_id == tenant_id,
+                    CommandReceiptRecord.idempotency_key == command.idempotency_key,
+                )
             )
-        ) == 1
-        assert session.scalar(
-            sa.select(sa.func.count(DomainEventRecord.id)).where(
-                DomainEventRecord.tenant_id == tenant_id,
-                DomainEventRecord.event_type == "CASE_CREATED",
+            == 1
+        )
+        assert (
+            session.scalar(
+                sa.select(sa.func.count(DomainEventRecord.id)).where(
+                    DomainEventRecord.tenant_id == tenant_id,
+                    DomainEventRecord.event_type == "CASE_CREATED",
+                )
             )
-        ) == 1
-        assert session.scalar(
-            sa.select(sa.func.count(OutboxMessageRecord.id)).where(
-                OutboxMessageRecord.tenant_id == tenant_id,
-                OutboxMessageRecord.event_id == UUID(first.event_ids[0]),
+            == 1
+        )
+        assert (
+            session.scalar(
+                sa.select(sa.func.count(OutboxMessageRecord.id)).where(
+                    OutboxMessageRecord.tenant_id == tenant_id,
+                    OutboxMessageRecord.event_id == UUID(first.event_ids[0]),
+                )
             )
-        ) == 1
+            == 1
+        )
 
 
 def test_case_creation_requires_a_qualified_signal(
@@ -216,14 +225,20 @@ def test_case_creation_requires_a_qualified_signal(
         )
 
     with session_factory() as session:
-        assert session.scalar(
-            sa.select(sa.func.count(CaseRecord.id)).where(CaseRecord.tenant_id == tenant_id)
-        ) == 0
-        assert session.scalar(
-            sa.select(sa.func.count(CommandReceiptRecord.id)).where(
-                CommandReceiptRecord.tenant_id == tenant_id
+        assert (
+            session.scalar(
+                sa.select(sa.func.count(CaseRecord.id)).where(CaseRecord.tenant_id == tenant_id)
             )
-        ) == 0
+            == 0
+        )
+        assert (
+            session.scalar(
+                sa.select(sa.func.count(CommandReceiptRecord.id)).where(
+                    CommandReceiptRecord.tenant_id == tenant_id
+                )
+            )
+            == 0
+        )
 
 
 def test_case_creation_does_not_cross_tenant_boundary(
@@ -249,8 +264,11 @@ def test_case_creation_does_not_cross_tenant_boundary(
         )
 
     with session_factory() as session:
-        assert session.scalar(
-            sa.select(sa.func.count(CaseRecord.id)).where(
-                CaseRecord.tenant_id.in_([source_tenant, foreign_tenant])
+        assert (
+            session.scalar(
+                sa.select(sa.func.count(CaseRecord.id)).where(
+                    CaseRecord.tenant_id.in_([source_tenant, foreign_tenant])
+                )
             )
-        ) == 0
+            == 0
+        )

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
+from typing import Any, cast
 from uuid import UUID
 
 from app.interfaces.http.routes import knowledge as knowledge_route
+from app.interfaces.http.routes.consultations import ConsultationSecurityRuntime
 from app.interfaces.http.routes.knowledge import build_knowledge_router
 from app.modules.dce.application.queries import CaseDceReadingAvailability
 from app.modules.knowledge.domain.retrieval import (
@@ -48,7 +50,7 @@ class FakeKnowledgeService:
 
 class FakePolicy:
     def __init__(self) -> None:
-        self.requests = []
+        self.requests: list[Any] = []
 
     def authorize(self, *, context, request):
         self.requests.append(request)
@@ -76,11 +78,14 @@ def test_knowledge_search_returns_bounded_source_citation(monkeypatch) -> None:
         lambda *, authorization, context_resolver: SimpleNamespace(tenant_id=TENANT_ID),
     )
     policy = FakePolicy()
-    security_runtime = SimpleNamespace(context_resolver=object(), policy=policy)
+    security_runtime = cast(
+        ConsultationSecurityRuntime,
+        SimpleNamespace(context_resolver=object(), policy=policy),
+    )
     app = FastAPI()
     app.include_router(
         build_knowledge_router(
-            service=FakeKnowledgeService(),
+            service=cast(Any, FakeKnowledgeService()),
             runtime=FakeRuntime(),
             security_runtime=security_runtime,
         )
@@ -116,11 +121,14 @@ def test_knowledge_search_rejects_invalid_top_k(monkeypatch) -> None:
     app = FastAPI()
     app.include_router(
         build_knowledge_router(
-            service=FakeKnowledgeService(),
+            service=cast(Any, FakeKnowledgeService()),
             runtime=FakeRuntime(),
-            security_runtime=SimpleNamespace(
-                context_resolver=object(),
-                policy=FakePolicy(),
+            security_runtime=cast(
+                ConsultationSecurityRuntime,
+                SimpleNamespace(
+                    context_resolver=object(),
+                    policy=FakePolicy(),
+                ),
             ),
         )
     )

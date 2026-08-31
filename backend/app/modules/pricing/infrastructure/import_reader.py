@@ -44,9 +44,7 @@ class SqlAlchemyImportPreviewReader:
             )
             current_state = latest_transition.to_state if latest_transition else batch.state
             current_revision = (
-                latest_transition.version
-                if latest_transition
-                else batch.aggregate_revision
+                latest_transition.version if latest_transition else batch.aggregate_revision
             )
             rows = session.scalars(
                 sa.select(PricingImportRowRecord)

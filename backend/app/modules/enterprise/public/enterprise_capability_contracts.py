@@ -50,9 +50,7 @@ class AddEnterpriseCapabilityVersionRequest(EnterpriseCapabilityPublicModel):
     usage_scope: str = Field(min_length=1, max_length=500)
     proof_document_ids: list[UUID] = Field(default_factory=list, max_length=20)
 
-    def to_command(
-        self, *, capability_id: UUID
-    ) -> AddEnterpriseCapabilityVersionCommand:
+    def to_command(self, *, capability_id: UUID) -> AddEnterpriseCapabilityVersionCommand:
         from app.modules.enterprise.application.enterprise_capability_commands import (
             AddEnterpriseCapabilityVersionCommand,
         )

@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import asyncio
 from types import SimpleNamespace
+from typing import cast
 from uuid import uuid4
 
+from app.bootstrap.application import AppRuntime
+from app.modules.dce.infrastructure.quarantine import LocalQuarantineStorageAdapter
 from app.workers import dce_extraction
 
 
@@ -38,8 +41,8 @@ def test_worker_uses_extraction_factory_and_returns_safe_receipt(monkeypatch) ->
     monkeypatch.setattr(dce_extraction, "build_dce_document_extraction_service", fake_factory)
     tenant_id = uuid4()
     document_id = uuid4()
-    runtime = SimpleNamespace(dispatcher=object())
-    storage = FakeStorage()
+    runtime = cast(AppRuntime, SimpleNamespace(dispatcher=object()))
+    storage = cast(LocalQuarantineStorageAdapter, FakeStorage())
 
     receipt = asyncio.run(
         dce_extraction.run_once(
@@ -58,9 +61,7 @@ def test_worker_uses_extraction_factory_and_returns_safe_receipt(monkeypatch) ->
             "storage": storage,
         }
     ]
-    assert service.calls == [
-        {"tenant_id": tenant_id, "dce_document_id": document_id}
-    ]
+    assert service.calls == [{"tenant_id": tenant_id, "dce_document_id": document_id}]
     assert receipt == {
         "status": "SUCCEEDED",
         "result_code": "DCE_EXTRACTION_RECORDED",
@@ -91,8 +92,8 @@ def test_worker_receipt_is_empty_event_safe(monkeypatch) -> None:
     receipt = asyncio.run(
         dce_extraction.run_once(
             session_factory=object(),
-            runtime=SimpleNamespace(dispatcher=object()),
-            storage=FakeStorage(),
+            runtime=cast(AppRuntime, SimpleNamespace(dispatcher=object())),
+            storage=cast(LocalQuarantineStorageAdapter, FakeStorage()),
             tenant_id=uuid4(),
             dce_document_id=uuid4(),
         )

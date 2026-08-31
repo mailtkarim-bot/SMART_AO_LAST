@@ -41,10 +41,6 @@ from sqlalchemy.orm import Session, sessionmaker
 NOW = datetime(2026, 8, 14, 10, 0, tzinfo=UTC)
 
 
-
-
-
-
 @pytest.fixture(autouse=True)
 def isolate_classification_records(database_engine: sa.Engine) -> None:
     with database_engine.begin() as connection:
@@ -516,9 +512,7 @@ def test_classification_validator_rejects_invalid_projection_and_evidence(
                     "results": [
                         command.results[0].model_copy(
                             update={
-                                "evidence": [
-                                    evidence.model_copy(update={"fragment_id": uuid4()})
-                                ]
+                                "evidence": [evidence.model_copy(update={"fragment_id": uuid4()})]
                             }
                         )
                     ]
@@ -532,9 +526,7 @@ def test_classification_validator_rejects_invalid_projection_and_evidence(
                     "results": [
                         command.results[0].model_copy(
                             update={
-                                "evidence": [
-                                    evidence.model_copy(update={"rule_id": "MISMATCH_V1"})
-                                ]
+                                "evidence": [evidence.model_copy(update={"rule_id": "MISMATCH_V1"})]
                             }
                         )
                     ]
@@ -625,9 +617,7 @@ def test_classification_handler_direct_replay_is_idempotent(
         ),
     )
     replay = dispatcher.dispatch(
-        command=command.model_copy(
-            update={"command_id": uuid4(), "idempotency_key": uuid4()}
-        ),
+        command=command.model_copy(update={"command_id": uuid4(), "idempotency_key": uuid4()}),
         context=CommandContext(
             tenant_id=tenant_id, actor_id=uuid4(), actor_kind="SYSTEM", received_at=NOW
         ),

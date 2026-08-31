@@ -54,10 +54,6 @@ class SequenceTokenGenerator:
         return self._tokens.popleft()
 
 
-
-
-
-
 @pytest.fixture(autouse=True)
 def isolate_authentication_records(database_engine: sa.Engine) -> None:
     with database_engine.begin() as connection:
@@ -199,16 +195,22 @@ def test_login_refuses_unknown_credentials_neutrally_without_creating_session(
 
     assert str(captured.value) == "INVALID_CREDENTIALS"
     with Session(database_engine) as session:
-        assert session.scalar(
-            sa.select(sa.func.count())
-            .select_from(AuthSessionRecord)
-            .where(AuthSessionRecord.tenant_id == tenant_id)
-        ) == 0
-        assert session.scalar(
-            sa.select(sa.func.count())
-            .select_from(RefreshTokenRecord)
-            .where(RefreshTokenRecord.tenant_id == tenant_id)
-        ) == 0
+        assert (
+            session.scalar(
+                sa.select(sa.func.count())
+                .select_from(AuthSessionRecord)
+                .where(AuthSessionRecord.tenant_id == tenant_id)
+            )
+            == 0
+        )
+        assert (
+            session.scalar(
+                sa.select(sa.func.count())
+                .select_from(RefreshTokenRecord)
+                .where(RefreshTokenRecord.tenant_id == tenant_id)
+            )
+            == 0
+        )
 
 
 @pytest.mark.db
@@ -263,11 +265,14 @@ def test_login_refuses_inactive_membership_without_creating_session(
         )
 
     with Session(database_engine) as session:
-        assert session.scalar(
-            sa.select(sa.func.count())
-            .select_from(AuthSessionRecord)
-            .where(AuthSessionRecord.identity_id == identity_id)
-        ) == 0
+        assert (
+            session.scalar(
+                sa.select(sa.func.count())
+                .select_from(AuthSessionRecord)
+                .where(AuthSessionRecord.identity_id == identity_id)
+            )
+            == 0
+        )
 
 
 @pytest.mark.db

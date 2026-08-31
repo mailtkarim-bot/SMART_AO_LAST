@@ -25,9 +25,7 @@ def _insert_tenant(engine: sa.Engine) -> str:
     tenant_id = str(uuid4())
     with engine.begin() as connection:
         connection.execute(
-            sa.text(
-                "INSERT INTO tenants (id, slug, lifecycle) VALUES (:id, :slug, 'ACTIVE')"
-            ),
+            sa.text("INSERT INTO tenants (id, slug, lifecycle) VALUES (:id, :slug, 'ACTIVE')"),
             {"id": tenant_id, "slug": f"tenant-{tenant_id}"},
         )
     return tenant_id
@@ -84,10 +82,13 @@ def test_dispatcher_commits_consultation_event_outbox_and_receipt_together(
         assert session.query(CommandReceiptRecord).filter_by(tenant_id=tenant_id).count() == 1
         assert session.query(DomainEventRecord).filter_by(tenant_id=tenant_id).count() == 1
         assert session.query(OutboxMessageRecord).filter_by(tenant_id=tenant_id).count() == 1
-        assert session.execute(
-            sa.text("SELECT count(*) FROM consultations WHERE tenant_id = :tenant_id"),
-            {"tenant_id": tenant_id},
-        ).scalar_one() == 1
+        assert (
+            session.execute(
+                sa.text("SELECT count(*) FROM consultations WHERE tenant_id = :tenant_id"),
+                {"tenant_id": tenant_id},
+            ).scalar_one()
+            == 1
+        )
 
 
 @pytest.mark.db
@@ -113,10 +114,13 @@ def test_dispatcher_replays_success_without_second_mutation(
         assert session.query(CommandReceiptRecord).filter_by(tenant_id=tenant_id).count() == 1
         assert session.query(DomainEventRecord).filter_by(tenant_id=tenant_id).count() == 1
         assert session.query(OutboxMessageRecord).filter_by(tenant_id=tenant_id).count() == 1
-        assert session.execute(
-            sa.text("SELECT count(*) FROM consultations WHERE tenant_id = :tenant_id"),
-            {"tenant_id": tenant_id},
-        ).scalar_one() == 1
+        assert (
+            session.execute(
+                sa.text("SELECT count(*) FROM consultations WHERE tenant_id = :tenant_id"),
+                {"tenant_id": tenant_id},
+            ).scalar_one()
+            == 1
+        )
 
 
 @pytest.mark.db
@@ -146,14 +150,17 @@ def test_dispatcher_rejects_reused_key_when_request_hash_differs(
         assert session.query(CommandReceiptRecord).filter_by(tenant_id=tenant_id).count() == 1
         assert session.query(DomainEventRecord).filter_by(tenant_id=tenant_id).count() == 1
         assert session.query(OutboxMessageRecord).filter_by(tenant_id=tenant_id).count() == 1
-        assert session.execute(
-            sa.text("SELECT count(*) FROM consultations WHERE tenant_id = :tenant_id"),
-            {"tenant_id": tenant_id},
-        ).scalar_one() == 1
+        assert (
+            session.execute(
+                sa.text("SELECT count(*) FROM consultations WHERE tenant_id = :tenant_id"),
+                {"tenant_id": tenant_id},
+            ).scalar_one()
+            == 1
+        )
 
 
 class FailingHandler:
-    def execute(self, *, session: Session, command, context):  # type: ignore[no-untyped-def]
+    def execute(self, *, session: Session, command, context):
         del session, command, context
         raise RuntimeError("simulated crash before commit")
 
@@ -176,10 +183,13 @@ def test_dispatcher_rolls_back_receipt_and_side_effects_before_commit(
         assert session.query(CommandReceiptRecord).filter_by(tenant_id=tenant_id).count() == 0
         assert session.query(DomainEventRecord).filter_by(tenant_id=tenant_id).count() == 0
         assert session.query(OutboxMessageRecord).filter_by(tenant_id=tenant_id).count() == 0
-        assert session.execute(
-            sa.text("SELECT count(*) FROM consultations WHERE tenant_id = :tenant_id"),
-            {"tenant_id": tenant_id},
-        ).scalar_one() == 0
+        assert (
+            session.execute(
+                sa.text("SELECT count(*) FROM consultations WHERE tenant_id = :tenant_id"),
+                {"tenant_id": tenant_id},
+            ).scalar_one()
+            == 0
+        )
 
 
 @pytest.mark.db

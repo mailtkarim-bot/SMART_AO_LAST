@@ -6,6 +6,8 @@ from datetime import datetime
 from typing import Protocol
 from uuid import UUID
 
+from app.modules.decision.application.ports import DecisionRiskPage
+
 
 @dataclass(frozen=True, slots=True)
 class DecisionDossierDecision:
@@ -102,6 +104,21 @@ class DecisionRiskRequirementReader(Protocol):
         after_created_at: datetime | None,
         after_id: UUID | None,
     ) -> DecisionRiskRequirementPage: ...
+
+
+class DecisionRiskReader(Protocol):
+    """Reads patron-only structured risks with a stable tenant/case cursor."""
+
+    def list_for_case(
+        self,
+        *,
+        session: object,
+        tenant_id: UUID,
+        case_id: UUID,
+        limit: int,
+        after_created_at: datetime | None,
+        after_id: UUID | None,
+    ) -> DecisionRiskPage: ...
 
 
 class DecisionPricingReconciliationReader(Protocol):

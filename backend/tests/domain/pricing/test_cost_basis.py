@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 from app.modules.pricing.domain.cost_basis import (
     CostBasisInput,
@@ -59,7 +61,7 @@ def test_cost_basis_uses_ceiling_for_a_non_integer_minimum_sales() -> None:
     ],
 )
 def test_cost_basis_rejects_invalid_inputs(field_name: str, value: object) -> None:
-    kwargs: dict[str, object] = {
+    kwargs: dict[str, Any] = {
         "sales_total_minor": 100,
         "direct_cost_total_minor": 10,
         "overhead_total_minor": 0,

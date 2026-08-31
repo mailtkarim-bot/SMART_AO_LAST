@@ -1,9 +1,13 @@
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from typing import cast
 from uuid import uuid4
 
 import pytest
-from app.modules.dce.application.queries import CaseDceReadingAvailability
+from app.modules.dce.application.queries import (
+    CaseDceReadingAvailability,
+    CaseDceReadingRequirementProjection,
+)
 from app.modules.dce.infrastructure.case_dce_reading_reader import (
     SqlAlchemyCaseDceReadingReader,
     _positive_int,
@@ -25,8 +29,12 @@ class _ScalarSequenceSession:
 
 def test_reader_returns_broken_reference_without_leaking_dce_data():
     case = SimpleNamespace(
-        id=uuid4(), title="Affaire", lifecycle="ACTIVE", commercial_stage="ANALYSIS",
-        dce_freshness="REVIEW_REQUIRED", applicable_dce_version_id=uuid4(),
+        id=uuid4(),
+        title="Affaire",
+        lifecycle="ACTIVE",
+        commercial_stage="ANALYSIS",
+        dce_freshness="REVIEW_REQUIRED",
+        applicable_dce_version_id=uuid4(),
     )
     reader = SqlAlchemyCaseDceReadingReader(_ScalarSequenceSession(case, None))
 
@@ -96,7 +104,9 @@ def test_reader_counters_classify_all_closed_outcomes():
         SimpleNamespace(confirmation_outcome="PENDING_HUMAN_CONFIRMATION"),
     ]
 
-    counters = SqlAlchemyCaseDceReadingReader._counters(requirements)
+    counters = SqlAlchemyCaseDceReadingReader._counters(
+        cast(list[CaseDceReadingRequirementProjection], requirements)
+    )
 
     assert counters.total == 4
     assert counters.confirmed == 1

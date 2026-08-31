@@ -20,7 +20,7 @@ def test_bge_provider_loads_lazily_and_requests_local_cpu_model(monkeypatch) -> 
             return [[3.0, 4.0]]
 
     fake_module = ModuleType("sentence_transformers")
-    fake_module.SentenceTransformer = FakeSentenceTransformer
+    setattr(fake_module, "SentenceTransformer", FakeSentenceTransformer)  # noqa: B010
     monkeypatch.setitem(sys.modules, "sentence_transformers", fake_module)
 
     provider = BgeEmbeddingProvider()

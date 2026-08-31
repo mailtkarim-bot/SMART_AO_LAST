@@ -4,7 +4,12 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from app.modules.decision.application.ports import DecisionRiskRepository, DecisionRiskSnapshot
+from app.modules.decision.application.pagination import decode_cursor
+from app.modules.decision.application.ports import (
+    DecisionRiskRepository,
+    DecisionRiskSnapshot,
+)
+from app.modules.decision.application.queries import DecisionRiskPage
 from app.platform.security.authorization import (
     AuthorizationPolicyPort,
     AuthorizationRequest,
@@ -42,6 +47,32 @@ class PatronDecisionRiskReadService:
         if snapshot is None:
             raise PermissionError("NOT_FOUND_OR_FORBIDDEN")
         return snapshot
+
+    def list_for_case(
+        self,
+        *,
+        actor: ActorContext,
+        case_id: UUID,
+        limit: int,
+        cursor: str | None,
+        now: datetime,
+    ) -> DecisionRiskPage:
+        self._authorize(actor=actor, case_id=case_id, now=now)
+        if not 1 <= limit <= 100:
+            raise ValueError("limit must be between 1 and 100")
+        after_created_at = None
+        after_id = None
+        if cursor:
+            after_created_at, after_id = decode_cursor(cursor)
+        with self._session_factory() as session:
+            return self._reader.list_for_case(
+                session=session,
+                tenant_id=actor.tenant_id,
+                case_id=case_id,
+                limit=limit,
+                after_created_at=after_created_at,
+                after_id=after_id,
+            )
 
     def _authorize(self, *, actor: ActorContext, case_id: UUID, now: datetime) -> None:
         if actor.actor_kind is not ActorKind.PATRON_ADMIN or actor.membership_id is None:

@@ -100,9 +100,7 @@ class DceRetentionWorker:
             records = [
                 (record.id, record.tenant_id)
                 for record in session.scalars(
-                    sa.select(DceStagedObjectRecord).where(
-                        DceStagedObjectRecord.id.in_(object_ids)
-                    )
+                    sa.select(DceStagedObjectRecord).where(DceStagedObjectRecord.id.in_(object_ids))
                 )
             ]
         expired = 0
@@ -264,9 +262,7 @@ def build_default_worker() -> DceRetentionWorker:
         session_factory=session_factory,
         handlers={"ExpireDceStagedObject": ExpireDceStagedObjectHandler()},
     )
-    storage = LocalQuarantineStorageAdapter(
-        root=Path(os.environ["SMART_AO_DCE_QUARANTINE_ROOT"])
-    )
+    storage = LocalQuarantineStorageAdapter(root=Path(os.environ["SMART_AO_DCE_QUARANTINE_ROOT"]))
     return DceRetentionWorker(
         session_factory=session_factory,
         dispatcher=dispatcher,

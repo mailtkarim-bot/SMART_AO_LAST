@@ -1,10 +1,12 @@
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from typing import cast
 from uuid import uuid4
 
 import pytest
 from app.modules.pricing.application.transition_commands import TransitionPricingScenarioCommand
 from app.modules.pricing.application.transition_service import PricingScenarioTransitionService
+from app.platform.events.dispatcher import CommandDispatcher
 from app.platform.security.context import ActorContext, ActorKind, MembershipState
 
 NOW = datetime(2026, 8, 27, 12, 0, tzinfo=UTC)
@@ -49,7 +51,9 @@ def _actor() -> ActorContext:
 def test_transition_facade_dispatches_without_session_factory() -> None:
     dispatcher = _Dispatcher()
     service = PricingScenarioTransitionService(
-        reader=_Reader(), dispatcher=dispatcher, policy=_Policy()
+        reader=_Reader(),
+        dispatcher=cast(CommandDispatcher, dispatcher),
+        policy=_Policy(),
     )
     command = TransitionPricingScenarioCommand(
         command_id=uuid4(),
@@ -71,7 +75,9 @@ def test_transition_facade_dispatches_without_session_factory() -> None:
 
 def test_transition_facade_rejects_non_patron_before_dispatch() -> None:
     service = PricingScenarioTransitionService(
-        reader=_Reader(), dispatcher=_Dispatcher(), policy=_Policy()
+        reader=_Reader(),
+        dispatcher=cast(CommandDispatcher, _Dispatcher()),
+        policy=_Policy(),
     )
     command = TransitionPricingScenarioCommand(
         command_id=uuid4(),

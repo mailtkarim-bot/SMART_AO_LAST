@@ -92,22 +92,21 @@ def test_progressive_lockout_is_bounded_and_returns_retry_after() -> None:
     for _ in range(2):
         limiter.record_failure(namespace="login", identity="a@example.test", source_ip="10.0.0.1")
 
-    blocked = limiter.check(
-        namespace="login", identity="a@example.test", source_ip="10.0.0.1"
-    )
+    blocked = limiter.check(namespace="login", identity="a@example.test", source_ip="10.0.0.1")
     assert blocked.allowed is False
     assert blocked.retry_after_seconds == 5
 
     clock.advance(5)
-    assert limiter.check(
-        namespace="login", identity="a@example.test", source_ip="10.0.0.1"
-    ).allowed
+    assert limiter.check(namespace="login", identity="a@example.test", source_ip="10.0.0.1").allowed
 
     limiter.record_failure(namespace="login", identity="a@example.test", source_ip="10.0.0.1")
     limiter.record_failure(namespace="login", identity="a@example.test", source_ip="10.0.0.1")
-    assert limiter.check(
-        namespace="login", identity="a@example.test", source_ip="10.0.0.1"
-    ).retry_after_seconds == 8
+    assert (
+        limiter.check(
+            namespace="login", identity="a@example.test", source_ip="10.0.0.1"
+        ).retry_after_seconds
+        == 8
+    )
 
 
 def test_buckets_are_isolated_and_success_clears_only_one_bucket() -> None:
@@ -122,9 +121,7 @@ def test_buckets_are_isolated_and_success_clears_only_one_bucket() -> None:
         namespace="login", identity="b@example.test", source_ip="10.0.0.1"
     ).allowed
     limiter.record_success(namespace="login", identity="a@example.test", source_ip="10.0.0.1")
-    assert limiter.check(
-        namespace="login", identity="a@example.test", source_ip="10.0.0.1"
-    ).allowed
+    assert limiter.check(namespace="login", identity="a@example.test", source_ip="10.0.0.1").allowed
     assert not limiter.check(
         namespace="login", identity="b@example.test", source_ip="10.0.0.1"
     ).allowed
@@ -158,13 +155,16 @@ def test_failure_window_expires_stale_state() -> None:
     assert limiter.check(namespace="refresh", identity=None, source_ip="10.0.0.1").allowed
 
 
-@pytest.mark.parametrize("name", [
-    "SMART_AO_LOGIN_MAX_FAILURES",
-    "SMART_AO_LOGIN_FAILURE_WINDOW_SECONDS",
-    "SMART_AO_LOGIN_BASE_LOCKOUT_SECONDS",
-    "SMART_AO_LOGIN_MAX_LOCKOUT_SECONDS",
-    "SMART_AO_LOGIN_MAX_BUCKETS",
-])
+@pytest.mark.parametrize(
+    "name",
+    [
+        "SMART_AO_LOGIN_MAX_FAILURES",
+        "SMART_AO_LOGIN_FAILURE_WINDOW_SECONDS",
+        "SMART_AO_LOGIN_BASE_LOCKOUT_SECONDS",
+        "SMART_AO_LOGIN_MAX_LOCKOUT_SECONDS",
+        "SMART_AO_LOGIN_MAX_BUCKETS",
+    ],
+)
 def test_environment_values_must_be_positive_integers(
     monkeypatch: pytest.MonkeyPatch, name: str
 ) -> None:

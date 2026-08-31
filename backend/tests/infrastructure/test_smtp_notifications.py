@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from email.message import EmailMessage
 from uuid import uuid4
 
 import pytest
@@ -13,9 +14,9 @@ from app.modules.submission.infrastructure.smtp_notifications import (
 class FakeSmtp:
     def __init__(self, *, failure: Exception | None = None) -> None:
         self.failure = failure
-        self.calls: list[tuple[object, dict[str, object]]] = []
+        self.calls: list[tuple[EmailMessage, dict[str, object]]] = []
 
-    async def send(self, message, **kwargs):
+    async def send(self, message: EmailMessage, **kwargs):
         self.calls.append((message, kwargs))
         if self.failure is not None:
             raise self.failure

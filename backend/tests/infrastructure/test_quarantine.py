@@ -38,9 +38,7 @@ def test_local_quarantine_round_trip_delete_and_path(tmp_path: Path):
     assert not path.exists()
 
 
-@pytest.mark.parametrize(
-    "key", ["/absolute", "../escape", "tenant/../escape"]
-)
+@pytest.mark.parametrize("key", ["/absolute", "../escape", "tenant/../escape"])
 def test_local_quarantine_rejects_path_traversal_and_empty_segments(tmp_path: Path, key: str):
     storage = LocalQuarantineStorageAdapter(root=tmp_path)
 
@@ -51,7 +49,7 @@ def test_local_quarantine_rejects_path_traversal_and_empty_segments(tmp_path: Pa
 def test_local_quarantine_rejects_non_bytes_and_removes_partial_file(tmp_path: Path):
     async def invalid_stream():
         yield b"valid"
-        yield "invalid"  # type: ignore[misc]
+        yield "invalid"
 
     storage = LocalQuarantineStorageAdapter(root=tmp_path)
     with pytest.raises(TypeError, match="must yield bytes"):
@@ -93,7 +91,7 @@ def test_local_quarantine_read_enforces_extraction_limit(tmp_path: Path):
 def test_python_magic_adapter_delegates_to_libmagic(tmp_path: Path, monkeypatch):
     storage = LocalQuarantineStorageAdapter(root=tmp_path)
     _write(storage, "tenant/object", b"content")
-    observed = {}
+    observed: dict[str, object] = {}
 
     def fake_from_file(path: str, *, mime: bool):
         observed["path"] = path
@@ -108,7 +106,7 @@ def test_python_magic_adapter_delegates_to_libmagic(tmp_path: Path, monkeypatch)
     )
 
     assert detected == "application/pdf"
-    assert observed["path"].endswith("tenant/object")
+    assert str(observed["path"]).endswith("tenant/object")
     assert observed["mime"] is True
 
 
@@ -143,8 +141,9 @@ def test_clamd_scan_streams_file_and_returns_clean(tmp_path: Path, monkeypatch):
     _write(storage, "tenant/object", b"abc")
     version_writer = _Writer()
     scan_writer = _Writer()
-    connections = iter([(_Reader(b"ClamAV 1.2\x00"), version_writer),
-                        (_Reader(b"stream: OK\x00"), scan_writer)])
+    connections = iter(
+        [(_Reader(b"ClamAV 1.2\x00"), version_writer), (_Reader(b"stream: OK\x00"), scan_writer)]
+    )
 
     async def fake_open_connection(host, port):
         assert (host, port) == ("clamd", 3310)
@@ -166,9 +165,11 @@ def test_clamd_scan_streams_file_and_returns_clean(tmp_path: Path, monkeypatch):
 
 @pytest.mark.parametrize(
     ("response", "verdict"),
-    [(b"stream: Eicar-Test-Signature FOUND\x00", "INFECTED"),
-     (b"unexpected response\x00", "ERROR"),
-     (b"not-a-stream-ok\x00", "ERROR")],
+    [
+        (b"stream: Eicar-Test-Signature FOUND\x00", "INFECTED"),
+        (b"unexpected response\x00", "ERROR"),
+        (b"not-a-stream-ok\x00", "ERROR"),
+    ],
 )
 def test_clamd_scan_maps_infected_and_unknown_verdicts(
     tmp_path: Path, monkeypatch, response, verdict
@@ -212,10 +213,12 @@ def test_clamd_scan_fails_closed_on_connection_error(tmp_path: Path, monkeypatch
     assert result.verdict == "ERROR"
     assert result.scanner_name == "clamd"
     assert result.scanner_signature_version == "unavailable"
-    assert logged == [(
-        "dce_clamav_scan_failed",
-        {"scanner_name": "clamd", "error_type": "OSError"},
-    )]
+    assert logged == [
+        (
+            "dce_clamav_scan_failed",
+            {"scanner_name": "clamd", "error_type": "OSError"},
+        )
+    ]
 
 
 def test_clamd_version_decodes_and_truncates_response(tmp_path: Path, monkeypatch):

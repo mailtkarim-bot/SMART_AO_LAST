@@ -13,8 +13,7 @@ def test_risk_treatment_transition_table_and_trigger_exist(database_engine: sa.E
     assert "decision_risk_treatment_transitions" in tables
 
     columns = {
-        column["name"]
-        for column in inspector.get_columns("decision_risk_treatment_transitions")
+        column["name"] for column in inspector.get_columns("decision_risk_treatment_transitions")
     }
     assert {
         "risk_id",

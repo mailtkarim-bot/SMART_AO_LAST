@@ -56,9 +56,7 @@ def test_insee_lookup_is_read_only_and_normalizes_company_facts() -> None:
     assert company.active is True
     assert company.activity_code == "41.20A"
     assert client.requests[0]["url"] == "https://insee.test/siren/123456789"
-    assert client.requests[0]["headers"] == {
-        "Authorization": "Bearer token-not-in-repository"
-    }
+    assert client.requests[0]["headers"] == {"Authorization": "Bearer token-not-in-repository"}
 
 
 def test_insee_lookup_returns_none_for_unknown_siren() -> None:
@@ -82,7 +80,8 @@ def test_insee_lookup_fails_closed_on_external_errors(status_code: int) -> None:
 
 
 @pytest.mark.parametrize(  # pragma: allowlist secret
-    "siren", ["", "123", "12345678A"]  # pragma: allowlist secret
+    "siren",
+    ["", "123", "12345678A"],  # pragma: allowlist secret
 )
 def test_insee_lookup_rejects_invalid_siren(siren: str) -> None:
     registry = InseeSireneRegistry(token="token", client=FakeClient(FakeResponse(200)))

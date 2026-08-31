@@ -323,7 +323,8 @@ def build_patron_pricing_import_router(
                 elif (
                     isinstance(error, IdempotencyKeyReusedError)
                     or "IDEMPOTENCY" in code
-                    or code in {
+                    or code
+                    in {
                         "COMMAND_IN_PROGRESS",
                         "VERSION_CONFLICT",
                         "IMPORT_ALREADY_COMMITTED",

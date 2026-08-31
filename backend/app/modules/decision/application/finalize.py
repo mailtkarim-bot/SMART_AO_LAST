@@ -102,10 +102,14 @@ class FinalizeGoNoGoDecisionHandler:
 
     def execute(self, *, session: Any, command, context: CommandContext) -> HandlerOutcome:
         tenant_id = UUID(str(context.tenant_id))
-        if context.actor_kind not in {
-            ActorKind.PATRON_ADMIN.value,
-            ActorKind.PATRON_DELEGATE.value,
-        } or context.membership_id is None:
+        if (
+            context.actor_kind
+            not in {
+                ActorKind.PATRON_ADMIN.value,
+                ActorKind.PATRON_DELEGATE.value,
+            }
+            or context.membership_id is None
+        ):
             raise CommandExecutionError("PATRON_REQUIRED")
         repository = self._repository_factory(session)
         snapshot = repository.get(

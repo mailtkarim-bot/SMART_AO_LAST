@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import base64
+from datetime import datetime
 from typing import cast
 from uuid import UUID
 
@@ -13,6 +15,7 @@ from app.modules.dce.infrastructure.models.dce_extraction import (
 )
 from app.modules.decision.application.ports import (
     DecisionRiskDraft,
+    DecisionRiskPage,
     DecisionRiskSnapshot,
     DecisionRiskTreatmentTransitionDraft,
 )
@@ -124,9 +127,7 @@ class SqlAlchemyDecisionRiskRepository:
             return False
         return excerpt_at_offsets == source_excerpt
 
-    def functional_exists(
-        self, *, session: object, tenant_id: UUID, functional_key: str
-    ) -> bool:
+    def functional_exists(self, *, session: object, tenant_id: UUID, functional_key: str) -> bool:
         db_session = cast(Session, session)
         return (
             db_session.scalar(
@@ -182,7 +183,91 @@ class SqlAlchemyDecisionRiskRepository:
         )
         if risk is None:
             return None
-        latest = db_session.scalar(
+        latest = self._latest_transition(session=db_session, tenant_id=tenant_id, risk_id=risk_id)
+        return _risk_snapshot(risk=risk, latest=latest)
+
+    def list_for_case(
+        self,
+        *,
+        session: object,
+        tenant_id: UUID,
+        case_id: UUID,
+        limit: int,
+        after_created_at: datetime | None,
+        after_id: UUID | None,
+    ) -> DecisionRiskPage:
+        db_session = cast(Session, session)
+        page_limit = min(max(limit, 1), 100)
+
+        statement = (
+            sa.select(DecisionRiskRecord)
+            .where(
+                DecisionRiskRecord.tenant_id == tenant_id,
+                DecisionRiskRecord.case_id == case_id,
+            )
+            .order_by(
+                DecisionRiskRecord.created_at.asc(),
+                DecisionRiskRecord.id.asc(),
+            )
+            .limit(page_limit + 1)
+        )
+        if after_created_at is not None and after_id is not None:
+            statement = statement.where(
+                sa.or_(
+                    DecisionRiskRecord.created_at > after_created_at,
+                    sa.and_(
+                        DecisionRiskRecord.created_at == after_created_at,
+                        DecisionRiskRecord.id > after_id,
+                    ),
+                )
+            )
+
+        risks = list(db_session.scalars(statement).all())
+        has_more = len(risks) > page_limit
+        risks = risks[:page_limit]
+
+        latest_by_risk: dict[UUID, DecisionRiskTreatmentTransitionRecord] = {}
+        if risks:
+            risk_ids = [risk.id for risk in risks]
+            transition_cte = (
+                sa.select(
+                    DecisionRiskTreatmentTransitionRecord,
+                    sa.func.row_number()
+                    .over(
+                        partition_by=DecisionRiskTreatmentTransitionRecord.risk_id,
+                        order_by=DecisionRiskTreatmentTransitionRecord.aggregate_revision.desc(),
+                    )
+                    .label("rn"),
+                )
+                .where(
+                    DecisionRiskTreatmentTransitionRecord.tenant_id == tenant_id,
+                    DecisionRiskTreatmentTransitionRecord.risk_id.in_(risk_ids),
+                )
+                .cte()
+            )
+            latest_rows = db_session.execute(
+                sa.select(transition_cte).where(transition_cte.c.rn == 1)
+            ).all()
+            for row in latest_rows:
+                transition = row[0]
+                latest_by_risk[transition.risk_id] = transition
+
+        items = tuple(
+            _risk_snapshot(
+                risk=risk,
+                latest=latest_by_risk.get(risk.id),
+            )
+            for risk in risks
+        )
+        next_cursor = (
+            _encode_cursor(items[-1].created_at, items[-1].id) if has_more and items else None
+        )
+        return DecisionRiskPage(items=items, next_cursor=next_cursor)
+
+    def _latest_transition(
+        self, *, session: Session, tenant_id: UUID, risk_id: UUID
+    ) -> DecisionRiskTreatmentTransitionRecord | None:
+        return session.scalar(
             sa.select(DecisionRiskTreatmentTransitionRecord)
             .where(
                 DecisionRiskTreatmentTransitionRecord.tenant_id == tenant_id,
@@ -191,35 +276,8 @@ class SqlAlchemyDecisionRiskRepository:
             .order_by(DecisionRiskTreatmentTransitionRecord.aggregate_revision.desc())
             .limit(1)
         )
-        evidence = None
-        if latest is not None:
-            evidence = {
-                "excerpt": latest.evidence_excerpt,
-                "locator": dict(latest.evidence_locator_json),
-                "start_byte_offset": latest.evidence_start_byte_offset,
-                "end_byte_offset": latest.evidence_end_byte_offset,
-                "rationale": latest.rationale,
-            }
-        return DecisionRiskSnapshot(
-            id=risk.id,
-            tenant_id=risk.tenant_id,
-            case_id=risk.case_id,
-            dce_version_id=risk.dce_version_id,
-            source_fragment_id=risk.source_fragment_id,
-            risk_code=risk.risk_code,
-            category=risk.category,
-            title=risk.title,
-            severity=risk.severity,
-            likelihood=risk.likelihood,
-            treatment=latest.to_treatment if latest is not None else risk.treatment,
-            revision=latest.aggregate_revision if latest is not None else 1,
-            due_at=risk.due_at,
-            latest_treatment_evidence=evidence,
-        )
 
-    def transition(
-        self, *, session: object, draft: DecisionRiskTreatmentTransitionDraft
-    ) -> None:
+    def transition(self, *, session: object, draft: DecisionRiskTreatmentTransitionDraft) -> None:
         db_session = cast(Session, session)
         risk = db_session.scalar(
             sa.select(DecisionRiskRecord)
@@ -266,3 +324,41 @@ class SqlAlchemyDecisionRiskRepository:
                 correlation_id=draft.correlation_id,
             )
         )
+
+
+def _risk_snapshot(
+    *,
+    risk: DecisionRiskRecord,
+    latest: DecisionRiskTreatmentTransitionRecord | None,
+) -> DecisionRiskSnapshot:
+    evidence = None
+    if latest is not None:
+        evidence = {
+            "excerpt": latest.evidence_excerpt,
+            "locator": dict(latest.evidence_locator_json),
+            "start_byte_offset": latest.evidence_start_byte_offset,
+            "end_byte_offset": latest.evidence_end_byte_offset,
+            "rationale": latest.rationale,
+        }
+    return DecisionRiskSnapshot(
+        id=risk.id,
+        tenant_id=risk.tenant_id,
+        case_id=risk.case_id,
+        dce_version_id=risk.dce_version_id,
+        source_fragment_id=risk.source_fragment_id,
+        risk_code=risk.risk_code,
+        category=risk.category,
+        title=risk.title,
+        severity=risk.severity,
+        likelihood=risk.likelihood,
+        treatment=latest.to_treatment if latest is not None else risk.treatment,
+        revision=latest.aggregate_revision if latest is not None else 1,
+        due_at=risk.due_at,
+        created_at=risk.created_at,
+        latest_treatment_evidence=evidence,
+    )
+
+
+def _encode_cursor(created_at: datetime, risk_id: UUID) -> str:
+    payload = f"{created_at.isoformat()}|{risk_id}"
+    return base64.urlsafe_b64encode(payload.encode("utf-8")).decode("ascii").rstrip("=")

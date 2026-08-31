@@ -5,7 +5,10 @@ from uuid import UUID
 import sqlalchemy as sa
 from sqlalchemy.orm import Session, sessionmaker
 
-from app.modules.pricing.application.queries import PricingScenarioProjection
+from app.modules.pricing.application.queries import (
+    PricingScenarioProjection,
+    project_pricing_scenario,
+)
 from app.modules.pricing.infrastructure.models import (
     PricingScenarioRecord,
     PricingScenarioTransitionRecord,
@@ -63,7 +66,7 @@ class SqlAlchemyPricingScenarioReader:
                 .order_by(PricingScenarioRecord.created_at.desc())
             ).all()
         return tuple(
-            PricingScenarioProjection(
+            project_pricing_scenario(
                 scenario_id=record.id,
                 case_id=record.case_id,
                 scenario_key=record.scenario_key,

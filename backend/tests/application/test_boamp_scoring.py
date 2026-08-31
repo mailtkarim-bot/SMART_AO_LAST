@@ -56,9 +56,7 @@ def test_scoring_exposes_negative_evidence_without_financial_inference() -> None
         included_departments=("59",),
     )
 
-    result = BoampOpportunityScoringService().score(
-        candidate=candidate, criteria=criteria, now=NOW
-    )
+    result = BoampOpportunityScoringService().score(candidate=candidate, criteria=criteria, now=NOW)
 
     assert result.score == 10
     assert all(0 <= factor.points <= 50 for factor in result.factors)

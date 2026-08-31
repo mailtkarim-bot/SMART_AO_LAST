@@ -61,6 +61,7 @@ class FinancialReportSnapshotRecord(TenantScopedRecord, Base):
     gross_margin_rate_bps: Mapped[int] = mapped_column(sa.Integer, nullable=False)
     forecast_cashflow_minor: Mapped[int] = mapped_column(sa.BigInteger, nullable=False)
 
+
 class FinancialReportLineRecord(TenantScopedRecord, Base):
     """Immutable authorized monetary line of one financial report snapshot."""
 
@@ -92,6 +93,7 @@ class FinancialReportLineRecord(TenantScopedRecord, Base):
     quantity_decimal: Mapped[str] = mapped_column(sa.String(32), nullable=False)
     unit: Mapped[str] = mapped_column(sa.String(32), nullable=False)
     amount_minor: Mapped[int] = mapped_column(sa.BigInteger, nullable=False)
+
 
 class PricingScenarioRecord(TenantScopedRecord, Base):
     """Private patron pricing scenario derived from one published snapshot."""
@@ -190,6 +192,7 @@ class FinancialReportPublicationRecord(TenantScopedRecord, Base):
     correlation_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True))
     published_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False)
 
+
 class PricingImportBatchRecord(TenantScopedRecord, Base):
     """Immutable normalized import batch; the uploaded binary is never stored."""
 
@@ -209,9 +212,7 @@ class PricingImportBatchRecord(TenantScopedRecord, Base):
         ),
         sa.UniqueConstraint("tenant_id", "id", name="uq_pricing_import_batches__tenant_id"),
         sa.UniqueConstraint("tenant_id", "command_id", name="uq_pricing_import_batches__command"),
-        sa.CheckConstraint(
-            "document_kind IN ('DPGF', 'BPU', 'EXCEL')", name="document_kind"
-        ),
+        sa.CheckConstraint("document_kind IN ('DPGF', 'BPU', 'EXCEL')", name="document_kind"),
         sa.CheckConstraint("state IN ('PREVIEWED', 'COMMITTED')", name="state"),
         sa.CheckConstraint("aggregate_revision > 0", name="aggregate_revision_positive"),
         sa.CheckConstraint("row_count >= 0", name="row_count_non_negative"),
@@ -240,6 +241,7 @@ class PricingImportBatchRecord(TenantScopedRecord, Base):
     command_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     idempotency_key: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     correlation_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True))
+
 
 class PricingImportRowRecord(TenantScopedRecord, Base):
     """Immutable normalized import row; no original file content is retained."""
@@ -287,6 +289,7 @@ class PricingImportRowRecord(TenantScopedRecord, Base):
     total_minor: Mapped[int | None] = mapped_column(sa.BigInteger)
     error_codes_json: Mapped[list[str]] = mapped_column(JSONB, nullable=False)
 
+
 class PricingImportTransitionRecord(TenantScopedRecord, Base):
     """Append-only lifecycle transition for one normalized pricing import batch."""
 
@@ -308,9 +311,7 @@ class PricingImportTransitionRecord(TenantScopedRecord, Base):
         sa.UniqueConstraint(
             "tenant_id", "batch_id", "version", name="uq_pricing_import_transition_version"
         ),
-        sa.UniqueConstraint(
-            "tenant_id", "command_id", name="uq_pricing_import_transition_command"
-        ),
+        sa.UniqueConstraint("tenant_id", "command_id", name="uq_pricing_import_transition_command"),
         sa.CheckConstraint("version > 1", name="version_positive"),
         sa.CheckConstraint("from_state = 'PREVIEWED'", name="from_state"),
         sa.CheckConstraint("to_state = 'COMMITTED'", name="to_state"),
@@ -332,6 +333,7 @@ class PricingImportTransitionRecord(TenantScopedRecord, Base):
     command_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     idempotency_key: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     correlation_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True))
+
 
 class PricingScenarioTransitionRecord(TenantScopedRecord, Base):
     """Append-only selection/archive history for a private pricing scenario."""
@@ -373,4 +375,3 @@ class PricingScenarioTransitionRecord(TenantScopedRecord, Base):
     command_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     idempotency_key: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     correlation_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True))
-

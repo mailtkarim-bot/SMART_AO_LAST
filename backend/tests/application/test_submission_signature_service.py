@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from typing import cast
 from uuid import uuid4
 
 import pytest
@@ -73,7 +74,7 @@ def test_request_signature_creates_append_only_intent() -> None:
 
     assert outcome.result_code == "SUBMISSION_SIGNATURE_REQUESTED"
     assert len(added) == 1
-    assert added[0].status == "REQUESTED"
+    assert cast(SimpleNamespace, added[0]).status == "REQUESTED"
     assert outcome.events[0].payload["provider"] == "DOCUSIGN"
 
 

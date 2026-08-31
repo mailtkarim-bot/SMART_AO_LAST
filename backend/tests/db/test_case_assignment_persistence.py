@@ -18,8 +18,6 @@ from sqlalchemy.orm import Session
 NOW = datetime(2026, 8, 13, 12, 0, tzinfo=UTC)
 
 
-
-
 @pytest.fixture(autouse=True)
 def isolate_assignment_records(database_engine: sa.Engine) -> None:
     with database_engine.begin() as connection:

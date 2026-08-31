@@ -12,9 +12,7 @@ def _insert_tenant(engine: sa.Engine) -> str:
     tenant_id = str(uuid4())
     with engine.begin() as connection:
         connection.execute(
-            sa.text(
-                "INSERT INTO tenants (id, slug, lifecycle) VALUES (:id, :slug, 'ACTIVE')"
-            ),
+            sa.text("INSERT INTO tenants (id, slug, lifecycle) VALUES (:id, :slug, 'ACTIVE')"),
             {"id": tenant_id, "slug": f"m1-tenant-{tenant_id}"},
         )
     return tenant_id
@@ -33,37 +31,49 @@ def test_m1_scenario_preserves_decision_and_case_history_after_rectification(
     )
 
     with Session(database_engine) as session:
-        dce_versions = session.execute(
-            sa.text(
-                """
+        dce_versions = (
+            session.execute(
+                sa.text(
+                    """
                 SELECT id, lifecycle, corpus_hash, predecessor_dce_version_id
                 FROM dce_versions
                 WHERE tenant_id = :tenant_id
                 ORDER BY source_received_at, id
                 """
-            ),
-            {"tenant_id": tenant_id},
-        ).mappings().all()
-        case = session.execute(
-            sa.text(
-                """
+                ),
+                {"tenant_id": tenant_id},
+            )
+            .mappings()
+            .all()
+        )
+        case = (
+            session.execute(
+                sa.text(
+                    """
                 SELECT commercial_stage, dce_freshness, applicable_dce_version_id
                 FROM cases
                 WHERE tenant_id = :tenant_id AND id = :case_id
                 """
-            ),
-            {"tenant_id": tenant_id, "case_id": str(result.case_id)},
-        ).mappings().one()
-        decision = session.execute(
-            sa.text(
-                """
+                ),
+                {"tenant_id": tenant_id, "case_id": str(result.case_id)},
+            )
+            .mappings()
+            .one()
+        )
+        decision = (
+            session.execute(
+                sa.text(
+                    """
                 SELECT lifecycle, outcome, validity, context_status, selected_final_context_id
                 FROM decisions
                 WHERE tenant_id = :tenant_id AND id = :decision_id
                 """
-            ),
-            {"tenant_id": tenant_id, "decision_id": str(result.decision_id)},
-        ).mappings().one()
+                ),
+                {"tenant_id": tenant_id, "decision_id": str(result.decision_id)},
+            )
+            .mappings()
+            .one()
+        )
         current_history_count = session.execute(
             sa.text(
                 """

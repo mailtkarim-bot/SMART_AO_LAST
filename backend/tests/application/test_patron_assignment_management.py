@@ -1,3 +1,4 @@
+from collections.abc import Generator
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
@@ -36,12 +37,10 @@ from sqlalchemy.orm import Session, sessionmaker
 NOW = datetime(2026, 8, 14, 12, 0, tzinfo=UTC)
 
 
-
-
-
-
 @pytest.fixture(autouse=True)
-def isolate_patron_assignment_management(database_engine: sa.Engine) -> None:
+def isolate_patron_assignment_management(
+    database_engine: sa.Engine,
+) -> Generator[None, None, None]:
     with database_engine.begin() as connection:
         connection.execute(sa.text("TRUNCATE TABLE tenants, identities CASCADE"))
     yield
@@ -299,9 +298,10 @@ def test_patron_creation_replay_has_no_duplicate_change_or_event(session_factory
     assert replay.replayed is True
     with session_factory() as session:
         assert session.scalar(sa.select(sa.func.count()).select_from(CaseAssignmentRecord)) == 1
-        assert session.scalar(
-            sa.select(sa.func.count()).select_from(CaseAssignmentChangeEventRecord)
-        ) == 1
+        assert (
+            session.scalar(sa.select(sa.func.count()).select_from(CaseAssignmentChangeEventRecord))
+            == 1
+        )
         assert session.scalar(sa.select(sa.func.count()).select_from(DomainEventRecord)) == 1
         assert session.scalar(sa.select(sa.func.count()).select_from(OutboxMessageRecord)) == 1
 
@@ -361,9 +361,10 @@ def test_open_assignment_is_unique_and_foreign_target_is_neutral(session_factory
 
     with session_factory() as session:
         assert session.scalar(sa.select(sa.func.count()).select_from(CaseAssignmentRecord)) == 1
-        assert session.scalar(
-            sa.select(sa.func.count()).select_from(CaseAssignmentChangeEventRecord)
-        ) == 1
+        assert (
+            session.scalar(sa.select(sa.func.count()).select_from(CaseAssignmentChangeEventRecord))
+            == 1
+        )
 
 
 @pytest.mark.db
@@ -492,9 +493,10 @@ def test_patron_scope_amendment_rejects_unchanged_or_stale_scope(session_factory
         assignment = session.get(CaseAssignmentRecord, creation.assignment_id)
         assert assignment is not None
         assert assignment.aggregate_revision == 1
-        assert session.scalar(
-            sa.select(sa.func.count()).select_from(CaseAssignmentChangeEventRecord)
-        ) == 2
+        assert (
+            session.scalar(sa.select(sa.func.count()).select_from(CaseAssignmentChangeEventRecord))
+            == 2
+        )
 
 
 @pytest.mark.db
@@ -587,9 +589,10 @@ def test_patron_suspension_replay_and_invalid_transition_have_no_extra_write(
     assert first.result_code == "CASE_ASSIGNMENT_SUSPENDED"
     assert replay.replayed is True
     with session_factory() as session:
-        assert session.scalar(
-            sa.select(sa.func.count()).select_from(CaseAssignmentChangeEventRecord)
-        ) == 2
+        assert (
+            session.scalar(sa.select(sa.func.count()).select_from(CaseAssignmentChangeEventRecord))
+            == 2
+        )
         assert session.scalar(sa.select(sa.func.count()).select_from(DomainEventRecord)) == 2
         assert session.scalar(sa.select(sa.func.count()).select_from(OutboxMessageRecord)) == 2
 
@@ -624,9 +627,10 @@ def test_patron_suspension_rejects_stale_revision_and_non_patron(session_factory
         assert assignment is not None
         assert assignment.state == "ACTIVE"
         assert assignment.aggregate_revision == 0
-        assert session.scalar(
-            sa.select(sa.func.count()).select_from(CaseAssignmentChangeEventRecord)
-        ) == 1
+        assert (
+            session.scalar(sa.select(sa.func.count()).select_from(CaseAssignmentChangeEventRecord))
+            == 1
+        )
 
 
 @pytest.mark.db
@@ -702,9 +706,10 @@ def test_patron_reactivation_replay_and_invalid_state_have_no_extra_write(sessio
     assert first.result_code == "CASE_ASSIGNMENT_REACTIVATED"
     assert replay.replayed is True
     with session_factory() as session:
-        assert session.scalar(
-            sa.select(sa.func.count()).select_from(CaseAssignmentChangeEventRecord)
-        ) == 3
+        assert (
+            session.scalar(sa.select(sa.func.count()).select_from(CaseAssignmentChangeEventRecord))
+            == 3
+        )
         assert session.scalar(sa.select(sa.func.count()).select_from(DomainEventRecord)) == 3
         assert session.scalar(sa.select(sa.func.count()).select_from(OutboxMessageRecord)) == 3
 
@@ -865,9 +870,10 @@ def test_patron_end_replay_and_terminal_transition_do_not_write_twice(session_fa
     assert first.result_code == "CASE_ASSIGNMENT_ENDED"
     assert replay.replayed is True
     with session_factory() as session:
-        assert session.scalar(
-            sa.select(sa.func.count()).select_from(CaseAssignmentChangeEventRecord)
-        ) == 2
+        assert (
+            session.scalar(sa.select(sa.func.count()).select_from(CaseAssignmentChangeEventRecord))
+            == 2
+        )
         assert session.scalar(sa.select(sa.func.count()).select_from(DomainEventRecord)) == 2
         assert session.scalar(sa.select(sa.func.count()).select_from(OutboxMessageRecord)) == 2
 
@@ -903,6 +909,7 @@ def test_patron_end_rejects_stale_revision_and_non_patron_without_mutation(sessi
         assert assignment.state == "ACTIVE"
         assert assignment.ended_at is None
         assert assignment.aggregate_revision == 0
-        assert session.scalar(
-            sa.select(sa.func.count()).select_from(CaseAssignmentChangeEventRecord)
-        ) == 1
+        assert (
+            session.scalar(sa.select(sa.func.count()).select_from(CaseAssignmentChangeEventRecord))
+            == 1
+        )

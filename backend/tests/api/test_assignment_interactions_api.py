@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from typing import cast
 from uuid import UUID, uuid4
 
 import pytest
@@ -38,10 +39,6 @@ class UnusedPasswordVerifier:
 class UnusedTokenGenerator:
     def generate(self) -> str:
         return "unused-refresh-token"
-
-
-
-
 
 
 @pytest.fixture(autouse=True)
@@ -777,7 +774,7 @@ def test_patron_assignment_creation_and_scope_amendment_return_closed_receipts(
         json=creation_payload,
         headers=headers,
     )
-    assignment_id = UUID(creation_payload["assignment_id"])
+    assignment_id = UUID(cast(str, creation_payload["assignment_id"]))
     amendment = client.post(
         f"/api/v1/patron/assignments/{assignment_id}/scope-amendments",
         json={
@@ -904,7 +901,7 @@ def test_patron_assignment_suspension_returns_closed_receipt_and_replays(
         json=creation_payload,
         headers=headers,
     )
-    assignment_id = UUID(creation_payload["assignment_id"])
+    assignment_id = UUID(cast(str, creation_payload["assignment_id"]))
     suspension_payload = {
         "command_id": str(uuid4()),
         "idempotency_key": str(uuid4()),
@@ -994,7 +991,7 @@ def test_patron_assignment_reactivation_returns_closed_receipt_and_replays(
         json=creation_payload,
         headers=headers,
     )
-    assignment_id = UUID(creation_payload["assignment_id"])
+    assignment_id = UUID(cast(str, creation_payload["assignment_id"]))
     suspension = client.post(
         f"/api/v1/patron/assignments/{assignment_id}/suspensions",
         json={
@@ -1056,7 +1053,7 @@ def test_patron_assignment_reactivation_requires_closed_reason(
         json=creation_payload,
         headers=headers,
     )
-    assignment_id = UUID(creation_payload["assignment_id"])
+    assignment_id = UUID(cast(str, creation_payload["assignment_id"]))
     client.post(
         f"/api/v1/patron/assignments/{assignment_id}/suspensions",
         json={
@@ -1102,7 +1099,7 @@ def test_patron_assignment_end_returns_closed_receipt_and_replays(
         json=creation_payload,
         headers=headers,
     )
-    assignment_id = UUID(creation_payload["assignment_id"])
+    assignment_id = UUID(cast(str, creation_payload["assignment_id"]))
     end_payload = _patron_end_payload(end_reason_code="CASE_ARCHIVED")
 
     ending = client.post(
@@ -1251,7 +1248,7 @@ def test_patron_assignment_cockpit_lists_filtered_assignments_and_closed_journal
         json=creation_payload,
         headers=headers,
     )
-    assignment_id = UUID(creation_payload["assignment_id"])
+    assignment_id = UUID(cast(str, creation_payload["assignment_id"]))
 
     active_list = client.get(
         "/api/v1/patron/assignments",

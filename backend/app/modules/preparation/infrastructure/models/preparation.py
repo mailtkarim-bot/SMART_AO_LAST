@@ -52,6 +52,7 @@ class PreparationPackageRecord(TenantScopedRecord, Base):
     created_by_actor_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     membership_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
 
+
 class PreparationReviewRecord(TenantScopedRecord, Base):
     """Immutable state transition for a versioned preparation target review."""
 
@@ -152,6 +153,7 @@ class PreparationReadinessRecord(TenantScopedRecord, Base):
     command_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     correlation_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True))
 
+
 class GeneratedTechnicalDocumentRecord(TenantScopedRecord, Base):
     """Immutable generated technical document metadata; content stays private."""
 
@@ -195,6 +197,7 @@ class GeneratedTechnicalDocumentRecord(TenantScopedRecord, Base):
     membership_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     command_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     correlation_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True))
+
 
 class PreparationSnapshotRecord(TenantScopedRecord, Base):
     """Immutable non-financial preparation facts frozen for patron review."""
@@ -246,6 +249,7 @@ class PreparationSnapshotRecord(TenantScopedRecord, Base):
     idempotency_key: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     correlation_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True))
 
+
 class PreparationTransmissionRecord(TenantScopedRecord, Base):
     """Append-only handoff of one immutable preparation snapshot to the patron."""
 
@@ -281,6 +285,7 @@ class PreparationTransmissionRecord(TenantScopedRecord, Base):
     command_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     idempotency_key: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     correlation_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True))
+
 
 class PreparationReviewCorrectionRecord(TenantScopedRecord, Base):
     """Immutable targeted correction attached to a review transition."""
@@ -339,6 +344,7 @@ class PreparationReviewCorrectionRecord(TenantScopedRecord, Base):
     idempotency_key: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     correlation_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True))
 
+
 class TechnicalResponseDraftRecord(TenantScopedRecord, Base):
     """Immutable, non-financial, versioned response draft metadata."""
 
@@ -392,4 +398,3 @@ class TechnicalResponseDraftRecord(TenantScopedRecord, Base):
     command_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     idempotency_key: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     correlation_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True))
-

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from typing import cast
 from uuid import uuid4
 
 import pytest
@@ -12,6 +13,7 @@ from app.modules.opportunity.application.boamp_qualification import (
     QualificationReason,
 )
 from app.modules.opportunity.infrastructure.boamp_qualification_repository import (
+    BoampQualificationRepository,
     QualificationPersistenceResult,
 )
 from app.platform.events.dispatcher import CommandContext
@@ -21,14 +23,12 @@ NOW = datetime(2026, 8, 23, 12, 0, tzinfo=UTC)
 
 
 class FakeRepository:
-    def __init__(self, record: object) -> None:
+    def __init__(self, record: SimpleNamespace) -> None:
         self.record = record
         self.calls: list[dict[str, object]] = []
 
     def list_observations(self, *, session, tenant_id, limit, min_score):
-        self.calls.append(
-            {"tenant_id": tenant_id, "limit": limit, "min_score": min_score}
-        )
+        self.calls.append({"tenant_id": tenant_id, "limit": limit, "min_score": min_score})
         return (self.record,)
 
     def persist_qualification(self, **kwargs):
@@ -66,7 +66,9 @@ def _record():
 def test_patron_read_returns_closed_projection_and_tenant_scope() -> None:
     tenant_id = uuid4()
     repository = FakeRepository(_record())
-    service = PatronBoampObservationService(repository=repository)
+    service = PatronBoampObservationService(
+        repository=cast(BoampQualificationRepository, repository)
+    )
 
     result = service.read(
         session=FakeSession(uuid4()),
@@ -94,7 +96,9 @@ def test_qualification_requires_patron_and_compatible_closed_reason() -> None:
         ).validate()
 
     repository = FakeRepository(_record())
-    service = PatronBoampObservationService(repository=repository)
+    service = PatronBoampObservationService(
+        repository=cast(BoampQualificationRepository, repository)
+    )
     context = CommandContext(
         tenant_id=uuid4(),
         actor_id=uuid4(),
@@ -122,7 +126,9 @@ def test_qualification_requires_patron_and_compatible_closed_reason() -> None:
 
 def test_qualification_rejects_collaborator_before_database_access() -> None:
     repository = FakeRepository(_record())
-    service = PatronBoampObservationService(repository=repository)
+    service = PatronBoampObservationService(
+        repository=cast(BoampQualificationRepository, repository)
+    )
     context = CommandContext(
         tenant_id=uuid4(),
         actor_id=uuid4(),

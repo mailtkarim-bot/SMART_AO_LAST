@@ -122,9 +122,12 @@ def test_worker_retries_postgres_outbox_after_external_rejection(
         assert message.attempt_count == 1
         assert message.last_error_code == "EXTERNAL_EVENT_BUS_DELIVERY_FAILED"
         assert message.next_attempt_at == NOW + timedelta(seconds=30)
-        assert session.scalar(
-            sa.select(sa.func.count(OutboxMessageRecord.id)).where(
-                OutboxMessageRecord.tenant_id == tenant_id,
-                OutboxMessageRecord.status == "PUBLISHED",
+        assert (
+            session.scalar(
+                sa.select(sa.func.count(OutboxMessageRecord.id)).where(
+                    OutboxMessageRecord.tenant_id == tenant_id,
+                    OutboxMessageRecord.status == "PUBLISHED",
+                )
             )
-        ) == 0
+            == 0
+        )

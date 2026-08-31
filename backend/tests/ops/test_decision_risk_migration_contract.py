@@ -1,10 +1,7 @@
 from pathlib import Path
 
 MIGRATION = (
-    Path(__file__).parents[2]
-    / "alembic"
-    / "versions"
-    / "20260824_0058_create_decision_risks.py"
+    Path(__file__).parents[2] / "alembic" / "versions" / "20260824_0058_create_decision_risks.py"
 )
 TRANSITION_MIGRATION = (
     Path(__file__).parents[2]

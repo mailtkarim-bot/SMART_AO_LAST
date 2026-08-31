@@ -19,12 +19,7 @@ BANNED_IMPORT_PREFIXES = (
 @pytest.mark.parametrize("filename", ("consultation.py", "dce_version.py"))
 def test_dce_domain_has_no_framework_or_foreign_module_import(filename: str) -> None:
     domain_path = (
-        Path(__file__).resolve().parents[2]
-        / "app"
-        / "modules"
-        / "dce"
-        / "domain"
-        / filename
+        Path(__file__).resolve().parents[2] / "app" / "modules" / "dce" / "domain" / filename
     )
     tree = ast.parse(domain_path.read_text(encoding="utf-8"), filename=str(domain_path))
 

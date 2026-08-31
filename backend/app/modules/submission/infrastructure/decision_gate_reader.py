@@ -125,9 +125,7 @@ class SqlAlchemySubmissionDecisionGateReader(SubmissionDecisionGateReader):
         return int(confirmed_count or 0) == len(requirement_ids)
 
     @staticmethod
-    def _unresolved_risk_action_count(
-        *, session: Session, tenant_id: UUID, case_id: UUID
-    ) -> int:
+    def _unresolved_risk_action_count(*, session: Session, tenant_id: UUID, case_id: UUID) -> int:
         action_key = sa.func.concat(
             "decision-risk-requirement:", DecisionRiskRequirementLinkRecord.id
         )

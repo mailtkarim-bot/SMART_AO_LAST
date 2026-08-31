@@ -16,12 +16,15 @@ def test_requirement_is_confirmed_uses_current_confirmation_projection() -> None
     session = MagicMock()
     session.scalar.return_value = uuid4()
 
-    assert repository.requirement_is_confirmed(
-        session=session,
-        tenant_id=uuid4(),
-        requirement_id=uuid4(),
-        dce_version_id=uuid4(),
-    ) is True
+    assert (
+        repository.requirement_is_confirmed(
+            session=session,
+            tenant_id=uuid4(),
+            requirement_id=uuid4(),
+            dce_version_id=uuid4(),
+        )
+        is True
+    )
     session.scalar.assert_called_once()
 
 
@@ -30,12 +33,15 @@ def test_requirement_is_not_confirmed_when_current_projection_is_absent() -> Non
     session = MagicMock()
     session.scalar.return_value = None
 
-    assert repository.requirement_is_confirmed(
-        session=session,
-        tenant_id=uuid4(),
-        requirement_id=uuid4(),
-        dce_version_id=uuid4(),
-    ) is False
+    assert (
+        repository.requirement_is_confirmed(
+            session=session,
+            tenant_id=uuid4(),
+            requirement_id=uuid4(),
+            dce_version_id=uuid4(),
+        )
+        is False
+    )
 
 
 def test_create_persists_only_safe_reference_identifiers() -> None:

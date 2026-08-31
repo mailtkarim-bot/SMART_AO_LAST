@@ -8,8 +8,8 @@ from app.modules.pricing.application.import_commands import (
     CreatePricingImportPreviewCommand,
     CreatePricingImportRowCommand,
 )
-from app.modules.pricing.application.import_creation import (
-    PricingImportCreationService,
+from app.modules.pricing.application.import_creation import PricingImportCreationService
+from app.modules.pricing.application.import_creation_handler import (
     _validate_rows,
     pricing_import_creation_handlers,
 )
@@ -49,7 +49,8 @@ def _command(case_id, *, command_id=None, idempotency_key=None, rows=None):
         case_id=case_id,
         document_kind="DPGF",
         source_sha256="c" * 64,
-        rows=rows or [
+        rows=rows
+        or [
             CreatePricingImportRowCommand(
                 row_number=2,
                 code="A-01",

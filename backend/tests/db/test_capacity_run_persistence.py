@@ -106,12 +106,15 @@ def test_capacity_run_is_idempotent_audited_and_append_only(
             "status": "OPTIMAL",
             "input_sha256": run.input_sha256,
         }
-        assert session.scalar(
-            sa.select(sa.func.count()).where(
-                OptimizationRunRecord.tenant_id == actor.tenant_id,
-                OptimizationRunRecord.id == first.run_id,
+        assert (
+            session.scalar(
+                sa.select(sa.func.count()).where(
+                    OptimizationRunRecord.tenant_id == actor.tenant_id,
+                    OptimizationRunRecord.id == first.run_id,
+                )
             )
-        ) == 1
+            == 1
+        )
 
     with pytest.raises(sa.exc.ProgrammingError), session_factory.begin() as session:
         session.execute(
@@ -192,9 +195,12 @@ def test_capacity_run_rejects_idempotency_reuse_with_changed_input(
         service.execute(command)
 
     with session_factory() as session:
-        assert session.scalar(
-            sa.select(sa.func.count()).where(
-                OptimizationRunRecord.tenant_id == actor.tenant_id,
-                OptimizationRunRecord.command_id == command.command_id,
+        assert (
+            session.scalar(
+                sa.select(sa.func.count()).where(
+                    OptimizationRunRecord.tenant_id == actor.tenant_id,
+                    OptimizationRunRecord.command_id == command.command_id,
+                )
             )
-        ) == 1
+            == 1
+        )

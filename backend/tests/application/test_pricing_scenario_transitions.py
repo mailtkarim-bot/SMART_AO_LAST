@@ -5,15 +5,11 @@ from uuid import uuid4
 import pytest
 import sqlalchemy as sa
 from app.modules.pricing.application.commands import CreatePricingScenarioCommand
-from app.modules.pricing.application.service import (
-    PricingScenarioService,
-    pricing_scenario_handlers,
-)
+from app.modules.pricing.application.scenario_handler import pricing_scenario_handlers
+from app.modules.pricing.application.service import PricingScenarioService
 from app.modules.pricing.application.transition_commands import TransitionPricingScenarioCommand
-from app.modules.pricing.application.transition_service import (
-    PricingScenarioTransitionService,
-    pricing_scenario_transition_handlers,
-)
+from app.modules.pricing.application.transition_handler import pricing_scenario_transition_handlers
+from app.modules.pricing.application.transition_service import PricingScenarioTransitionService
 from app.modules.pricing.infrastructure.scenario_reader import SqlAlchemyPricingScenarioReader
 from app.platform.events.dispatcher import CommandDispatcher
 from app.platform.security.authorization import AuthorizationPolicy

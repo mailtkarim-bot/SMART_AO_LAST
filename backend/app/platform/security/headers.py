@@ -23,9 +23,7 @@ class SecurityHeadersMiddleware:
                 headers.setdefault("X-Content-Type-Options", "nosniff")
                 headers.setdefault("X-Frame-Options", "DENY")
                 headers.setdefault("Referrer-Policy", "no-referrer")
-                headers.setdefault(
-                    "Permissions-Policy", "camera=(), geolocation=(), microphone=()"
-                )
+                headers.setdefault("Permissions-Policy", "camera=(), geolocation=(), microphone=()")
                 headers.setdefault("Cross-Origin-Resource-Policy", "same-origin")
             await send(message)
 

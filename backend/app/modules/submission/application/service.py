@@ -74,9 +74,7 @@ class SubmissionPackageService:
         self._audit_writer = audit_writer or SecurityAuditWriter()
         self._decision_gate_reader = decision_gate_reader
 
-    def export(
-        self, *, actor: ActorContext, submission_package_id: UUID, now: datetime
-    ) -> bytes:
+    def export(self, *, actor: ActorContext, submission_package_id: UUID, now: datetime) -> bytes:
         if actor.actor_kind is not ActorKind.PATRON_ADMIN or actor.membership_id is None:
             raise PermissionError("SUBMISSION_PATRON_REQUIRED")
         if self._storage is None:

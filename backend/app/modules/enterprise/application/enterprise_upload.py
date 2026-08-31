@@ -417,9 +417,7 @@ class FinalizeEnterpriseDocumentUploadHandler:
                 document_label=upload.document_label,
                 storage_object_id=command.upload_id,
                 original_filename=upload.original_filename,
-                issued_at=min(
-                    context.received_at, upload.expires_at - timedelta(microseconds=1)
-                ),
+                issued_at=min(context.received_at, upload.expires_at - timedelta(microseconds=1)),
                 expires_at=upload.expires_at,
                 sha256=upload.sha256,
                 verification_status="PENDING",

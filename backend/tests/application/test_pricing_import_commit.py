@@ -1,5 +1,6 @@
 from dataclasses import replace
 from datetime import UTC, datetime
+from typing import cast
 from uuid import uuid4
 
 import pytest
@@ -7,15 +8,14 @@ import sqlalchemy as sa
 from app.interfaces.http.routes.consultations import ConsultationSecurityRuntime
 from app.interfaces.http.routes.patron_pricing_import import build_patron_pricing_import_router
 from app.modules.pricing.application.import_commands import CommitPricingImportCommand
+from app.modules.pricing.application.import_handler import pricing_import_handlers
 from app.modules.pricing.application.import_preview import PricingImportPreviewService
 from app.modules.pricing.application.import_read import PricingImportReadService
-from app.modules.pricing.application.import_service import (
-    PricingImportService,
-    pricing_import_handlers,
-)
+from app.modules.pricing.application.import_service import PricingImportService
 from app.modules.pricing.infrastructure.import_reader import SqlAlchemyImportPreviewReader
 from app.platform.events.dispatcher import CommandDispatcher, CommandExecutionError
 from app.platform.persistence.models import DomainEventRecord, OutboxMessageRecord
+from app.platform.security.authenticated_context import AuthenticationContextResolver
 from app.platform.security.authorization import AuthorizationPolicy
 from app.platform.security.context import ActorKind
 from app.platform.security.models import (
@@ -191,7 +191,8 @@ def test_commit_pricing_import_http_contract(session_factory):
             service=PricingImportPreviewService(policy=AuthorizationPolicy()),
             commit_service=_service(session_factory),
             security_runtime=ConsultationSecurityRuntime(
-                context_resolver=_Resolver(), policy=AuthorizationPolicy()
+                context_resolver=cast(AuthenticationContextResolver, _Resolver()),
+                policy=AuthorizationPolicy(),
             ),
         )
     )
@@ -327,7 +328,7 @@ def test_pricing_import_read_http_contract_is_tenant_scoped(session_factory):
                     policy=AuthorizationPolicy(),
                 ),
                 security_runtime=ConsultationSecurityRuntime(
-                    context_resolver=_Resolver(resolved_actor),
+                    context_resolver=cast(AuthenticationContextResolver, _Resolver(resolved_actor)),
                     policy=AuthorizationPolicy(),
                 ),
             )

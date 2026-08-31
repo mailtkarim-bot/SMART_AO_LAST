@@ -119,7 +119,7 @@ def _message(
     )
 
 
-def _factory_for_message(message: SimpleNamespace) -> MagicMock:
+def _factory_for_message(message: SimpleNamespace | None) -> MagicMock:
     factory = MagicMock()
     read_session = MagicMock()
     read_session.get.return_value = message
@@ -201,15 +201,24 @@ def test_publish_and_retry_are_idempotent_for_already_published_message() -> Non
 
 def test_safe_payload_rejects_non_dict_and_invalid_field_types() -> None:
     assert _safe_payload(None) is None
-    assert _safe_payload(
-        {"submission_package_id": 123, "archive_sha256": "a" * 64, "delivery": "DOWNLOAD"}
-    ) is None
-    assert _safe_payload(
-        {"submission_package_id": "id", "archive_sha256": 123, "delivery": "DOWNLOAD"}
-    ) is None
-    assert _safe_payload(
-        {"submission_package_id": "id", "archive_sha256": "a" * 63, "delivery": "DOWNLOAD"}
-    ) is None
+    assert (
+        _safe_payload(
+            {"submission_package_id": 123, "archive_sha256": "a" * 64, "delivery": "DOWNLOAD"}
+        )
+        is None
+    )
+    assert (
+        _safe_payload(
+            {"submission_package_id": "id", "archive_sha256": 123, "delivery": "DOWNLOAD"}
+        )
+        is None
+    )
+    assert (
+        _safe_payload(
+            {"submission_package_id": "id", "archive_sha256": "a" * 63, "delivery": "DOWNLOAD"}
+        )
+        is None
+    )
 
 
 def test_process_delivers_successful_webhook_response(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -264,6 +273,7 @@ def test_run_once_merges_results_from_claimed_messages(monkeypatch: pytest.Monke
             webhook_module.WebhookRunResult(skipped=1),
         ]
     )
+
     async def process_message(*_args: object) -> webhook_module.WebhookRunResult:
         return next(outcomes)
 
@@ -291,9 +301,9 @@ def test_post_json_validates_and_sends_request(monkeypatch: pytest.MonkeyPatch) 
     response = MagicMock(status=202)
     context = MagicMock()
     context.__enter__.return_value = response
-    captured: list[object] = []
+    captured: list[MagicMock] = []
 
-    def fake_urlopen(request: object, timeout: float) -> MagicMock:
+    def fake_urlopen(request: MagicMock, timeout: float) -> MagicMock:
         captured.append(request)
         return context
 

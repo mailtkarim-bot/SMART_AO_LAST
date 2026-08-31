@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
+from typing import Any, cast
 from uuid import uuid4
 
 import pytest
@@ -17,7 +18,10 @@ from app.platform.events.dispatcher import (
     CommandInProgressError,
     IdempotencyKeyReusedError,
 )
-from app.platform.security.authenticated_context import UnauthenticatedError
+from app.platform.security.authenticated_context import (
+    UnauthenticatedError,
+)
+from app.platform.security.authorization import AuthorizationPolicyPort
 from app.platform.security.context import ActorContext, ActorKind, MembershipState
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -55,8 +59,8 @@ def _actor() -> ActorContext:
 
 def _runtime(*, resolver_error: Exception | None = None) -> ConsultationSecurityRuntime:
     return ConsultationSecurityRuntime(
-        context_resolver=_Resolver(error=resolver_error),
-        policy=SimpleNamespace(),
+        context_resolver=cast(Any, _Resolver(error=resolver_error)),
+        policy=cast(AuthorizationPolicyPort, SimpleNamespace()),
     )
 
 
@@ -64,8 +68,8 @@ def _client(*, service=None, upload_service=None, resolver_error=None) -> TestCl
     app = FastAPI()
     app.include_router(
         build_patron_enterprise_library_router(
-            service=service or _LibraryService(),
-            upload_service=upload_service or _UploadService(),
+            service=service or cast(Any, _LibraryService()),
+            upload_service=upload_service or cast(Any, _UploadService()),
             security_runtime=_runtime(resolver_error=resolver_error),
         )
     )
@@ -240,7 +244,7 @@ def test_enterprise_library_maps_invalid_resolved_context_to_401():
 
 
 def test_create_company_returns_201_then_200_on_replay():
-    service = _LibraryService()
+    service = cast(Any, _LibraryService())
     client = _client(service=service)
     payload = _company_payload()
 
@@ -316,8 +320,10 @@ def test_read_company_returns_projection_without_storage_metadata():
 
 @pytest.mark.parametrize(
     ("error", "status_code", "detail"),
-    [(PermissionError("NOT_FOUND_OR_FORBIDDEN"), 404, "NOT_FOUND_OR_FORBIDDEN"),
-     (PermissionError("PATRON_REQUIRED"), 403, "FORBIDDEN")],
+    [
+        (PermissionError("NOT_FOUND_OR_FORBIDDEN"), 404, "NOT_FOUND_OR_FORBIDDEN"),
+        (PermissionError("PATRON_REQUIRED"), 403, "FORBIDDEN"),
+    ],
 )
 def test_read_company_maps_permission_errors(error, status_code, detail):
     client = _client(service=_LibraryService(read_error=error))

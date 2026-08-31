@@ -113,9 +113,7 @@ def _parse_notice(item: object) -> BoampNotice:
         publication_date=(
             date.fromisoformat(publication) if isinstance(publication, str) else None
         ),
-        response_deadline=(
-            datetime.fromisoformat(deadline) if isinstance(deadline, str) else None
-        ),
+        response_deadline=(datetime.fromisoformat(deadline) if isinstance(deadline, str) else None),
         department_codes=_string_tuple(departments),
         market_types=_string_tuple(market_types),
         status=status if isinstance(status, str) else None,

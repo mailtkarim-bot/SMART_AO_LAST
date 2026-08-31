@@ -456,9 +456,11 @@ class PreparationHandler:
                 proof_states.append("CURRENT")
             if capability is None or version is None or capability.state != "ACTIVE":
                 blocker_codes.add("CAPABILITY_PROOF_UNAUTHORIZED")
-            elif version.valid_from > context.received_at or (
-                version.valid_until is not None and version.valid_until <= context.received_at
-            ) or proposal.validity_state == "EXPIRED":
+            elif (
+                version.valid_from > context.received_at
+                or (version.valid_until is not None and version.valid_until <= context.received_at)
+                or proposal.validity_state == "EXPIRED"
+            ):
                 blocker_codes.add("CAPABILITY_PROOF_EXPIRED")
             elif not links:
                 blocker_codes.add("CAPABILITY_PROOF_MISSING")

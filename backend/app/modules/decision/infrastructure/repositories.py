@@ -164,9 +164,7 @@ class SqlAlchemyDecisionLifecycleRepository(DecisionLifecycleRepository):
             )
         )
 
-    def case_has_applicable_dce(
-        self, *, session: object, tenant_id: UUID, case_id: UUID
-    ) -> bool:
+    def case_has_applicable_dce(self, *, session: object, tenant_id: UUID, case_id: UUID) -> bool:
         db_session = cast(Session, session)
         return (
             db_session.scalar(

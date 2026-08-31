@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from typing import cast
 from unittest.mock import MagicMock
 from uuid import uuid4
 
@@ -14,7 +15,7 @@ from app.modules.decision.application.finalize_commands import (
 )
 from app.platform.events.dispatcher import CommandContext, CommandExecutionError
 from app.platform.persistence.repository import OptimisticRevisionConflictError
-from app.platform.security.context import ActorKind
+from app.platform.security.context import ActorContext, ActorKind
 
 NOW = datetime(2026, 8, 24, 12, 0, tzinfo=UTC)
 TENANT_ID = uuid4()
@@ -99,7 +100,7 @@ def test_finalization_service_requires_mfa_step_up_at_authorization_boundary() -
     )
 
     PatronDecisionFinalizationService(dispatcher=dispatcher, policy=policy).execute(
-        actor=actor,
+        actor=cast(ActorContext, actor),
         command=_command(),
         now=NOW,
     )

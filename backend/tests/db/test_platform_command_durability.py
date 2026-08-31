@@ -217,15 +217,24 @@ def test_event_and_outbox_are_rolled_back_together_when_transaction_fails(
         raise RuntimeError("simulate failure before commit")
 
     with database_engine.connect() as connection:
-        assert connection.scalar(
-            sa.text("SELECT count(*) FROM tenants WHERE id = :tenant_id"),
-            {"tenant_id": tenant_id},
-        ) == 0
-        assert connection.scalar(
-            sa.text("SELECT count(*) FROM domain_events WHERE id = :event_id"),
-            {"event_id": event_id},
-        ) == 0
-        assert connection.scalar(
-            sa.text("SELECT count(*) FROM outbox_messages WHERE event_id = :event_id"),
-            {"event_id": event_id},
-        ) == 0
+        assert (
+            connection.scalar(
+                sa.text("SELECT count(*) FROM tenants WHERE id = :tenant_id"),
+                {"tenant_id": tenant_id},
+            )
+            == 0
+        )
+        assert (
+            connection.scalar(
+                sa.text("SELECT count(*) FROM domain_events WHERE id = :event_id"),
+                {"event_id": event_id},
+            )
+            == 0
+        )
+        assert (
+            connection.scalar(
+                sa.text("SELECT count(*) FROM outbox_messages WHERE event_id = :event_id"),
+                {"event_id": event_id},
+            )
+            == 0
+        )

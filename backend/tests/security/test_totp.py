@@ -158,6 +158,4 @@ def test_totp_enrollment_confirmation_step_up_replay_recovery_and_disable(
         assert factor is not None and factor.state == "DISABLED"
         assert auth_session is not None and auth_session.auth_strength == "PASSWORD"
         assert auth_session.mfa_verified_at is None
-        assert session.scalar(
-            sa.select(sa.func.count()).select_from(TotpRecoveryCodeRecord)
-        ) == 10
+        assert session.scalar(sa.select(sa.func.count()).select_from(TotpRecoveryCodeRecord)) == 10

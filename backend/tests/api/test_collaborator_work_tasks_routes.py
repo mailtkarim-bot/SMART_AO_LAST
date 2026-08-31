@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from typing import Any, cast
 from uuid import uuid4
 
 import pytest
@@ -13,7 +14,10 @@ from app.platform.events.dispatcher import (
     CommandInProgressError,
     IdempotencyKeyReusedError,
 )
-from app.platform.security.authenticated_context import UnauthenticatedError
+from app.platform.security.authenticated_context import (
+    UnauthenticatedError,
+)
+from app.platform.security.authorization import AuthorizationPolicyPort
 from app.platform.security.context import ActorContext, ActorKind, MembershipState
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -51,7 +55,8 @@ def _actor() -> ActorContext:
 
 def _runtime(*, resolver_error=None):
     return ConsultationSecurityRuntime(
-        context_resolver=_Resolver(error=resolver_error), policy=SimpleNamespace()
+        context_resolver=cast(Any, _Resolver(error=resolver_error)),
+        policy=cast(AuthorizationPolicyPort, SimpleNamespace()),
     )
 
 
@@ -59,7 +64,7 @@ def _client(*, service=None, resolver_error=None):
     app = FastAPI()
     app.include_router(
         build_collaborator_work_task_router(
-            service=service or _TaskService(),
+            service=service or cast(Any, _TaskService()),
             security_runtime=_runtime(resolver_error=resolver_error),
         )
     )
@@ -194,9 +199,7 @@ def test_work_task_route_maps_invalid_context_to_401():
 
 def test_list_tasks_returns_projection_without_financial_fields():
     case_id = uuid4()
-    response = _client().get(
-        f"/api/v1/collaborator/cases/{case_id}/tasks", headers=_headers()
-    )
+    response = _client().get(f"/api/v1/collaborator/cases/{case_id}/tasks", headers=_headers())
 
     assert response.status_code == 200
     body = response.json()
@@ -223,7 +226,7 @@ def test_list_tasks_maps_service_errors(error, status_code, detail):
 
 
 def test_task_commands_return_201_then_200_on_replay():
-    service = _TaskService()
+    service = cast(Any, _TaskService())
     client = _client(service=service)
     case_id = uuid4()
     assignment_id = uuid4()

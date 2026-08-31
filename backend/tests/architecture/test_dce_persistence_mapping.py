@@ -49,7 +49,7 @@ def test_dce_persistence_mapping_rejects_non_domain_enum_values() -> None:
         provenance="test",
         received_at=datetime.now(tz=UTC),
     )
-    version.lifecycle = "ADMITTED"  # type: ignore[assignment]
+    setattr(version, "lifecycle", "ADMITTED")  # noqa: B010
 
     with pytest.raises(TypeError, match="expected DceLifecycle"):
         to_dce_version_persistence_state(version)

@@ -32,10 +32,6 @@ class UnusedTokenGenerator:
         return "unused-refresh-token"
 
 
-
-
-
-
 @pytest.fixture(autouse=True)
 def isolate_records(database_engine: sa.Engine) -> None:
     with database_engine.begin() as connection:

@@ -18,9 +18,7 @@ from app.modules.patron_action.domain.state import ensure_transition_allowed
         ("WAITING", "ABANDONED"),
     ),
 )
-def test_allowed_patron_action_transition(
-    current_state: str, target_state: str
-) -> None:
+def test_allowed_patron_action_transition(current_state: str, target_state: str) -> None:
     ensure_transition_allowed(current_state, target_state)
 
 
@@ -35,8 +33,6 @@ def test_allowed_patron_action_transition(
         ("UNKNOWN", "OPEN"),
     ),
 )
-def test_forbidden_patron_action_transition(
-    current_state: str, target_state: str
-) -> None:
+def test_forbidden_patron_action_transition(current_state: str, target_state: str) -> None:
     with pytest.raises(ValueError):
         ensure_transition_allowed(current_state, target_state)

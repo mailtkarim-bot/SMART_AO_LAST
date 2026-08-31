@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
+from typing import Any, cast
 from uuid import UUID, uuid4
 
 from app.interfaces.http.routes.consultations import ConsultationSecurityRuntime
@@ -11,6 +12,8 @@ from app.modules.opportunity.application.patron_watch_profile import (
     WatchProfileProjection,
     WatchProfileVersionProjection,
 )
+from app.platform.security.authenticated_context import AuthenticationContextResolver
+from app.platform.security.authorization import AuthorizationPolicyPort
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -64,15 +67,15 @@ class FakeProfileService:
         return (_projection(),)
 
 
-def _client(service: FakeProfileService) -> TestClient:
+def _client(service: Any) -> TestClient:
     context = SimpleNamespace(tenant_id=TENANT_ID)
     app = FastAPI()
     app.include_router(
         build_patron_opportunity_watch_profile_router(
             service=service,
             security_runtime=ConsultationSecurityRuntime(
-                context_resolver=FakeResolver(context),
-                policy=SimpleNamespace(),
+                context_resolver=cast(AuthenticationContextResolver, FakeResolver(context)),
+                policy=cast(AuthorizationPolicyPort, SimpleNamespace()),
             ),
         )
     )
@@ -91,16 +94,14 @@ def _create_payload() -> dict[str, object]:
 
 
 def test_profile_routes_require_bearer() -> None:
-    response = _client(FakeProfileService()).get(
-        "/api/v1/patron/opportunity-watch-profiles"
-    )
+    response = _client(FakeProfileService()).get("/api/v1/patron/opportunity-watch-profiles")
 
     assert response.status_code == 401
     assert response.json()["detail"] == "UNAUTHENTICATED"
 
 
 def test_create_profile_returns_201_then_200_on_replay() -> None:
-    service = FakeProfileService()
+    service = cast(Any, FakeProfileService())
     client = _client(service)
 
     first = client.post(
@@ -150,7 +151,7 @@ def test_add_version_and_read_projection_do_not_expose_server_context() -> None:
 
 
 def test_profile_route_maps_non_patron_to_forbidden() -> None:
-    service = FakeProfileService()
+    service = cast(Any, FakeProfileService())
     service.denied = True
     response = _client(service).post(
         "/api/v1/patron/opportunity-watch-profiles",

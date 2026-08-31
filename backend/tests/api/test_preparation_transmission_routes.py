@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from types import SimpleNamespace
+from typing import cast
 from uuid import uuid4
 
 import pytest
@@ -14,7 +15,11 @@ from app.platform.events.dispatcher import (
     CommandInProgressError,
     IdempotencyKeyReusedError,
 )
-from app.platform.security.authenticated_context import UnauthenticatedError
+from app.platform.security.authenticated_context import (
+    AuthenticationContextResolver,
+    UnauthenticatedError,
+)
+from app.platform.security.authorization import AuthorizationPolicyPort
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -33,8 +38,8 @@ class Resolver:
 
 def _runtime(*, error: Exception | None = None) -> ConsultationSecurityRuntime:
     return ConsultationSecurityRuntime(
-        context_resolver=Resolver(error=error),
-        policy=SimpleNamespace(),
+        context_resolver=cast(AuthenticationContextResolver, Resolver(error=error)),
+        policy=cast(AuthorizationPolicyPort, SimpleNamespace()),
     )
 
 

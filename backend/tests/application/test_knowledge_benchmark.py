@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import Any
 from uuid import UUID
 
 import pytest
@@ -17,7 +18,7 @@ FRAGMENT_A = "33333333-3333-4333-8333-333333333333"
 FRAGMENT_B = "44444444-4444-4444-8444-444444444444"
 
 
-def manifest_payload() -> dict[str, object]:
+def manifest_payload() -> dict[str, Any]:
     return {
         "schema_version": 1,
         "corpus_id": "golden-public-v1",
@@ -80,8 +81,8 @@ def test_load_manifest_rejects_sensitive_fields(field: str) -> None:
 
 def test_load_manifest_rejects_financial_classification() -> None:
     payload = manifest_payload()
-    fragments = payload["cases"][0]["fragments"]  # type: ignore[index]
-    fragments[0]["classification"] = "FINANCIAL_PRIVATE"  # type: ignore[index]
+    fragments = payload["cases"][0]["fragments"]
+    fragments[0]["classification"] = "FINANCIAL_PRIVATE"
 
     with pytest.raises(BenchmarkManifestError, match="classification"):
         load_manifest(payload)
@@ -89,8 +90,8 @@ def test_load_manifest_rejects_financial_classification() -> None:
 
 def test_load_manifest_rejects_expected_fragment_from_another_case() -> None:
     payload = manifest_payload()
-    queries = payload["cases"][0]["queries"]  # type: ignore[index]
-    queries[0]["expected_fragment_ids"] = [VERSION_ID]  # type: ignore[index]
+    queries = payload["cases"][0]["queries"]
+    queries[0]["expected_fragment_ids"] = [VERSION_ID]
 
     with pytest.raises(BenchmarkManifestError, match="belong to the case"):
         load_manifest(payload)

@@ -23,10 +23,6 @@ from sqlalchemy.orm import Session, sessionmaker
 NOW = datetime(2026, 8, 13, 13, 0, tzinfo=UTC)
 
 
-
-
-
-
 @pytest.fixture(autouse=True)
 def isolate_dce_admission_records(database_engine: sa.Engine) -> None:
     with database_engine.begin() as connection:
@@ -382,8 +378,11 @@ def test_register_dce_version_rejects_noncanonical_corpus_hash_without_side_effe
         assert session.scalar(sa.select(sa.func.count()).select_from(DceVersionRecord)) == 0
         assert session.scalar(sa.select(sa.func.count()).select_from(DceDocumentRecord)) == 0
         assert session.scalar(sa.select(sa.func.count()).select_from(OutboxMessageRecord)) == 0
-        assert session.scalar(
-            sa.select(sa.func.count()).select_from(DceStagedObjectRecord).where(
-                DceStagedObjectRecord.state == "CLEAN"
+        assert (
+            session.scalar(
+                sa.select(sa.func.count())
+                .select_from(DceStagedObjectRecord)
+                .where(DceStagedObjectRecord.state == "CLEAN")
             )
-        ) == 2
+            == 2
+        )

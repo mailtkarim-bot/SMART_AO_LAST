@@ -233,6 +233,7 @@ class EnterpriseDocumentVerificationRecord(TenantScopedRecord, Base):
         sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
     )
 
+
 class EnterpriseCapabilityRecord(TenantScopedRecord, Base):
     """Patron-owned reusable capability root, separate from any Case assessment."""
 
@@ -287,6 +288,7 @@ class EnterpriseCapabilityRecord(TenantScopedRecord, Base):
     idempotency_key: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     correlation_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True))
 
+
 class EnterpriseCapabilityVersionRecord(TenantScopedRecord, Base):
     """Immutable dated version of one enterprise capability."""
 
@@ -337,6 +339,7 @@ class EnterpriseCapabilityVersionRecord(TenantScopedRecord, Base):
     idempotency_key: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     correlation_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True))
 
+
 class EnterpriseCapabilityProofLinkRecord(TenantScopedRecord, Base):
     """Immutable link from a capability version to an enterprise document proof."""
 
@@ -370,6 +373,7 @@ class EnterpriseCapabilityProofLinkRecord(TenantScopedRecord, Base):
     capability_version_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     document_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     relation_label: Mapped[str] = mapped_column(sa.String(240), nullable=False)
+
 
 class CaseCapabilityProposalRecord(TenantScopedRecord, Base):
     """Collaborator candidate use of an enterprise capability for one Case."""
@@ -455,6 +459,7 @@ class CaseCapabilityProposalRecord(TenantScopedRecord, Base):
     command_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     idempotency_key: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     correlation_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True))
+
 
 class CaseCapabilityGapRecord(TenantScopedRecord, Base):
     """Collaborator finding that a Case capability/proof is missing or unusable."""

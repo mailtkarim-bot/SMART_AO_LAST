@@ -151,9 +151,7 @@ def test_submission_evidence_rejects_collaborator_and_missing_package(
     services, session_factory
 ) -> None:
     _, submission = services
-    actor, preparation_package_id, case_id = _prepare_generated_document(
-        services, session_factory
-    )
+    actor, preparation_package_id, case_id = _prepare_generated_document(services, session_factory)
     _publish_snapshot(session_factory, tenant_id=actor.tenant_id, case_id=case_id)
     package_result = submission.prepare(
         actor=actor,
@@ -203,13 +201,9 @@ def test_submission_evidence_rejects_collaborator_and_missing_package(
 
 @pytest.mark.db
 @pytest.mark.security
-def test_submission_evidence_rejects_denied_capability(
-    services, session_factory
-) -> None:
+def test_submission_evidence_rejects_denied_capability(services, session_factory) -> None:
     _, submission = services
-    actor, preparation_package_id, case_id = _prepare_generated_document(
-        services, session_factory
-    )
+    actor, preparation_package_id, case_id = _prepare_generated_document(services, session_factory)
     _publish_snapshot(session_factory, tenant_id=actor.tenant_id, case_id=case_id)
     package_result = submission.prepare(
         actor=actor,

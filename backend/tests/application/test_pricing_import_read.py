@@ -70,8 +70,7 @@ def test_persisted_reader_denial_is_audited_without_business_payload(session_fac
             sa.select(SecurityAuditEventRecord)
             .where(
                 SecurityAuditEventRecord.tenant_id == actor.tenant_id,
-                SecurityAuditEventRecord.action
-                == "financial.report.line.write",
+                SecurityAuditEventRecord.action == "financial.report.line.write",
                 SecurityAuditEventRecord.resource_id == batch.id,
             )
             .order_by(SecurityAuditEventRecord.occurred_at.desc())

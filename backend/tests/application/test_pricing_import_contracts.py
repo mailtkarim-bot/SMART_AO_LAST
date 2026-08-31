@@ -1,3 +1,4 @@
+from typing import Any
 from uuid import uuid4
 
 import pytest
@@ -10,7 +11,7 @@ from app.modules.pricing.public.import_contracts import (
 from pydantic import ValidationError
 
 
-def _commit_payload() -> dict[str, object]:
+def _commit_payload() -> dict[str, Any]:
     return {
         "command_id": uuid4(),
         "idempotency_key": uuid4(),
@@ -52,16 +53,14 @@ def test_commit_response_contains_only_receipt_and_aggregate_references():
 
     dumped = response.model_dump()
     assert dumped["result_code"] == "PRICING_IMPORT_COMMITTED"
-    assert {"total_minor", "designation", "unit_price_minor", "source_sha256"}.isdisjoint(
-        dumped
-    )
+    assert {"total_minor", "designation", "unit_price_minor", "source_sha256"}.isdisjoint(dumped)
 
     with pytest.raises(ValidationError):
         PricingImportCommitResponse.model_validate({**dumped, "total_minor": 12500})
 
 
-def test_preview_response_closes_document_kind_and_row_shape():
-    payload = {
+def test_preview_response_closes_document_kind_and_row_shape() -> None:
+    payload: dict[str, Any] = {
         "case_id": uuid4(),
         "document_kind": "DPGF",
         "filename": "bordereau.xlsx",
@@ -127,6 +126,4 @@ def test_creation_request_serializes_only_public_command_metadata():
     payload = {"command_id": uuid4(), "idempotency_key": uuid4(), "correlation_id": uuid4()}
     dumped = PricingImportCreationRequest.model_validate(payload).model_dump()
     assert set(dumped) == {"command_id", "idempotency_key", "correlation_id"}
-    assert {"payload", "filename", "storage_key", "source_sha256", "total_minor"}.isdisjoint(
-        dumped
-    )
+    assert {"payload", "filename", "storage_key", "source_sha256", "total_minor"}.isdisjoint(dumped)

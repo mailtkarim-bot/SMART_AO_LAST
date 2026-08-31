@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
+from typing import Any, cast
 from uuid import UUID
 
 from app.interfaces.http.routes import patron_enterprise_registry as registry_route
+from app.interfaces.http.routes.consultations import ConsultationSecurityRuntime
 from app.interfaces.http.routes.patron_enterprise_registry import (
     build_patron_enterprise_registry_router,
 )
@@ -34,7 +36,7 @@ class FakeRegistry:
 class FakePolicy:
     def __init__(self, *, allowed: bool = True) -> None:
         self.allowed = allowed
-        self.requests = []
+        self.requests: list[Any] = []
 
     def authorize(self, *, context, request):
         self.requests.append(request)
@@ -49,7 +51,10 @@ def _app(*, registry: FakeRegistry, policy: FakePolicy) -> FastAPI:
     app.include_router(
         build_patron_enterprise_registry_router(
             service=EnterpriseRegistryLookupService(registry=registry),
-            security_runtime=SimpleNamespace(context_resolver=object(), policy=policy),
+            security_runtime=cast(
+                ConsultationSecurityRuntime,
+                SimpleNamespace(context_resolver=object(), policy=policy),
+            ),
         )
     )
     return app

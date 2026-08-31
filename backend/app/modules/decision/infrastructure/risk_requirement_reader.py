@@ -109,9 +109,7 @@ class SqlAlchemyDecisionRiskRequirementReader:
             for link, action, state, revision in rows
         )
         next_cursor = (
-            _encode_cursor(items[-1].created_at, items[-1].link_id)
-            if has_more and items
-            else None
+            _encode_cursor(items[-1].created_at, items[-1].link_id) if has_more and items else None
         )
         return DecisionRiskRequirementPage(items=items, next_cursor=next_cursor)
 
@@ -127,11 +125,13 @@ class SqlAlchemyDecisionRiskRequirementReader:
         normalized_search = search.strip().casefold()
         with self._session_factory() as session:
             link_exists = session.scalar(
-                sa.select(sa.exists().where(
-                    DecisionRiskRequirementLinkRecord.tenant_id == tenant_id,
-                    DecisionRiskRequirementLinkRecord.case_id == case_id,
-                    DecisionRiskRequirementLinkRecord.id == link_id,
-                ))
+                sa.select(
+                    sa.exists().where(
+                        DecisionRiskRequirementLinkRecord.tenant_id == tenant_id,
+                        DecisionRiskRequirementLinkRecord.case_id == case_id,
+                        DecisionRiskRequirementLinkRecord.id == link_id,
+                    )
+                )
             )
             if not link_exists:
                 return None

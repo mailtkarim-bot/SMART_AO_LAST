@@ -257,9 +257,7 @@ class Case:
             origin.kind not in {CaseOriginKind.MANUAL, CaseOriginKind.OPPORTUNITY}
             and consultation_reference is None
         ):
-            raise CaseScopeAmbiguousError(
-                "this case origin requires a consultation reference"
-            )
+            raise CaseScopeAmbiguousError("this case origin requires a consultation reference")
 
         case = cls(
             id=case_id,

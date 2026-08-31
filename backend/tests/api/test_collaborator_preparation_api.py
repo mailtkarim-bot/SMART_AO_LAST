@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 from pathlib import Path
-from uuid import uuid4
+from typing import cast
+from uuid import UUID, uuid4
 
 import pytest
 import sqlalchemy as sa
@@ -138,7 +139,7 @@ def test_collaborator_preparation_readiness_generation_and_public_projection(
     client, tokens = _client(session_factory, storage_root=tmp_path / "private-dce")
     token = tokens.issue(
         identity_id=actor.identity_id,
-        session_id=actor.session_id,
+        session_id=cast(UUID, actor.session_id),
         token_version=1,
     )
     headers = {"Authorization": f"Bearer {token}"}

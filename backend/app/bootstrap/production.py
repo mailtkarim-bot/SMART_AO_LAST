@@ -42,8 +42,7 @@ def _jwt_verification_keys() -> Mapping[str, str] | None:
     except json.JSONDecodeError as exc:
         raise RuntimeError("invalid SMART_AO_JWT_VERIFICATION_KEYS_JSON") from exc
     if not isinstance(manifest, dict) or not all(
-        isinstance(key_id, str) and isinstance(key, str)
-        for key_id, key in manifest.items()
+        isinstance(key_id, str) and isinstance(key, str) for key_id, key in manifest.items()
     ):
         raise RuntimeError("JWT verification key manifest must be an object of strings")
     return manifest

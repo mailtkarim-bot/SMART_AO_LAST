@@ -425,13 +425,14 @@ def test_case_dce_impact_handler_rejects_chain_manifest_counts_projection_and_re
         )
     assert str(projection_failure.value.__cause__) == "CASE_DCE_IMPACT_PROJECTION_REQUIRED"
 
-    first = dispatcher.dispatch(command=command, context=CommandContext(
-        tenant_id=tenant_id, actor_id=uuid4(), actor_kind="SYSTEM", received_at=NOW
-    ))
-    replay = dispatcher.dispatch(
-        command=command.model_copy(
-            update={"command_id": uuid4(), "idempotency_key": uuid4()}
+    first = dispatcher.dispatch(
+        command=command,
+        context=CommandContext(
+            tenant_id=tenant_id, actor_id=uuid4(), actor_kind="SYSTEM", received_at=NOW
         ),
+    )
+    replay = dispatcher.dispatch(
+        command=command.model_copy(update={"command_id": uuid4(), "idempotency_key": uuid4()}),
         context=CommandContext(
             tenant_id=tenant_id, actor_id=uuid4(), actor_kind="SYSTEM", received_at=NOW
         ),

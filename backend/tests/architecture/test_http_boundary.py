@@ -9,15 +9,13 @@ from tests.support.database import REPOSITORY_ROOT
 
 @pytest.mark.architecture
 def test_consultation_route_has_no_orm_or_module_infrastructure_import() -> None:
-    source = (
-        REPOSITORY_ROOT / "backend/app/interfaces/http/routes/consultations.py"
-    ).read_text(encoding="utf-8")
+    source = (REPOSITORY_ROOT / "backend/app/interfaces/http/routes/consultations.py").read_text(
+        encoding="utf-8"
+    )
     tree = ast.parse(source)
 
     imports = {
-        node.module
-        for node in ast.walk(tree)
-        if isinstance(node, ast.ImportFrom) and node.module
+        node.module for node in ast.walk(tree) if isinstance(node, ast.ImportFrom) and node.module
     }
 
     assert "sqlalchemy" not in imports

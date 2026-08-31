@@ -32,10 +32,6 @@ class UnusedTokenGenerator:
         return "unused-refresh-token"
 
 
-
-
-
-
 def _client(session_factory):
     clock = FixedClock()
     tokens = JwtAccessTokenCodec(

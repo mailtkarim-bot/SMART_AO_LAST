@@ -56,9 +56,7 @@ class SqlAlchemyVectorIndex(VectorIndex):
                         existing.text_sha256 != source_hash
                         or existing.embedding != embedding_values
                     ):
-                        raise ValueError(
-                            "embedding identity already exists with different content"
-                        )
+                        raise ValueError("embedding identity already exists with different content")
                     continue
                 session.add(
                     DceFragmentEmbeddingRecord(

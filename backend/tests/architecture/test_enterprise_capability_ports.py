@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from typing import cast
 from unittest.mock import Mock
 from uuid import uuid4
 
@@ -8,7 +9,7 @@ from app.modules.enterprise.application.enterprise_capability_commands import (
     AddEnterpriseCapabilityVersionCommand,
 )
 from app.platform.security.capabilities import Capability
-from app.platform.security.context import ActorKind
+from app.platform.security.context import ActorContext, ActorKind
 
 NOW = datetime(2026, 8, 27, 12, 0, tzinfo=UTC)
 
@@ -48,7 +49,7 @@ def test_add_version_resolves_company_through_application_port() -> None:
         capability_context_reader=reader,
         dispatcher=dispatcher,
         policy=policy,
-    ).add_version(actor=actor, command=command, now=NOW)
+    ).add_version(actor=cast(ActorContext, actor), command=command, now=NOW)
 
     reader.company_id_for_capability.assert_called_once_with(
         tenant_id=tenant_id, capability_id=capability_id

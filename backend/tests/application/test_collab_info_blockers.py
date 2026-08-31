@@ -49,10 +49,6 @@ from test_collab_work_task import _seed  # noqa: E402
 NOW = datetime(2026, 8, 17, 12, 0, tzinfo=UTC)
 
 
-
-
-
-
 def _task_service(factory):
     return CollaboratorWorkTaskService(
         reader=SqlAlchemyCollaboratorWorkTaskReader(factory),
@@ -306,8 +302,12 @@ def test_info_blocker_handler_rejects_stale_request_and_closed_request(session_f
     service.execute(
         actor=actor,
         command=RecordInformationRequestResponseCommand(
-            command_id=uuid4(), idempotency_key=uuid4(), request_id=create.request_id,
-            expected_revision=0, response_text="Réponse opérationnelle", outcome="ANSWERED",
+            command_id=uuid4(),
+            idempotency_key=uuid4(),
+            request_id=create.request_id,
+            expected_revision=0,
+            response_text="Réponse opérationnelle",
+            outcome="ANSWERED",
         ),
         now=NOW,
     )
@@ -315,8 +315,12 @@ def test_info_blocker_handler_rejects_stale_request_and_closed_request(session_f
         service.execute(
             actor=actor,
             command=RecordInformationRequestResponseCommand(
-                command_id=uuid4(), idempotency_key=uuid4(), request_id=create.request_id,
-                expected_revision=1, response_text="Deuxième réponse", outcome="ANSWERED",
+                command_id=uuid4(),
+                idempotency_key=uuid4(),
+                request_id=create.request_id,
+                expected_revision=1,
+                response_text="Deuxième réponse",
+                outcome="ANSWERED",
             ),
             now=NOW,
         )
@@ -339,8 +343,12 @@ def test_info_blocker_handler_rejects_terminal_task_and_missing_blocker(session_
         service.execute(
             actor=actor,
             command=DeclareTaskBlockerCommand(
-                command_id=uuid4(), idempotency_key=uuid4(), correlation_id=uuid4(),
-                task_id=task_id, expected_revision=0, blocker_id=uuid4(),
+                command_id=uuid4(),
+                idempotency_key=uuid4(),
+                correlation_id=uuid4(),
+                task_id=task_id,
+                expected_revision=0,
+                blocker_id=uuid4(),
                 blocker_kind="MISSING_INFORMATION",
                 description="Bloqué",
                 resolution_owner="COLLABORATEUR",
@@ -356,8 +364,12 @@ def test_info_blocker_handler_rejects_terminal_task_and_missing_blocker(session_
         service.execute(
             actor=actor,
             command=ResolveTaskBlockerCommand(
-                command_id=uuid4(), idempotency_key=uuid4(), correlation_id=uuid4(),
-                task_id=task_id, blocker_id=uuid4(), expected_revision=0,
+                command_id=uuid4(),
+                idempotency_key=uuid4(),
+                correlation_id=uuid4(),
+                task_id=task_id,
+                blocker_id=uuid4(),
+                expected_revision=0,
                 resolution_note="Impossible à résoudre.",
             ),
             now=NOW,
@@ -377,8 +389,12 @@ def test_info_blocker_handler_rejects_already_resolved_blocker(session_factory) 
     service.execute(
         actor=actor,
         command=DeclareTaskBlockerCommand(
-            command_id=uuid4(), idempotency_key=uuid4(), correlation_id=uuid4(),
-            task_id=task_id, expected_revision=0, blocker_id=blocker_id,
+            command_id=uuid4(),
+            idempotency_key=uuid4(),
+            correlation_id=uuid4(),
+            task_id=task_id,
+            expected_revision=0,
+            blocker_id=blocker_id,
             blocker_kind="MISSING_INFORMATION",
             description="Blocage",
             resolution_owner="COLLABORATEUR",
@@ -388,8 +404,12 @@ def test_info_blocker_handler_rejects_already_resolved_blocker(session_factory) 
     service.execute(
         actor=actor,
         command=ResolveTaskBlockerCommand(
-            command_id=uuid4(), idempotency_key=uuid4(), correlation_id=uuid4(),
-            task_id=task_id, blocker_id=blocker_id, expected_revision=1,
+            command_id=uuid4(),
+            idempotency_key=uuid4(),
+            correlation_id=uuid4(),
+            task_id=task_id,
+            blocker_id=blocker_id,
+            expected_revision=1,
             resolution_note="Résolu.",
         ),
         now=NOW,
@@ -398,8 +418,12 @@ def test_info_blocker_handler_rejects_already_resolved_blocker(session_factory) 
         service.execute(
             actor=actor,
             command=ResolveTaskBlockerCommand(
-                command_id=uuid4(), idempotency_key=uuid4(), correlation_id=uuid4(),
-                task_id=task_id, blocker_id=blocker_id, expected_revision=2,
+                command_id=uuid4(),
+                idempotency_key=uuid4(),
+                correlation_id=uuid4(),
+                task_id=task_id,
+                blocker_id=blocker_id,
+                expected_revision=2,
                 resolution_note="Deuxième résolution.",
             ),
             now=NOW,

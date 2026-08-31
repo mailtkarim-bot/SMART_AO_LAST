@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from typing import Any, cast
 from uuid import uuid4
 
 import pytest
@@ -9,7 +10,10 @@ from app.interfaces.http.routes.patron_pricing_import import (
     build_patron_pricing_import_router,
 )
 from app.platform.events.dispatcher import CommandExecutionError, IdempotencyKeyReusedError
-from app.platform.security.authenticated_context import UnauthenticatedError
+from app.platform.security.authenticated_context import (
+    UnauthenticatedError,
+)
+from app.platform.security.authorization import AuthorizationPolicyPort
 from app.platform.security.context import ActorContext, ActorKind, MembershipState
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -26,31 +30,40 @@ class _Resolver:
         if self.error is not None:
             raise self.error
         return ActorContext(
-            actor_id=uuid4(), identity_id=uuid4(), tenant_id=uuid4(), membership_id=uuid4(),
-            actor_kind=ActorKind.PATRON_ADMIN, membership_state=MembershipState.ACTIVE,
-            capabilities=frozenset(), assigned_case_ids=frozenset(), session_id=uuid4(),
-            authenticated_at=NOW, mfa_verified_at=None, correlation_id=uuid4(),
+            actor_id=uuid4(),
+            identity_id=uuid4(),
+            tenant_id=uuid4(),
+            membership_id=uuid4(),
+            actor_kind=ActorKind.PATRON_ADMIN,
+            membership_state=MembershipState.ACTIVE,
+            capabilities=frozenset(),
+            assigned_case_ids=frozenset(),
+            session_id=uuid4(),
+            authenticated_at=NOW,
+            mfa_verified_at=None,
+            correlation_id=uuid4(),
         )
 
 
 def _runtime(*, resolver_error=None):
     return ConsultationSecurityRuntime(
-        context_resolver=_Resolver(error=resolver_error), policy=SimpleNamespace()
+        context_resolver=cast(Any, _Resolver(error=resolver_error)),
+        policy=cast(AuthorizationPolicyPort, SimpleNamespace()),
     )
 
 
 def _client(
     *,
-    service=None,
-    commit_service=None,
-    creation_service=None,
-    read_service=None,
+    service: Any = None,
+    commit_service: Any = None,
+    creation_service: Any = None,
+    read_service: Any = None,
     resolver_error=None,
 ):
     app = FastAPI()
     app.include_router(
         build_patron_pricing_import_router(
-            service=service or _PreviewService(),
+            service=service or cast(Any, _PreviewService()),
             commit_service=commit_service,
             creation_service=creation_service,
             read_service=read_service,
@@ -82,9 +95,15 @@ class _PreviewService:
         if self.error is not None:
             raise self.error
         return SimpleNamespace(
-            case_id=kwargs["case_id"], document_kind=kwargs["document_kind"],
-            filename=kwargs["filename"], row_count=2, valid_row_count=1, error_count=1,
-            total_minor=125000, truncated=False, limit_reason=None,
+            case_id=kwargs["case_id"],
+            document_kind=kwargs["document_kind"],
+            filename=kwargs["filename"],
+            row_count=2,
+            valid_row_count=1,
+            error_count=1,
+            total_minor=125000,
+            truncated=False,
+            limit_reason=None,
             rows=[
                 _Row(1, "A-1", "Ouvrage", "U", "10", 12500, 125000, []),
                 _Row(2, None, "Ligne invalide", None, None, None, None, ["CODE_REQUIRED"]),
@@ -126,13 +145,18 @@ class _CommitService:
         if self.error is not None:
             raise self.error
         return SimpleNamespace(
-            command_id=str(uuid4()), idempotency_key=str(uuid4()),
+            command_id=str(uuid4()),
+            idempotency_key=str(uuid4()),
             result_code="PRICING_IMPORT_COMMITTED",
             aggregate_refs=[
-                {"aggregate_type": "PricingImportBatch", "aggregate_id": str(uuid4()),
-                 "aggregate_revision": 2}
+                {
+                    "aggregate_type": "PricingImportBatch",
+                    "aggregate_id": str(uuid4()),
+                    "aggregate_revision": 2,
+                }
             ],
-            event_ids=[str(uuid4())], replayed=False,
+            event_ids=[str(uuid4())],
+            replayed=False,
         )
 
 
@@ -142,9 +166,12 @@ def _headers():
 
 def _commit_payload():
     return {
-        "command_id": str(uuid4()), "idempotency_key": str(uuid4()),
-        "correlation_id": str(uuid4()), "report_id": str(uuid4()),
-        "expected_batch_revision": 1, "expected_report_revision": 2,
+        "command_id": str(uuid4()),
+        "idempotency_key": str(uuid4()),
+        "correlation_id": str(uuid4()),
+        "report_id": str(uuid4()),
+        "expected_batch_revision": 1,
+        "expected_report_revision": 2,
     }
 
 
@@ -172,7 +199,7 @@ def test_pricing_import_preview_maps_invalid_context_to_401():
 
 
 def test_pricing_import_preview_returns_rows_and_query_document_kind():
-    service = _PreviewService()
+    service = cast(Any, _PreviewService())
     case_id = uuid4()
     response = _client(service=service).post(
         f"/api/v1/patron/cases/{case_id}/pricing-import/preview?document_kind=DPGF",
@@ -190,7 +217,7 @@ def test_pricing_import_preview_returns_rows_and_query_document_kind():
 def test_pricing_import_preview_rejects_oversized_upload_before_service():
     from app.modules.pricing.application.import_preview import MAX_UPLOAD_BYTES
 
-    service = _PreviewService()
+    service = cast(Any, _PreviewService())
     oversized = b"x" * (MAX_UPLOAD_BYTES + 1)
     response = _client(service=service).post(
         f"/api/v1/patron/cases/{uuid4()}/pricing-import/preview",
@@ -204,8 +231,10 @@ def test_pricing_import_preview_rejects_oversized_upload_before_service():
 
 @pytest.mark.parametrize(
     ("error", "status_code", "detail"),
-    [(PermissionError("FORBIDDEN"), 403, "FORBIDDEN"),
-     (ValueError("UNSUPPORTED_MEDIA_TYPE"), 422, "UNSUPPORTED_MEDIA_TYPE")],
+    [
+        (PermissionError("FORBIDDEN"), 403, "FORBIDDEN"),
+        (ValueError("UNSUPPORTED_MEDIA_TYPE"), 422, "UNSUPPORTED_MEDIA_TYPE"),
+    ],
 )
 def test_pricing_import_preview_maps_service_errors(error, status_code, detail):
     response = _client(service=_PreviewService(error=error)).post(
@@ -220,7 +249,8 @@ def test_pricing_import_preview_maps_service_errors(error, status_code, detail):
 def test_pricing_import_commit_returns_success_receipt():
     response = _client(commit_service=_CommitService()).post(
         f"/api/v1/patron/cases/{uuid4()}/pricing-import/{uuid4()}/commit",
-        json=_commit_payload(), headers=_headers(),
+        json=_commit_payload(),
+        headers=_headers(),
     )
     assert response.status_code == 201
     assert response.json()["result_code"] == "PRICING_IMPORT_COMMITTED"
@@ -230,26 +260,32 @@ def test_pricing_import_commit_returns_success_receipt():
 def test_pricing_import_commit_route_is_not_registered_without_service():
     response = _client().post(
         f"/api/v1/patron/cases/{uuid4()}/pricing-import/{uuid4()}/commit",
-        json=_commit_payload(), headers=_headers(),
+        json=_commit_payload(),
+        headers=_headers(),
     )
     assert response.status_code == 404
 
 
 @pytest.mark.parametrize(
     ("error", "status_code", "detail"),
-    [(PermissionError("FORBIDDEN"), 403, "FORBIDDEN"),
-     (CommandExecutionError("IMPORT_NOT_FOUND_OR_FORBIDDEN"), 404,
-      "NOT_FOUND_OR_FORBIDDEN"),
-     (CommandExecutionError("FINANCIAL_REPORT_NOT_FOUND_OR_FORBIDDEN"), 404,
-      "NOT_FOUND_OR_FORBIDDEN"),
-     (CommandExecutionError("VERSION_CONFLICT"), 409, "CONFLICT"),
-     (CommandExecutionError("IMPORT_ALREADY_COMMITTED"), 409, "CONFLICT"),
-     (CommandExecutionError("INVALID_ROW"), 422, "COMMAND_REJECTED")],
+    [
+        (PermissionError("FORBIDDEN"), 403, "FORBIDDEN"),
+        (CommandExecutionError("IMPORT_NOT_FOUND_OR_FORBIDDEN"), 404, "NOT_FOUND_OR_FORBIDDEN"),
+        (
+            CommandExecutionError("FINANCIAL_REPORT_NOT_FOUND_OR_FORBIDDEN"),
+            404,
+            "NOT_FOUND_OR_FORBIDDEN",
+        ),
+        (CommandExecutionError("VERSION_CONFLICT"), 409, "CONFLICT"),
+        (CommandExecutionError("IMPORT_ALREADY_COMMITTED"), 409, "CONFLICT"),
+        (CommandExecutionError("INVALID_ROW"), 422, "COMMAND_REJECTED"),
+    ],
 )
 def test_pricing_import_commit_maps_service_errors(error, status_code, detail):
     response = _client(commit_service=_CommitService(error=error)).post(
         f"/api/v1/patron/cases/{uuid4()}/pricing-import/{uuid4()}/commit",
-        json=_commit_payload(), headers=_headers(),
+        json=_commit_payload(),
+        headers=_headers(),
     )
     assert response.status_code == status_code
     assert response.json() == {"detail": detail}
@@ -441,7 +477,6 @@ def test_pricing_import_preview_reused_key_with_changed_source_returns_409():
     assert len(creation_service._receipt_by_key) == 1
 
 
-
 def test_pricing_import_read_returns_private_normalized_projection():
     read_service = _ReadService()
     case_id = uuid4()
@@ -482,9 +517,7 @@ def test_pricing_import_read_maps_private_access_errors(error, status_code, deta
 
 def test_pricing_import_commit_maps_idempotency_key_reuse_to_409():
     response = _client(
-        commit_service=_CommitService(
-            error=IdempotencyKeyReusedError("IDEMPOTENCY_KEY_REUSED")
-        )
+        commit_service=_CommitService(error=IdempotencyKeyReusedError("IDEMPOTENCY_KEY_REUSED"))
     ).post(
         f"/api/v1/patron/cases/{uuid4()}/pricing-import/{uuid4()}/commit",
         json=_commit_payload(),

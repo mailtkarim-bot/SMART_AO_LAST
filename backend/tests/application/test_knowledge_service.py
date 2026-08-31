@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -17,7 +18,7 @@ FRAGMENT_ID = UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaa0003")
 class FakeProvider:
     model_id: str = "fake-bge-m3"
 
-    def embed(self, texts: list[str]) -> list[tuple[float, ...]]:
+    def embed(self, texts: Sequence[str]) -> list[tuple[float, ...]]:
         return [(1.0, 0.0) for _ in texts]
 
 
@@ -58,11 +59,14 @@ def test_knowledge_service_indexes_and_searches_through_ports() -> None:
         source=source,
     )
 
-    assert service.index_case_dce(
-        tenant_id=TENANT_ID,
-        case_id=CASE_ID,
-        dce_version_id=VERSION_ID,
-    ) == 1
+    assert (
+        service.index_case_dce(
+            tenant_id=TENANT_ID,
+            case_id=CASE_ID,
+            dce_version_id=VERSION_ID,
+        )
+        == 1
+    )
     results = service.search_case_dce(
         tenant_id=TENANT_ID,
         case_id=CASE_ID,

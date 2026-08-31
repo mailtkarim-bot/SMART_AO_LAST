@@ -54,9 +54,7 @@ def test_write_removes_temporary_file_when_replace_fails(
 @pytest.mark.parametrize(
     "storage_key", ["/absolute.pdf", "../escape.pdf", "case/../escape.pdf", "."]
 )
-def test_path_rejects_absolute_dot_and_parent_segments(
-    tmp_path: Path, storage_key: str
-) -> None:
+def test_path_rejects_absolute_dot_and_parent_segments(tmp_path: Path, storage_key: str) -> None:
     storage = LocalGeneratedDocumentStorage(root=tmp_path / "generated")
 
     with pytest.raises(ValueError, match="invalid private generated document key|escapes"):

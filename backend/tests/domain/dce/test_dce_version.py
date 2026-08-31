@@ -121,10 +121,13 @@ def test_rectificatif_creates_new_root_and_supersedes_prior_version_without_rewr
     assert rectificatif.lifecycle is DceLifecycle.ADMITTED
     assert initial.lifecycle is DceLifecycle.SUPERSEDED
     assert initial.corpus_hash == "b" * 64
-    assert DceVersionSuperseded(
-        dce_version_id=initial.id,
-        superseded_by_version_id=rectificatif.id,
-    ) in initial.pending_events
+    assert (
+        DceVersionSuperseded(
+            dce_version_id=initial.id,
+            superseded_by_version_id=rectificatif.id,
+        )
+        in initial.pending_events
+    )
 
 
 def test_withdrawn_dce_version_remains_auditable_but_cannot_register_source_statement() -> None:

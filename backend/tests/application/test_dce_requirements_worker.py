@@ -3,8 +3,10 @@ from __future__ import annotations
 import asyncio
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from typing import cast
 from uuid import uuid4
 
+from app.bootstrap.application import AppRuntime
 from app.workers import dce_requirements
 
 NOW = datetime(2026, 8, 23, 12, tzinfo=UTC)
@@ -43,7 +45,7 @@ def test_worker_materializes_the_selected_analysis_and_returns_safe_receipt(monk
     tenant_id = uuid4()
     dce_version_id = uuid4()
     analysis_id = uuid4()
-    runtime = SimpleNamespace(dispatcher=object())
+    runtime = cast(AppRuntime, SimpleNamespace(dispatcher=object()))
 
     receipt = asyncio.run(
         dce_requirements.run_once(
@@ -96,7 +98,7 @@ def test_worker_preserves_replay_as_zero_event_receipt(monkeypatch) -> None:
     receipt = asyncio.run(
         dce_requirements.run_once(
             session_factory=object(),
-            runtime=SimpleNamespace(dispatcher=object()),
+            runtime=cast(AppRuntime, SimpleNamespace(dispatcher=object())),
             tenant_id=uuid4(),
             dce_version_id=uuid4(),
             dce_rc_analysis_id=uuid4(),

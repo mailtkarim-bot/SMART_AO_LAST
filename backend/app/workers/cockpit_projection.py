@@ -24,9 +24,7 @@ from app.platform.persistence.models import OutboxMessageRecord
 
 COCKPIT_PROJECTION_TOPIC = "cockpit_projection"
 PROCESS_NAME = "cockpit-projection"
-_ALLOWED_EVENT_TYPES = frozenset(
-    {"DCE_STAGING_QUARANTINE_RECORDED", "DCE_STAGING_SCAN_RECORDED"}
-)
+_ALLOWED_EVENT_TYPES = frozenset({"DCE_STAGING_QUARANTINE_RECORDED", "DCE_STAGING_SCAN_RECORDED"})
 _ALLOWED_DATA_FIELDS = frozenset({"storage_object_id", "tenant_id", "consultation_id", "state"})
 _ALLOWED_STATES = frozenset({"PENDING_SCAN", "SCANNED", "REJECTED"})
 

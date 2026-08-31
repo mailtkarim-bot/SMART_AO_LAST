@@ -1,14 +1,16 @@
 # SMART_AO V8 — Rapport global d’avancement
 
-**Date de mise à jour :** 18 août 2026
-**Branche de référence :** `ops/vps-deploy-health-digests-01`
-**Dernier commit publié :** [`9b8b7c1`](https://github.com/mailtkarim-bot/SMART_AO_V8/commit/9b8b7c14723df7c4b80cb240b78ceb0760624154)
-**Dernière CI verte :** [workflow `32150099196`](https://github.com/mailtkarim-bot/SMART_AO_V8/actions/runs/32150099196)
-**Validation intégrée courante :** 435 tests backend verts, couverture branchée **85,04 %** avec seuil CI à 85 %, Ruff, Alembic, detect-secrets, SAST, audit de dépendances et build frontend TypeScript strict verts.
+**Date de mise à jour :** 30 août 2026
+**Branche de référence :** `main`
+**Dernier commit publié :** [`16f61b9`](https://github.com/mailtkarim-bot/SMART_AO_V8/commit/16f61b9)
+**Dernière CI verte :** [workflow `32912209432`](https://github.com/mailtkarim-bot/SMART_AO_V8/actions/runs/32912209432)
+**Validation intégrée courante :** 1132 tests backend non-DB passés, mypy `backend/app` propre sur 386 fichiers, Ruff check/format pass, couverture CI **88,77 %** avec seuil à 85,50 %, frontend typecheck/lint/build/tests verts.
 
 ## 1. Position honnête du produit
 
-SMART_AO V8 est un **socle SaaS BTP sécurisé, multi-tenant et fortement audité**, auquel s’ajoutent désormais les parcours de préparation documentaire, cockpit patron initial et paquet de dépôt contrôlé. Il ne faut toutefois pas le présenter comme une application commerciale achevée de bout en bout. Les frontières restantes sont l’extension des modèles et pièces documentaires finales, l’unification complète du cockpit, l’extension des contrôles de dépôt et le dépôt électronique lui-même, qui ne sera jamais déclaré réussi sans preuve externe.
+SMART_AO V8 est un **backend métier avancé et un frontend réel**, avec une architecture modulaire, une sécurité tenant-scoped, une idempotence systématique et une surface fonctionnelle couvrant la majeure partie du cycle AO. Le projet a dépassé le stade prototype et dispose d’un domain model pur, d’une outbox, d’invariants append-only et d’une CI exécutée sur runners GitHub Actions.
+
+Il ne faut toutefois pas le présenter comme une application commerciale achevée de bout en bout. Les frontières restantes sont : la consolidation des derniers refactors architecturaux (ARCH-001), la preuve d’exploitation sur VPS réel (ClamAV/EICAR, HTTPS, backup/restore), le raccordement frontend à une URL HTTPS backend vérifiée, les recettes fournisseurs et la validation juridique/métier des pièces finales. Le dépôt électronique ne sera jamais déclaré réussi sans accusé externe vérifiable.
 
 La séparation fondamentale reste obligatoire : le collaborateur prépare et remonte des informations opérationnelles ; le patron conserve la décision, le chiffrage, la marge, la trésorerie et l’action de dépôt. Aucun contrat collaborateur ne doit transporter de données financières.
 
@@ -16,16 +18,17 @@ La séparation fondamentale reste obligatoire : le collaborateur prépare et rem
 
 | Domaine | État | Fonctionnalités réellement présentes | Limite actuelle |
 |---|---|---|---|
-| Noyau métier | Livré et stable | `Case`, Consultation, DCE, Decision, révisions, événements, outbox, receipts et idempotence. | Le parcours utilisateur complet reste à assembler. |
-| Sécurité et tenants | Livré et durci | Authentification, sessions, refresh rotatif, MFA, RBAC/ABAC/ReBAC, audit append-only, limitation anti-brute-force progressive. | La preuve d’exploitation réelle sur VPS reste ouverte. |
-| Admission DCE | Livrée côté code | Staging privé, upload binaire, limites, hash serveur, MIME détecté, ClamAV fail-closed, rétention et extraction déterministe. | Scan ClamAV, HTTPS, stockage privé et sauvegardes doivent être éprouvés sur un hôte réel. |
-| Analyse DCE | Livrée dans un périmètre déterministe | Analyse lexicale RC, classification, exigences atomiques, preuves sourcées, confirmations humaines et impact de rectificatif. | OCR, plans, formats supplémentaires et analyse IA complète restent hors périmètre. |
-| Entreprise | Livrée dans son premier incrément | Société, assurances/Kbis/RIB, uploads privés, vérification humaine, qualifications, références, capacités et preuves versionnées. | Les workflows métier plus riches de bibliothèque et d’usage des preuves restent à étendre. |
-| Collaboration | Fondations avancées | Affectations, interactions, tâches, demandes d’information, blocages, readiness, revues, corrections et brouillons techniques. | Le parcours complet de production de l’offre technique n’est pas encore assemblé. |
-| Finance patronale | Fondation sécurisée étendue | Snapshots, lignes en unités mineures, publication contrôlée, lecture patronale, scénarios privés versionnés, sélection/archivage et prévisualisation d’import DPGF/BPU/Excel sécurisé. | L’import ne persiste encore qu’une prévisualisation ; rapprochement métier complet, calcul opérationnel et écriture durable des lignes importées restent à étendre. |
-| Génération documentaire | Livrée dans un périmètre contrôlé | Assembleur déterministe avec `TechnicalDocumentFacts`, exigences DCE structurées, versions append-only, readiness et stockage privé. | Les modèles métier finaux et l’assemblage exhaustif des pièces RC restent à étendre. |
-| Cockpit patron | Unifié dans le périmètre courant | React/Vite consomme les API d’affectations, journaux, interactions, Actions patron, Dossier décision, scénarios privés, paquet, preuve de dépôt et navigation métier. | Les écrans finaux de bibliothèque et la profondeur complète du workspace patron restent à enrichir. |
-| Dépôt | Préparation et preuve manuelle livrées | `submission` produit un paquet tenant-scoped idempotent, manifest JSONB hashé, contrôles de versions publiées, preuve manuelle hashée append-only et `external_submission` permanent `NOT_PERFORMED`. | Transmission électronique réelle, accusé externe vérifié et intégration portail restent hors code et ne doivent pas être simulés. |
+| Noyau métier | Livré et stable | `Case`, Consultation, DCE, Decision, révisions, événements, outbox, receipts et idempotence. | Assemblage E2E navigateur authentifié de bout en bout. |
+| Sécurité et tenants | Livré et durci | Authentification, sessions, refresh rotatif, MFA/TOTP complet, step-up sur décision et signature, RBAC/ABAC/ReBAC, audit append-only, anti-brute-force. | Preuve d’exploitation réelle sur VPS. |
+| Admission DCE | Livrée côté code | Staging privé, upload binaire, limites, hash serveur, MIME détecté, ClamAV fail-closed, rétention et extraction déterministe. | Scan ClamAV réel, HTTPS, stockage privé et sauvegardes sur hôte réel. |
+| Analyse DCE | Livrée dans un périmètre déterministe | Analyse lexicale RC, classification, exigences atomiques, preuves sourcées, confirmations humaines, impact de rectificatif, OCR opt-in RapideOCR, détection de contradictions interdocuments. | Corpus Golden DCE anonymisé, métriques OCR/RAG, modèle BGE réel. |
+| Entreprise | Livrée dans son premier incrément | Société, assurances/Kbis/RIB, uploads privés, vérification humaine, qualifications, références, capacités, preuves versionnées et bibliothèque. | Workflows métier plus riches et usage des preuves dans la qualification. |
+| Collaboration | Fondations avancées | Affectations, interactions, tâches, demandes d’information, blocages, readiness, revues, corrections, brouillons techniques et documents générés. | Parcours complet de production de l’offre technique assemblé E2E. |
+| Finance patronale | Très avancée | Snapshots, lignes, publication contrôlée, scénarios privés versionnés, import DPGF/BPU/Excel sécurisé avec libmagic/ClamAV, preview persistée, rapprochement DPGF/BPU. | Écriture durable des lignes importées et calcul opérationnel complet. |
+| Génération documentaire | Livrée dans un périmètre contrôlé | Assembleur déterministe avec `TechnicalDocumentFacts`, exigences DCE structurées, versions append-only, readiness, stockage privé et enveloppes DC1/DC2/DC4 non contractuelles. | Validation juridique/métier des textes finaux. |
+| Cockpit patron | Unifié et enrichi | React/Vite : login, création d’affaire, affectations, DCE, opportunities/BOAMP, Dossier décision, risques, GO/NO-GO conditionnel, scénarios pricing, paquet, preuve de dépôt, TOTP. | Raccordement à une URL HTTPS backend réelle et E2E navigateur. |
+| Dépôt | Préparation et preuve manuelle livrées | Paquet tenant-scoped idempotent, manifest JSONB hashé, contrôles de versions publiées, preuve manuelle hashée append-only, garde Decision intégré et `external_submission` permanent `NOT_PERFORMED`. | Transmission électronique réelle et accusé externe vérifié. |
+| Veille | Intégrée | Profil opportunity, ingestion BOAMP, observations fingerprintées, scoring, qualification humaine `QUALIFIED`/`REJECTED`/`SNOOZED`, conversion contrôlée en Case, cockpit frontend. | Recette réseau BOAMP stable et recette externe. |
 | Déploiement | Préparé, non exécuté sur VPS | Factory production, Caddy, healthchecks, pinning digest, sauvegarde/restauration isolée, timers et rotation des secrets. | Gate VPS réel, HTTPS, EICAR, supervision externe et rapport opérateur. |
 
 ## 3. Corrections de socle publiées
@@ -59,15 +62,15 @@ Les étapes DCE, préparation collaborative, génération technique, cockpit pat
 
 ## 6. Ordre de travail avant VPS
 
-| Ordre | Slice | Résultat attendu |
+| Phase | Slice | Résultat attendu |
 |---:|---|---|
-| 1 | Génération documentaire contrôlée | Livrée dans le périmètre actuel ; étendre ultérieurement les modèles et pièces RC finales. |
-| 2 | Cockpit patron | Première tranche livrée ; réunir progressivement préparation, revue, bibliothèque et paquet. |
-| 3 | Préparation du dépôt et preuve | Livrée : paquet immutable, manifest hashé, contrôles de versions, preuve manuelle append-only et `NOT_PERFORMED`. |
-| 4 | Frontend patron et parcours intégrés | Livrés dans le périmètre courant : navigation métier, Dossier décision, preuve de dépôt, wizard collaborateur et actions de préparation. |
-| 5 | Import pricing sécurisé | Livré en prévisualisation patronale : DPGF/BPU/Excel `.xlsx`, contrôles anti-macro/anti-bombe, colonnes normalisées, centimes déterministes et erreurs par ligne. |
-| 6 | Réconciliation finale | Livrée : 435 tests, couverture 85,04 %, architecture, documentation, secrets, audit, SAST et build strict validés par CI. |
-| 7 | Gate VPS | Après disponibilité d’un VPS : Docker, Caddy, ClamAV réel, EICAR, HTTPS, backups hors hôte, restauration isolée, supervision et rapport opérateur. |
+| 1 | Stabilisation | Tests verts hors DB, Ruff/mypy/format propres, documentation d’état à jour. |
+| 2 | Fin du refactoring ARCH-001 | Extraire les derniers readers/ports dans `pricing` et `membership` ; verrouiller par un test d’architecture anti-import `infrastructure` dans `application/`. |
+| 3 | Cœur métier BTP | Registre CCAP/CCTP, croisement CCTP–DPGF–BPU, OCR Golden Corpus, GO/NO-GO conditionnel finalisé. |
+| 4 | E2E navigateur | Parcours Playwright authentifié : Case → DCE → préparation → pricing → decision → submission. |
+| 5 | Gate VPS | Docker préproduction, PostgreSQL 16, ClamAV/EICAR, Caddy/HTTPS public, backup/restore, supervision et rapport opérateur. |
+| 6 | Recettes fournisseurs | S3/MinIO, SMTP, signature, bus externe, BOAMP/INSEE, OCR avancé avec secrets runtime hors Git. |
+| 7 | Validation juridique/métier | Textes DC1/DC2/DC4, droits `PATRON_DELEGATE`, conservation et conformité opérationnelle. |
 
 ## 7. Limites explicitement conservées
 

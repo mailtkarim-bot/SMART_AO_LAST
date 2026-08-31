@@ -157,8 +157,7 @@ def build_patron_assignment_cockpit_router(
             case_id=lookup.case_id,
             case_lifecycle=lookup.case_lifecycle,
             items=[
-                PatronAssignmentInteractionItemResponse(**asdict(item))
-                for item in lookup.items
+                PatronAssignmentInteractionItemResponse(**asdict(item)) for item in lookup.items
             ],
         )
 

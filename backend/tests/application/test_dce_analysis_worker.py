@@ -3,8 +3,10 @@ from __future__ import annotations
 import asyncio
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from typing import cast
 from uuid import uuid4
 
+from app.bootstrap.application import AppRuntime
 from app.workers import dce_analysis
 
 NOW = datetime(2026, 8, 23, 12, tzinfo=UTC)
@@ -42,7 +44,7 @@ def test_worker_uses_system_analysis_service_and_returns_safe_receipt(monkeypatc
     monkeypatch.setattr(dce_analysis, "DceRcAnalysisService", fake_service)
     tenant_id = uuid4()
     dce_version_id = uuid4()
-    runtime = SimpleNamespace(dispatcher=object())
+    runtime = cast(AppRuntime, SimpleNamespace(dispatcher=object()))
 
     receipt = asyncio.run(
         dce_analysis.run_once(
@@ -93,7 +95,7 @@ def test_worker_preserves_replay_as_zero_event_receipt(monkeypatch) -> None:
     receipt = asyncio.run(
         dce_analysis.run_once(
             session_factory=object(),
-            runtime=SimpleNamespace(dispatcher=object()),
+            runtime=cast(AppRuntime, SimpleNamespace(dispatcher=object())),
             tenant_id=uuid4(),
             dce_version_id=uuid4(),
         )

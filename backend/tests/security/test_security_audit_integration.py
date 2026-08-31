@@ -56,10 +56,6 @@ class SequenceTokenGenerator:
         return self._values.popleft()
 
 
-
-
-
-
 @pytest.fixture(autouse=True)
 def isolate_audit_integration_records(database_engine: sa.Engine) -> None:
     with database_engine.begin() as connection:
@@ -144,8 +140,9 @@ def test_login_success_and_logout_append_minimized_security_events(
     with Session(database_engine) as session:
         events = list(
             session.scalars(
-                sa.select(SecurityAuditEventRecord)
-                .order_by(SecurityAuditEventRecord.occurred_at, SecurityAuditEventRecord.id)
+                sa.select(SecurityAuditEventRecord).order_by(
+                    SecurityAuditEventRecord.occurred_at, SecurityAuditEventRecord.id
+                )
             )
         )
 

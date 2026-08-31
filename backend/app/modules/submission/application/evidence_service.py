@@ -102,23 +102,27 @@ class RecordSubmissionEvidenceHandler:
         session.add(record)
         return HandlerOutcome(
             result_code="SUBMISSION_EVIDENCE_RECORDED",
-            aggregate_refs=({
-                "aggregate_type": "SubmissionEvidence",
-                "aggregate_id": str(record.id),
-                "aggregate_revision": 1,
-            },),
-            events=(PendingDomainEvent(
-                aggregate_type="SubmissionEvidence",
-                aggregate_id=record.id,
-                aggregate_revision=1,
-                event_type="SubmissionEvidenceRecorded",
-                payload={
-                    "submission_evidence_id": str(record.id),
-                    "submission_package_id": str(package.id),
-                    "status": record.status,
-                    "external_submission": "NOT_PERFORMED",
+            aggregate_refs=(
+                {
+                    "aggregate_type": "SubmissionEvidence",
+                    "aggregate_id": str(record.id),
+                    "aggregate_revision": 1,
                 },
-            ),),
+            ),
+            events=(
+                PendingDomainEvent(
+                    aggregate_type="SubmissionEvidence",
+                    aggregate_id=record.id,
+                    aggregate_revision=1,
+                    event_type="SubmissionEvidenceRecorded",
+                    payload={
+                        "submission_evidence_id": str(record.id),
+                        "submission_package_id": str(package.id),
+                        "status": record.status,
+                        "external_submission": "NOT_PERFORMED",
+                    },
+                ),
+            ),
         )
 
 

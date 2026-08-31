@@ -82,9 +82,7 @@ def _seed_message(
     return tenant_id, message_id
 
 
-def _read_message(
-    session_factory: sessionmaker[Session], message_id: UUID
-) -> OutboxMessageRecord:
+def _read_message(session_factory: sessionmaker[Session], message_id: UUID) -> OutboxMessageRecord:
     with session_factory() as session:
         message = session.get(OutboxMessageRecord, message_id)
         assert message is not None

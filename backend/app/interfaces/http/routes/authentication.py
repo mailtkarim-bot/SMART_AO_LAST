@@ -178,9 +178,7 @@ def build_authentication_router(*, runtime: AuthenticationHttpRuntime) -> APIRou
 
     @router.post("/login", response_model=AccessTokenResponse)
     def login(request: LoginRequest, http_request: Request) -> JSONResponse:
-        source_ip = _source_ip(
-            http_request, trusted_proxy_networks=runtime.trusted_proxy_networks
-        )
+        source_ip = _source_ip(http_request, trusted_proxy_networks=runtime.trusted_proxy_networks)
         decision = runtime.rate_limiter.check(
             namespace="login",
             identity=request.email,
@@ -238,9 +236,7 @@ def build_authentication_router(*, runtime: AuthenticationHttpRuntime) -> APIRou
         request: Request,
         csrf_header: str | None = Header(default=None, alias=_CSRF_HEADER_NAME),
     ) -> JSONResponse:
-        source_ip = _source_ip(
-            request, trusted_proxy_networks=runtime.trusted_proxy_networks
-        )
+        source_ip = _source_ip(request, trusted_proxy_networks=runtime.trusted_proxy_networks)
         decision = runtime.rate_limiter.check(
             namespace="refresh",
             identity=None,
@@ -403,9 +399,7 @@ def build_authentication_router(*, runtime: AuthenticationHttpRuntime) -> APIRou
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=str(error),
             ) from error
-        runtime.rate_limiter.record_success(
-            namespace="mfa", identity=identity, source_ip=source_ip
-        )
+        runtime.rate_limiter.record_success(namespace="mfa", identity=identity, source_ip=source_ip)
         _record_mfa_event(
             runtime=runtime,
             context=context,
@@ -430,9 +424,7 @@ def build_authentication_router(*, runtime: AuthenticationHttpRuntime) -> APIRou
         )
         session_id = _require_authenticated_session(context)
         _require_csrf(request=http_request, csrf_header=csrf_header)
-        source_ip = _source_ip(
-            http_request, trusted_proxy_networks=runtime.trusted_proxy_networks
-        )
+        source_ip = _source_ip(http_request, trusted_proxy_networks=runtime.trusted_proxy_networks)
         identity = str(context.identity_id)
         decision = runtime.rate_limiter.check(
             namespace="mfa", identity=identity, source_ip=source_ip
@@ -463,9 +455,7 @@ def build_authentication_router(*, runtime: AuthenticationHttpRuntime) -> APIRou
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=str(error),
             ) from error
-        runtime.rate_limiter.record_success(
-            namespace="mfa", identity=identity, source_ip=source_ip
-        )
+        runtime.rate_limiter.record_success(namespace="mfa", identity=identity, source_ip=source_ip)
         _record_mfa_event(
             runtime=runtime,
             context=context,
@@ -478,9 +468,7 @@ def build_authentication_router(*, runtime: AuthenticationHttpRuntime) -> APIRou
             severity=AuditSeverity.INFO,
             action="auth.mfa.step_up",
             reason_code=(
-                "MFA_RECOVERY_USED"
-                if result.used_recovery_code
-                else "MFA_STEP_UP_SUCCEEDED"
+                "MFA_RECOVERY_USED" if result.used_recovery_code else "MFA_STEP_UP_SUCCEEDED"
             ),
         )
         return _issue_access_token_response(
@@ -529,9 +517,7 @@ def build_authentication_router(*, runtime: AuthenticationHttpRuntime) -> APIRou
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=str(error),
             ) from error
-        runtime.rate_limiter.record_success(
-            namespace="mfa", identity=identity, source_ip=source_ip
-        )
+        runtime.rate_limiter.record_success(namespace="mfa", identity=identity, source_ip=source_ip)
         _record_mfa_event(
             runtime=runtime,
             context=context,

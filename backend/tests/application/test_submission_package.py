@@ -217,21 +217,30 @@ def test_submission_package_is_hashed_idempotent_and_append_only(services, sessi
         assert record.financial_snapshot_id == snapshot_id
         assert record.manifest_json["external_submission"] == "NOT_PERFORMED"
         assert "sales_total_minor" not in str(record.manifest_json)
-        assert session.scalar(
-            sa.select(sa.func.count()).where(
-                SubmissionPackageRecord.tenant_id == actor.tenant_id,
-                SubmissionPackageRecord.preparation_package_id == preparation_package_id,
+        assert (
+            session.scalar(
+                sa.select(sa.func.count()).where(
+                    SubmissionPackageRecord.tenant_id == actor.tenant_id,
+                    SubmissionPackageRecord.preparation_package_id == preparation_package_id,
+                )
             )
-        ) == 1
-        assert session.scalar(
-            sa.select(sa.func.count()).where(
-                DomainEventRecord.tenant_id == actor.tenant_id,
-                DomainEventRecord.aggregate_id == record.id,
+            == 1
+        )
+        assert (
+            session.scalar(
+                sa.select(sa.func.count()).where(
+                    DomainEventRecord.tenant_id == actor.tenant_id,
+                    DomainEventRecord.aggregate_id == record.id,
+                )
             )
-        ) == 2
-        assert session.scalar(
-            sa.select(sa.func.count()).where(OutboxMessageRecord.tenant_id == actor.tenant_id)
-        ) >= 2
+            == 2
+        )
+        assert (
+            session.scalar(
+                sa.select(sa.func.count()).where(OutboxMessageRecord.tenant_id == actor.tenant_id)
+            )
+            >= 2
+        )
         audit = session.scalar(
             sa.select(SecurityAuditEventRecord).where(
                 SecurityAuditEventRecord.tenant_id == actor.tenant_id,
@@ -263,7 +272,6 @@ def test_submission_package_is_hashed_idempotent_and_append_only(services, sessi
         }
         assert "archive_sha256" not in smtp_notification.payload_json
         assert "financial_snapshot_id" not in smtp_notification.payload_json
-
 
     with pytest.raises(sa.exc.ProgrammingError), session_factory.begin() as session:
         session.execute(

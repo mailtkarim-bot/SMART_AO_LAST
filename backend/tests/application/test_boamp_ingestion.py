@@ -21,7 +21,6 @@ _SCRIPT_SPEC.loader.exec_module(ingest_boamp_opportunities)
 NOW = datetime(2026, 8, 23, 12, 0, tzinfo=UTC)
 
 
-
 class FakeBoampPort:
     def __init__(self, pages: dict[tuple[str, int], tuple[BoampNotice, ...]]) -> None:
         self.pages = pages
@@ -112,9 +111,7 @@ def test_ingestion_rejects_empty_keywords_and_excessive_keyword_budget() -> None
             criteria=WatchProfileCriteria(), now=NOW
         )
     with pytest.raises(OpportunityIngestionLimitError):
-        BoampOpportunityIngestionService(
-            search_port=FakeBoampPort({}), max_keywords=1
-        ).ingest(
+        BoampOpportunityIngestionService(search_port=FakeBoampPort({}), max_keywords=1).ingest(
             criteria=WatchProfileCriteria(keywords=("one", "two")), now=NOW
         )
 

@@ -1,13 +1,17 @@
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
+from typing import cast
 from uuid import uuid4
 
 import pytest
 from app.interfaces.http.routes.consultations import ConsultationSecurityRuntime
 from app.interfaces.http.routes.dce_staging import build_dce_staging_router
 from app.platform.events.dispatcher import CommandExecutionError, IdempotencyKeyReusedError
-from app.platform.security.authenticated_context import UnauthenticatedError
+from app.platform.security.authenticated_context import (
+    AuthenticationContextResolver,
+    UnauthenticatedError,
+)
 from app.platform.security.context import ActorContext, ActorKind, MembershipState
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -24,10 +28,18 @@ class _Resolver:
         if self.error is not None:
             raise self.error
         return ActorContext(
-            actor_id=uuid4(), identity_id=uuid4(), tenant_id=uuid4(), membership_id=uuid4(),
-            actor_kind=ActorKind.PATRON_ADMIN, membership_state=MembershipState.ACTIVE,
-            capabilities=frozenset(), assigned_case_ids=frozenset(), session_id=uuid4(),
-            authenticated_at=NOW, mfa_verified_at=None, correlation_id=uuid4(),
+            actor_id=uuid4(),
+            identity_id=uuid4(),
+            tenant_id=uuid4(),
+            membership_id=uuid4(),
+            actor_kind=ActorKind.PATRON_ADMIN,
+            membership_state=MembershipState.ACTIVE,
+            capabilities=frozenset(),
+            assigned_case_ids=frozenset(),
+            session_id=uuid4(),
+            authenticated_at=NOW,
+            mfa_verified_at=None,
+            correlation_id=uuid4(),
         )
 
 
@@ -78,11 +90,18 @@ class _Dispatcher:
         if self.error is not None:
             raise self.error
         return SimpleNamespace(
-            command_id=uuid4(), idempotency_key=uuid4(),
+            command_id=uuid4(),
+            idempotency_key=uuid4(),
             result_code="DCE_STAGING_PREPARED",
-            aggregate_refs=[{"aggregate_type": "DceStagedObject", "aggregate_id": uuid4(),
-                             "aggregate_revision": 1}],
-            event_ids=[uuid4()], replayed=False,
+            aggregate_refs=[
+                {
+                    "aggregate_type": "DceStagedObject",
+                    "aggregate_id": uuid4(),
+                    "aggregate_revision": 1,
+                }
+            ],
+            event_ids=[uuid4()],
+            replayed=False,
         )
 
 
@@ -106,7 +125,8 @@ class _Runtime:
 
 def _security(*, policy=None, resolver_error=None):
     return ConsultationSecurityRuntime(
-        context_resolver=_Resolver(error=resolver_error), policy=policy or _Policy()
+        context_resolver=cast(AuthenticationContextResolver, _Resolver(error=resolver_error)),
+        policy=policy or _Policy(),
     )
 
 
@@ -127,10 +147,14 @@ def _headers():
 
 def _prepare_payload(consultation_id):
     return {
-        "command_id": str(uuid4()), "idempotency_key": str(uuid4()),
-        "correlation_id": str(uuid4()), "consultation_id": str(consultation_id),
-        "consultation_revision": 2, "original_filename": "reglement.pdf",
-        "expected_byte_size": 7, "source_channel": "MANUAL_UPLOAD",
+        "command_id": str(uuid4()),
+        "idempotency_key": str(uuid4()),
+        "correlation_id": str(uuid4()),
+        "consultation_id": str(consultation_id),
+        "consultation_revision": 2,
+        "original_filename": "reglement.pdf",
+        "expected_byte_size": 7,
+        "source_channel": "MANUAL_UPLOAD",
         "expires_at": (NOW + timedelta(hours=1)).isoformat(),
     }
 
@@ -163,8 +187,10 @@ def test_prepare_staging_maps_missing_consultation_to_neutral_404():
 
 @pytest.mark.parametrize(
     ("decision", "status_code", "detail"),
-    [(_Decision(False, 403, "FORBIDDEN"), 403, "FORBIDDEN"),
-     (_Decision(False, 404, "NOT_FOUND_OR_FORBIDDEN"), 404, "NOT_FOUND_OR_FORBIDDEN")],
+    [
+        (_Decision(False, 403, "FORBIDDEN"), 403, "FORBIDDEN"),
+        (_Decision(False, 404, "NOT_FOUND_OR_FORBIDDEN"), 404, "NOT_FOUND_OR_FORBIDDEN"),
+    ],
 )
 def test_prepare_staging_maps_authorization_decision(decision, status_code, detail):
     response = _client(policy=_Policy(decision)).post(
@@ -176,8 +202,10 @@ def test_prepare_staging_maps_authorization_decision(decision, status_code, deta
 
 @pytest.mark.parametrize(
     ("error", "detail"),
-    [(IdempotencyKeyReusedError("reused"), "IDEMPOTENCY_KEY_REUSED"),
-     (CommandExecutionError("invalid"), "COMMAND_REJECTED")],
+    [
+        (IdempotencyKeyReusedError("reused"), "IDEMPOTENCY_KEY_REUSED"),
+        (CommandExecutionError("invalid"), "COMMAND_REJECTED"),
+    ],
 )
 def test_prepare_staging_maps_dispatch_errors(error, detail):
     runtime = _Runtime(consultation_tenant=uuid4(), dispatcher=_Dispatcher(error=error))
@@ -211,7 +239,8 @@ def test_upload_requires_idempotency_header_and_does_not_resolve_target():
     runtime = _Runtime(target=_Target(uuid4(), uuid4(), "dce/key", 7))
     response = _client(runtime=runtime).put(
         f"/api/v1/dce-staged-objects/{uuid4()}/content",
-        content=b"payload", headers={**_headers(), "content-type": "application/octet-stream"},
+        content=b"payload",
+        headers={**_headers(), "content-type": "application/octet-stream"},
     )
     assert response.status_code == 400
     assert response.json() == {"detail": "IDEMPOTENCY_KEY_REQUIRED"}
@@ -226,8 +255,12 @@ def test_upload_returns_clean_state_and_forwards_binary_stream():
     response = _client(runtime=runtime).put(
         f"/api/v1/dce-staged-objects/{storage_id}/content",
         content=b"payload",
-        headers={**_headers(), "Idempotency-Key": str(uuid4()),
-                 "content-type": "application/octet-stream", "content-length": "7"},
+        headers={
+            **_headers(),
+            "Idempotency-Key": str(uuid4()),
+            "content-type": "application/octet-stream",
+            "content-length": "7",
+        },
     )
     assert response.status_code == 200
     assert response.json() == {"storage_object_id": str(storage_id), "state": "CLEAN"}
@@ -237,15 +270,17 @@ def test_upload_returns_clean_state_and_forwards_binary_stream():
 
 @pytest.mark.parametrize(
     ("content_type", "status_code", "detail"),
-    [("application/json", 415, "BINARY_STREAM_REQUIRED"),
-     ("multipart/form-data; boundary=x", 415, "BINARY_STREAM_REQUIRED")],
+    [
+        ("application/json", 415, "BINARY_STREAM_REQUIRED"),
+        ("multipart/form-data; boundary=x", 415, "BINARY_STREAM_REQUIRED"),
+    ],
 )
 def test_upload_rejects_non_binary_content_types(content_type, status_code, detail):
     runtime = _Runtime(target=_Target(uuid4(), uuid4(), "dce/key", 7))
     response = _client(runtime=runtime).put(
         f"/api/v1/dce-staged-objects/{uuid4()}/content",
-        content=b"payload", headers={**_headers(), "Idempotency-Key": str(uuid4()),
-                 "content-type": content_type},
+        content=b"payload",
+        headers={**_headers(), "Idempotency-Key": str(uuid4()), "content-type": content_type},
     )
     assert response.status_code == status_code
     assert response.json() == {"detail": detail}
@@ -256,8 +291,13 @@ def test_upload_rejects_invalid_content_length(content_length):
     runtime = _Runtime(target=_Target(uuid4(), uuid4(), "dce/key", 7))
     response = _client(runtime=runtime).put(
         f"/api/v1/dce-staged-objects/{uuid4()}/content",
-        content=b"payload", headers={**_headers(), "Idempotency-Key": str(uuid4()),
-                 "content-type": "application/octet-stream", "content-length": content_length},
+        content=b"payload",
+        headers={
+            **_headers(),
+            "Idempotency-Key": str(uuid4()),
+            "content-type": "application/octet-stream",
+            "content-length": content_length,
+        },
     )
     assert response.status_code == 400
     assert response.json() == {"detail": "INVALID_CONTENT_LENGTH"}
@@ -266,8 +306,12 @@ def test_upload_rejects_invalid_content_length(content_length):
 def test_upload_maps_missing_target_to_neutral_404():
     response = _client(runtime=_Runtime(target=None)).put(
         f"/api/v1/dce-staged-objects/{uuid4()}/content",
-        content=b"payload", headers={**_headers(), "Idempotency-Key": str(uuid4()),
-                 "content-type": "application/octet-stream"},
+        content=b"payload",
+        headers={
+            **_headers(),
+            "Idempotency-Key": str(uuid4()),
+            "content-type": "application/octet-stream",
+        },
     )
     assert response.status_code == 404
     assert response.json() == {"detail": "NOT_FOUND_OR_FORBIDDEN"}

@@ -59,9 +59,7 @@ def test_update_root_rejects_empty_and_forbidden_changes(aggregate_table: sa.Tab
     with pytest.raises(ValueError, match="at least one change"):
         update_root_with_expected_revision(changes={}, **common)
     with pytest.raises(ValueError, match="forbidden columns: other, status"):
-        update_root_with_expected_revision(
-            changes={"status": "OPEN", "other": "value"}, **common
-        )
+        update_root_with_expected_revision(changes={"status": "OPEN", "other": "value"}, **common)
     assert session.statement is None
 
 

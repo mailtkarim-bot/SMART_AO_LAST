@@ -3,6 +3,7 @@ import logging
 import re
 import sys
 from types import SimpleNamespace
+from typing import Any, cast
 
 from app.bootstrap.application import create_app
 from app.platform.observability import logging as structured_logging
@@ -117,9 +118,11 @@ def test_json_log_formatter_serializes_exception_without_business_fields() -> No
             lineno=1,
             msg="worker failed",
             args=(),
-            exc_info=True,
+            exc_info=cast(
+                tuple[type[BaseException], BaseException, Any],
+                sys.exc_info(),
+            ),
         )
-        record.exc_info = sys.exc_info()
 
     payload = json.loads(JsonLogFormatter().format(record))
 
@@ -132,8 +135,8 @@ def test_json_log_formatter_serializes_exception_without_business_fields() -> No
 def test_configure_structured_logging_installs_root_handler_once(monkeypatch) -> None:
     class FakeRoot:
         def __init__(self) -> None:
-            self.handlers = []
-            self.level = None
+            self.handlers: list[Any] = []
+            self.level: int | None = None
 
         def addHandler(self, handler) -> None:
             self.handlers.append(handler)

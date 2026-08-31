@@ -68,9 +68,7 @@ class HttpExternalEventBus:
             sort_keys=True,
             separators=(",", ":"),
         ).encode("utf-8")
-        signature = hmac.new(
-            self.token.encode("utf-8"), body, hashlib.sha256
-        ).hexdigest()
+        signature = hmac.new(self.token.encode("utf-8"), body, hashlib.sha256).hexdigest()
         request = Request(
             self.url,
             data=body,

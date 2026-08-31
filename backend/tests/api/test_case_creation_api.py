@@ -1,11 +1,13 @@
 from dataclasses import replace
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from typing import cast
 from uuid import uuid4
 
 import app.interfaces.http.routes.case_creation as route_module
 import pytest
 from app.interfaces.http.routes.case_creation import build_case_creation_router
+from app.interfaces.http.routes.consultations import ConsultationSecurityRuntime
 from app.platform.events.dispatcher import (
     CommandExecutionError,
     DispatchResult,
@@ -37,9 +39,12 @@ def _actor() -> ActorContext:
 
 
 def _client(*, dispatcher, actor: ActorContext, monkeypatch) -> TestClient:
-    security_runtime = SimpleNamespace(
-        context_resolver=object(),
-        policy=AuthorizationPolicy(),
+    security_runtime = cast(
+        ConsultationSecurityRuntime,
+        SimpleNamespace(
+            context_resolver=object(),
+            policy=AuthorizationPolicy(),
+        ),
     )
     monkeypatch.setattr(route_module, "_resolve_context", lambda **_kwargs: actor)
     app = FastAPI()

@@ -126,11 +126,7 @@ class JwtAccessTokenCodec:
         except (InvalidTokenError, KeyError, TypeError, ValueError) as error:
             raise AccessTokenRejectedError() from error
         now = self._now()
-        if (
-            claims.token_version < 1
-            or claims.issued_at > now
-            or claims.expires_at <= now
-        ):
+        if claims.token_version < 1 or claims.issued_at > now or claims.expires_at <= now:
             raise AccessTokenRejectedError()
         return claims
 

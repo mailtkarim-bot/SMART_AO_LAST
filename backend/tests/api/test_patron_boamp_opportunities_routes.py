@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from typing import cast
 from uuid import UUID, uuid4
 
 from app.interfaces.http.routes.consultations import ConsultationSecurityRuntime
@@ -11,6 +12,8 @@ from app.interfaces.http.routes.patron_boamp_opportunities import (
 from app.modules.opportunity.application.boamp_qualification_errors import (
     BoampQualificationIdempotencyConflict,
 )
+from app.platform.security.authenticated_context import AuthenticationContextResolver
+from app.platform.security.authorization import AuthorizationPolicyPort
 from app.platform.security.context import ActorKind
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -128,8 +131,8 @@ def _client(
         build_patron_boamp_opportunity_router(
             runtime=_runtime(*session_values, repository=repository),
             security_runtime=ConsultationSecurityRuntime(
-                context_resolver=FakeResolver(context),
-                policy=FakePolicy(allowed=allowed),
+                context_resolver=cast(AuthenticationContextResolver, FakeResolver(context)),
+                policy=cast(AuthorizationPolicyPort, FakePolicy(allowed=allowed)),
             ),
         )
     )

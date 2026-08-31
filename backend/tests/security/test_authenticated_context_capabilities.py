@@ -29,10 +29,6 @@ class FixedClock:
         return NOW
 
 
-
-
-
-
 @pytest.fixture(autouse=True)
 def isolate_context_records(database_engine: sa.Engine) -> None:
     with database_engine.begin() as connection:
@@ -266,9 +262,7 @@ def test_context_resolver_rejects_inactive_membership(
     database_engine: sa.Engine,
     session_factory: sessionmaker[Session],
 ) -> None:
-    _, identity_id, membership_id, _, session_id = _seed_collaborator_assignment(
-        database_engine
-    )
+    _, identity_id, membership_id, _, session_id = _seed_collaborator_assignment(database_engine)
     with Session(database_engine) as session:
         membership = session.get(TenantMembershipRecord, membership_id)
         assert membership is not None
@@ -292,9 +286,7 @@ def test_non_collaborator_context_has_no_assignment_scopes(
     database_engine: sa.Engine,
     session_factory: sessionmaker[Session],
 ) -> None:
-    _, identity_id, membership_id, _, session_id = _seed_collaborator_assignment(
-        database_engine
-    )
+    _, identity_id, membership_id, _, session_id = _seed_collaborator_assignment(database_engine)
     with Session(database_engine) as session:
         membership = session.get(TenantMembershipRecord, membership_id)
         assert membership is not None

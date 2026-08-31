@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from typing import Any, cast
 from uuid import uuid4
 
 import pytest
@@ -13,7 +14,10 @@ from app.platform.events.dispatcher import (
     CommandInProgressError,
     IdempotencyKeyReusedError,
 )
-from app.platform.security.authenticated_context import UnauthenticatedError
+from app.platform.security.authenticated_context import (
+    UnauthenticatedError,
+)
+from app.platform.security.authorization import AuthorizationPolicyPort
 from app.platform.security.context import ActorContext, ActorKind, MembershipState
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -51,7 +55,8 @@ def _actor() -> ActorContext:
 
 def _runtime(*, resolver_error=None):
     return ConsultationSecurityRuntime(
-        context_resolver=_Resolver(error=resolver_error), policy=SimpleNamespace()
+        context_resolver=cast(Any, _Resolver(error=resolver_error)),
+        policy=cast(AuthorizationPolicyPort, SimpleNamespace()),
     )
 
 
@@ -59,7 +64,7 @@ def _client(*, service=None, resolver_error=None):
     app = FastAPI()
     app.include_router(
         build_patron_submission_evidence_router(
-            service=service or _EvidenceService(),
+            service=service or cast(Any, _EvidenceService()),
             security_runtime=_runtime(resolver_error=resolver_error),
         )
     )
@@ -133,7 +138,7 @@ def test_submission_evidence_route_maps_invalid_context_to_401():
 
 
 def test_record_evidence_returns_201_then_200_on_replay():
-    service = _EvidenceService()
+    service = cast(Any, _EvidenceService())
     client = _client(service=service)
     package_id = uuid4()
     payload = _payload()

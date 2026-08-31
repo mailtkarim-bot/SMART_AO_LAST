@@ -78,7 +78,10 @@ class BoampOpportunityObservationRecord(TenantScopedRecord, Base):
         sa.ForeignKeyConstraint(["tenant_id"], ["tenants.id"], name="boamp_observations_tenant"),
         sa.UniqueConstraint("tenant_id", "id", name="uq_boamp_observations_tenant_id"),
         sa.UniqueConstraint(
-            "tenant_id", "source", "source_notice_id", "fingerprint_sha256",
+            "tenant_id",
+            "source",
+            "source_notice_id",
+            "fingerprint_sha256",
             name="uq_boamp_observations_source_fingerprint",
         ),
         sa.CheckConstraint("source = 'BOAMP'", name="boamp_observations_source"),

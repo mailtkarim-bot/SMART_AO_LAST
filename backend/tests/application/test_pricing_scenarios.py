@@ -3,10 +3,8 @@ from uuid import uuid4
 
 import pytest
 from app.modules.pricing.application.commands import CreatePricingScenarioCommand
-from app.modules.pricing.application.service import (
-    PricingScenarioService,
-    pricing_scenario_handlers,
-)
+from app.modules.pricing.application.scenario_handler import pricing_scenario_handlers
+from app.modules.pricing.application.service import PricingScenarioService
 from app.modules.pricing.infrastructure.scenario_reader import SqlAlchemyPricingScenarioReader
 from app.platform.events.dispatcher import CommandDispatcher, CommandExecutionError
 from app.platform.security.authorization import AuthorizationPolicy

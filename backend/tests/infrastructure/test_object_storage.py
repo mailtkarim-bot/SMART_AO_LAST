@@ -70,9 +70,9 @@ def test_s3_read_and_bounded_async_read() -> None:
     storage = S3PrivateObjectStorage(bucket="private", client=client)
 
     assert storage.read(storage_key="tenant/object.bin") == b"stored"
-    assert asyncio.run(
-        storage.read_bytes(storage_key="tenant/object.bin", max_bytes=6)
-    ) == b"stored"
+    assert (
+        asyncio.run(storage.read_bytes(storage_key="tenant/object.bin", max_bytes=6)) == b"stored"
+    )
 
     with pytest.raises(ValueError, match="read limit"):
         asyncio.run(storage.read_bytes(storage_key="tenant/object.bin", max_bytes=5))

@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from typing import cast
 from uuid import uuid4
 
 import pytest
@@ -15,7 +16,11 @@ from app.platform.events.dispatcher import (
     CommandInProgressError,
     IdempotencyKeyReusedError,
 )
-from app.platform.security.authenticated_context import UnauthenticatedError
+from app.platform.security.authenticated_context import (
+    AuthenticationContextResolver,
+    UnauthenticatedError,
+)
+from app.platform.security.authorization import AuthorizationPolicyPort
 from app.platform.security.context import (
     ActorContext,
     ActorKind,
@@ -58,8 +63,8 @@ def _actor() -> ActorContext:
 
 def _runtime(*, resolver_error: Exception | None = None) -> ConsultationSecurityRuntime:
     return ConsultationSecurityRuntime(
-        context_resolver=_Resolver(error=resolver_error),
-        policy=SimpleNamespace(),
+        context_resolver=cast(AuthenticationContextResolver, _Resolver(error=resolver_error)),
+        policy=cast(AuthorizationPolicyPort, SimpleNamespace()),
     )
 
 
@@ -93,9 +98,7 @@ def _result(*, replayed: bool = False, transition: bool = False):
             if aggregate_id
             else "SUBMISSION_PACKAGE_PREPARED"
         ),
-        aggregate_refs=[
-            {"aggregate_id": str(aggregate_id), "aggregate_revision": 2}
-        ],
+        aggregate_refs=[{"aggregate_id": str(aggregate_id), "aggregate_revision": 2}],
         event_ids=[str(uuid4())],
         replayed=replayed,
     )
@@ -308,7 +311,7 @@ def test_export_submission_returns_private_zip_headers_and_bytes():
     assert response.content.startswith(b"PK")
     assert response.headers["content-type"] == "application/zip"
     assert response.headers["cache-control"] == "no-store"
-    assert f'submission-{package_id}.zip' in response.headers["content-disposition"]
+    assert f"submission-{package_id}.zip" in response.headers["content-disposition"]
 
 
 @pytest.mark.parametrize(

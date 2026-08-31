@@ -313,9 +313,7 @@ def test_case_history_allows_one_current_consultation_and_dce_link(
         )
 
     connection.execute(
-        sa.text(
-            "UPDATE case_consultation_links SET is_current = false WHERE case_id = :case_id"
-        ),
+        sa.text("UPDATE case_consultation_links SET is_current = false WHERE case_id = :case_id"),
         {"case_id": case_id},
     )
     connection.execute(

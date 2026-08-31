@@ -1,9 +1,14 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
+from typing import Any, cast
 from uuid import UUID
 
-from app.modules.knowledge.domain.retrieval import DataClassification, RetrievalScope
+from app.modules.knowledge.domain.retrieval import (
+    DataClassification,
+    EmbeddingVector,
+    RetrievalScope,
+)
 from app.modules.knowledge.infrastructure.vector_index import SqlAlchemyVectorIndex
 
 TENANT_ID = UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
@@ -13,7 +18,7 @@ VERSION_ID = UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaa0002")
 
 class FakeSession:
     def __init__(self) -> None:
-        self.statement = None
+        self.statement: Any = None
 
     def __enter__(self) -> FakeSession:
         return self
@@ -42,7 +47,7 @@ def test_sqlalchemy_search_filters_the_applicable_dce_version() -> None:
     )
 
     index.search(
-        query=SimpleNamespace(dimension=2, values=(1.0, 0.0)),
+        query=cast(EmbeddingVector, SimpleNamespace(dimension=2, values=(1.0, 0.0))),
         scope=RetrievalScope(
             tenant_id=TENANT_ID,
             case_id=CASE_ID,

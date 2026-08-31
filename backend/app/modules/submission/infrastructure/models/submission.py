@@ -76,6 +76,7 @@ class SubmissionPackageRecord(TenantScopedRecord, Base):
     idempotency_key: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     correlation_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True))
 
+
 class SubmissionEvidenceRecord(TenantScopedRecord, Base):
     """Human-provided evidence; it never asserts automated external submission success."""
 
@@ -132,9 +133,7 @@ class SubmissionSignatureRecord(TenantScopedRecord, Base):
         sa.UniqueConstraint(
             "tenant_id", "command_id", name="uq_submission_signatures__tenant_command"
         ),
-        sa.CheckConstraint(
-            "status IN ('REQUESTED', 'SIGNED', 'REJECTED')", name="status"
-        ),
+        sa.CheckConstraint("status IN ('REQUESTED', 'SIGNED', 'REJECTED')", name="status"),
         sa.CheckConstraint("expected_package_version > 0", name="expected_package_version"),
         sa.CheckConstraint(
             "provider_reference_hash IS NULL OR provider_reference_hash ~ '^[a-f0-9]{64}$'",
@@ -161,4 +160,3 @@ class SubmissionSignatureRecord(TenantScopedRecord, Base):
     command_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     idempotency_key: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     correlation_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True))
-

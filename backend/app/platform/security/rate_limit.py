@@ -40,13 +40,16 @@ class LoginRateLimiter:
         max_buckets: int = 100_000,
         clock=monotonic,
     ) -> None:
-        if min(
-            max_failures,
-            failure_window_seconds,
-            base_lockout_seconds,
-            max_lockout_seconds,
-            max_buckets,
-        ) <= 0:
+        if (
+            min(
+                max_failures,
+                failure_window_seconds,
+                base_lockout_seconds,
+                max_lockout_seconds,
+                max_buckets,
+            )
+            <= 0
+        ):
             raise ValueError("rate limiter settings must be positive")
         if base_lockout_seconds > max_lockout_seconds:
             raise ValueError("base lockout cannot exceed maximum lockout")
@@ -63,15 +66,9 @@ class LoginRateLimiter:
     def from_environment(cls) -> LoginRateLimiter:
         return cls(
             max_failures=_positive_int("SMART_AO_LOGIN_MAX_FAILURES", 5),
-            failure_window_seconds=_positive_int(
-                "SMART_AO_LOGIN_FAILURE_WINDOW_SECONDS", 900
-            ),
-            base_lockout_seconds=_positive_int(
-                "SMART_AO_LOGIN_BASE_LOCKOUT_SECONDS", 30
-            ),
-            max_lockout_seconds=_positive_int(
-                "SMART_AO_LOGIN_MAX_LOCKOUT_SECONDS", 900
-            ),
+            failure_window_seconds=_positive_int("SMART_AO_LOGIN_FAILURE_WINDOW_SECONDS", 900),
+            base_lockout_seconds=_positive_int("SMART_AO_LOGIN_BASE_LOCKOUT_SECONDS", 30),
+            max_lockout_seconds=_positive_int("SMART_AO_LOGIN_MAX_LOCKOUT_SECONDS", 900),
             max_buckets=_positive_int("SMART_AO_LOGIN_MAX_BUCKETS", 100_000),
         )
 
@@ -91,9 +88,7 @@ class LoginRateLimiter:
                 self._states.pop(key, None)
         return RateLimitDecision(allowed=True)
 
-    def record_failure(
-        self, *, namespace: str, identity: str | None, source_ip: str
-    ) -> None:
+    def record_failure(self, *, namespace: str, identity: str | None, source_ip: str) -> None:
         now = self._clock()
         key = _bucket_key(namespace=namespace, identity=identity, source_ip=source_ip)
         with self._lock:

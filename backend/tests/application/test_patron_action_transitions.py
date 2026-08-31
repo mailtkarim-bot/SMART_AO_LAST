@@ -150,9 +150,7 @@ def test_action_transitions_are_versioned_idempotent_and_append_only(services, s
                     .values(**{column: value})
                 )
         with pytest.raises(sa.exc.DatabaseError, match="append-only"), session.begin_nested():
-            session.execute(
-                sa.delete(PatronActionRecord).where(PatronActionRecord.id == action_id)
-            )
+            session.execute(sa.delete(PatronActionRecord).where(PatronActionRecord.id == action_id))
 
 
 def test_action_transition_requires_current_revision_and_patron(services, session_factory):

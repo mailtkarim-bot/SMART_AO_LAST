@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from collections.abc import Callable
-from uuid import uuid4
+from collections.abc import Callable, Mapping
+from typing import Protocol
+from uuid import UUID, uuid4
 
 import pytest
 import sqlalchemy as sa
@@ -37,9 +38,7 @@ def session(connection: sa.Connection):
 def _insert_tenant(connection: sa.Connection) -> str:
     tenant_id = str(uuid4())
     connection.execute(
-        sa.text(
-            "INSERT INTO tenants (id, slug, lifecycle) VALUES (:id, :slug, 'ACTIVE')"
-        ),
+        sa.text("INSERT INTO tenants (id, slug, lifecycle) VALUES (:id, :slug, 'ACTIVE')"),
         {"id": tenant_id, "slug": f"tenant-{tenant_id}"},
     )
     return tenant_id
@@ -438,7 +437,18 @@ def test_decision_repository_loads_contexts_references_and_conditions(
     assert len(snapshot.conditions) == 1
 
 
-RepositoryFactory = Callable[[Session], object]
+class _SupportsRootUpdate(Protocol):
+    def update_root(
+        self,
+        *,
+        tenant_id: UUID | str,
+        aggregate_id: UUID | str,
+        expected_revision: int,
+        changes: Mapping[str, object],
+    ) -> int: ...
+
+
+RepositoryFactory = Callable[[Session], _SupportsRootUpdate]
 
 
 @pytest.mark.db
@@ -462,12 +472,15 @@ def test_repository_update_requires_exact_expected_revision(
     aggregate_id = aggregate_ids[aggregate_index]
     repository = repository_factory(session)
 
-    assert repository.update_root(
-        tenant_id=tenant_id,
-        aggregate_id=aggregate_id,
-        expected_revision=0,
-        changes=changes,
-    ) == 1
+    assert (
+        repository.update_root(
+            tenant_id=tenant_id,
+            aggregate_id=aggregate_id,
+            expected_revision=0,
+            changes=changes,
+        )
+        == 1
+    )
 
     with pytest.raises(OptimisticRevisionConflictError):
         repository.update_root(

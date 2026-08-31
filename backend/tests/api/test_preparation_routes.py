@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from typing import Any, cast
 from uuid import uuid4
 
 import pytest
@@ -14,7 +15,10 @@ from app.platform.events.dispatcher import (
     CommandInProgressError,
     IdempotencyKeyReusedError,
 )
-from app.platform.security.authenticated_context import UnauthenticatedError
+from app.platform.security.authenticated_context import (
+    UnauthenticatedError,
+)
+from app.platform.security.authorization import AuthorizationPolicyPort
 from app.platform.security.context import ActorContext, ActorKind, MembershipState
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -52,21 +56,27 @@ def _actor() -> ActorContext:
 
 def _runtime(*, resolver_error=None):
     return ConsultationSecurityRuntime(
-        context_resolver=_Resolver(error=resolver_error), policy=SimpleNamespace()
+        context_resolver=cast(Any, _Resolver(error=resolver_error)),
+        policy=cast(AuthorizationPolicyPort, SimpleNamespace()),
     )
 
 
-def _client(*, service=None, review_service=None, resolver_error=None):
+def _client(
+    *,
+    service: Any = None,
+    review_service: Any = None,
+    resolver_error=None,
+):
     app = FastAPI()
     app.include_router(
         build_preparation_router(
-            service=service or _PreparationService(),
+            service=service or cast(Any, _PreparationService()),
             security_runtime=_runtime(resolver_error=resolver_error),
         )
     )
     app.include_router(
         build_preparation_review_router(
-            service=review_service or _ReviewService(),
+            service=review_service or cast(Any, _ReviewService()),
             security_runtime=_runtime(resolver_error=resolver_error),
         )
     )
@@ -260,9 +270,7 @@ def test_preparation_routes_map_invalid_context_to_401():
 
 def test_read_package_returns_readiness_and_document_revision():
     package_id = uuid4()
-    response = _client().get(
-        f"/api/v1/collaborator/preparation/{package_id}", headers=_headers()
-    )
+    response = _client().get(f"/api/v1/collaborator/preparation/{package_id}", headers=_headers())
 
     assert response.status_code == 200
     body = response.json()
@@ -273,8 +281,10 @@ def test_read_package_returns_readiness_and_document_revision():
 
 @pytest.mark.parametrize(
     ("error", "status_code", "detail"),
-    [(PermissionError("NOT_FOUND_OR_FORBIDDEN"), 404, "NOT_FOUND_OR_FORBIDDEN"),
-     (PermissionError("ASSIGNMENT_REQUIRED"), 403, "FORBIDDEN")],
+    [
+        (PermissionError("NOT_FOUND_OR_FORBIDDEN"), 404, "NOT_FOUND_OR_FORBIDDEN"),
+        (PermissionError("ASSIGNMENT_REQUIRED"), 403, "FORBIDDEN"),
+    ],
 )
 def test_read_package_maps_service_errors(error, status_code, detail):
     response = _client(service=_PreparationService(read_error=error)).get(
@@ -286,7 +296,7 @@ def test_read_package_maps_service_errors(error, status_code, detail):
 
 
 def test_readiness_and_document_generation_return_201_then_200_on_replay():
-    service = _PreparationService()
+    service = cast(Any, _PreparationService())
     client = _client(service=service)
     case_id = uuid4()
     readiness = client.post(
@@ -309,7 +319,7 @@ def test_readiness_and_document_generation_return_201_then_200_on_replay():
 @pytest.mark.parametrize("document_kind", ["DC1", "DC2", "DC4"])
 def test_controlled_document_routes_accept_only_supported_kinds(document_kind):
     payload = {**_document_payload(), "document_kind": document_kind}
-    response = _client(service=_PreparationService()).post(
+    response = _client(service=cast(Any, _PreparationService())).post(
         f"/api/v1/collaborator/preparation/{uuid4()}/documents",
         json=payload,
         headers=_headers(),
@@ -321,7 +331,7 @@ def test_controlled_document_routes_accept_only_supported_kinds(document_kind):
 
 def test_controlled_document_route_rejects_unknown_kind():
     payload = {**_document_payload(), "document_kind": "DC3"}
-    response = _client(service=_PreparationService()).post(
+    response = _client(service=cast(Any, _PreparationService())).post(
         f"/api/v1/collaborator/preparation/{uuid4()}/documents",
         json=payload,
         headers=_headers(),
@@ -352,7 +362,7 @@ def test_preparation_dispatch_maps_service_errors(error, status_code, detail):
 
 
 def test_review_routes_return_each_command_result():
-    service = _ReviewService()
+    service = cast(Any, _ReviewService())
     client = _client(review_service=service)
     package_id = uuid4()
     review_id = uuid4()

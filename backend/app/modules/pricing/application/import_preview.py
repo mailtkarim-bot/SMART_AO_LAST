@@ -122,9 +122,7 @@ class PricingImportPreviewService:
                 if errors >= MAX_ERRORS:
                     errors_budget_reached = True
                     break
-            truncated = (rows_budget_reached or errors_budget_reached) and _has_remaining_rows(
-                rows
-            )
+            truncated = (rows_budget_reached or errors_budget_reached) and _has_remaining_rows(rows)
             limit_reason: str | None = None
             if truncated:
                 limit_reason = "ROW_LIMIT" if rows_budget_reached else "ERROR_LIMIT"
@@ -177,9 +175,7 @@ def _check_archive_uncompressed_size(archive: ZipFile) -> None:
 
 
 def _has_remaining_rows(rows) -> bool:
-    return any(
-        any(value not in (None, "") for value in values) for values in rows
-    )
+    return any(any(value not in (None, "") for value in values) for values in rows)
 
 
 def _normalize_header(value: object) -> str:

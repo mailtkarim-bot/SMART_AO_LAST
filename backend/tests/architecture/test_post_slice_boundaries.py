@@ -69,8 +69,7 @@ def test_post_slice_modules_expose_application_and_public_boundaries() -> None:
 @pytest.mark.architecture
 def test_membership_read_services_use_only_application_ports() -> None:
     source_paths = (
-        REPOSITORY_ROOT
-        / "backend/app/modules/membership/application/patron_assignment_cockpit.py",
+        REPOSITORY_ROOT / "backend/app/modules/membership/application/patron_assignment_cockpit.py",
         REPOSITORY_ROOT / "backend/app/modules/membership/application/assignment_history.py",
     )
     for source_path in source_paths:
@@ -96,9 +95,7 @@ def test_decision_application_dossier_uses_reader_boundary() -> None:
     source_path = REPOSITORY_ROOT / "backend/app/modules/decision/application/patron_dossier.py"
     tree = ast.parse(source_path.read_text(encoding="utf-8"))
     imported_modules = {
-        node.module
-        for node in ast.walk(tree)
-        if isinstance(node, ast.ImportFrom) and node.module
+        node.module for node in ast.walk(tree) if isinstance(node, ast.ImportFrom) and node.module
     }
     imported_names = {
         alias.name
@@ -150,7 +147,6 @@ def test_frontend_exposes_feature_boundaries_for_post_slice_workspaces() -> None
         assert (features_root / feature_name).is_dir(), feature_name
     assert (REPOSITORY_ROOT / "web/src/infrastructure").is_dir()
     assert (REPOSITORY_ROOT / "web/src/shared").is_dir()
-
 
 
 @pytest.mark.architecture

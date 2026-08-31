@@ -42,10 +42,6 @@ from sqlalchemy.orm import Session, sessionmaker
 NOW = datetime(2026, 8, 14, 9, 0, tzinfo=UTC)
 
 
-
-
-
-
 @pytest.fixture(autouse=True)
 def isolate_rc_analysis_records(database_engine: sa.Engine) -> None:
     with database_engine.begin() as connection:
@@ -584,9 +580,7 @@ def test_rc_analysis_validator_rejects_invalid_source_and_rule_proofs(
                 update={
                     "observations": [
                         observation.model_copy(
-                            update={
-                                "sources": [source.model_copy(update={"fragment_id": uuid4()})]
-                            }
+                            update={"sources": [source.model_copy(update={"fragment_id": uuid4()})]}
                         )
                     ]
                 }
@@ -609,11 +603,7 @@ def test_rc_analysis_validator_rejects_invalid_source_and_rule_proofs(
     with pytest.raises(ValueError, match="DCE_ANALYSIS_RULE_REQUIRED"):
         validate(
             command.model_copy(
-                update={
-                    "observations": [
-                        observation.model_copy(update={"rule_id": "INVALID_V1"})
-                    ]
-                }
+                update={"observations": [observation.model_copy(update={"rule_id": "INVALID_V1"})]}
             )
         )
 
@@ -659,8 +649,7 @@ def test_rc_analysis_rejects_missing_completed_extraction(
 
 @pytest.mark.db
 @pytest.mark.integration
-def test_rc_analysis_rejects_non_analysable_version(
-session_factory, tmp_path: Path) -> None:
+def test_rc_analysis_rejects_non_analysable_version(session_factory, tmp_path: Path) -> None:
     storage = LocalQuarantineStorageAdapter(root=tmp_path)
     tenant_id, document_id, dce_version_id = _seed_admitted_document(
         session_factory, storage=storage, source_bytes=b"Le RC existe."
@@ -739,9 +728,7 @@ def test_rc_analysis_rejects_source_count_and_manifest_mismatch(
     assert str(count_failure.value.__cause__) == "DCE_ANALYSIS_SOURCE_COUNT_REQUIRED"
     with pytest.raises(CommandExecutionError) as manifest_failure:
         dispatcher.dispatch(
-            command=valid_command.model_copy(
-                update={"input_manifest_sha256": "f" * 64}
-            ),
+            command=valid_command.model_copy(update={"input_manifest_sha256": "f" * 64}),
             context=CommandContext(
                 tenant_id=tenant_id, actor_id=uuid4(), actor_kind="SYSTEM", received_at=NOW
             ),

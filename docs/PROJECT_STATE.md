@@ -1,5 +1,53 @@
 # PROJECT_STATE
 
+## Actualisation du 30 août 2026 — Phase 1 de consolidation
+
+Le dépôt a été stabilisé après les fusions massives du 24–28 août 2026. Le `main` local est synchronisé avec `origin/main` ; le dernier commit publié est [`16f61b9`](https://github.com/mailtkarim-bot/SMART_AO_V8/commit/16f61b9) (`refactor: decouple patron assignment facade`, PR #125).
+
+### Gates locaux actuels
+
+| Élément | Résultat |
+|---|---|
+| Tests backend hors DB | **1132 passed**, 2 skipped, 477 deselected |
+| Tests DB | 477 collectés, désélectionnés faute de PostgreSQL local |
+| Mypy `backend/app` | **386 fichiers, 0 erreur** |
+| Ruff check `backend/app` | Pass |
+| Ruff format `backend/app` | Pass (386 files formatted) |
+| Frontend | Typecheck, lint, build et tests passent en CI |
+
+Les 2 tests skipped concernent l’OCR image (`rapidocr`) et requièrent l’extra `document-ocr` (dépendance `PIL`/`Pillow`) ; ils ne sont pas bloquants pour le socle.
+
+### Ce qui a été consolidé depuis le 23 août
+
+Les lots suivants, mentionnés comme ouverts dans les sections historiques ci-dessous, sont désormais fusionnés dans `main` :
+
+- **PR #51** — MFA/TOTP complet : lifecycle, anti-rejeu, recovery codes, CSRF, rate limits, audit, migration `0062`, step-up sur décision et signature.
+- **PR #52** — CreateCase : formulaire cockpit, contrats TypeScript/API, navigation `CASE_OVERVIEW` et tests.
+- **PR #53** — `cockpit_projection` : contrat fermé, leases/retry borné, statut `NOT_CONFIGURED`, métriques et profil Compose.
+- **PR #54** — Pricing sécurité fichier : libmagic, scan `clamd INSTREAM` et refus fail-closed sur l’import XLSX.
+- **PR #55** — BOAMP → Case : conversion contrôlée après qualification humaine `QUALIFIED`, tenant-scoped et idempotente.
+- **PR #56** — Golden Corpus/BTP : manifeste fermé, validateur, cross-match enterprise et enveloppes DC1/DC2/DC4 non contractuelles.
+- **PR #74/#75** — DCE context identifiers et membership patron assignment typing ; mypy global `backend/app` propre.
+- **PR #99 à #125** — Refactoring ARCH-001 : extraction de readers/ports dans `enterprise`, `pricing` et `membership` ; découplage des façades (`patron_assignment`, `financial_report_*`, `pricing_*`, `collab_*`).
+
+### CI et couverture
+
+Les runners GitHub Actions ont été rétablis. Les runs post-merge sont verts jusqu’à la PR #75 (`32912209432`). Le run `33074545327` rapporte une couverture de **88,77 %** (17 624/19 216 lignes, 2 585/3 550 branches), au-dessus du gate de 85,50 %.
+
+### Frontières volontairement ouvertes
+
+- Recette VPS réelle : Docker préproduction, ClamAV/EICAR, Caddy/HTTPS public, backup hors hôte, restauration isolée, supervision.
+- Corpus DCE anonymisé/autorisé, cache/modèle BGE et métriques OCR/RAG.
+- Fournisseurs et secrets réels : S3, SMTP, signature, bus, OCR avancé, BOAMP/INSEE.
+- Profilage N+1 sous PostgreSQL de préproduction.
+- Validation juridique/métier des textes DC1/DC2/DC4 et des droits `PATRON_DELEGATE`.
+
+### Prochaine action
+
+La Phase 1 (stabilisation immédiate) est terminée. La Phase 2 (fin du refactoring ARCH-001, couverture des tests/fixtures mypy, nettoyage des branches) peut commencer.
+
+---
+
 ## Actualisation du 23 août 2026
 
 Le lot `KNOWLEDGE-BENCHMARK-01` et la lecture DCE/RAG sont publiés, puis `93ba239` a limité le retrieval à la `dce_version_id` applicable résolue côté serveur. `fe488f5` a ajouté les runners one-shot DCE d’analyse RC et de matérialisation des exigences, profilés et sans sortie sensible. Le commit de remédiation `7d91b0a` déplace les modèles ORM métier vers `pricing`, `preparation`, `submission`, `patron_action` et `enterprise`, ajoute l’ownership test et la registry Alembic explicite, protège `pricing_scenarios` par la migration `20260823_0055`, durcit le webhook d’export contre HTTP et les destinations DNS privées, et ajoute le support de rotation JWT par `kid` avec compatibilité des anciens tokens. Le gate local final passe avec 862 tests backend non-DB, 458 tests DB désélectionnés, 93 tests frontend et un build Vite ; la couverture complète hors DB est mesurée à 67,45 % et reste sous le seuil strict de 85,50 %. Aucun corpus, poids BGE, embedding, montant ou résultat RAG réel n’est fabriqué. PostgreSQL online, Docker, fournisseur bus, URL HTTPS backend, CI avec runner exécutant et recette VPS restent des preuves externes ouvertes.

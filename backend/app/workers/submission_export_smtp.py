@@ -109,9 +109,7 @@ class SubmissionExportSmtpWorker:
             return self._retry(message_id, now, "SMTP_NOTIFICATION_DELIVERY_FAILED")
         return self._publish(message_id, now)
 
-    def _publish(
-        self, message_id: UUID, now: datetime, *, skipped: bool = False
-    ) -> SmtpRunResult:
+    def _publish(self, message_id: UUID, now: datetime, *, skipped: bool = False) -> SmtpRunResult:
         with self._session_factory.begin() as session:
             message = session.get(OutboxMessageRecord, message_id, with_for_update=True)
             if message is None or message.status == "PUBLISHED":
@@ -200,9 +198,7 @@ def build_default_worker() -> SubmissionExportSmtpWorker:
         use_tls = os.getenv("SMART_AO_SMTP_USE_TLS", "0") == "1"
         start_tls = _optional_bool(os.getenv("SMART_AO_SMTP_START_TLS"))
         if not use_tls and start_tls is not True:
-            raise RuntimeError(
-                "SMTP requires SMART_AO_SMTP_USE_TLS=1 or SMART_AO_SMTP_START_TLS=1"
-            )
+            raise RuntimeError("SMTP requires SMART_AO_SMTP_USE_TLS=1 or SMART_AO_SMTP_START_TLS=1")
         notifier = AioSmtpSubmissionExportNotifier(
             hostname=os.environ["SMART_AO_SMTP_HOST"],
             port=int(os.getenv("SMART_AO_SMTP_PORT", "587")),

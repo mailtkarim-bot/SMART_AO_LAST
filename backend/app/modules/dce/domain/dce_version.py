@@ -207,11 +207,7 @@ class DceVersion:
         source_reference: str,
     ) -> None:
         self._ensure_admitted_and_usable()
-        if (
-            not expected_family.strip()
-            or not reason.strip()
-            or not source_reference.strip()
-        ):
+        if not expected_family.strip() or not reason.strip() or not source_reference.strip():
             raise SourceLocationRequiredError(
                 "missing document declaration requires family, reason and source reference"
             )

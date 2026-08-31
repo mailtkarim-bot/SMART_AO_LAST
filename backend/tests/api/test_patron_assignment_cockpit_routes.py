@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from typing import Any, cast
 from uuid import uuid4
 
 import pytest
@@ -8,7 +9,10 @@ from app.interfaces.http.routes.consultations import ConsultationSecurityRuntime
 from app.interfaces.http.routes.patron_assignment_cockpit import (
     build_patron_assignment_cockpit_router,
 )
-from app.platform.security.authenticated_context import UnauthenticatedError
+from app.platform.security.authenticated_context import (
+    UnauthenticatedError,
+)
+from app.platform.security.authorization import AuthorizationPolicyPort
 from app.platform.security.context import ActorContext, ActorKind, MembershipState
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -25,16 +29,25 @@ class _Resolver:
         if self.error is not None:
             raise self.error
         return ActorContext(
-            actor_id=uuid4(), identity_id=uuid4(), tenant_id=uuid4(), membership_id=uuid4(),
-            actor_kind=ActorKind.PATRON_ADMIN, membership_state=MembershipState.ACTIVE,
-            capabilities=frozenset(), assigned_case_ids=frozenset(), session_id=uuid4(),
-            authenticated_at=NOW, mfa_verified_at=None, correlation_id=uuid4(),
+            actor_id=uuid4(),
+            identity_id=uuid4(),
+            tenant_id=uuid4(),
+            membership_id=uuid4(),
+            actor_kind=ActorKind.PATRON_ADMIN,
+            membership_state=MembershipState.ACTIVE,
+            capabilities=frozenset(),
+            assigned_case_ids=frozenset(),
+            session_id=uuid4(),
+            authenticated_at=NOW,
+            mfa_verified_at=None,
+            correlation_id=uuid4(),
         )
 
 
 def _runtime(*, resolver_error=None):
     return ConsultationSecurityRuntime(
-        context_resolver=_Resolver(error=resolver_error), policy=SimpleNamespace()
+        context_resolver=cast(Any, _Resolver(error=resolver_error)),
+        policy=cast(AuthorizationPolicyPort, SimpleNamespace()),
     )
 
 
@@ -42,7 +55,7 @@ def _client(*, service=None, resolver_error=None):
     app = FastAPI()
     app.include_router(
         build_patron_assignment_cockpit_router(
-            service=service or _CockpitService(),
+            service=service or cast(Any, _CockpitService()),
             security_runtime=_runtime(resolver_error=resolver_error),
         )
     )
@@ -104,8 +117,16 @@ class _CockpitService:
 
     def _assignment(self, assignment_id=None):
         return _Assignment(
-            assignment_id or uuid4(), uuid4(), "Réhabilitation école", "ACTIVE", "ACTIVE", 4,
-            NOW, None, None, ["case.dce.read", "assignment.history.read"],
+            assignment_id or uuid4(),
+            uuid4(),
+            "Réhabilitation école",
+            "ACTIVE",
+            "ACTIVE",
+            4,
+            NOW,
+            None,
+            None,
+            ["case.dce.read", "assignment.history.read"],
             ["INTERNAL_OPERATIONAL"],
         )
 
@@ -121,8 +142,18 @@ class _CockpitService:
             raise self.journal_error
         assignment = self._assignment(kwargs["assignment_id"])
         item = _JournalItem(
-            uuid4(), NOW, "ASSIGNMENT_CREATED", None, 1, None, "ACTIVE", None,
-            None, None, assignment.scope_actions, assignment.scope_classifications,
+            uuid4(),
+            NOW,
+            "ASSIGNMENT_CREATED",
+            None,
+            1,
+            None,
+            "ACTIVE",
+            None,
+            None,
+            None,
+            assignment.scope_actions,
+            assignment.scope_classifications,
         )
         return SimpleNamespace(assignment=assignment, items=[item])
 
@@ -131,9 +162,20 @@ class _CockpitService:
         if self.interactions_error is not None:
             raise self.interactions_error
         return SimpleNamespace(
-            assignment_id=kwargs["assignment_id"], case_id=uuid4(), case_lifecycle="ACTIVE",
-            items=[_Interaction(uuid4(), "CLARIFICATION_REQUEST", NOW, 4, "OPEN",
-                                clarification_kind="DEADLINE", priority="HIGH")],
+            assignment_id=kwargs["assignment_id"],
+            case_id=uuid4(),
+            case_lifecycle="ACTIVE",
+            items=[
+                _Interaction(
+                    uuid4(),
+                    "CLARIFICATION_REQUEST",
+                    NOW,
+                    4,
+                    "OPEN",
+                    clarification_kind="DEADLINE",
+                    priority="HIGH",
+                )
+            ],
         )
 
 
@@ -159,7 +201,7 @@ def test_assignment_cockpit_maps_invalid_context_to_401():
 
 
 def test_list_assignments_returns_closed_projection_and_forwards_filters():
-    service = _CockpitService()
+    service = cast(Any, _CockpitService())
     case_id = uuid4()
     response = _client(service=service).get(
         f"/api/v1/patron/assignments?case_id={case_id}&state=SUSPENDED&limit=20",
@@ -198,8 +240,10 @@ def test_journal_returns_assignment_and_append_only_items():
 
 @pytest.mark.parametrize(
     ("error", "status_code", "detail"),
-    [(PermissionError("NOT_FOUND_OR_FORBIDDEN"), 404, "NOT_FOUND_OR_FORBIDDEN"),
-     (PermissionError("FORBIDDEN"), 403, "FORBIDDEN")],
+    [
+        (PermissionError("NOT_FOUND_OR_FORBIDDEN"), 404, "NOT_FOUND_OR_FORBIDDEN"),
+        (PermissionError("FORBIDDEN"), 403, "FORBIDDEN"),
+    ],
 )
 def test_journal_maps_neutral_not_found_and_forbidden(error, status_code, detail):
     response = _client(service=_CockpitService(journal_error=error)).get(
@@ -210,7 +254,7 @@ def test_journal_maps_neutral_not_found_and_forbidden(error, status_code, detail
 
 
 def test_interactions_returns_kind_and_operational_state():
-    service = _CockpitService()
+    service = cast(Any, _CockpitService())
     assignment_id = uuid4()
     response = _client(service=service).get(
         f"/api/v1/patron/assignments/{assignment_id}/interactions"
@@ -229,8 +273,10 @@ def test_interactions_returns_kind_and_operational_state():
 
 @pytest.mark.parametrize(
     ("path", "error", "detail"),
-    [("journal", PermissionError("NOT_FOUND_OR_FORBIDDEN"), "NOT_FOUND_OR_FORBIDDEN"),
-     ("interactions", PermissionError("FORBIDDEN"), "FORBIDDEN")],
+    [
+        ("journal", PermissionError("NOT_FOUND_OR_FORBIDDEN"), "NOT_FOUND_OR_FORBIDDEN"),
+        ("interactions", PermissionError("FORBIDDEN"), "FORBIDDEN"),
+    ],
 )
 def test_interactions_and_journal_map_errors(path, error, detail):
     service = _CockpitService(journal_error=error, interactions_error=error)
@@ -241,12 +287,12 @@ def test_interactions_and_journal_map_errors(path, error, detail):
     assert response.json() == {"detail": detail}
 
 
-@pytest.mark.parametrize(
-    "query", ["limit=0", "limit=201", "state=UNKNOWN", "kind=UNKNOWN"]
-)
+@pytest.mark.parametrize("query", ["limit=0", "limit=201", "state=UNKNOWN", "kind=UNKNOWN"])
 def test_assignment_cockpit_rejects_invalid_query_bounds_and_enums(query):
-    path = "/api/v1/patron/assignments" if "state" in query or "limit" in query else (
-        f"/api/v1/patron/assignments/{uuid4()}/interactions"
+    path = (
+        "/api/v1/patron/assignments"
+        if "state" in query or "limit" in query
+        else (f"/api/v1/patron/assignments/{uuid4()}/interactions")
     )
     response = _client().get(f"{path}?{query}", headers=_headers())
     assert response.status_code == 422

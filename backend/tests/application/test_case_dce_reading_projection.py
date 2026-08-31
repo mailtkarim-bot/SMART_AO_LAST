@@ -189,9 +189,10 @@ def test_case_dce_reading_projection_is_tenant_scoped_closed_and_deterministic(
     assert projection.reading.dce_version_id == dce_version_id
     assert projection.reading.counters.total == len(projection.reading.requirements)
     assert projection.reading.counters.confirmed == 1
-    assert projection.reading.counters.pending_human_confirmation == len(
-        projection.reading.requirements
-    ) - 1
+    assert (
+        projection.reading.counters.pending_human_confirmation
+        == len(projection.reading.requirements) - 1
+    )
     assert all(
         item.document_family == "SOURCE_UNCLASSIFIED" for item in projection.reading.requirements
     )

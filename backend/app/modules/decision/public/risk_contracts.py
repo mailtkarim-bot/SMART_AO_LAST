@@ -73,6 +73,13 @@ class TransitionStructuredRiskTreatmentResponse(BaseModel):
     replayed: bool
 
 
+class StructuredRiskPageResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    items: list[StructuredRiskProjection]
+    next_cursor: str | None
+
+
 class StructuredRiskCommandResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

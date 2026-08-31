@@ -371,10 +371,13 @@ def test_refresh_token_can_be_consumed_once_and_replay_revokes_family(
 
     assert first_use.rowcount == 1
     assert replay.rowcount == 0
-    assert connection.scalar(
-        sa.text("SELECT state FROM refresh_token_families WHERE id = :id"),
-        {"id": family_id},
-    ) == "COMPROMISED"
+    assert (
+        connection.scalar(
+            sa.text("SELECT state FROM refresh_token_families WHERE id = :id"),
+            {"id": family_id},
+        )
+        == "COMPROMISED"
+    )
 
 
 @pytest.mark.db
@@ -523,9 +526,7 @@ def test_mfa_tables_have_no_plaintext_secret_or_recovery_code_column(
 ) -> None:
     inspector = sa.inspect(database_engine)
     factor_columns = {column["name"] for column in inspector.get_columns("mfa_factors")}
-    recovery_columns = {
-        column["name"] for column in inspector.get_columns("mfa_recovery_codes")
-    }
+    recovery_columns = {column["name"] for column in inspector.get_columns("mfa_recovery_codes")}
 
     assert "secret_ciphertext" in factor_columns
     assert not {"totp_secret", "secret_plaintext"} & factor_columns

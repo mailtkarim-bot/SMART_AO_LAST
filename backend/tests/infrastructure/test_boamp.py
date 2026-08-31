@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any, cast
+
 import pytest
 from app.modules.market_watch.infrastructure.boamp import (
     BoampReadOnlySearch,
@@ -61,9 +63,9 @@ def test_boamp_search_returns_only_allowlisted_public_facts() -> None:
     assert notice.market_types == ("TRAVAUX",)
     assert notice.status == "INITIAL"
     assert "donnees" not in notice.__dict__ if hasattr(notice, "__dict__") else True
-    request = client.calls[0]
+    request = cast(dict[str, Any], client.calls[0])
     assert request["url"].startswith("https://www.boamp.fr/")
-    params = request["params"]
+    params = cast(dict[str, Any], request["params"])
     assert params["select"] == (
         "idweb,objet,dateparution,datelimitereponse,code_departement,type_marche,etat"
     )

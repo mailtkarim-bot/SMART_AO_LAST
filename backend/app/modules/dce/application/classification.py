@@ -426,9 +426,7 @@ def _recording_command(
     expected_dce_version_revision: int,
     projection: ClassificationProjection,
 ) -> RecordDceDocumentClassificationRunCommand:
-    input_manifest_sha256 = classification_input_manifest_sha256(
-        documents=projection.documents
-    )
+    input_manifest_sha256 = classification_input_manifest_sha256(documents=projection.documents)
     classification_run_id = uuid5(
         dce_version_id,
         f"{input_manifest_sha256}:{CLASSIFIER_ID}:{CLASSIFIER_VERSION}",
@@ -475,9 +473,7 @@ def classification_input_manifest_sha256(
     *,
     documents: tuple[ClassificationDocument, ...],
 ) -> str:
-    canonical_manifest = "\n".join(
-        _manifest_lines(document=document) for document in documents
-    )
+    canonical_manifest = "\n".join(_manifest_lines(document=document) for document in documents)
     return sha256(canonical_manifest.encode("utf-8")).hexdigest()
 
 

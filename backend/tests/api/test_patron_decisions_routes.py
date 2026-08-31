@@ -1,13 +1,17 @@
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from typing import Any, cast
 from uuid import uuid4
 
 import pytest
 from app.interfaces.http.routes.consultations import ConsultationSecurityRuntime
 from app.interfaces.http.routes.patron_decisions import build_patron_decision_router
 from app.platform.events.dispatcher import CommandExecutionError
-from app.platform.security.authenticated_context import UnauthenticatedError
+from app.platform.security.authenticated_context import (
+    UnauthenticatedError,
+)
+from app.platform.security.authorization import AuthorizationPolicyPort
 from app.platform.security.context import ActorContext, ActorKind, MembershipState
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -45,13 +49,14 @@ def _actor() -> ActorContext:
 
 def _runtime(*, resolver_error=None):
     return ConsultationSecurityRuntime(
-        context_resolver=_Resolver(error=resolver_error), policy=SimpleNamespace()
+        context_resolver=cast(Any, _Resolver(error=resolver_error)),
+        policy=cast(AuthorizationPolicyPort, SimpleNamespace()),
     )
 
 
 def _client(
     *,
-    service=None,
+    service: Any = None,
     risk_service=None,
     risk_treatment_service=None,
     risk_read_service=None,
@@ -64,7 +69,7 @@ def _client(
     app = FastAPI()
     app.include_router(
         build_patron_decision_router(
-            service=service or _DecisionService(),
+            service=service or cast(Any, _DecisionService()),
             risk_service=risk_service,
             risk_treatment_service=risk_treatment_service,
             risk_read_service=risk_read_service,
@@ -199,8 +204,11 @@ class _RiskTreatmentService:
 
 
 class _RiskReadService:
-    def __init__(self, *, error=None):
+    def __init__(self, *, error=None, list_error=None, page=None):
         self.error = error
+        self.list_error = list_error
+        self.page = page
+        self.calls = []
 
     def read(self, **kwargs):
         if self.error is not None:
@@ -224,6 +232,38 @@ class _RiskReadService:
                 "rationale": "Plan validé.",
             },
         )
+
+    def list_for_case(self, **kwargs):
+        self.calls.append(kwargs)
+        if self.list_error is not None:
+            raise self.list_error
+        page = self.page
+        if page is None:
+            page = SimpleNamespace(
+                items=(
+                    SimpleNamespace(
+                        id=uuid4(),
+                        case_id=kwargs["case_id"],
+                        dce_version_id=uuid4(),
+                        risk_code="CCAP-DELAI-001",
+                        category="CCAP",
+                        title="Délai contractuel critique",
+                        severity="HIGH",
+                        likelihood="LIKELY",
+                        treatment="ACCEPTED",
+                        revision=2,
+                        due_at=None,
+                        latest_treatment_evidence={
+                            "locator": {"page": 14},
+                            "start_byte_offset": 50,
+                            "end_byte_offset": 90,
+                            "rationale": "Plan validé.",
+                        },
+                    ),
+                ),
+                next_cursor=None,
+            )
+        return page
 
 
 class _RiskRequirementService:
@@ -583,6 +623,57 @@ def test_read_risk_maps_not_found_to_404():
 
     assert response.status_code == 404
     assert response.json() == {"detail": "NOT_FOUND_OR_FORBIDDEN"}
+
+
+def test_list_risks_returns_paginated_projections():
+    case_id = uuid4()
+    response = _client(risk_read_service=_RiskReadService()).get(
+        f"/api/v1/patron/cases/{case_id}/risks",
+        headers=_headers(),
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body["items"]) == 1
+    assert body["items"][0]["risk_code"] == "CCAP-DELAI-001"
+    assert body["items"][0]["treatment"] == "ACCEPTED"
+    assert body["next_cursor"] is None
+
+
+def test_list_risks_forwards_limit_and_cursor():
+    case_id = uuid4()
+    service = _RiskReadService()
+    _client(risk_read_service=service).get(
+        f"/api/v1/patron/cases/{case_id}/risks?limit=10&cursor=abcd",
+        headers=_headers(),
+    )
+
+    assert service.calls[0]["limit"] == 10
+    assert service.calls[0]["cursor"] == "abcd"
+
+
+def test_list_risks_maps_forbidden_to_403():
+    response = _client(
+        risk_read_service=_RiskReadService(list_error=PermissionError("FORBIDDEN"))
+    ).get(
+        f"/api/v1/patron/cases/{uuid4()}/risks",
+        headers=_headers(),
+    )
+
+    assert response.status_code == 403
+    assert response.json() == {"detail": "FORBIDDEN"}
+
+
+def test_list_risks_maps_invalid_cursor_to_422():
+    response = _client(
+        risk_read_service=_RiskReadService(list_error=ValueError("invalid cursor"))
+    ).get(
+        f"/api/v1/patron/cases/{uuid4()}/risks?cursor=bad",
+        headers=_headers(),
+    )
+
+    assert response.status_code == 422
+    assert response.json() == {"detail": "INVALID_CURSOR"}
 
 
 def test_link_risk_requirement_returns_closed_receipt_and_forwards_path_ids():

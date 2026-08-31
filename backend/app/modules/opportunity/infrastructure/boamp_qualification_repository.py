@@ -72,8 +72,7 @@ class BoampQualificationRepository:
                 sa.or_(
                     BoampOpportunityQualificationRecord.id == qualification_id,
                     BoampOpportunityQualificationRecord.command_id == command.command_id,
-                    BoampOpportunityQualificationRecord.idempotency_key
-                    == command.idempotency_key,
+                    BoampOpportunityQualificationRecord.idempotency_key == command.idempotency_key,
                 ),
             )
         ).all()

@@ -44,10 +44,6 @@ class SequenceTokenGenerator:
         return self._tokens.popleft()
 
 
-
-
-
-
 @pytest.fixture(autouse=True)
 def isolate_authentication_records(database_engine: sa.Engine) -> None:
     with database_engine.begin() as connection:
@@ -312,8 +308,7 @@ def test_logout_requires_authenticated_context_and_csrf_then_clears_cookies(
     assert logout.status_code == 204
     deleted_cookies = logout.headers.get_list("set-cookie")
     assert any(
-        "smart_ao_refresh=" in cookie and "Max-Age=0" in cookie
-        for cookie in deleted_cookies
+        "smart_ao_refresh=" in cookie and "Max-Age=0" in cookie for cookie in deleted_cookies
     )
     assert any(
         "smart_ao_csrf=" in cookie and "Max-Age=0" in cookie and "Path=/" in cookie
@@ -339,11 +334,14 @@ def test_logout_refuses_invalid_access_token_neutrally_without_mutation(
     assert response.status_code == 401
     assert response.json() == {"detail": "UNAUTHENTICATED"}
     with Session(database_engine) as session:
-        assert session.scalar(
-            sa.select(sa.func.count())
-            .select_from(AuthSessionRecord)
-            .where(AuthSessionRecord.tenant_id == tenant_id)
-        ) == 0
+        assert (
+            session.scalar(
+                sa.select(sa.func.count())
+                .select_from(AuthSessionRecord)
+                .where(AuthSessionRecord.tenant_id == tenant_id)
+            )
+            == 0
+        )
 
 
 @pytest.mark.api
@@ -417,9 +415,7 @@ def test_mfa_enrollment_confirmation_reissues_access_token_and_step_up_is_rate_l
     session_factory: sessionmaker[Session],
 ) -> None:
     tenant_id = _insert_tenant(database_engine)
-    identity_id, _, email = _active_identity_with_membership(
-        database_engine, tenant_id=tenant_id
-    )
+    identity_id, _, email = _active_identity_with_membership(database_engine, tenant_id=tenant_id)
     totp_service = TotpService(
         session_factory=session_factory,
         encryption_key=Fernet.generate_key().decode("ascii"),
@@ -449,9 +445,9 @@ def test_mfa_enrollment_confirmation_reissues_access_token_and_step_up_is_rate_l
     assert confirmation.status_code == 200
     refreshed_token = confirmation.json()["access_token"]
     assert refreshed_token != token
-    assert access_tokens.decode(refreshed_token).session_id == access_tokens.decode(
-        token
-    ).session_id
+    assert (
+        access_tokens.decode(refreshed_token).session_id == access_tokens.decode(token).session_id
+    )
 
     with Session(database_engine) as session:
         auth_session = session.scalar(

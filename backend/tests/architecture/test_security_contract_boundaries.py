@@ -23,8 +23,9 @@ def _imports_from(path: Path) -> set[str]:
     return imported
 
 
-def test_security_contracts__when_inspected__then_have_no_framework_orm_or_business_imports(
-) -> None:
+def test_security_contracts__when_inspected__then_have_no_framework_orm_or_business_imports() -> (
+    None
+):
     imports = set().union(*(_imports_from(path) for path in SECURITY_CONTRACT_FILES))
 
     assert not any(name.startswith("fastapi") for name in imports)
@@ -32,8 +33,9 @@ def test_security_contracts__when_inspected__then_have_no_framework_orm_or_busin
     assert not any(name.startswith("app.modules") for name in imports)
 
 
-def test_http_authorization_mapping__when_inspected__then_never_serializes_internal_reason(
-) -> None:
+def test_http_authorization_mapping__when_inspected__then_never_serializes_internal_reason() -> (
+    None
+):
     source = ERROR_MAPPING.read_text(encoding="utf-8")
 
     assert "decision.reason" not in source

@@ -15,9 +15,7 @@ class SqlAlchemySubmissionSignatureReader(SubmissionSignatureReader):
     def __init__(self, *, session_factory: sessionmaker[Session]) -> None:
         self._session_factory = session_factory
 
-    def get(
-        self, *, tenant_id: UUID, signature_id: UUID
-    ) -> SubmissionSignatureProjection | None:
+    def get(self, *, tenant_id: UUID, signature_id: UUID) -> SubmissionSignatureProjection | None:
         with self._session_factory() as session:
             record = session.scalar(
                 sa.select(SubmissionSignatureRecord).where(

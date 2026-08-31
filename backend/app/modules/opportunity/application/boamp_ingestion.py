@@ -167,9 +167,7 @@ def _matches_criteria(
         return False
     if departments.intersection(criteria.excluded_departments):
         return False
-    return not (
-        candidate.response_deadline is not None and candidate.response_deadline < now
-    )
+    return not (candidate.response_deadline is not None and candidate.response_deadline < now)
 
 
 def _as_utc(value: datetime) -> datetime:

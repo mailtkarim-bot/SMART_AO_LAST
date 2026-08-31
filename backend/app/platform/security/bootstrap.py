@@ -214,11 +214,13 @@ class TenantBootstrapService:
                     raise BootstrapTokenRejectedError()
 
                 active_patron_exists = session.scalar(
-                    sa.select(sa.exists().where(
-                        TenantMembershipRecord.tenant_id == tenant_id,
-                        TenantMembershipRecord.role == "PATRON_ADMIN",
-                        TenantMembershipRecord.state == "ACTIVE",
-                    ))
+                    sa.select(
+                        sa.exists().where(
+                            TenantMembershipRecord.tenant_id == tenant_id,
+                            TenantMembershipRecord.role == "PATRON_ADMIN",
+                            TenantMembershipRecord.state == "ACTIVE",
+                        )
+                    )
                 )
                 if active_patron_exists:
                     raise BootstrapTokenRejectedError()

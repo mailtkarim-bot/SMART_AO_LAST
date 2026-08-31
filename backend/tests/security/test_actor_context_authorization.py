@@ -65,15 +65,16 @@ def test_actor_context__when_constructed__then_is_immutable_and_has_no_client_ro
     context = _context()
 
     with pytest.raises(FrozenInstanceError):
-        context.tenant_id = uuid4()  # type: ignore[misc]
+        setattr(context, "tenant_id", uuid4())  # noqa: B010
 
     assert context.membership_state is MembershipState.ACTIVE
     assert not hasattr(context, "client_role")
     assert not hasattr(context, "permission_payload")
 
 
-def test_authorization__when_resource_belongs_to_another_tenant__then_returns_neutral_denial(
-) -> None:
+def test_authorization__when_resource_belongs_to_another_tenant__then_returns_neutral_denial() -> (
+    None
+):
     context = _context()
     request = AuthorizationRequest(
         action="consultation.read",
@@ -116,8 +117,7 @@ def test_authorization__when_collaborator_is_not_assigned_to_case__then_denies_a
     assert decision.code == "AUTHORIZATION_DENIED"
 
 
-def test_authorization__when_collaborator_requests_financial_data__then_denies_even_with_capability(
-) -> None:
+def test_collaborator_denied_for_financial_data() -> None:
     context = _context(
         actor_kind=ActorKind.COLLABORATEUR,
         capabilities=frozenset({"pricing.read"}),
@@ -150,8 +150,7 @@ def test_authorization__when_sensitive_action_has_stale_mfa__then_requires_step_
     assert decision.http_status_code == 403
 
 
-def test_authorization__when_patron_has_capability_and_recent_mfa__then_allows_sensitive_action(
-) -> None:
+def test_patron_allowed_with_recent_mfa() -> None:
     now = datetime(2026, 8, 13, 10, 0, tzinfo=UTC)
     context = _context(mfa_verified_at=now - timedelta(minutes=14))
     request = AuthorizationRequest(

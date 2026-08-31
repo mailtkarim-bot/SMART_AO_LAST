@@ -32,9 +32,7 @@ class BuyerIdentity:
 
     def normalized_key(self) -> str | None:
         identifier = (
-            self.normalized_identifier.strip().upper()
-            if self.normalized_identifier
-            else ""
+            self.normalized_identifier.strip().upper() if self.normalized_identifier else ""
         )
         return identifier or None
 
@@ -166,8 +164,7 @@ class Consultation:
             source_reference=source_reference.strip() if source_reference else None,
         )
         if any(
-            existing.lot_number.casefold() == lot.lot_number.casefold()
-            for existing in self.lots
+            existing.lot_number.casefold() == lot.lot_number.casefold() for existing in self.lots
         ):
             raise ConsultationIdentityError("consultation lot number is already registered")
         self.lots.append(lot)
@@ -230,9 +227,7 @@ class Consultation:
         if not subject.strip():
             raise ConsultationIdentityError("consultation subject is required")
 
-        has_buyer_reference = bool(
-            buyer.normalized_key() and (external_reference or "").strip()
-        )
+        has_buyer_reference = bool(buyer.normalized_key() and (external_reference or "").strip())
         has_source_fallback = bool(initial_source.strip() and subject.strip())
         if not has_buyer_reference and not has_source_fallback:
             raise ConsultationIdentityError(

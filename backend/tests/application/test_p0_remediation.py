@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from io import BytesIO
 from types import SimpleNamespace
+from typing import Any
 from uuid import uuid4
 
 import pytest
@@ -31,9 +32,9 @@ class FakeLifecycleRepository:
     def __init__(self, snapshot=None, *, applicable_dce: bool = False) -> None:
         self.snapshot = snapshot
         self.applicable_dce = applicable_dce
-        self.created_root = None
-        self.created_context = None
-        self.updated = None
+        self.created_root: SimpleNamespace | None = None
+        self.created_context: tuple[Any, Any] | None = None
+        self.updated: tuple[Any, Any] | None = None
 
     def case_exists(self, *, session, tenant_id, case_id):
         return True
@@ -73,7 +74,7 @@ class FakeLifecycleRepository:
 class FakeDecisionRepository:
     def __init__(self, snapshot) -> None:
         self.snapshot = snapshot
-        self.updated = None
+        self.updated: tuple[Any, Any] | None = None
 
     def get(self, *, tenant_id, aggregate_id):
         return self.snapshot
@@ -87,6 +88,9 @@ class FakeDecisionRepository:
 class FakeConditionRepository:
     def __init__(self) -> None:
         self.transition_draft: DecisionConditionTransitionDraft | None = None
+
+    def create_many(self, *, session, drafts) -> None:
+        pass
 
     def transition(self, *, session, draft):
         self.transition_draft = draft
@@ -144,6 +148,7 @@ def test_create_and_freeze_decision_are_available_to_application_handlers():
         context=context,
     )
     assert created.result_code == "DECISION_DRAFT_CREATED"
+    assert lifecycle_repository.created_root is not None
     assert lifecycle_repository.created_root.id == decision_id
 
     freeze_repository = FakeDecisionRepository(
@@ -185,6 +190,7 @@ def test_create_and_freeze_decision_are_available_to_application_handlers():
     )
     assert frozen.result_code == "DECISION_CONTEXT_FROZEN"
     assert frozen.aggregate_refs[1]["fingerprint"]
+    assert freeze_repository.updated is not None
     assert freeze_repository.updated[1]["context_status"] == "FROZEN"
 
 
@@ -210,6 +216,7 @@ def test_conditional_go_condition_resolution_updates_projection_and_is_append_on
     assert outcome.result_code == "DECISION_CONDITION_RESOLVED"
     assert transition_repository.transition_draft is not None
     assert transition_repository.transition_draft.to_status == "SATISFIED"
+    assert decision_repository.updated is not None
     assert decision_repository.updated[1]["condition_status"] == "SATISFIED"
 
 

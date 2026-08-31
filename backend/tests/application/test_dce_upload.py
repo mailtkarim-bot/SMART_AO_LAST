@@ -57,10 +57,6 @@ class StaticScanner:
         )
 
 
-
-
-
-
 @pytest.fixture(autouse=True)
 def isolate_dce_upload_records(database_engine: sa.Engine) -> None:
     with database_engine.begin() as connection:

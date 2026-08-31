@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from typing import cast
 from uuid import uuid4
 
 import pytest
@@ -8,12 +9,17 @@ from app.interfaces.http.routes.assignment_interactions import (
     build_assignment_interaction_router,
 )
 from app.interfaces.http.routes.consultations import ConsultationSecurityRuntime
+from app.modules.membership.application.mutation_service import MembershipMutationService
 from app.platform.events.dispatcher import (
     CommandExecutionError,
     CommandInProgressError,
     IdempotencyKeyReusedError,
 )
-from app.platform.security.authenticated_context import UnauthenticatedError
+from app.platform.security.authenticated_context import (
+    AuthenticationContextResolver,
+    UnauthenticatedError,
+)
+from app.platform.security.authorization import AuthorizationPolicyPort
 from app.platform.security.context import ActorContext, ActorKind, MembershipState
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -30,16 +36,25 @@ class _Resolver:
         if self.error is not None:
             raise self.error
         return ActorContext(
-            actor_id=uuid4(), identity_id=uuid4(), tenant_id=uuid4(), membership_id=uuid4(),
-            actor_kind=ActorKind.COLLABORATEUR, membership_state=MembershipState.ACTIVE,
-            capabilities=frozenset(), assigned_case_ids=frozenset(), session_id=uuid4(),
-            authenticated_at=NOW, mfa_verified_at=None, correlation_id=uuid4(),
+            actor_id=uuid4(),
+            identity_id=uuid4(),
+            tenant_id=uuid4(),
+            membership_id=uuid4(),
+            actor_kind=ActorKind.COLLABORATEUR,
+            membership_state=MembershipState.ACTIVE,
+            capabilities=frozenset(),
+            assigned_case_ids=frozenset(),
+            session_id=uuid4(),
+            authenticated_at=NOW,
+            mfa_verified_at=None,
+            correlation_id=uuid4(),
         )
 
 
 def _runtime(*, resolver_error=None):
     return ConsultationSecurityRuntime(
-        context_resolver=_Resolver(error=resolver_error), policy=SimpleNamespace()
+        context_resolver=cast(AuthenticationContextResolver, _Resolver(error=resolver_error)),
+        policy=cast(AuthorizationPolicyPort, SimpleNamespace()),
     )
 
 
@@ -47,7 +62,7 @@ def _client(*, service=None, resolver_error=None):
     app = FastAPI()
     app.include_router(
         build_assignment_interaction_router(
-            service=service or _InteractionService(),
+            service=service or cast(MembershipMutationService, _InteractionService()),
             security_runtime=_runtime(resolver_error=resolver_error),
         )
     )
@@ -56,17 +71,27 @@ def _client(*, service=None, resolver_error=None):
 
 def _result(*, code, replayed=False):
     return SimpleNamespace(
-        command_id=uuid4(), idempotency_key=uuid4(), result_code=code,
-        aggregate_refs=[{"aggregate_type": "CaseAssignment", "aggregate_id": str(uuid4()),
-                         "aggregate_revision": 2}],
-        event_ids=[str(uuid4())], replayed=replayed,
+        command_id=uuid4(),
+        idempotency_key=uuid4(),
+        result_code=code,
+        aggregate_refs=[
+            {
+                "aggregate_type": "CaseAssignment",
+                "aggregate_id": str(uuid4()),
+                "aggregate_revision": 2,
+            }
+        ],
+        event_ids=[str(uuid4())],
+        replayed=replayed,
     )
 
 
 def _base():
     return {
-        "command_id": str(uuid4()), "idempotency_key": str(uuid4()),
-        "correlation_id": str(uuid4()), "expected_revision": 1,
+        "command_id": str(uuid4()),
+        "idempotency_key": str(uuid4()),
+        "correlation_id": str(uuid4()),
+        "expected_revision": 1,
     }
 
 
@@ -76,18 +101,24 @@ def _ack_payload():
 
 def _clarification_payload():
     return {
-        **_base(), "clarification_kind": "DEADLINE", "subject": "Échéance",
-        "question": "Quelle est la date de remise attendue ?", "requested_scope": "Planning",
+        **_base(),
+        "clarification_kind": "DEADLINE",
+        "subject": "Échéance",
+        "question": "Quelle est la date de remise attendue ?",
+        "requested_scope": "Planning",
         "priority": "HIGH",
     }
 
 
 def _unavailability_payload():
     return {
-        **_base(), "reason_kind": "CAPACITY_CONFLICT", "reason": "Conflit de capacité.",
+        **_base(),
+        "reason_kind": "CAPACITY_CONFLICT",
+        "reason": "Conflit de capacité.",
         "unavailable_from": "2026-08-20T09:00:00Z",
         "unavailable_until": "2026-08-21T18:00:00Z",
-        "known_deadline_impact": True, "impact_note": "Replanification nécessaire.",
+        "known_deadline_impact": True,
+        "impact_note": "Replanification nécessaire.",
     }
 
 
@@ -127,7 +158,8 @@ def test_assignment_interaction_routes_reject_missing_or_malformed_bearer(author
     headers = {} if authorization is None else {"Authorization": authorization}
     response = client.post(
         f"/api/v1/assignments/{uuid4()}/acknowledgement",
-        json=_ack_payload(), headers=headers,
+        json=_ack_payload(),
+        headers=headers,
     )
     assert response.status_code == 401
     assert response.json() == {"detail": "UNAUTHENTICATED"}
@@ -136,7 +168,8 @@ def test_assignment_interaction_routes_reject_missing_or_malformed_bearer(author
 def test_assignment_interaction_routes_map_invalid_context_to_401():
     response = _client(resolver_error=UnauthenticatedError()).post(
         f"/api/v1/assignments/{uuid4()}/clarification-requests",
-        json=_clarification_payload(), headers=_headers(),
+        json=_clarification_payload(),
+        headers=_headers(),
     )
     assert response.status_code == 401
     assert response.json() == {"detail": "UNAUTHENTICATED"}
@@ -147,12 +180,21 @@ def test_assignment_interaction_commands_return_receipts_and_forward_assignment_
     client = _client(service=service)
     assignment_id = uuid4()
     paths = [
-        (f"/api/v1/assignments/{assignment_id}/acknowledgement", _ack_payload(),
-         "ASSIGNMENT_ACKNOWLEDGED"),
-        (f"/api/v1/assignments/{assignment_id}/clarification-requests", _clarification_payload(),
-         "ASSIGNMENT_CLARIFICATION_REQUESTED"),
-        (f"/api/v1/assignments/{assignment_id}/unavailability-reports", _unavailability_payload(),
-         "ASSIGNMENT_UNAVAILABILITY_REPORTED"),
+        (
+            f"/api/v1/assignments/{assignment_id}/acknowledgement",
+            _ack_payload(),
+            "ASSIGNMENT_ACKNOWLEDGED",
+        ),
+        (
+            f"/api/v1/assignments/{assignment_id}/clarification-requests",
+            _clarification_payload(),
+            "ASSIGNMENT_CLARIFICATION_REQUESTED",
+        ),
+        (
+            f"/api/v1/assignments/{assignment_id}/unavailability-reports",
+            _unavailability_payload(),
+            "ASSIGNMENT_UNAVAILABILITY_REPORTED",
+        ),
     ]
     for index, (path, payload, code) in enumerate(paths):
         response = client.post(path, json=payload, headers=_headers())
@@ -163,16 +205,19 @@ def test_assignment_interaction_commands_return_receipts_and_forward_assignment_
 
 @pytest.mark.parametrize(
     ("error", "status_code", "detail"),
-    [(PermissionError("NOT_FOUND_OR_FORBIDDEN"), 404, "NOT_FOUND_OR_FORBIDDEN"),
-     (PermissionError("FORBIDDEN"), 403, "FORBIDDEN"),
-     (IdempotencyKeyReusedError("reused"), 409, "IDEMPOTENCY_KEY_REUSED"),
-     (CommandInProgressError("running"), 409, "COMMAND_IN_PROGRESS"),
-     (CommandExecutionError("VERSION_CONFLICT"), 422, "COMMAND_REJECTED")],
+    [
+        (PermissionError("NOT_FOUND_OR_FORBIDDEN"), 404, "NOT_FOUND_OR_FORBIDDEN"),
+        (PermissionError("FORBIDDEN"), 403, "FORBIDDEN"),
+        (IdempotencyKeyReusedError("reused"), 409, "IDEMPOTENCY_KEY_REUSED"),
+        (CommandInProgressError("running"), 409, "COMMAND_IN_PROGRESS"),
+        (CommandExecutionError("VERSION_CONFLICT"), 422, "COMMAND_REJECTED"),
+    ],
 )
 def test_assignment_interaction_maps_service_errors(error, status_code, detail):
     response = _client(service=_InteractionService(error=error)).post(
         f"/api/v1/assignments/{uuid4()}/unavailability-reports",
-        json=_unavailability_payload(), headers=_headers(),
+        json=_unavailability_payload(),
+        headers=_headers(),
     )
     assert response.status_code == status_code
     assert response.json() == {"detail": detail}
@@ -181,16 +226,21 @@ def test_assignment_interaction_maps_service_errors(error, status_code, detail):
 def test_assignment_interaction_payload_rejects_financial_fields():
     response = _client().post(
         f"/api/v1/assignments/{uuid4()}/acknowledgement",
-        json={**_ack_payload(), "gross_margin_minor": 100}, headers=_headers(),
+        json={**_ack_payload(), "gross_margin_minor": 100},
+        headers=_headers(),
     )
     assert response.status_code == 422
 
 
 @pytest.mark.parametrize(
     ("path", "payload"),
-    [("acknowledgement", {**_base(), "expected_revision": -1}),
-     ("clarification-requests", {**_base(), "clarification_kind": "INVALID",
-                                  "subject": "x", "question": "x"})],
+    [
+        ("acknowledgement", {**_base(), "expected_revision": -1}),
+        (
+            "clarification-requests",
+            {**_base(), "clarification_kind": "INVALID", "subject": "x", "question": "x"},
+        ),
+    ],
 )
 def test_assignment_interaction_payload_rejects_invalid_values(path, payload):
     response = _client().post(

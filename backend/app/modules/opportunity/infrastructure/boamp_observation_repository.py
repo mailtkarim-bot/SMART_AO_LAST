@@ -132,24 +132,28 @@ class BoampObservationRepository:
                 UUID("00000000-0000-0000-0000-000000000002"),
                 f"boamp-observation:{tenant_id}:{candidate.source_notice_id}:{candidate.fingerprint()}",
             )
-            statement = insert(BoampOpportunityObservationRecord).values(
-                id=observation_id,
-                tenant_id=tenant_id,
-                source=candidate.source,
-                source_notice_id=candidate.source_notice_id,
-                fingerprint_sha256=candidate.fingerprint(),
-                title=candidate.title,
-                publication_date=candidate.publication_date,
-                response_deadline=candidate.response_deadline,
-                department_codes=list(candidate.department_codes),
-                market_types=list(candidate.market_types),
-                source_status=candidate.source_status,
-                score_version=score.version,
-                score=score.score,
-                score_explanation_json=score.snapshot(),
-                score_explanation_sha256=score.explanation_sha256,
-                observed_at=completed_at,
-            ).on_conflict_do_nothing(constraint="uq_boamp_observations_source_fingerprint")
+            statement = (
+                insert(BoampOpportunityObservationRecord)
+                .values(
+                    id=observation_id,
+                    tenant_id=tenant_id,
+                    source=candidate.source,
+                    source_notice_id=candidate.source_notice_id,
+                    fingerprint_sha256=candidate.fingerprint(),
+                    title=candidate.title,
+                    publication_date=candidate.publication_date,
+                    response_deadline=candidate.response_deadline,
+                    department_codes=list(candidate.department_codes),
+                    market_types=list(candidate.market_types),
+                    source_status=candidate.source_status,
+                    score_version=score.version,
+                    score=score.score,
+                    score_explanation_json=score.snapshot(),
+                    score_explanation_sha256=score.explanation_sha256,
+                    observed_at=completed_at,
+                )
+                .on_conflict_do_nothing(constraint="uq_boamp_observations_source_fingerprint")
+            )
             session.execute(statement)
             persisted = session.scalar(
                 sa.select(BoampOpportunityObservationRecord.id).where(

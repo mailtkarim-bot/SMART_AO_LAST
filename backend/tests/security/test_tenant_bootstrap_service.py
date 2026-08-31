@@ -50,10 +50,6 @@ class FailingPasswordHasher:
         raise RuntimeError("simulated password hashing failure")
 
 
-
-
-
-
 @pytest.fixture(autouse=True)
 def isolate_bootstrap_records(database_engine: sa.Engine) -> None:
     with database_engine.begin() as connection:
@@ -185,11 +181,14 @@ def test_consumed_bootstrap_secret_is_never_reusable(
     assert str(captured.value) == "BOOTSTRAP_TOKEN_REJECTED"
     with Session(database_engine) as session:
         assert session.scalar(sa.select(sa.func.count()).select_from(IdentityRecord)) == 1
-        assert session.scalar(
-            sa.select(sa.func.count())
-            .select_from(TenantMembershipRecord)
-            .where(TenantMembershipRecord.role == "PATRON_ADMIN")
-        ) == 1
+        assert (
+            session.scalar(
+                sa.select(sa.func.count())
+                .select_from(TenantMembershipRecord)
+                .where(TenantMembershipRecord.role == "PATRON_ADMIN")
+            )
+            == 1
+        )
 
 
 @pytest.mark.db

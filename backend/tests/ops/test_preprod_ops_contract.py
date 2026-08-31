@@ -19,9 +19,7 @@ def test_preprod_operations_scripts_are_executable_and_syntactically_valid() -> 
 def test_compose_runtime_images_are_digest_pinned_and_clamav_is_private() -> None:
     compose = (OPS / "docker-compose.preprod.yml").read_text(encoding="utf-8")
     image_lines = [
-        line.strip()
-        for line in compose.splitlines()
-        if line.strip().startswith("image:")
+        line.strip() for line in compose.splitlines() if line.strip().startswith("image:")
     ]
     assert image_lines
     assert all("@sha256:" in line for line in image_lines)
@@ -49,8 +47,7 @@ def test_deploy_starts_submission_notification_workers_explicitly() -> None:
     assert "submission-export-smtp-worker" in deploy_script
     assert (
         "compose up -d backend dce-retention-worker submission-export-webhook-worker "
-        "submission-export-smtp-worker"
-        in deploy_script
+        "submission-export-smtp-worker" in deploy_script
     )
 
 
@@ -73,7 +70,7 @@ def test_preprod_trusts_forwarded_client_ip_only_on_internal_proxy_network() -> 
     assert "  migrate:\n" in compose
     assert 'command: ["alembic", "-c", "/app/backend/alembic.ini", "upgrade", "head"]' in compose
     assert compose.count("service_completed_successfully") >= 7
-    assert 'backend:\n' in compose and '      - internal\n' in compose
+    assert "backend:\n" in compose and "      - internal\n" in compose
 
 
 def test_preprod_services_use_minimal_environment_allowlists() -> None:
@@ -131,9 +128,7 @@ def test_healthcheck_validates_application_json_payloads() -> None:
 
 
 def test_backend_docker_context_excludes_demonstrations_and_tests() -> None:
-    dockerignore = (ROOT / "ops/docker/backend.Dockerfile.dockerignore").read_text(
-        encoding="utf-8"
-    )
+    dockerignore = (ROOT / "ops/docker/backend.Dockerfile.dockerignore").read_text(encoding="utf-8")
     assert "backend/app/demonstrations/" in dockerignore
     assert "backend/tests/" in dockerignore
     assert "web/" in dockerignore
@@ -150,7 +145,7 @@ def test_backend_docker_context_excludes_demonstrations_and_tests() -> None:
 
 def test_dev_compose_is_loopback_bound_and_not_repurposable_as_preprod() -> None:
     compose = (ROOT / "docker-compose.yml").read_text(encoding="utf-8")
-    assert 'SMART_AO_ENV: development' in compose
+    assert "SMART_AO_ENV: development" in compose
     assert '"127.0.0.1:${SMART_AO_POSTGRES_HOST_PORT:-5432}:5432"' in compose
     assert '"127.0.0.1:8000:8000"' in compose
     assert "local-development-signing-key-change-me" in compose
@@ -189,9 +184,7 @@ def test_ci_audits_frontend_production_dependencies() -> None:
 
 def test_egress_services_join_private_and_edge_networks() -> None:
     compose = (OPS / "docker-compose.preprod.yml").read_text(encoding="utf-8")
-    clamav = compose.split("  clamav:", maxsplit=1)[1].split(
-        "\n\n  volumes:", maxsplit=1
-    )[0]
+    clamav = compose.split("  clamav:", maxsplit=1)[1].split("\n\n  volumes:", maxsplit=1)[0]
     webhook = compose.split("  submission-export-webhook-worker:", maxsplit=1)[1].split(
         "\n  postgres:", maxsplit=1
     )[0]
@@ -298,53 +291,55 @@ def test_boamp_public_search_is_explicit_and_secretless() -> None:
 
 def test_dce_extraction_wrapper_is_one_shot_and_uses_private_env() -> None:
     wrapper = (OPS / "run-dce-extraction-preprod.sh").read_text(encoding="utf-8")
-    assert '[[ $# -ne 2 ]]' in wrapper
-    assert 'stat -c \'%a\' "$ENV_FILE"' in wrapper
+    assert "[[ $# -ne 2 ]]" in wrapper
+    assert "stat -c '%a' \"$ENV_FILE\"" in wrapper
     assert '"$ENV_FILE"' in wrapper
     assert "run --rm --no-deps --no-ansi backend" in wrapper
     assert "python -m app.workers.dce_extraction" in wrapper
-    assert "--tenant-id \"$tenant_id\"" in wrapper
-    assert "--dce-document-id \"$dce_document_id\"" in wrapper
+    assert '--tenant-id "$tenant_id"' in wrapper
+    assert '--dce-document-id "$dce_document_id"' in wrapper
 
 
 def test_dce_analysis_wrapper_is_one_shot_and_uses_private_env() -> None:
     wrapper = (OPS / "run-dce-analysis-preprod.sh").read_text(encoding="utf-8")
     compose = (OPS / "docker-compose.preprod.yml").read_text(encoding="utf-8")
 
-    assert '[[ $# -ne 2 ]]' in wrapper
-    assert 'stat -c \'%a\' "$ENV_FILE"' in wrapper
+    assert "[[ $# -ne 2 ]]" in wrapper
+    assert "stat -c '%a' \"$ENV_FILE\"" in wrapper
     assert '"$ENV_FILE"' in wrapper
     assert "--profile dce-analysis run --rm --no-deps --no-ansi dce-rc-analysis-runner" in wrapper
     assert "python -m app.workers.dce_analysis" in wrapper
-    assert "--tenant-id \"$tenant_id\"" in wrapper
-    assert "--dce-version-id \"$dce_version_id\"" in wrapper
+    assert '--tenant-id "$tenant_id"' in wrapper
+    assert '--dce-version-id "$dce_version_id"' in wrapper
     assert "dce-rc-analysis-runner:" in compose
     assert 'profiles: ["dce-analysis"]' in compose
     assert 'command: ["python", "-m", "app.workers.dce_analysis"]' in compose
-    assert "restart: \"no\"" in compose
-    assert "dce-rc-analysis-runner" not in compose.split("  backend:", maxsplit=1)[1].split(
-        "  dce-retention-worker:", maxsplit=1
-    )[0]
+    assert 'restart: "no"' in compose
+    assert (
+        "dce-rc-analysis-runner"
+        not in compose.split("  backend:", maxsplit=1)[1].split(
+            "  dce-retention-worker:", maxsplit=1
+        )[0]
+    )
 
 
 def test_dce_requirements_wrapper_is_one_shot_and_profiled() -> None:
     wrapper = (OPS / "run-dce-requirements-preprod.sh").read_text(encoding="utf-8")
     compose = (OPS / "docker-compose.preprod.yml").read_text(encoding="utf-8")
 
-    assert '[[ $# -ne 3 ]]' in wrapper
-    assert 'stat -c \'%a\' "$ENV_FILE"' in wrapper
+    assert "[[ $# -ne 3 ]]" in wrapper
+    assert "stat -c '%a' \"$ENV_FILE\"" in wrapper
     assert (
-        "--profile dce-requirements run --rm --no-deps --no-ansi "
-        "dce-requirements-runner"
+        "--profile dce-requirements run --rm --no-deps --no-ansi dce-requirements-runner"
     ) in wrapper
     assert "python -m app.workers.dce_requirements" in wrapper
-    assert "--tenant-id \"$tenant_id\"" in wrapper
-    assert "--dce-version-id \"$dce_version_id\"" in wrapper
-    assert "--dce-rc-analysis-id \"$dce_rc_analysis_id\"" in wrapper
+    assert '--tenant-id "$tenant_id"' in wrapper
+    assert '--dce-version-id "$dce_version_id"' in wrapper
+    assert '--dce-rc-analysis-id "$dce_rc_analysis_id"' in wrapper
     assert "dce-requirements-runner:" in compose
     assert 'profiles: ["dce-requirements"]' in compose
     assert 'command: ["python", "-m", "app.workers.dce_requirements"]' in compose
-    assert "restart: \"no\"" in compose
+    assert 'restart: "no"' in compose
 
 
 def test_rag_indexing_is_explicitly_opt_in_and_one_shot() -> None:
@@ -355,11 +350,11 @@ def test_rag_indexing_is_explicitly_opt_in_and_one_shot() -> None:
     assert "SMART_AO_RAG_INDEXING_ENABLED: ${SMART_AO_RAG_INDEXING_ENABLED:-0}" in compose
     assert "SMART_AO_BGE_LOCAL_FILES_ONLY: ${SMART_AO_BGE_LOCAL_FILES_ONLY:-1}" in compose
     assert "python -m app.workers.knowledge_embeddings" in worker
-    assert "--tenant-id \"$tenant_id\"" in worker
-    assert "--case-id \"$case_id\"" in worker
-    assert "--dce-version-id \"$dce_version_id\"" in worker
-    assert '[[ $# -ne 3 ]]' in worker
-    assert 'stat -c \'%a\' "$ENV_FILE"' in worker
+    assert '--tenant-id "$tenant_id"' in worker
+    assert '--case-id "$case_id"' in worker
+    assert '--dce-version-id "$dce_version_id"' in worker
+    assert "[[ $# -ne 3 ]]" in worker
+    assert "stat -c '%a' \"$ENV_FILE\"" in worker
     assert "run --rm --no-deps --no-ansi backend" in worker
     assert "ports:" not in worker
 
@@ -408,8 +403,7 @@ def test_cockpit_projection_worker_is_explicitly_profiled_and_internal() -> None
     assert 'profiles: ["cockpit-projection"]' in worker
     assert "command: python -m app.workers.cockpit_projection" in worker
     assert (
-        "SMART_AO_COCKPIT_PROJECTION_ENABLED: "
-        "${SMART_AO_COCKPIT_PROJECTION_ENABLED:-0}"
+        "SMART_AO_COCKPIT_PROJECTION_ENABLED: ${SMART_AO_COCKPIT_PROJECTION_ENABLED:-0}"
     ) in worker
     assert "      - internal" in worker
     assert "      - edge" not in worker

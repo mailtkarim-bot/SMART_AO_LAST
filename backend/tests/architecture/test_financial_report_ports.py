@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from typing import cast
 from unittest.mock import Mock
 from uuid import uuid4
 
@@ -9,7 +10,7 @@ from app.modules.membership.application.financial_report import (
     PatronFinancialReportService,
 )
 from app.platform.security.capabilities import Capability
-from app.platform.security.context import ActorKind
+from app.platform.security.context import ActorContext, ActorKind
 
 NOW = datetime(2026, 8, 27, 12, 0, tzinfo=UTC)
 
@@ -49,7 +50,7 @@ def test_financial_report_service_reads_through_application_port() -> None:
     )
 
     projection = PatronFinancialReportService(reader=reader, policy=policy).get_draft(
-        actor=actor,
+        actor=cast(ActorContext, actor),
         case_id=case_id,
         report_id=report_id,
         now=NOW,

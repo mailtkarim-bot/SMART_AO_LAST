@@ -678,12 +678,6 @@ class AssignmentInteractionPatronValidationRecord(TenantScopedRecord, Base):
     correlation_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), nullable=True)
 
 
-
-
-
-
-
-
 class AuthSessionRecord(TenantScopedRecord, Base):
     """A revocable browser session bound to one tenant membership and identity."""
 
@@ -1237,6 +1231,7 @@ class CollaboratorTaskBlockerRecord(TenantScopedRecord, Base):
     command_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     correlation_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True))
 
+
 # Compatibility exports for the remaining module-owned business records.
 from app.modules.enterprise.infrastructure.models.enterprise import (  # noqa: E402, F401
     CaseCapabilityGapRecord,
@@ -1277,9 +1272,7 @@ class TotpFactorRecord(Base):
             ["identity_id"], ["identities.id"], name="fk_mfa_totp__identity", ondelete="RESTRICT"
         ),
         sa.UniqueConstraint("id", name="uq_mfa_totp__id"),
-        sa.CheckConstraint(
-            "state IN ('PENDING', 'ACTIVE', 'DISABLED')", name="state"
-        ),
+        sa.CheckConstraint("state IN ('PENDING', 'ACTIVE', 'DISABLED')", name="state"),
         sa.CheckConstraint("length(encrypted_secret) >= 80", name="encrypted_secret"),
         sa.CheckConstraint("expires_at > created_at", name="expiry"),
         sa.CheckConstraint(

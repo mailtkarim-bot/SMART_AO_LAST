@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sys
 from types import ModuleType
+from typing import Any, cast
 
 import pytest
 from app.modules.dce.application.commands import (
@@ -48,7 +49,7 @@ def test_pymupdf_adapter_preserves_page_block_and_bbox(monkeypatch) -> None:
             return iter([FakePage()])
 
     fake_pymupdf = ModuleType("pymupdf")
-    fake_pymupdf.open = lambda *, stream, filetype: FakeDocument()
+    cast(Any, fake_pymupdf).open = lambda *, stream, filetype: FakeDocument()
     monkeypatch.setitem(sys.modules, "pymupdf", fake_pymupdf)
 
     projection = PyMuPdfAdvancedExtractionAdapter().extract(
@@ -82,7 +83,7 @@ def test_docling_adapter_uses_local_temp_file_and_exports_markdown(monkeypatch) 
             return FakeConversion()
 
     fake_docling_converter = ModuleType("docling.document_converter")
-    fake_docling_converter.DocumentConverter = FakeConverter
+    cast(Any, fake_docling_converter).DocumentConverter = FakeConverter
     fake_docling = ModuleType("docling")
     monkeypatch.setitem(sys.modules, "docling", fake_docling)
     monkeypatch.setitem(sys.modules, "docling.document_converter", fake_docling_converter)
@@ -136,6 +137,7 @@ def test_rapidocr_requires_preloaded_local_models() -> None:
 
 
 def test_rapidocr_projection_is_review_required_and_source_anchored(tmp_path) -> None:
+    pytest.importorskip("PIL")
     from io import BytesIO
     from types import SimpleNamespace
 
@@ -183,6 +185,7 @@ def test_rapidocr_projection_is_review_required_and_source_anchored(tmp_path) ->
 
 
 def test_rapidocr_rejects_page_pixel_limit(monkeypatch, tmp_path) -> None:
+    pytest.importorskip("PIL")
     from io import BytesIO
     from types import SimpleNamespace
 

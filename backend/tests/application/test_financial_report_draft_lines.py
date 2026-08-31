@@ -33,10 +33,6 @@ from sqlalchemy.orm import Session, sessionmaker
 NOW = datetime(2026, 8, 17, 12, 0, tzinfo=UTC)
 
 
-
-
-
-
 @pytest.fixture(autouse=True)
 def isolate_financial_records(database_engine: sa.Engine) -> None:
     with database_engine.begin() as connection:
@@ -227,8 +223,7 @@ def test_replaying_financial_line_command_does_not_create_a_second_line(
     assert replay.aggregate_refs == first.aggregate_refs
     with session_factory() as session:
         assert (
-            session.scalar(sa.select(sa.func.count()).select_from(FinancialReportLineRecord))
-            == 1
+            session.scalar(sa.select(sa.func.count()).select_from(FinancialReportLineRecord)) == 1
         )
         assert session.scalar(sa.select(sa.func.count()).select_from(DomainEventRecord)) == 1
         assert session.scalar(sa.select(sa.func.count()).select_from(OutboxMessageRecord)) == 1
@@ -251,8 +246,7 @@ def test_stale_financial_line_revision_leaves_snapshot_and_line_unchanged(
         assert snapshot.aggregate_revision == 0
         assert snapshot.sales_total_minor == 0
         assert (
-            session.scalar(sa.select(sa.func.count()).select_from(FinancialReportLineRecord))
-            == 0
+            session.scalar(sa.select(sa.func.count()).select_from(FinancialReportLineRecord)) == 0
         )
         assert session.scalar(sa.select(sa.func.count()).select_from(DomainEventRecord)) == 0
         assert session.scalar(sa.select(sa.func.count()).select_from(OutboxMessageRecord)) == 0
@@ -283,8 +277,7 @@ def test_collaborator_is_refused_before_financial_snapshot_resolution(
     with session_factory() as session:
         assert session.get(FinancialReportSnapshotRecord, report_id) is not None
         assert (
-            session.scalar(sa.select(sa.func.count()).select_from(FinancialReportLineRecord))
-            == 0
+            session.scalar(sa.select(sa.func.count()).select_from(FinancialReportLineRecord)) == 0
         )
         assert case_id is not None
 
@@ -310,8 +303,7 @@ def test_published_financial_snapshot_rejects_new_line(
 
     with session_factory() as session:
         assert (
-            session.scalar(sa.select(sa.func.count()).select_from(FinancialReportLineRecord))
-            == 0
+            session.scalar(sa.select(sa.func.count()).select_from(FinancialReportLineRecord)) == 0
         )
 
 
@@ -342,8 +334,7 @@ def test_incorrect_revision_after_existing_line_does_not_create_a_second_line(
         assert snapshot.aggregate_revision == 1
         assert snapshot.sales_total_minor == 125_000
         assert (
-            session.scalar(sa.select(sa.func.count()).select_from(FinancialReportLineRecord))
-            == 1
+            session.scalar(sa.select(sa.func.count()).select_from(FinancialReportLineRecord)) == 1
         )
         assert session.scalar(sa.select(sa.func.count()).select_from(DomainEventRecord)) == 1
         assert session.scalar(sa.select(sa.func.count()).select_from(OutboxMessageRecord)) == 1
@@ -381,8 +372,7 @@ def test_published_snapshot_rejects_line_after_existing_draft_write(
         assert snapshot.aggregate_revision == 1
         assert snapshot.sales_total_minor == 125_000
         assert (
-            session.scalar(sa.select(sa.func.count()).select_from(FinancialReportLineRecord))
-            == 1
+            session.scalar(sa.select(sa.func.count()).select_from(FinancialReportLineRecord)) == 1
         )
         assert session.scalar(sa.select(sa.func.count()).select_from(DomainEventRecord)) == 1
         assert session.scalar(sa.select(sa.func.count()).select_from(OutboxMessageRecord)) == 1

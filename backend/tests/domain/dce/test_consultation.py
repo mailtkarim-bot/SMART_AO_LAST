@@ -98,14 +98,20 @@ def test_consultation_registers_source_lot_and_tranche_without_becoming_case_sco
     assert consultation.lots[0].lot_number == "01"
     assert consultation.lots[0].label == "Gros œuvre étendu"
     assert consultation.tranches[0].tranche_reference == "TF"
-    assert ConsultationLotRegistered(
-        consultation_id=consultation.id,
-        lot_number="01",
-    ) in consultation.pending_events
-    assert ConsultationTrancheRegistered(
-        consultation_id=consultation.id,
-        tranche_reference="TF",
-    ) in consultation.pending_events
+    assert (
+        ConsultationLotRegistered(
+            consultation_id=consultation.id,
+            lot_number="01",
+        )
+        in consultation.pending_events
+    )
+    assert (
+        ConsultationTrancheRegistered(
+            consultation_id=consultation.id,
+            tranche_reference="TF",
+        )
+        in consultation.pending_events
+    )
 
 
 def test_closing_consultation_preserves_its_source_entities() -> None:
