@@ -206,6 +206,17 @@ class DecisionPatronActionWriter(Protocol):
         idempotency_key: UUID,
     ) -> DecisionPatronActionReference | None: ...
 
+    def create_from_registered_risk(
+        self,
+        *,
+        session: Any,
+        context: Any,
+        case_id: UUID,
+        risk_id: UUID,
+        command_id: UUID,
+        idempotency_key: UUID,
+    ) -> DecisionPatronActionReference | None: ...
+
 
 class DecisionRiskRequirementLinkRepository(Protocol):
     """Persists one immutable link to a human-confirmed DCE requirement."""

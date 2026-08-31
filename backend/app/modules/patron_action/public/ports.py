@@ -36,5 +36,29 @@ class PatronActionWriter(Protocol):
         idempotency_key: UUID,
     ) -> PatronActionReference | None: ...
 
+    def create_from_risk_requirement_link(
+        self,
+        *,
+        session: Session,
+        context: CommandContext,
+        case_id: UUID,
+        risk_id: UUID,
+        requirement_id: UUID,
+        link_id: UUID,
+        command_id: UUID,
+        idempotency_key: UUID,
+    ) -> PatronActionReference | None: ...
+
+    def create_from_registered_risk(
+        self,
+        *,
+        session: Session,
+        context: CommandContext,
+        case_id: UUID,
+        risk_id: UUID,
+        command_id: UUID,
+        idempotency_key: UUID,
+    ) -> PatronActionReference | None: ...
+
 
 __all__ = ["PatronActionReference", "PatronActionWriter"]

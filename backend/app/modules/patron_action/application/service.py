@@ -275,6 +275,59 @@ class PatronActionWriter:
             aggregate_revision=record.aggregate_revision,
         )
 
+    def create_from_registered_risk(
+        self,
+        *,
+        session: Session,
+        context: CommandContext,
+        case_id: UUID,
+        risk_id: UUID,
+        command_id: UUID,
+        idempotency_key: UUID,
+    ) -> PatronActionReference | None:
+        """Create one patron review action when a structured risk is registered."""
+        functional_key = f"decision-risk:{risk_id}"
+        existing = session.scalar(
+            sa.select(PatronActionRecord).where(
+                PatronActionRecord.tenant_id == context.tenant_id,
+                PatronActionRecord.functional_key == functional_key,
+            )
+        )
+        if existing is not None:
+            return None
+        record = PatronActionRecord(
+            id=risk_id,
+            tenant_id=context.tenant_id,
+            case_id=case_id,
+            functional_key=functional_key,
+            action_type="DECIDE_GO_NO_GO",
+            severity="BLOCKING",
+            state="OPEN",
+            title="Décider du traitement d’un risque DCE enregistré",
+            why_now="Un risque structuré vient d’être enregistré sur le DCE.",
+            impact="La décision GO/NO-GO doit intégrer ce risque et son traitement.",
+            recommended_action=(
+                "Revoir le risque et décider du traitement patronal avant toute décision finale."
+            ),
+            due_at=None,
+            source_refs_json=[f"decision-risk:{risk_id}"],
+            aggregate_revision=1,
+            actor_id=context.actor_id,
+            membership_id=context.membership_id,
+            command_id=command_id,
+            idempotency_key=idempotency_key,
+            correlation_id=context.correlation_id,
+        )
+        session.add(record)
+        return PatronActionReference(
+            id=record.id,
+            case_id=record.case_id,
+            action_type=record.action_type,
+            severity=record.severity,
+            state=record.state,
+            aggregate_revision=record.aggregate_revision,
+        )
+
 
 class PatronActionHandler:
     """Persist the first version of an explainable patron action."""

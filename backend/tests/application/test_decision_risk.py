@@ -165,3 +165,61 @@ def test_structured_risk_rejects_unordered_source_offsets() -> None:
 
     with pytest.raises(RiskValidationError, match="offsets"):
         risk.validate()
+
+
+@pytest.mark.application
+def test_register_risk_creates_patron_action_when_writer_is_provided() -> None:
+    repository = MagicMock()
+    repository.case_exists.return_value = True
+    repository.case_uses_dce_version.return_value = True
+    repository.source_exists.return_value = True
+    repository.source_supports.return_value = True
+    repository.functional_exists.return_value = False
+    action_writer = MagicMock()
+    command = _command()
+    action_ref = MagicMock()
+    action_ref.id = command.risk_id
+    action_ref.aggregate_revision = 1
+    action_writer.create_from_registered_risk.return_value = action_ref
+
+    outcome = RegisterStructuredRiskHandler(
+        repository_factory=lambda _session: repository,
+        action_writer=action_writer,
+    ).execute(session=MagicMock(), command=command, context=_context())
+
+    action_writer.create_from_registered_risk.assert_called_once_with(
+        session=repository.create.call_args.kwargs["session"],
+        context=action_writer.create_from_registered_risk.call_args.kwargs["context"],
+        case_id=command.case_id,
+        risk_id=command.risk_id,
+        command_id=command.command_id,
+        idempotency_key=command.idempotency_key,
+    )
+    assert outcome.result_code == "DECISION_RISK_REGISTERED"
+    assert len(outcome.aggregate_refs) == 2
+    assert outcome.aggregate_refs[1]["aggregate_type"] == "PatronAction"
+    assert outcome.aggregate_refs[1]["aggregate_id"] == str(command.risk_id)
+    assert len(outcome.events) == 2
+    assert outcome.events[1].event_type == "PatronActionCreated"
+    assert outcome.events[1].payload["action_type"] == "DECIDE_GO_NO_GO"
+
+
+@pytest.mark.application
+def test_register_risk_skips_patron_action_when_writer_returns_none() -> None:
+    repository = MagicMock()
+    repository.case_exists.return_value = True
+    repository.case_uses_dce_version.return_value = True
+    repository.source_exists.return_value = True
+    repository.source_supports.return_value = True
+    repository.functional_exists.return_value = False
+    action_writer = MagicMock()
+    action_writer.create_from_registered_risk.return_value = None
+
+    outcome = RegisterStructuredRiskHandler(
+        repository_factory=lambda _session: repository,
+        action_writer=action_writer,
+    ).execute(session=MagicMock(), command=_command(), context=_context())
+
+    assert outcome.result_code == "DECISION_RISK_REGISTERED"
+    assert len(outcome.aggregate_refs) == 1
+    assert len(outcome.events) == 1

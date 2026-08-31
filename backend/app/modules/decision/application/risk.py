@@ -6,6 +6,7 @@ from typing import Any
 from uuid import UUID
 
 from app.modules.decision.application.ports import (
+    DecisionPatronActionWriter,
     DecisionRiskDraft,
     DecisionRiskRepository,
     DecisionRiskTreatmentTransitionDraft,
@@ -144,8 +145,10 @@ class RegisterStructuredRiskHandler:
         self,
         *,
         repository_factory: Callable[[Any], DecisionRiskRepository],
+        action_writer: DecisionPatronActionWriter | None = None,
     ) -> None:
         self._repository_factory = repository_factory
+        self._action_writer = action_writer
 
     def execute(self, *, session: Any, command, context: CommandContext) -> HandlerOutcome:
         if context.actor_kind != ActorKind.PATRON_ADMIN.value or context.membership_id is None:
@@ -225,29 +228,65 @@ class RegisterStructuredRiskHandler:
             due_at=command.due_at,
         )
         repository.create(session=session, draft=draft)
+        aggregate_refs: list[dict[str, object]] = [
+            {
+                "aggregate_type": "DecisionRisk",
+                "aggregate_id": str(command.risk_id),
+                "aggregate_revision": 1,
+            }
+        ]
+        events = [
+            PendingDomainEvent(
+                aggregate_type="DecisionRisk",
+                aggregate_id=command.risk_id,
+                aggregate_revision=1,
+                event_type="DecisionRiskRegistered",
+                payload={
+                    "risk_id": str(command.risk_id),
+                    "case_id": str(command.case_id),
+                    "category": command.category,
+                    "severity": command.severity,
+                },
+            )
+        ]
+        if self._action_writer is not None:
+            action_ref = self._action_writer.create_from_registered_risk(
+                session=session,
+                context=context,
+                case_id=command.case_id,
+                risk_id=command.risk_id,
+                command_id=command.command_id,
+                idempotency_key=command.idempotency_key,
+            )
+            if action_ref is not None:
+                action_id = UUID(str(action_ref.id))
+                action_revision = int(action_ref.aggregate_revision)
+                aggregate_refs.append(
+                    {
+                        "aggregate_type": "PatronAction",
+                        "aggregate_id": str(action_id),
+                        "aggregate_revision": action_revision,
+                    }
+                )
+                events.append(
+                    PendingDomainEvent(
+                        aggregate_type="PatronAction",
+                        aggregate_id=action_id,
+                        aggregate_revision=action_revision,
+                        event_type="PatronActionCreated",
+                        payload={
+                            "action_id": str(action_id),
+                            "case_id": str(command.case_id),
+                            "action_type": "DECIDE_GO_NO_GO",
+                            "severity": "BLOCKING",
+                            "state": "OPEN",
+                        },
+                    )
+                )
         return HandlerOutcome(
             result_code="DECISION_RISK_REGISTERED",
-            aggregate_refs=(
-                {
-                    "aggregate_type": "DecisionRisk",
-                    "aggregate_id": str(command.risk_id),
-                    "aggregate_revision": 1,
-                },
-            ),
-            events=(
-                PendingDomainEvent(
-                    aggregate_type="DecisionRisk",
-                    aggregate_id=command.risk_id,
-                    aggregate_revision=1,
-                    event_type="DecisionRiskRegistered",
-                    payload={
-                        "risk_id": str(command.risk_id),
-                        "case_id": str(command.case_id),
-                        "category": command.category,
-                        "severity": command.severity,
-                    },
-                ),
-            ),
+            aggregate_refs=tuple(aggregate_refs),
+            events=tuple(events),
         )
 
 
@@ -349,9 +388,14 @@ class TransitionStructuredRiskTreatmentHandler:
 
 
 def decision_risk_handlers(
-    *, repository_factory: Callable[[Any], DecisionRiskRepository]
+    *,
+    repository_factory: Callable[[Any], DecisionRiskRepository],
+    action_writer: DecisionPatronActionWriter | None = None,
 ) -> dict[str, CommandHandler]:
-    register_handler = RegisterStructuredRiskHandler(repository_factory=repository_factory)
+    register_handler = RegisterStructuredRiskHandler(
+        repository_factory=repository_factory,
+        action_writer=action_writer,
+    )
     transition_handler = TransitionStructuredRiskTreatmentHandler(
         repository_factory=repository_factory
     )

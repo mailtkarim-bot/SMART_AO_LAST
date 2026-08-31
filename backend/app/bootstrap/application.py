@@ -436,7 +436,8 @@ class AppRuntime:
                 **patron_action_handlers(),
                 **patron_action_transition_handlers(),
                 **decision_risk_handlers(
-                    repository_factory=lambda _session: SqlAlchemyDecisionRiskRepository()
+                    repository_factory=lambda _session: SqlAlchemyDecisionRiskRepository(),
+                    action_writer=PatronActionWriter(),
                 ),
                 **decision_risk_requirement_link_handlers(
                     repository_factory=_decision_risk_requirement_link_repository,
