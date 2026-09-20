@@ -12,6 +12,7 @@
 - Bandit sur `backend/app` : **vert** ;
 - detect-secrets avec `.secrets.baseline` : **vert** ;
 - `scripts/simulate_staging_deploy.sh --static-only` et `--compose-config` : **verts**, sans démarrer de services ;
+- simulation locale complète tentée avec PostgreSQL, ClamAV, migration, backend et frontend ; configuration et téléchargement ClamAV passent, mais le build frontend s’arrête sur `pnpm install` après des timeouts du registre npm ; le stack temporaire est nettoyé ;
 - exercice PostgreSQL local isolé : **PASS**, sauvegarde compressée puis restauration dans une seconde base temporaire, 127 tables, tête `20260920_0090` et trigger append-only vérifiés ;
 - rotation JWT atomique avec environnement éphémère protégé : **PASS**, ancien fichier supprimé après simulation ;
 - recherche de clés privées, tokens GitHub et secrets versionnés hors fixtures explicitement marquées : **aucun secret de production trouvé** ;

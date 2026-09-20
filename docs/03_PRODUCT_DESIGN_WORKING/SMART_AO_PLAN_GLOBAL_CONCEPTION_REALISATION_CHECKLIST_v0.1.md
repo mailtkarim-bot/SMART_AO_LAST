@@ -439,6 +439,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 20/09/2026 | Preuve locale restauration/rotation | base source isolée migrée puis restaurée dans une base temporaire : 127 tables, tête `20260920_0090`, trigger append-only ; rotation JWT atomique simulée avec fichier 0600 éphémère ; preuve dans `SMART_AO_PHASE11_PRODUCTION_SECURITY_AUDIT_v0.1.md` | exécuter la restauration et la rotation sur le VPS de préproduction réel |
 | 20/09/2026 | Runbook préproduction VPS | dimensionnement, installation, secrets, déploiement, backup, restauration, rotation JWT, smoke tests et rollback décrits dans `docs/02_FUTURE_TECHNICAL/SMART_AO_PREPRODUCTION_VPS_RUNBOOK_v0.1.md` ; infrastructure réelle encore absente | provisionner le VPS de préproduction puis exécuter le runbook |
 | 20/09/2026 | Contrats d’exploitation préproduction | 45 tests `backend/tests/ops` passent ; scripts shell, Compose digest-pinné, réseau privé, healthchecks, allowlists de secrets, wrappers one-shot, backup/restore et rotation contrôlés | provisionner le VPS de préproduction puis exécuter le runbook |
+| 20/09/2026 | Simulation locale complète du stack | PostgreSQL/ClamAV et configuration Compose préproduction validés ; build frontend interrompu par timeouts du registre npm pendant `pnpm install`, stack temporaire nettoyé sans données persistantes | provisionner le VPS ou rendre le registre npm accessible puis rejouer le stack complet |
 
 ## 7. Règle de mise à jour
 
