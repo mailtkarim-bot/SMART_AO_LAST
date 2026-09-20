@@ -3,7 +3,7 @@
 **Date :** 20 septembre 2026  
 **Autorités :** cahier OWNER produit/métier v0.4, catalogue OWNER UX v0.3, registre `SMART_AO_G01_G52`  
 **Périmètre :** flux réels DCE, de la réception/quarantaine à la lecture et à la qualification des exigences  
-**Verdict :** preuves techniques acquises, aucune acceptation métier globale déclarée
+**Verdict :** preuves techniques reliées aux actes métier ciblés, aucune acceptation métier globale déclarée
 
 ## 1. Objectif et règle de preuve
 
@@ -30,18 +30,18 @@ SMART_AO_TEST_DATABASE_URL='postgresql+psycopg://smart_ao:smart_ao@127.0.0.1:543
 
 Résultat réel : **105 tests réussis, 5 avertissements, 115,20 s**. Les avertissements sont des dépréciations Starlette/httpx et 422 ; aucun échec fonctionnel n’est observé.
 
-Une seconde passe de fixtures métier a ensuite été ajoutée dans `backend/app/platform/quality/data/g01_g09_business.json` et rejouée par `backend/tests/application/test_g01_g09_business_fixtures.py` : **10 tests réussis** (9 unitaires, 1 PostgreSQL). Cette passe vérifie directement le gate de soumission, le refus de version après rectificatif, la contradiction sans priorité automatique, le gap de capacité append-only, la provenance XLSX, l’échéance absente et les refus de fichier protégé, archive limitée et contenu hostile.
+Une seconde passe de fixtures métier a ensuite été ajoutée dans `backend/app/platform/quality/data/g01_g09_business.json` et rejouée par `backend/tests/application/test_g01_g09_business_fixtures.py` : **10 tests réussis** (9 unitaires, 1 PostgreSQL). Chaque fixture porte maintenant un acte métier et deux références de preuve contrôlées par le parseur fermé. Le détail de la liaison se trouve dans `SMART_AO_PHASE9_G01_G09_ACTES_METIER_PREUVE_v0.1.md`.
 
 ## 2. Résultat par scénario
 
 | Scénario | Flux réellement prouvé | État de cette passe | Limite restante |
 |---|---|---|---|
-| **G01** | Projection/extraction sourcée, absence de signal sans prétendre à une absence, exigences atomiques et gate P3/P5 bloqué quand les exigences ne sont pas confirmées. | **PARTIEL — preuve technique** | La décision métier et la preuve append-only de la dépendance restent à relier au dossier complet. |
-| **G02** | Versions non admises/non vérifiées refusées, consultation obsolète refusée, admission rejouée sans doublon et autorisation d’une ancienne version refusée par conflit de version. | **PARTIEL — preuve technique** | L’invalidation append-only d’une autorisation P5 après réception d’un rectificatif doit être exécutée de bout en bout. |
-| **G03** | Analyse RC/CCAP sourcée, taxonomie CCAP/CCTP déterministe, deux sources conservées sans priorité automatique et fixture contradictoire en `REVIEW_REQUIRED`. | **PARTIEL — preuve technique** | La résolution humaine motivée doit encore être persistée et rejouée. |
-| **G04** | Besoin de levage sans ligne dédiée projeté comme `CAPABILITY_GAP` bloquant, avec source CCTP, action de revue et événement `CapabilityGapReported` append-only. | **PREUVE VERTICALE TECHNIQUE** | La décision économique humaine et l’hypothèse retenue restent hors de cette preuve. |
-| **G05** | Projections DOCX/XLSX avec ancres de paragraphe/cellule, hash et extraction immuable ; fixture XLSX conserve l’ancre de cellule originale. | **PARTIEL — preuve technique** | L’édition dérivée non qualifiée et son avertissement doivent encore être persistés comme acte métier. |
-| **G06** | Page illisible, OCR sous revue, limites de taille et échéance absente projetée en `DEADLINE_MISSING` sans invention de date. | **PARTIEL — preuve technique** | La projection complète dans la fiche métier et la responsabilité de résolution restent à relier. |
+| **G01** | Projection/extraction sourcée, absence de signal sans prétendre à une absence, exigences atomiques et gate P3/P5 bloqué quand les exigences ne sont pas confirmées. | **PREUVE RELIÉE — décision de gate** | La décision Patron complète et l’autorisation effective restent séparées. |
+| **G02** | Versions non admises/non vérifiées refusées, consultation obsolète refusée, admission rejouée sans doublon et autorisation d’une ancienne version refusée par conflit de version. | **PREUVE RELIÉE — contrôle P5** | Un nouveau paquet doit recevoir une nouvelle autorisation ; aucun héritage automatique. |
+| **G03** | Analyse RC/CCAP sourcée, taxonomie CCAP/CCTP déterministe, deux sources conservées sans priorité automatique, conflit résolu par un acte humain motivé. | **PREUVE RELIÉE — résolution humaine** | La résolution choisit une contribution sans effacer l’autre. |
+| **G04** | Besoin de levage sans ligne dédiée projeté comme `CAPABILITY_GAP` bloquant, avec source CCTP, action de revue et événement `CapabilityGapReported` append-only. | **PREUVE RELIÉE — revue Patron** | Aucun coût ni hypothèse n’est accepté automatiquement. |
+| **G05** | Projections DOCX/XLSX avec ancres de paragraphe/cellule, hash et extraction immuable ; un brouillon dérivé versionné conserve la source et reste soumis à revue. | **PREUVE RELIÉE — édition dérivée** | Le brouillon n’est ni une validation ni un dépôt. |
+| **G06** | Page illisible, OCR sous revue, limites de taille et échéance absente projetée en `DEADLINE_MISSING` sans invention de date ; l’inconnu reste lisible côté Patron. | **PREUVE RELIÉE — revue Patron** | La date doit être confirmée par une source, jamais déduite. |
 | **G07** | PDF protégé détecté et déclaré sans tentative de contournement ni extraction fabriquée. | **PREUVE TECHNIQUE** | La revue métier doit confirmer le blocage du processus dépendant du fichier protégé. |
 | **G08** | Archive au-delà de la limite refusée, inventaire borné et éléments non traités rendus visibles ; reprise possible après rejet. | **PARTIEL — preuve technique** | Il reste à jouer le parcours d’inventaire partiel et de reprise avec un manifeste d’archive métier complet. |
 | **G09** | Instruction hostile classée `REVIEW_REQUIRED`, contenu mis en quarantaine/fail-closed, aucune exécution ni transmission IA. | **PREUVE VERTICALE TECHNIQUE** | La décision de revue et son événement append-only doivent être reliés à la recette métier G09 complète. |
@@ -60,7 +60,7 @@ Les preuves les plus directement reliées aux scénarios sont :
 
 G01–G09 restent **non clôturés** dans le registre G01–G52. Cette passe établit une base technique robuste et reproductible, mais elle ne prétend pas couvrir les décisions humaines, les intégrations externes, la recette UI manuelle ou l’acceptation propriétaire. Aucun scénario n’est donc marqué `ACCEPTÉ MÉTIER`.
 
-La suite doit relier les preuves techniques aux actes métier encore manquants : résolution humaine G03, décision P3/P5 G01/G02, édition dérivée G05 et revue propriétaire G04/G06. Les fixtures sont maintenant versionnées et rejouables ; aucun statut d’acceptation métier n’est encore avancé.
+La liaison des preuves aux actes ciblés est maintenant matérialisée dans le catalogue et vérifiée par les tests réels. Les fixtures restent versionnées et rejouables ; aucun statut d’acceptation métier globale n’est avancé. La prochaine tranche porte sur les contrôles d’accessibilité, de responsive et de fuite de données avant le gel UX.
 
 ## Références
 
@@ -69,6 +69,7 @@ La suite doit relier les preuves techniques aux actes métier encore manquants :
 - `backend/app/platform/quality/data/g01_g09_business.json`
 - `backend/app/platform/quality/business_fixtures.py`
 - `backend/tests/application/test_g01_g09_business_fixtures.py`
+- `docs/03_PRODUCT_DESIGN_WORKING/SMART_AO_PHASE9_G01_G09_ACTES_METIER_PREUVE_v0.1.md`
 - `backend/app/platform/quality/recipe_catalog.py`
 - `docs/00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_CONSOLIDATED_v0.4.md`
 - `docs/00_REFERENCE_ACTIVE/SMART_AO_Catalogue_Ecrans_Parcours_Produit_OWNER_CONSOLIDATED_v0.3.md`

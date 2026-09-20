@@ -14,6 +14,8 @@ class BusinessFixture:
     expected_refusal: str
     expected_final_state: str
     append_only_evidence: tuple[str, ...]
+    business_act: str
+    act_proof: tuple[str, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -57,13 +59,22 @@ def _parse_fixture(raw: Any) -> BusinessFixture:
         "expected_refusal",
         "expected_final_state",
         "append_only_evidence",
+        "business_act",
+        "act_proof",
     }
     if not isinstance(raw, dict) or set(raw) != required:
         raise ValueError("BUSINESS_FIXTURE_FIELDS_INVALID")
-    values = {key: _text(raw[key]) for key in required - {"append_only_evidence"}}
+    values = {key: _text(raw[key]) for key in required - {"append_only_evidence", "act_proof"}}
     evidence = raw["append_only_evidence"]
     if not isinstance(evidence, list) or not evidence or any(not _text(item) for item in evidence):
         raise ValueError("BUSINESS_FIXTURE_EVIDENCE_INVALID")
+    act_proof = raw["act_proof"]
+    if (
+        not isinstance(act_proof, list)
+        or not act_proof
+        or any(not _text(item) for item in act_proof)
+    ):
+        raise ValueError("BUSINESS_FIXTURE_ACT_PROOF_INVALID")
     return BusinessFixture(
         recipe_id=values["recipe_id"],
         input_state=values["input_state"],
@@ -71,6 +82,8 @@ def _parse_fixture(raw: Any) -> BusinessFixture:
         expected_refusal=values["expected_refusal"],
         expected_final_state=values["expected_final_state"],
         append_only_evidence=tuple(item.strip() for item in evidence),
+        business_act=values["business_act"],
+        act_proof=tuple(item.strip() for item in act_proof),
     )
 
 

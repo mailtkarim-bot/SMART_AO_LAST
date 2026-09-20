@@ -63,6 +63,18 @@ def test_g01_g09_business_fixture_catalog_is_closed() -> None:
     assert [item.recipe_id for item in FIXTURES.scenarios] == [
         f"G{index:02d}" for index in range(1, 10)
     ]
+    assert [item.business_act for item in FIXTURES.scenarios] == [
+        "P3_P5_DECISION_GATE",
+        "P5_AUTHORIZATION_VERSION_CHECK",
+        "DCE_HUMAN_CONFLICT_RESOLUTION",
+        "CAPABILITY_GAP_OWNER_REVIEW",
+        "TECHNICAL_RESPONSE_DERIVED_DRAFT",
+        "PATRON_UNKNOWN_REVIEW",
+        "DCE_PROTECTED_FILE_REVIEW",
+        "DCE_ARCHIVE_LIMIT_REVIEW",
+        "DCE_HOSTILE_CONTENT_REVIEW",
+    ]
+    assert all(len(item.act_proof) == 2 for item in FIXTURES.scenarios)
 
 
 def test_g01_missing_plan_blocks_submission_gate() -> None:
@@ -146,9 +158,7 @@ def test_g03_contradictory_sources_remain_review_required_without_priority() -> 
                 )
             ]
         ),
-        SimpleNamespace(
-            all=lambda: [(batch_id, "BPU", 4, "02.01", "Variante garde-corps", "ml")]
-        ),
+        SimpleNamespace(all=lambda: [(batch_id, "BPU", 4, "02.01", "Variante garde-corps", "ml")]),
     ]
     session_factory = MagicMock()
     session_factory.return_value.__enter__.return_value = session

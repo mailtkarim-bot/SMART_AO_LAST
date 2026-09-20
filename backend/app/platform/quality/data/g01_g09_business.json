@@ -8,7 +8,9 @@
       "action": "IMPORT_AND_QUALIFY",
       "expected_refusal": "P3_P5_BLOCKED_UNTIL_SOURCE_OR_BOUNDED_RISK",
       "expected_final_state": "DEPENDENCY_UNPROVEN",
-      "append_only_evidence": ["SOURCE_REFERENCE", "BLOCKER_EVENT"]
+      "append_only_evidence": ["SOURCE_REFERENCE", "BLOCKER_EVENT"],
+      "business_act": "P3_P5_DECISION_GATE",
+      "act_proof": ["evaluate_submission_gate", "test_g01_missing_plan_blocks_submission_gate"]
     },
     {
       "recipe_id": "G02",
@@ -16,7 +18,9 @@
       "action": "ADMIT_NEW_DCE_VERSION",
       "expected_refusal": "OLD_AUTHORIZATION_REFUSED_FOR_NEW_PACKAGE",
       "expected_final_state": "REVALIDATION_REQUIRED",
-      "append_only_evidence": ["OLD_VERSION", "INVALIDATION_EVENT", "NEW_VERSION"]
+      "append_only_evidence": ["OLD_VERSION", "INVALIDATION_EVENT", "NEW_VERSION"],
+      "business_act": "P5_AUTHORIZATION_VERSION_CHECK",
+      "act_proof": ["AuthorizeSubmissionPackageHandler", "test_g02_rectificative_version_refuses_old_package_authorization"]
     },
     {
       "recipe_id": "G03",
@@ -24,7 +28,9 @@
       "action": "COMPARE_AND_RESOLVE",
       "expected_refusal": "NO_AUTOMATIC_SOURCE_PRIORITY",
       "expected_final_state": "HUMAN_RESOLUTION_REQUIRED",
-      "append_only_evidence": ["SOURCE_A", "SOURCE_B", "RESOLUTION_REASON"]
+      "append_only_evidence": ["SOURCE_A", "SOURCE_B", "RESOLUTION_REASON"],
+      "business_act": "DCE_HUMAN_CONFLICT_RESOLUTION",
+      "act_proof": ["DceContributionConflictService.resolve", "test_concurrent_proposals_are_retained_blocked_and_resolvable"]
     },
     {
       "recipe_id": "G04",
@@ -32,7 +38,9 @@
       "action": "QUALIFY_COST_GAP",
       "expected_refusal": "UNCOVERED_COST_CANNOT_BE_ZERO",
       "expected_final_state": "COST_HYPOTHESIS_REQUIRED",
-      "append_only_evidence": ["REQUIREMENT_SOURCE", "COST_GAP"]
+      "append_only_evidence": ["REQUIREMENT_SOURCE", "COST_GAP"],
+      "business_act": "CAPABILITY_GAP_OWNER_REVIEW",
+      "act_proof": ["ReportCapabilityGapHandler", "test_g04_missing_lifting_cost_is_a_blocking_case_gap"]
     },
     {
       "recipe_id": "G05",
@@ -40,7 +48,9 @@
       "action": "IMPORT_WITHOUT_NORMALIZATION_LOSS",
       "expected_refusal": "UNQUALIFIED_EDITING_CANNOT_BE_PRESENTED_AS_FACT",
       "expected_final_state": "ORIGINAL_RETAINED_UNQUALIFIED",
-      "append_only_evidence": ["ORIGINAL_HASH", "DERIVED_FILE", "WARNING"]
+      "append_only_evidence": ["ORIGINAL_HASH", "DERIVED_FILE", "WARNING"],
+      "business_act": "TECHNICAL_RESPONSE_DERIVED_DRAFT",
+      "act_proof": ["PreparationReviewHandler._draft", "test_response_draft_is_versioned_replayed_and_financial_payload_is_rejected"]
     },
     {
       "recipe_id": "G06",
@@ -48,7 +58,9 @@
       "action": "READ_PARTIAL_DOCUMENT",
       "expected_refusal": "NO_DEADLINE_INVENTION",
       "expected_final_state": "DEADLINE_UNKNOWN",
-      "append_only_evidence": ["PAGE_LOCATOR", "READABILITY_ISSUE"]
+      "append_only_evidence": ["PAGE_LOCATOR", "READABILITY_ISSUE"],
+      "business_act": "PATRON_UNKNOWN_REVIEW",
+      "act_proof": ["PatronBoampObservationService.read", "test_patron_read_marks_missing_deadline_as_unknown"]
     },
     {
       "recipe_id": "G07",
@@ -56,7 +68,9 @@
       "action": "ATTEMPT_SAFE_OPEN",
       "expected_refusal": "NO_BYPASS_OR_DECRYPTION",
       "expected_final_state": "DEPENDENT_PROCESS_BLOCKED",
-      "append_only_evidence": ["FILE_VERSION", "REFUSAL_REASON"]
+      "append_only_evidence": ["FILE_VERSION", "REFUSAL_REASON"],
+      "business_act": "DCE_PROTECTED_FILE_REVIEW",
+      "act_proof": ["_project_document", "test_g07_protected_file_is_refused_without_bypass"]
     },
     {
       "recipe_id": "G08",
@@ -64,7 +78,9 @@
       "action": "IMPORT_WITH_BOUNDED_INVENTORY",
       "expected_refusal": "UNPROCESSED_ITEMS_MUST_REMAIN_VISIBLE",
       "expected_final_state": "PARTIAL_INVENTORY",
-      "append_only_evidence": ["ARCHIVE_MANIFEST", "LIMIT_EVENT", "REMAINING_ITEMS"]
+      "append_only_evidence": ["ARCHIVE_MANIFEST", "LIMIT_EVENT", "REMAINING_ITEMS"],
+      "business_act": "DCE_ARCHIVE_LIMIT_REVIEW",
+      "act_proof": ["_project_document", "test_g08_archive_limit_leaves_inventory_unprocessed"]
     },
     {
       "recipe_id": "G09",
@@ -72,7 +88,9 @@
       "action": "ISOLATE_AND_PREVIEW",
       "expected_refusal": "NO_EXECUTION_OR_AI_TRANSMISSION",
       "expected_final_state": "QUARANTINED_REVIEW_REQUIRED",
-      "append_only_evidence": ["QUARANTINE_EVENT", "CONTENT_HASH", "REVIEW_DECISION"]
+      "append_only_evidence": ["QUARANTINE_EVENT", "CONTENT_HASH", "REVIEW_DECISION"],
+      "business_act": "DCE_HOSTILE_CONTENT_REVIEW",
+      "act_proof": ["HOSTILE_INSTRUCTION_REVIEW_REQUIRED", "test_g09_hostile_content_isolated_for_human_review"]
     }
   ]
 }
