@@ -3,7 +3,7 @@
 
 **Date : 13 septembre 2026. Statut : BASE UX PROPRIÉTAIRE ADOPTÉE POUR PROTOTYPAGE — huit C1 arbitrés et fermés au niveau conception ; aucun UX Freeze ni Product Freeze déclaré.**
 
-Source métier : [OWNER_CONSOLIDATED v0.4](../../docs/00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_CONSOLIDATED_v0.4.md). SHA-256 : `af461cf4782af01575e707d97a724ac1c5d1a5c2229b9ec820010c58a4e05042`.
+Source métier : [OWNER_CONSOLIDATED v0.4](../../docs/00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v1.0.md). SHA-256 : `af461cf4782af01575e707d97a724ac1c5d1a5c2229b9ec820010c58a4e05042`.
 
 Base de comparaison historique : [catalogue v0.1](../_ARCHIVE/ux_ccf/SMART_AO_Catalogue_Ecrans_Parcours_Produit_v0.1.md). SHA-256 : `f94c8e805040fc1150149ba1252aa89f22cc7cb3c5aae8c7c522a86e9ec29f80`.
 

@@ -11,7 +11,7 @@ Ce document décrit SMART AO dans l’ordre où les personnes l’utilisent rée
 
 Il ne remplace aucune autorité propriétaire :
 
-1. [Cahier directeur Produit & Métier v0.4](../00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_CONSOLIDATED_v0.4.md) — produit et métier ;
+1. [Cahier directeur Produit & Métier v0.4](../00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v1.0.md) — produit et métier ;
 2. [Catalogue UX v0.3](../00_REFERENCE_ACTIVE/SMART_AO_Catalogue_Ecrans_Parcours_Produit_OWNER_CONSOLIDATED_v0.3.md) — couverture et parcours ;
 3. [Fondations UX v0.3](../00_REFERENCE_ACTIVE/SMART_AO_Prototype_UX_V0_Fondations_OWNER_CONSOLIDATED_v0.3.md) — règles communes de présentation et d’interaction.
 

@@ -1,26 +1,18 @@
 # SMART AO — Cahier directeur Produit & Métier
 ## OWNER FREEZE v1.0 — Product Freeze candidat
 
-**Statut :** CANDIDAT POUR APPROBATION PROPRIÉTAIRE  
-**Date :** 20 septembre 2026  
-**Autorité de transition :** le cahier OWNER_CONSOLIDATED v0.4 reste l’autorité active jusqu’à l’approbation explicite de ce v1.0  
+**Statut :** PRODUCT FREEZE v1.0 — AUTORITÉ PRODUIT/MÉTIER ACTIVE
+**Date :** 20 septembre 2026
+**Autorité de transition :** promotion propriétaire confirmée le 20 septembre 2026
 **Question couverte :** « Quel SmartAO voulons-nous construire ? »
 
 ## 0. Règle de transition
 
 Ce document consolide les décisions produit/métier du cahier v0.4, du catalogue UX v0.3, des OWNER EXPERIENCE FREEZE et de la preuve G01–G09. Il devient la nouvelle autorité produit/métier uniquement après approbation propriétaire explicite.
 
-Avant cette approbation :
+Ce document remplace le v0.4 comme source de vérité produit/métier. Le v0.4 est archivé avec son historique de décisions. Les contrats techniques et les preuves existantes restent des références d’implémentation, pas des autorités produit.
 
-- le v0.4 prévaut en cas de contradiction ;
-- ce document est le candidat de Product Freeze v1.0 ;
-- les contrats techniques et les preuves existantes restent des références d’implémentation, pas des autorités produit.
-
-Après approbation :
-
-- ce document remplace le v0.4 comme source de vérité produit/métier ;
-- le v0.4 passe dans `_ARCHIVE/` avec son historique de décisions ;
-- toute modification produit exige une nouvelle version, un motif, un impact et une validation propriétaire.
+Toute modification produit exige une nouvelle version, un motif, un impact et une validation propriétaire.
 
 ## 1. Promesse et client initial
 
@@ -162,12 +154,12 @@ Aucune divergence silencieuse entre ce document, le code et les tests n’est ac
 
 ## 12. Références de consolidation
 
-- `docs/00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_CONSOLIDATED_v0.4.md`
+- `docs/00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v1.0.md`
 - `docs/00_REFERENCE_ACTIVE/SMART_AO_Catalogue_Ecrans_Parcours_Produit_OWNER_CONSOLIDATED_v0.3.md`
 - `docs/03_PRODUCT_DESIGN_WORKING/SMART_AO_UX_FREEZE_GLOBAL_v0.1.md`
 - `docs/03_PRODUCT_DESIGN_WORKING/SMART_AO_G01_G09_OWNER_EXPERIENCE_FREEZE_v0.1.md`
 - `docs/03_PRODUCT_DESIGN_WORKING/SMART_AO_PLAN_GLOBAL_CONCEPTION_REALISATION_CHECKLIST_v0.1.md`
 
-## 13. Décision attendue
+## 13. Promotion effective
 
-Le propriétaire doit confirmer que ce candidat v1.0 remplace bien le v0.4 comme source de vérité produit/métier. Jusqu’à cette confirmation, le v0.4 reste prioritaire en cas de contradiction.
+Le propriétaire a confirmé la promotion du Product Freeze v1.0 comme nouvelle autorité produit/métier. En cas de contradiction, ce document prévaut. Le cahier v0.4 est historique et archivé.

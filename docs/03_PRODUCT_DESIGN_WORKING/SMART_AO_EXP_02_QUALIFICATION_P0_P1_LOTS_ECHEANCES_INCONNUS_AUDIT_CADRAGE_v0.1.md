@@ -2,7 +2,7 @@
 
 **Statut :** AUDITÉ · CONTRAT IMPLÉMENTÉ · PREUVE VERTICALE PROUVÉE
 **Date :** 14 septembre 2026
-**Autorité produit/métier :** `SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_CONSOLIDATED_v0.4.md`
+**Autorité produit/métier :** `SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v1.0.md`
 **Référence UX :** `SMART_AO_Catalogue_Ecrans_Parcours_Produit_OWNER_CONSOLIDATED_v0.3.md`
 **Tranche :** EXP-02, après la preuve nominale observation BOAMP → Affaire idempotente
 

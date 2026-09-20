@@ -7,13 +7,11 @@ Cet index indique quel document fait foi pour chaque type de décision. Il ne cr
 
 ## 1 — Autorité produit et métier
 
-[`SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_CONSOLIDATED_v0.4.md`](SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_CONSOLIDATED_v0.4.md)
+[`SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v1.0.md`](SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v1.0.md)
 
 Répond à : **« Quel SMART AO voulons-nous construire, pour qui, avec quelles règles, autorités et limites ? »**
 
-En cas de contradiction produit ou métier, ce document prévaut.
-
-Le candidat de remplacement est [`SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v1.0.md`](SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v1.0.md). Il consolide les décisions validées et reste soumis à l’approbation de transition ; il ne prévaut pas encore sur le v0.4.
+En cas de contradiction produit ou métier, le Product Freeze v1.0 prévaut. Le cahier v0.4 est archivé dans `../_ARCHIVE/produit_metier/`.
 
 ## 2 — Autorité de couverture UX et des parcours
 

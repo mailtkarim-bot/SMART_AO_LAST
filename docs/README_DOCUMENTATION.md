@@ -10,13 +10,13 @@ Les nouveaux livrables produit, métier, UX et techniques sont écrits sous `doc
 
 ## Source de vérité produit et métier actuelle
 
-La référence unique pour répondre à la question **« Quel SmartAO voulons-nous construire ? »** est :
+La référence unique pour répondre à la question **« Quel SmartAO voulons-nous construire ? »** est désormais :
 
-[`00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_CONSOLIDATED_v0.4.md`](00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_CONSOLIDATED_v0.4.md)
+[`00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v1.0.md`](00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v1.0.md)
 
-En cas de contradiction, le v0.4 prévaut sur tout document produit, métier, UX ou Work Review archivé. Il sera remplacé, après les conditions qu'il définit, par `SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v1.0.md`.
+En cas de contradiction, le Product Freeze v1.0 prévaut. Le cahier v0.4 est archivé dans `_ARCHIVE/produit_metier/`.
 
-Le candidat Product Freeze v1.0 est maintenant consolidé dans [`00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v1.0.md`](00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v1.0.md). Tant que l’approbation de transition n’est pas enregistrée, le v0.4 reste prioritaire.
+La transition a été approuvée par le propriétaire le 20 septembre 2026.
 
 ## Références d'implémentation actives
 

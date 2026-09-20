@@ -3,7 +3,7 @@
 
 **Statut :** AUDIT CODE VIVANT · P5, MANIFESTE, SIGNATURE ET HASH DE RÉCEPTION PROUVÉS · LECTURE STRUCTURÉE AJOUTÉE · RAPPROCHEMENT PARTIEL  
 **Date :** 15 septembre 2026  
-**Référence métier :** `docs/00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_CONSOLIDATED_v0.4.md` §11 et portes P4/P5.
+**Référence métier :** `docs/00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v1.0.md` §11 et portes P4/P5.
 
 ## 1. Résultat de l’audit
 

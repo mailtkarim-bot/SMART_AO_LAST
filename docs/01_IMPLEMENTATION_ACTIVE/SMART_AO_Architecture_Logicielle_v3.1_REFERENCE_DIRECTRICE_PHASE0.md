@@ -39,7 +39,7 @@ La direction cible est donc stabilisée ; l’architecture de migration détaill
 
 ## 1.1 Ordre de référence
 
-1. `docs/00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_CONSOLIDATED_v0.4.md` pour le produit et le métier ;
+1. `docs/00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v1.0.md` pour le produit et le métier ;
 2. présent document `SMART_AO_Architecture_Logicielle_v3.1` pour l'architecture de construction ;
 3. code réel `SMART_AO_V8` pour l'état observé ;
 4. dossiers `phase0_gate0/` pour les constats, gates et la migration ;

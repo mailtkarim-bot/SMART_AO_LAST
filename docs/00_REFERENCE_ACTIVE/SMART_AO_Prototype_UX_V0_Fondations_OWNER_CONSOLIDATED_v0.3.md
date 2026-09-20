@@ -11,7 +11,7 @@
 
 Ce document définit **les fondations propriétaires communes de la conception UX** : comment SMART AO doit se présenter et se comporter dans chaque expérience, prototype et future tranche fonctionnelle. Il couvre les 104 contrats de surface : shell, navigation, densité, langage métier, états, preuve, autorité, confidentialité, assistance IA et adaptation aux écrans.
 
-Le [catalogue UX propriétaire v0.3](SMART_AO_Catalogue_Ecrans_Parcours_Produit_OWNER_CONSOLIDATED_v0.3.md) fait foi pour C00, C01–C16, N01–N05, PUX-01–PUX-19, les huit corrections UX-C1 et les douze innovations I01–I12. Le [cahier produit v0.4](SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_CONSOLIDATED_v0.4.md) reste supérieur sur le métier, les droits, les portes P0–P7 et l’autorité. Le présent OWNER_CONSOLIDATED v0.3 conserve les décisions UX adoptées en v0.2 et change leur méthode de matérialisation ; toute contradiction se résout en faveur des autorités supérieures.^1
+Le [catalogue UX propriétaire v0.3](SMART_AO_Catalogue_Ecrans_Parcours_Produit_OWNER_CONSOLIDATED_v0.3.md) fait foi pour C00, C01–C16, N01–N05, PUX-01–PUX-19, les huit corrections UX-C1 et les douze innovations I01–I12. Le [cahier produit v0.4](SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v1.0.md) reste supérieur sur le métier, les droits, les portes P0–P7 et l’autorité. Le présent OWNER_CONSOLIDATED v0.3 conserve les décisions UX adoptées en v0.2 et change leur méthode de matérialisation ; toute contradiction se résout en faveur des autorités supérieures.^1
 
 La conception ne part plus d’une succession de frames isolées. Elle part d’une **expérience métier de bout en bout**, décrite par ses acteurs, résultats, pages, données, droits, états, preuves, erreurs et critères de réussite. Le contenu est d’abord candidat, puis prototypé et éprouvé. Le gel propriétaire intervient après cette boucle ; une maquette ne peut ni inventer une capacité ni masquer un état exigé.
 
@@ -47,7 +47,7 @@ La contre-proposition Work est **adoptée dans sa direction et consolidée** sou
 
 Pour toute décision V0 :
 
-1. `SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_CONSOLIDATED_v0.4.md` — autorité produit/métier ;
+1. `SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v1.0.md` — autorité produit/métier ;
 2. `SMART_AO_Catalogue_Ecrans_Parcours_Produit_OWNER_CONSOLIDATED_v0.3.md` — autorité UX de couverture et de parcours ;
 3. **le présent `SMART_AO_Prototype_UX_V0_Fondations_OWNER_CONSOLIDATED_v0.3.md`** — autorité de fondations visuelles et interactionnelles ;
 4. expériences portant un statut `OWNER EXPERIENCE FREEZE` — contenu et enchaînement propriétaires validés pour leur périmètre ;
@@ -979,7 +979,7 @@ Ces critères sont des conditions de recette future, pas des résultats déjà o
 
 ## Sources
 
-1. SMART AO. [Catalogue des écrans et parcours produit OWNER_CONSOLIDATED v0.3](../../docs/00_REFERENCE_ACTIVE/SMART_AO_Catalogue_Ecrans_Parcours_Produit_OWNER_CONSOLIDATED_v0.3.md), et [Cahier directeur Produit & Métier OWNER_CONSOLIDATED v0.4](../../docs/00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_CONSOLIDATED_v0.4.md). 13 septembre 2026. Sources propriétaires locales.
+1. SMART AO. [Catalogue des écrans et parcours produit OWNER_CONSOLIDATED v0.3](../../docs/00_REFERENCE_ACTIVE/SMART_AO_Catalogue_Ecrans_Parcours_Produit_OWNER_CONSOLIDATED_v0.3.md), et [Cahier directeur Produit & Métier OWNER_CONSOLIDATED v0.4](../../docs/00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v1.0.md). 13 septembre 2026. Sources propriétaires locales.
 2. Linear. [Peek preview](https://linear.app/docs/peek). Documentation publique consultée le 13 septembre 2026.
 3. IBM Carbon Design System. [Data table — Usage](https://carbondesignsystem.com/components/data-table/usage/). Documentation publique consultée le 13 septembre 2026.
 4. Stripe. [How PaymentIntents and SetupIntents work](https://docs.stripe.com/payments/paymentintents/lifecycle). Documentation publique consultée le 13 septembre 2026.

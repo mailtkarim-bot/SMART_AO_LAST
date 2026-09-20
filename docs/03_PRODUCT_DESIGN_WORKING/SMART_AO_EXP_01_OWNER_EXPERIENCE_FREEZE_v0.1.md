@@ -39,5 +39,5 @@ Le gel ne prétend pas livrer la persistance de brouillons, la reprise multi-app
 - [Évaluation technique EXP-01](SMART_AO_EXP_01_Evaluation_Technique_WORK_PROPOSAL_v0.1.md)
 - [Parcours et contrats de pages](SMART_AO_Experience_Utilisateur_Parcours_Pages_WORK_PROPOSAL_v0.1.md)
 - [Plan global](SMART_AO_PLAN_GLOBAL_CONCEPTION_REALISATION_CHECKLIST_v0.1.md)
-- [Cahier Produit/Métier OWNER v0.4](../00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_CONSOLIDATED_v0.4.md)
+- [Cahier Produit/Métier OWNER v0.4](../00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v1.0.md)
 - [Catalogue Écrans/Parcours OWNER v0.3](../00_REFERENCE_ACTIVE/SMART_AO_Catalogue_Ecrans_Parcours_Produit_OWNER_CONSOLIDATED_v0.3.md)
