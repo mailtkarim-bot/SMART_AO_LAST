@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 20 septembre 2026  
 **Statut global :** EN COURS  
 **Tranche active :** PHASE 11 — Qualification de production
-**Prochaine étape unique :** exécuter la restauration réelle d’une sauvegarde PostgreSQL et la rotation opérationnelle des secrets en préproduction.
+**Prochaine étape unique :** exécuter la restauration et la rotation sur l’environnement VPS de préproduction réel.
 
 ## 1. Rôle de ce document
 
@@ -280,7 +280,8 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 
 - [x] Suites unitaires, intégration PostgreSQL, contrats, end-to-end et non-régression Golden ; 1 717 tests backend passent, 2 tests PIL sont ignorés faute de dépendance optionnelle.
 - [x] Vérifier la sécurité de production, les secrets, les dépendances et les uploads hostiles ; audit dans `SMART_AO_PHASE11_PRODUCTION_SECURITY_AUDIT_v0.1.md`.
-- [>] Exécuter la restauration réelle d’une sauvegarde PostgreSQL et la rotation opérationnelle des secrets en préproduction.
+- [x] Exécuter une preuve isolée de restauration PostgreSQL et de rotation JWT avec environnement éphémère ; 127 tables, tête `20260920_0090`, trigger append-only et rotation atomique vérifiés.
+- [>] Exécuter la restauration et la rotation sur l’environnement VPS de préproduction réel.
 - [ ] Fiabilité : idempotence, concurrence, reprise, files de travail et opérations d'issue inconnue.
 - [ ] Performance : budgets mesurés, gros DCE, charge, stockage et coûts IA.
 - [ ] Exploitation : logs, métriques, alertes, sauvegarde/restauration et procédures d'incident.
@@ -435,6 +436,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 20/09/2026 | Contrat anti-divergence Product Freeze | tests d’architecture vérifiant l’unicité du v1.0 actif, l’archivage du v0.4 et la présence de la matrice de traçabilité ; 2 tests passent | exécuter les suites de qualification de production |
 | 20/09/2026 | Qualification backend complète | PostgreSQL Docker : 1 717 tests passés, 2 skips PIL, 10 avertissements Starlette/httpx ou alias HTTP non fonctionnels ; la tête de suite reste verte | vérifier la sécurité de production, les secrets, les dépendances, les uploads hostiles, l’audit et la restauration |
 | 20/09/2026 | Audit sécurité production | `pip-audit .`, Bandit, detect-secrets, audit pnpm officiel, frontières tenant/MFA/finance, uploads hostiles et contrat Product Freeze vérifiés ; restauration et rotation de secrets restent à exécuter en préproduction ; preuve `SMART_AO_PHASE11_PRODUCTION_SECURITY_AUDIT_v0.1.md` | exécuter la restauration réelle d’une sauvegarde PostgreSQL et la rotation opérationnelle des secrets |
+| 20/09/2026 | Preuve locale restauration/rotation | base source isolée migrée puis restaurée dans une base temporaire : 127 tables, tête `20260920_0090`, trigger append-only ; rotation JWT atomique simulée avec fichier 0600 éphémère ; preuve dans `SMART_AO_PHASE11_PRODUCTION_SECURITY_AUDIT_v0.1.md` | exécuter la restauration et la rotation sur le VPS de préproduction réel |
 
 ## 7. Règle de mise à jour
 

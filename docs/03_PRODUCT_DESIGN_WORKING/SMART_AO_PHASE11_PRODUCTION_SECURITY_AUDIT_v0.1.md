@@ -12,6 +12,8 @@
 - Bandit sur `backend/app` : **vert** ;
 - detect-secrets avec `.secrets.baseline` : **vert** ;
 - `scripts/simulate_staging_deploy.sh --static-only` et `--compose-config` : **verts**, sans démarrer de services ;
+- exercice PostgreSQL local isolé : **PASS**, sauvegarde compressée puis restauration dans une seconde base temporaire, 127 tables, tête `20260920_0090` et trigger append-only vérifiés ;
+- rotation JWT atomique avec environnement éphémère protégé : **PASS**, ancien fichier supprimé après simulation ;
 - recherche de clés privées, tokens GitHub et secrets versionnés hors fixtures explicitement marquées : **aucun secret de production trouvé** ;
 - uploads protégés, archives limitées, contenu hostile, antivirus fail-closed et quarantaine : couverts par les tests backend complets ;
 - contrat d’autorité Product Freeze : **2 tests verts**, v1.0 actif et v0.4 archivé.
