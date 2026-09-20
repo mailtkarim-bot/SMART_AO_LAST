@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 20 septembre 2026  
 **Statut global :** EN COURS  
 **Tranche active :** PHASE 9 — couverture produit totale et UX Freeze
-**Prochaine étape unique :** recueillir la validation propriétaire sur les surfaces G01–G09.
+**Prochaine étape unique :** produire les `OWNER EXPERIENCE FREEZE` puis l’UX Freeze global.
 
 ## 1. Rôle de ce document
 
@@ -261,8 +261,8 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 - [x] Vérifier clavier, lecteur d'écran, contrastes, focus, erreurs et responsive ; audit structurel et preuve dans `SMART_AO_PHASE9_ACCESSIBILITE_G01_G09_AUDIT_PREUVE_v0.1.md`.
 - [x] Vérifier l'absence de fuite de marge, de pouvoir induit et de déduction interdite ; audit et preuves dans `SMART_AO_PHASE9_G01_G09_CONFIDENTIALITE_DEDUCTIONS_AUDIT_PREUVE_v0.1.md`.
 - [x] Auditer et corriger les défauts ; aucun défaut bloquant n’a été trouvé dans les audits accessibilité et confidentialité.
-- [>] Recueillir la validation propriétaire sur les surfaces G01–G09 à partir du paquet de revue `SMART_AO_PHASE9_G01_G09_OWNER_REVIEW_PACKET_v0.1.md`.
-- [ ] Produire les `OWNER EXPERIENCE FREEZE` puis l'UX Freeze global.
+- [x] Recueillir la validation propriétaire sur les surfaces G01–G09 à partir du paquet de revue `SMART_AO_PHASE9_G01_G09_OWNER_REVIEW_PACKET_v0.1.md` ; confirmation explicite reçue : « Je valide G01–G09 ».
+- [>] Produire les `OWNER EXPERIENCE FREEZE` puis l'UX Freeze global.
 
 **Sortie de phase :** toutes les surfaces, variantes et recettes disposent d'une preuve ; aucun écran secondaire ne reste implicite.
 
@@ -425,6 +425,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 20/09/2026 | Audit accessibilité G01–G09 | focus `:focus-visible`, dialogue fermé par `Escape` avec retour du focus, alertes d’erreur, libellés natifs, cibles interactives et reflow responsive ; 187 tests web, typecheck, lint et build passent ; preuve `SMART_AO_PHASE9_ACCESSIBILITE_G01_G09_AUDIT_PREUVE_v0.1.md` | vérifier l’absence de fuite de marge, de pouvoir induit et de déduction interdite |
 | 20/09/2026 | Audit confidentialité et déductions G01–G09 | 31 tests architecture/sécurité non base, 29 tests API de frontières PostgreSQL et 9 tests G01–G09 verts ; marge/coût absents des surfaces Collaborateur, `economic_coverage` Patron-only, RAG financier exclu, scores BOAMP non financiers ; preuve `SMART_AO_PHASE9_G01_G09_CONFIDENTIALITE_DEDUCTIONS_AUDIT_PREUVE_v0.1.md` | corriger les défauts puis recueillir la validation propriétaire |
 | 20/09/2026 | Paquet de revue propriétaire G01–G09 | aucun défaut bloquant trouvé ; les neuf scénarios, limites, rôles, refus et critères de sortie sont regroupés dans `SMART_AO_PHASE9_G01_G09_OWNER_REVIEW_PACKET_v0.1.md` ; validation métier encore explicitement en attente | recueillir la validation propriétaire sur G01–G09 |
+| 20/09/2026 | Validation propriétaire G01–G09 | confirmation explicite reçue : « Je valide G01–G09 » ; le paquet de revue est passé à `VALIDÉ PAR LE PROPRIÉTAIRE` et les neuf lignes sont marquées `VALIDÉ` | produire les `OWNER EXPERIENCE FREEZE` puis l’UX Freeze global |
 
 ## 7. Règle de mise à jour
 

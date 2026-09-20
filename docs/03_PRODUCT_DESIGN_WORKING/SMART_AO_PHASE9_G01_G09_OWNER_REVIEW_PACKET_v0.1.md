@@ -1,7 +1,7 @@
 # SMART AO — Paquet de revue propriétaire G01–G09
 
 **Date :** 20 septembre 2026  
-**Statut :** PRÊT POUR VALIDATION PROPRIÉTAIRE  
+**Statut :** VALIDÉ PAR LE PROPRIÉTAIRE  
 **Autorités :** cahier OWNER produit/métier v0.4, catalogue OWNER UX v0.3
 
 ## Objet de la revue
@@ -20,15 +20,19 @@ Ce paquet présente les preuves exécutées et les limites qui doivent être acc
 
 | Scénario | Ce que le propriétaire doit vérifier | Limite explicitement conservée | Décision |
 |---|---|---|---|
-| G01 | Un gate P3/P5 bloqué est compréhensible et exige une source ou un risque borné. | `DEPENDENCY_UNPROVEN` ne vaut pas rejet définitif. | À confirmer |
-| G02 | Un rectificatif invalide la confiance dans l’ancien paquet et exige une nouvelle autorisation P5. | Aucun héritage silencieux d’autorisation. | À confirmer |
-| G03 | Deux sources contradictoires restent visibles et une résolution humaine est motivée. | La source écartée reste conservée. | À confirmer |
-| G04 | Un gap de capacité/coût apparaît comme blocage à revoir. | Aucun coût ou hypothèse n’est accepté automatiquement. | À confirmer |
-| G05 | Une édition dérivée reste identifiée comme brouillon et garde sa source. | Brouillon ≠ réponse validée ≠ dépôt. | À confirmer |
-| G06 | Une échéance illisible reste inconnue et appelle une confirmation. | Aucune date n’est déduite de l’absence de preuve. | À confirmer |
-| G07 | Un fichier protégé bloque le processus dépendant sans contournement. | Aucun déchiffrement ni contenu fabriqué. | À confirmer |
-| G08 | Une archive limitée expose les éléments non traités et permet une reprise. | Inventaire partiel ≠ inventaire complet. | À confirmer |
-| G09 | Un contenu hostile est isolé et soumis à revue. | Aucune exécution ni transmission IA. | À confirmer |
+| G01 | Un gate P3/P5 bloqué est compréhensible et exige une source ou un risque borné. | `DEPENDENCY_UNPROVEN` ne vaut pas rejet définitif. | VALIDÉ |
+| G02 | Un rectificatif invalide la confiance dans l’ancien paquet et exige une nouvelle autorisation P5. | Aucun héritage silencieux d’autorisation. | VALIDÉ |
+| G03 | Deux sources contradictoires restent visibles et une résolution humaine est motivée. | La source écartée reste conservée. | VALIDÉ |
+| G04 | Un gap de capacité/coût apparaît comme blocage à revoir. | Aucun coût ou hypothèse n’est accepté automatiquement. | VALIDÉ |
+| G05 | Une édition dérivée reste identifiée comme brouillon et garde sa source. | Brouillon ≠ réponse validée ≠ dépôt. | VALIDÉ |
+| G06 | Une échéance illisible reste inconnue et appelle une confirmation. | Aucune date n’est déduite de l’absence de preuve. | VALIDÉ |
+| G07 | Un fichier protégé bloque le processus dépendant sans contournement. | Aucun déchiffrement ni contenu fabriqué. | VALIDÉ |
+| G08 | Une archive limitée expose les éléments non traités et permet une reprise. | Inventaire partiel ≠ inventaire complet. | VALIDÉ |
+| G09 | Un contenu hostile est isolé et soumis à revue. | Aucune exécution ni transmission IA. | VALIDÉ |
+
+## Validation propriétaire
+
+Le propriétaire a confirmé explicitement dans la session : **« Je valide G01–G09 »**. Cette validation couvre les neuf lignes du tableau, leurs limites et le principe qu’aucun état technique ne vaut acceptation implicite d’un dépôt, d’un prix ou d’une décision externe.
 
 ## Critère de sortie
 
