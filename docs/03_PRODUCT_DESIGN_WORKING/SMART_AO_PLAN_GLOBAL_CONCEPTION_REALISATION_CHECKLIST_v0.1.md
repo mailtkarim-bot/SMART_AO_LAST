@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 20 septembre 2026  
 **Statut global :** EN COURS  
 **Tranche active :** PHASE 10 — Product Freeze et cahier technique d’exécution
-**Prochaine étape unique :** consolider les décisions d’expérience validées dans le Product Freeze v1.0.
+**Prochaine étape unique :** approuver et promouvoir le Product Freeze v1.0 comme nouvelle autorité produit/métier.
 
 ## 1. Rôle de ce document
 
@@ -268,7 +268,8 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 
 ### PHASE 10 — Product Freeze et cahier technique d'exécution
 
-- [>] Consolider les décisions d'expérience validées dans le Product Freeze v1.0.
+- [x] Consolider les décisions d'expérience validées dans le candidat Product Freeze v1.0 `docs/00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v1.0.md`.
+- [>] Approuver et promouvoir le Product Freeze v1.0 comme nouvelle autorité produit/métier.
 - [ ] Archiver le cahier propriétaire v0.4 lorsqu'il est réellement remplacé.
 - [ ] Écrire le cahier technique d'exécution : architecture cible, modules, données, API, événements et sécurité.
 - [ ] Cartographier chaque exigence gelée vers code, test, migration, observabilité et procédure d'exploitation.
@@ -427,6 +428,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 20/09/2026 | Paquet de revue propriétaire G01–G09 | aucun défaut bloquant trouvé ; les neuf scénarios, limites, rôles, refus et critères de sortie sont regroupés dans `SMART_AO_PHASE9_G01_G09_OWNER_REVIEW_PACKET_v0.1.md` ; validation métier encore explicitement en attente | recueillir la validation propriétaire sur G01–G09 |
 | 20/09/2026 | Validation propriétaire G01–G09 | confirmation explicite reçue : « Je valide G01–G09 » ; le paquet de revue est passé à `VALIDÉ PAR LE PROPRIÉTAIRE` et les neuf lignes sont marquées `VALIDÉ` | produire les `OWNER EXPERIENCE FREEZE` puis l’UX Freeze global |
 | 20/09/2026 | OWNER EXPERIENCE FREEZE et UX Freeze global | gel G01–G09 validé, règles communes consolidées pour C00–C16, 104 surfaces, PUX et freezes EXP/N déjà existants ; limites `PARTIAL`, recette lecteur d’écran et Product Freeze restent explicites ; preuves dans `SMART_AO_G01_G09_OWNER_EXPERIENCE_FREEZE_v0.1.md` et `SMART_AO_UX_FREEZE_GLOBAL_v0.1.md` | consolider les décisions d’expérience validées dans le Product Freeze v1.0 |
+| 20/09/2026 | Candidat Product Freeze v1.0 consolidé | cahier propriétaire v0.4, catalogue UX v0.3, freezes d’expérience, G01–G09 validés et contraintes de confidentialité/IA/accessibilité consolidés dans `SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v1.0.md` ; v0.4 reste prioritaire jusqu’à approbation de transition | approuver et promouvoir le Product Freeze v1.0 comme nouvelle autorité produit/métier |
 
 ## 7. Règle de mise à jour
 

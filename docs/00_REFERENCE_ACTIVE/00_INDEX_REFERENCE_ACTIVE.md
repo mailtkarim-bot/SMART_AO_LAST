@@ -13,6 +13,8 @@ Répond à : **« Quel SMART AO voulons-nous construire, pour qui, avec quelles 
 
 En cas de contradiction produit ou métier, ce document prévaut.
 
+Le candidat de remplacement est [`SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v1.0.md`](SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v1.0.md). Il consolide les décisions validées et reste soumis à l’approbation de transition ; il ne prévaut pas encore sur le v0.4.
+
 ## 2 — Autorité de couverture UX et des parcours
 
 [`SMART_AO_Catalogue_Ecrans_Parcours_Produit_OWNER_CONSOLIDATED_v0.3.md`](SMART_AO_Catalogue_Ecrans_Parcours_Produit_OWNER_CONSOLIDATED_v0.3.md)
@@ -51,4 +53,3 @@ Ces références ne redéfinissent pas le produit. Le code et les tests restent 
 - une modification des fondations UX exige une nouvelle version de la référence UX ;
 - une modification du catalogue ou du cahier métier exige une proposition explicite de réouverture propriétaire ;
 - une maquette, une spécification technique ou du code ne peut jamais créer silencieusement un droit, une promesse ou une capacité.
-

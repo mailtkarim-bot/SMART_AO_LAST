@@ -16,6 +16,8 @@ La référence unique pour répondre à la question **« Quel SmartAO voulons-no
 
 En cas de contradiction, le v0.4 prévaut sur tout document produit, métier, UX ou Work Review archivé. Il sera remplacé, après les conditions qu'il définit, par `SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v1.0.md`.
 
+Le candidat Product Freeze v1.0 est maintenant consolidé dans [`00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v1.0.md`](00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v1.0.md). Tant que l’approbation de transition n’est pas enregistrée, le v0.4 reste prioritaire.
+
 ## Références d'implémentation actives
 
 [`01_IMPLEMENTATION_ACTIVE/`](01_IMPLEMENTATION_ACTIVE/) contient l'architecture v3.1, le mandat Phase 0 et le dossier Gate0, y compris Golden DCE et les éléments A0/A1 lorsqu'ils y sont référencés.
