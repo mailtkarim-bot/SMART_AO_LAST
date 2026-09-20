@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PricingPanel } from "../features/pricing/PricingPanel";
 import { usePricingImport } from "../features/pricing/usePricingImport";
 import { SubmissionPanel } from "../features/submission/SubmissionPanel";
@@ -23,6 +23,8 @@ import { useBoampOpportunities } from "../features/opportunities/useBoampOpportu
 import { FinancialDraftPanel } from "../features/draft/FinancialDraftPanel";
 import { useFinancialDraft } from "../features/draft/useFinancialDraft";
 import { DceKnowledgePanel } from "../features/dce/DceKnowledgePanel";
+import { DceOpeningPanel } from "../features/dce/DceOpeningPanel";
+import { useDceOpening } from "../features/dce/useDceOpening";
 import { CreateCasePanel } from "../features/cases/CreateCasePanel";
 import { useDceKnowledge } from "../features/dce/useDceKnowledge";
 import { useAuthentication } from "../features/auth/useAuthentication";
@@ -35,6 +37,7 @@ import {
 } from "../infrastructure/runtimeConfig";
 import type {
   AssignedCase,
+  CaseResolution,
   FinancialCategory,
   PatronAction,
   PatronDecisionDossier,
@@ -77,6 +80,24 @@ const formatDate = (value: string) =>
     timeStyle: "short",
   }).format(new Date(value));
 
+const ACTION_DESTINATIONS: Record<
+  PatronAction["action_type"],
+  { sectionId: string; navKey: NavKey }
+> = {
+  REVIEW_PREPARATION: { sectionId: "preparation-section", navKey: "preparation" },
+  CONTROL_SUBMISSION: { sectionId: "submission-section", navKey: "submission" },
+  VALIDATE_PRICE: { sectionId: "pricing-section", navKey: "review" },
+  DECIDE_GO_NO_GO: { sectionId: "decision-section", navKey: "decision" },
+};
+
+type ConfirmedView = {
+  identityId: string;
+  tenantSlug: string;
+  actorKind: string;
+  caseId: string;
+  nav: NavKey;
+};
+
 function App() {
   const [baseUrl, setBaseUrl] = useState(() =>
     resolveApiBaseUrl(
@@ -89,6 +110,7 @@ function App() {
   const [loginPassword, setLoginPassword] = useState("");
   const [tenantId, setTenantId] = useState("");
   const [cases, setCases] = useState<AssignedCase[]>([]);
+  const [caseResolution, setCaseResolution] = useState<CaseResolution | null>(null);
   const [actions, setActions] = useState<PatronAction[]>([]);
   const [scenarios, setScenarios] = useState<PricingScenario[]>([]);
   const [decisionDossier, setDecisionDossier] = useState<PatronDecisionDossier | null>(null);
@@ -97,20 +119,35 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ tone: "success" | "error" | "warning"; text: string } | null>(null);
   const [showConnection, setShowConnection] = useState(false);
+  const [contextConfirmed, setContextConfirmed] = useState(false);
+  const [resumePending, setResumePending] = useState(false);
+  const lastConfirmedView = useRef<ConfirmedView | null>(null);
   const [activeNav, setActiveNav] = useState<NavKey>(initialDeepLink.section);
   const {
-    accessToken,
     currentActor,
     isRestoring,
+    sessionExpired,
+    hasSession,
     isAuthenticated,
     api,
     login,
+    refreshActor,
     logout,
   } = useAuthentication(baseUrl);
   const isPatron =
     currentActor?.actor_kind === "PATRON_ADMIN" ||
     currentActor?.actor_kind === "PATRON_DELEGATE";
   const isCollaborator = currentActor?.actor_kind === "COLLABORATEUR";
+  const roleLabel = currentActor?.actor_kind === "PATRON_ADMIN"
+    ? "Propriétaire et Patron administrateur"
+    : currentActor?.actor_kind === "PATRON_DELEGATE"
+      ? "Patron délégué"
+      : currentActor?.operational_profile === "RESPONSABLE"
+        ? "Responsable"
+        : currentActor?.operational_profile === "EXPERT"
+          ? "Expert"
+          : "Collaborateur";
+  const businessReady = isAuthenticated && contextConfirmed;
   const {
     backendReadiness,
     backendReadinessState,
@@ -158,6 +195,9 @@ function App() {
     wizardDocumentBusy,
     wizardTaskWorkflow,
     wizardDocumentKind,
+    wizardDraftSourceDocumentId,
+    wizardDraftSections,
+    wizardDraftSourceRefs,
     setWizardCaseId,
     setWizardPackageId,
     setWizardTaskId,
@@ -166,9 +206,13 @@ function App() {
     setWizardSnapshotId,
     setWizardTransmissionId,
     setWizardDocumentKind,
+    setWizardDraftSourceDocumentId,
+    setWizardDraftSections,
+    setWizardDraftSourceRefs,
     loadCollaboratorWizard,
     evaluateWizardReadiness,
     generateWizardDocument,
+    createWizardResponseDraft,
     claimWizardTask,
     recordWizardTaskResult,
     completeWizardTask,
@@ -186,7 +230,11 @@ function App() {
     setSelectedCaseId(caseId);
     await refreshScenarios(caseId);
   });
-  const boamp = useBoampOpportunities(api, setMessage);
+  const boamp = useBoampOpportunities(api, setMessage, async (result) => {
+    setSelectedCaseId(result.case_id);
+    setActiveNav("review");
+    await refreshCases();
+  });
   const dceKnowledge = useDceKnowledge(api, setMessage, selectedCaseId);
   const decisionRiskRequirements = useDecisionRiskRequirements(
     api,
@@ -236,6 +284,13 @@ function App() {
     submitLine,
   } = financialDraft;
   const submissionActions = useSubmissionActions(api, setMessage);
+  const selectedCase = cases.find((item) => item.case_id === selectedCaseId) ?? cases[0];
+  const dceOpening = useDceOpening(api, setMessage, selectedCase, async () => {
+    await refreshCases();
+    await dceKnowledge.loadReading(selectedCaseId);
+  });
+  const primaryAction = actions[0];
+  const watchItems = actions.filter((action) => action.action_id !== primaryAction?.action_id).slice(0, 3);
   const summaryCards = draft
     ? [
         { label: "Ventes", value: formatMoney(draft.summary.sales_total_minor, draft.currency_code), accent: "blue" },
@@ -260,7 +315,34 @@ function App() {
   }, [selectedCaseId, activeNav]);
 
   useEffect(() => {
-    if (!accessToken.trim()) return;
+    if (!businessReady || !currentActor) return;
+    const confirmedCaseId = cases.some((item) => item.case_id === selectedCaseId)
+      ? selectedCaseId
+      : cases[0]?.case_id ?? "";
+    lastConfirmedView.current = {
+      identityId: currentActor.identity_id,
+      tenantSlug: currentActor.tenant_slug,
+      actorKind: currentActor.actor_kind,
+      caseId: confirmedCaseId,
+      nav: activeNav,
+    };
+  }, [activeNav, businessReady, cases, currentActor, selectedCaseId]);
+
+  useEffect(() => {
+    if (!sessionExpired) return;
+    setCases([]);
+    setCaseResolution(null);
+    setActions([]);
+    setScenarios([]);
+    setDecisionDossier(null);
+    setSelectedCaseId("");
+    setMessage(null);
+    setResumePending(lastConfirmedView.current !== null);
+    setContextConfirmed(false);
+  }, [sessionExpired]);
+
+  useEffect(() => {
+    if (!businessReady) return;
     void refreshCases();
     if (isPatron) {
       void refreshAssignments();
@@ -271,18 +353,33 @@ function App() {
   // These effects are keyed to authenticated session, role and selected case. The hook APIs are
   // imperative callbacks recreated by feature hooks and must not trigger a fetch on every render.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accessToken, isPatron]);
+  }, [businessReady, isPatron]);
 
   useEffect(() => {
-    if (!selectedCaseId || !accessToken.trim()) return;
+    if (!selectedCaseId || !businessReady) return;
     if (isPatron) {
       void refreshScenarios(selectedCaseId);
       void refreshDecisionDossier(selectedCaseId);
     }
     if (isPatron || isCollaborator) void dceKnowledge.loadReading(selectedCaseId);
+    void dceOpening.openSpace();
   // See the session/case keying rationale above; feature-hook commands are intentionally omitted.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCaseId, accessToken, isCollaborator, isPatron]);
+  }, [selectedCaseId, businessReady, isCollaborator, isPatron]);
+
+  useEffect(() => {
+    if (!selectedCaseId || !businessReady) {
+      setCaseResolution(null);
+      return;
+    }
+    void refreshCaseResolution(selectedCaseId);
+  // Resolution is keyed by the confirmed Case and current session only.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCaseId, businessReady]);
+
+  useEffect(() => {
+    setContextConfirmed(false);
+  }, [currentActor?.actor_id]);
 
   async function refreshCases() {
     setLoading(true);
@@ -295,6 +392,7 @@ function App() {
       else if (!selectedCaseId && result[0]) setSelectedCaseId(result[0].case_id);
       else if (selectedCaseId && !requestedCase) setSelectedCaseId(result[0]?.case_id ?? "");
       setMessage({ tone: "success", text: `${result.length} affaire${result.length > 1 ? "s" : ""} chargée${result.length > 1 ? "s" : ""}.` });
+      setResumePending(false);
     } catch (error) {
       setMessage({ tone: "error", text: error instanceof Error ? error.message : "Impossible de charger les affaires." });
     } finally {
@@ -321,6 +419,7 @@ function App() {
         tone: "error",
         text: error instanceof Error ? error.message : "Impossible de créer l’affaire.",
       });
+      throw error;
     }
   }
 
@@ -346,6 +445,23 @@ function App() {
           error instanceof Error
             ? error.message
             : "Impossible de charger les scénarios de chiffrage.",
+      });
+    }
+  }
+
+  async function refreshCaseResolution(caseId: string) {
+    try {
+      setCaseResolution(await api.getCaseResolution(caseId));
+    } catch (error) {
+      setCaseResolution(null);
+      const status = (error as { status?: number }).status;
+      if (status === 403 || status === 404) return;
+      setMessage({
+        tone: "error",
+        text:
+          error instanceof Error
+            ? error.message
+            : "Impossible de charger la couverture de l’affaire.",
       });
     }
   }
@@ -455,6 +571,41 @@ function App() {
     document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
+  function openHomePrimaryAction() {
+    if (primaryAction) {
+      if (primaryAction.case_id) setSelectedCaseId(primaryAction.case_id);
+      const destination = ACTION_DESTINATIONS[primaryAction.action_type];
+      navigateTo(destination.sectionId, destination.navKey);
+      return;
+    }
+    if (selectedCase) {
+      setSelectedCaseId(selectedCase.case_id);
+      navigateTo("review-section", "review");
+      return;
+    }
+    if (isPatron) navigateTo("create-case-section", "create-case");
+  }
+
+  function confirmContext() {
+    const snapshot = lastConfirmedView.current;
+    const canResume = Boolean(
+      resumePending &&
+      snapshot &&
+      currentActor &&
+      snapshot.identityId === currentActor.identity_id &&
+      snapshot.tenantSlug === currentActor.tenant_slug &&
+      snapshot.actorKind === currentActor.actor_kind,
+    );
+    if (canResume && snapshot) {
+      if (snapshot.caseId) setSelectedCaseId(snapshot.caseId);
+      setActiveNav(snapshot.nav);
+    } else if (resumePending) {
+      lastConfirmedView.current = null;
+      setResumePending(false);
+    }
+    setContextConfirmed(true);
+  }
+
   async function saveConnection(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     try {
@@ -482,6 +633,8 @@ function App() {
   }
 
   async function signOut() {
+    lastConfirmedView.current = null;
+    setResumePending(false);
     try {
       await logout();
       setMessage({ tone: "success", text: "Session fermée." });
@@ -491,6 +644,62 @@ function App() {
         text: error instanceof Error ? error.message : "Impossible de fermer la session.",
       });
     }
+  }
+
+  if (!hasSession) {
+    return (
+      <main className="content">
+        <header className="topbar">
+          <div><div className="eyebrow">ACCÈS SMART AO</div><h1>{isRestoring ? "Restauration de la session" : "Connectez-vous"}</h1><p className="lede">Les données métier restent masquées jusqu’à l’établissement d’une session sécurisée.</p></div>
+        </header>
+        {resumePending && <div className="notice warning" role="status"><span>!</span>Votre session a expiré. Après reconnexion et validation du contexte, le dernier état confirmé sera repris.</div>}
+        {!isRestoring && (
+          <form className="connection-modal connection-page" onSubmit={saveConnection}>
+            <div className="modal-top"><div><span className="section-kicker">CONNEXION SÉCURISÉE</span><h2>Votre espace de travail</h2></div></div>
+            <label><span>URL API</span><input required value={baseUrl} onChange={(event) => setBaseUrl(event.target.value)} /></label>
+            <div className={`readiness-indicator readiness-${backendReadinessState}`} role="status"><strong>{backendReadinessState === "checking" ? "Vérification en cours…" : backendReadinessState === "ready" ? "Backend prêt" : backendReadinessState === "not_ready" ? "Backend non prêt" : backendReadinessState === "error" ? "Backend inaccessible" : "Backend non vérifié"}</strong>{backendReadiness && <small>PostgreSQL : {backendReadiness.checks.database} · ClamAV : {backendReadiness.checks.clamav}</small>}</div>
+            <label><span>Email</span><input required type="email" autoComplete="username" value={loginEmail} onChange={(event) => setLoginEmail(event.target.value)} /></label>
+            <label><span>Tenant ID</span><input required value={tenantId} onChange={(event) => setTenantId(event.target.value)} /></label>
+            <label><span>Mot de passe</span><input required type="password" autoComplete="current-password" value={loginPassword} onChange={(event) => setLoginPassword(event.target.value)} /></label>
+            <button className="primary-button" type="submit">Se connecter <span>→</span></button>
+          </form>
+        )}
+      </main>
+    );
+  }
+
+  if (hasSession && !isAuthenticated) {
+    return (
+      <main className="content">
+        <header className="topbar">
+          <div><div className="eyebrow">ACCÈS SÉCURISÉ</div><h1>Validez votre second facteur</h1><p className="lede">Aucune donnée métier n'est accessible avant cette validation.</p></div>
+          <button className="secondary-button" onClick={() => void signOut()}>Se déconnecter</button>
+        </header>
+        {message && <div className={`notice ${message.tone}`} role="status"><span>!</span>{message.text}</div>}
+        <MfaPanel api={api} setMessage={setMessage} onAuthenticationChanged={refreshActor} />
+      </main>
+    );
+  }
+
+  if (isAuthenticated && !contextConfirmed) {
+    return (
+      <main className="content">
+        <header className="topbar">
+          <div><div className="eyebrow">VOTRE ESPACE SMART AO</div><h1>Confirmez votre contexte</h1><p className="lede">Vérifiez l’entreprise et le rôle résolus par le serveur avant d’accéder aux Affaires.</p></div>
+          <button className="secondary-button" onClick={() => void signOut()}>Se déconnecter</button>
+        </header>
+        <section className="section-block">
+          <div className="section-heading"><div><span className="section-kicker">ENTREPRISE ACTIVE</span><h2>{currentActor?.tenant_slug}</h2></div><span className="count-pill">MFA validée</span></div>
+          <div className="detail-panel">
+            <h3>Votre rôle effectif</h3>
+            <p>{roleLabel}</p>
+            <p>Vos droits dépendent de ce rôle et de votre périmètre autorisé.</p>
+            {resumePending && <p className="form-status" role="status">Reprise du dernier état confirmé en cours. Les données seront rechargées avant de confirmer la reprise.</p>}
+            <button className="primary-button" type="button" onClick={confirmContext}>Confirmer et continuer</button>
+          </div>
+        </section>
+      </main>
+    );
   }
 
   return (
@@ -505,6 +714,7 @@ function App() {
           <button className={`nav-item ${activeNav === "review" ? "active" : ""}`} onClick={() => navigateTo("review-section", "review")}><span className="nav-icon">◌</span>Revue</button>
           {isPatron && <button className={`nav-item ${activeNav === "opportunities" ? "active" : ""}`} onClick={() => navigateTo("boamp-section", "opportunities")}><span className="nav-icon">◎</span>Opportunités BOAMP</button>}
           <button className={`nav-item ${activeNav === "dce" ? "active" : ""}`} onClick={() => navigateTo("dce-knowledge-section", "dce")}><span className="nav-icon">⌕</span>Lecture DCE / RAG</button>
+          <button className={`nav-item ${activeNav === "dce-opening" ? "active" : ""}`} onClick={() => navigateTo("dce-opening-section", "dce-opening")}><span className="nav-icon">⤓</span>Espace DCE</button>
           <button className={`nav-item ${activeNav === "wizard" ? "active" : ""}`} onClick={() => navigateTo("collaborator-wizard-section", "wizard")}><span className="nav-icon">⌁</span>Wizard collaborateur</button>
           {isPatron && <button className={`nav-item ${activeNav === "library" ? "active" : ""}`} onClick={() => navigateTo("library-section", "library")}><span className="nav-icon">▤</span>Bibliothèque</button>}
           {isPatron && <button className={`nav-item ${activeNav === "decision" ? "active" : ""}`} onClick={() => navigateTo("decision-section", "decision")}><span className="nav-icon">◇</span>Décision</button>}
@@ -513,26 +723,44 @@ function App() {
         <div className="sidebar-bottom">
           <button className="nav-item" onClick={() => setShowConnection(true)}><span className="nav-icon">⚙</span>{isAuthenticated ? "Session" : "Connexion"}</button>
           {isAuthenticated && <button className="nav-item" onClick={() => void signOut()}><span className="nav-icon">↪</span>Se déconnecter</button>}
-          <div className="operator-card"><div className="avatar">{currentActor?.actor_kind === "COLLABORATEUR" ? "CO" : "PA"}</div><div><strong>{currentActor?.actor_kind ?? "Utilisateur non connecté"}</strong><span>{currentActor ? `Membership ${currentActor.membership_state}` : "Authentification requise"}</span></div></div>
+          <div className="operator-card"><div className="avatar">{currentActor?.actor_kind === "COLLABORATEUR" ? "CO" : "PA"}</div><div><strong>{currentActor ? roleLabel : "Utilisateur non connecté"}</strong><span>{currentActor ? `Membership ${currentActor.membership_state}` : "Authentification requise"}</span></div></div>
         </div>
       </aside>
 
       <main className="content">
         <header className="topbar">
-          <div><div className="eyebrow">PILOTAGE DES RÉPONSES</div><h1>Vue d’ensemble</h1><p className="lede">Une lecture claire de vos affaires, de vos alertes et de vos chiffrages en cours.</p></div>
+          <div><div className="eyebrow">{currentActor?.tenant_slug} · {roleLabel}</div><h1>Accueil</h1><p className="lede">Voici ce qui demande votre attention maintenant, dans votre périmètre autorisé.</p></div>
           <div className="top-actions"><div className="secure-pill"><span className="status-dot" />Données confidentielles</div><button className="refresh-button" onClick={() => void refreshCases()} disabled={loading}><span>↻</span> Actualiser</button></div>
         </header>
 
         {message && <div className={`notice ${message.tone}`} role="status"><span>{message.tone === "success" ? "✓" : "!"}</span>{message.text}</div>}
+        {resumePending && <div className="notice warning" role="status"><span>!</span>Reprise du dernier état confirmé en cours ; aucune donnée nouvelle n’est considérée comme confirmée avant le rechargement.</div>}
 
-        {isPatron && (
-          <section className="section-block command-center-section" id="overview-section">
-            <div className="section-heading"><div><span className="section-kicker">COMMAND CENTER</span><h2>Actions à traiter</h2></div><span className="count-pill">{actions.length} ouverte{actions.length > 1 ? "s" : ""}</span></div>
-            {actions.length === 0 ? <div className="empty-card"><strong>Aucune action patronale ouverte</strong><p>Les transmissions et contrôles autorisés alimenteront cette file tenant-scopée.</p></div> : <div className="action-grid">{actions.slice(0, 6).map((action) => <article className="action-card" key={action.action_id}><div className="case-top"><span className={`state-badge state-${action.severity.toLowerCase()}`}>{action.severity}</span><span className="rule-tag">{action.state}</span></div><h3>{action.title}</h3><p>{action.why_now}</p><small>{action.recommended_action}</small></article>)}</div>}
-          </section>
-        )}
+        <section className="section-block home-section" id="overview-section" aria-labelledby="home-title">
+          <div className="section-heading">
+            <div><span className="section-kicker">PREMIER ACCUEIL COMPOSÉ</span><h2 id="home-title">Bonjour. Voici votre point de reprise.</h2></div>
+            <span className="count-pill">{loading ? "Actualisation…" : `${cases.length} affaire${cases.length > 1 ? "s" : ""}`}</span>
+          </div>
+          <div className="home-grid">
+            <article className="home-card home-primary">
+              <span className="section-kicker">À FAIRE MAINTENANT</span>
+              <h3>{primaryAction?.title ?? (selectedCase ? `Reprendre ${selectedCase.work_label}` : isPatron ? "Créer votre première Affaire" : "Aucune Affaire assignée")}</h3>
+              <p>{primaryAction?.why_now ?? (selectedCase ? `Dernier état confirmé : ${selectedCase.commercial_stage} · ${selectedCase.case_lifecycle}.` : isPatron ? "Commencez par définir le périmètre connu. Les compléments viendront au moment utile." : "Aucune action métier n’est disponible dans votre périmètre actuel.")}</p>
+              {(primaryAction || selectedCase || isPatron) && <button className="primary-button" type="button" onClick={openHomePrimaryAction}>{primaryAction?.recommended_action ?? (selectedCase ? "Ouvrir l’Affaire" : "Créer une Affaire")} <span>→</span></button>}
+            </article>
+            <article className="home-card">
+              <span className="section-kicker">À SURVEILLER</span>
+              {watchItems.length > 0 ? <div className="home-list">{watchItems.map((action) => <div key={action.action_id}><strong>{action.title}</strong><span>{action.why_now}</span></div>)}</div> : selectedCase && selectedCase.dce_availability !== "AVAILABLE" ? <div className="home-list"><div><strong>Lecture DCE non disponible</strong><span>État confirmé : {selectedCase.dce_availability}.</span></div></div> : <p>Aucun point à surveiller n’est disponible dans les projections actuelles.</p>}
+            </article>
+            <article className="home-card">
+              <span className="section-kicker">ÉVÉNEMENTS RÉCENTS</span>
+              {journal.length > 0 ? <div className="home-list">{journal.slice(0, 3).map((entry) => <div key={entry.record_id}><strong>{entry.event_type}</strong><span>{entry.resulting_state} · {formatDate(entry.recorded_at)}</span></div>)}</div> : <p>Aucun événement d’affectation autorisé n’est disponible.</p>}
+              <small>Lire cet historique ne ferme aucune action métier.</small>
+            </article>
+          </div>
+        </section>
 
-        {isPatron && <CreateCasePanel onCreate={createCase} disabled={!isAuthenticated} />}
+        {isPatron && <CreateCasePanel onCreate={createCase} disabled={!businessReady} />}
 
         {isPatron && (
           <EnterpriseLibraryPanel
@@ -575,6 +803,7 @@ function App() {
             pricingImportBatchRevision={pricingImport.pricingImportBatchRevision}
             pricingImportReportRevision={pricingImport.pricingImportReportRevision}
             pricingImportState={pricingImport.pricingImportState}
+            pricingImportUnknownAction={pricingImport.pricingImportUnknownAction}
             pricingImportPreview={pricingImport.pricingImportPreview}
             pricingImportReloadState={pricingImport.pricingImportReloadState}
             pricingImportUploading={pricingImport.pricingImportUploading}
@@ -584,6 +813,8 @@ function App() {
             setPricingImportBatchRevision={pricingImport.setPricingImportBatchRevision}
             setPricingImportReportRevision={pricingImport.setPricingImportReportRevision}
             onPreview={(file) => void pricingImport.previewPricingImport(file)}
+            onRetryPreview={() => void pricingImport.retryPricingImportPreview()}
+            onRetryCommit={() => void pricingImport.retryPricingImportCommit()}
             onReload={() => void pricingImport.reloadPricingImport()}
             onCommit={() => void pricingImport.commitPricingImport()}
             />
@@ -595,7 +826,7 @@ function App() {
           <div className="metric-stack"><div className="small-metric"><span className="metric-label">AFFAIRES ACTIVES</span><strong>{cases.length.toString().padStart(2, "0")}</strong><span className="metric-meta">dans votre périmètre</span></div><div className="small-metric"><span className="metric-label">ÉTAT DE LA CONNEXION</span><strong className={isAuthenticated ? "text-green" : "text-amber"}>{isAuthenticated ? "Prête" : isRestoring ? "Restauration…" : "À configurer"}</strong><span className="metric-meta">{baseUrl}</span></div></div>
         </section>
 
-        <section className="section-block" id="review-section"><div className="section-heading"><div><span className="section-kicker">PORTEFEUILLE</span><h2>Mes affaires</h2></div><span className="count-pill">{cases.length} visible{cases.length > 1 ? "s" : ""}</span></div><div className="case-grid">{cases.length === 0 ? <div className="empty-card"><strong>Aucune affaire chargée</strong><p>Connectez-vous avec votre compte pour charger les affaires auxquelles vous avez accès.</p><button className="secondary-button" onClick={() => setShowConnection(true)}>Configurer la connexion</button></div> : cases.map((item) => <button key={item.case_id} className={`case-card ${item.case_id === selectedCaseId ? "selected" : ""}`} onClick={() => setSelectedCaseId(item.case_id)}><div className="case-top"><span className="case-status">{item.dce_availability}</span><span className="case-arrow">↗</span></div><h3>{item.work_label}</h3><p>{item.case_id}</p><div className="case-footer"><span>{item.commercial_stage}</span><span>{item.case_lifecycle}</span></div></button>)}</div></section>
+        <section className="section-block" id="review-section"><div className="section-heading"><div><span className="section-kicker">PORTEFEUILLE</span><h2>Mes affaires</h2></div><span className="count-pill">{cases.length} visible{cases.length > 1 ? "s" : ""}</span></div><div className="case-grid">{cases.length === 0 ? <div className="empty-card"><strong>Aucune affaire chargée</strong><p>Connectez-vous avec votre compte pour charger les affaires auxquelles vous avez accès.</p><button className="secondary-button" onClick={() => setShowConnection(true)}>Configurer la connexion</button></div> : cases.map((item) => <button key={item.case_id} className={`case-card ${item.case_id === selectedCaseId ? "selected" : ""}`} onClick={() => setSelectedCaseId(item.case_id)}><div className="case-top"><span className="case-status">{item.dce_availability}</span><span className="case-arrow">↗</span></div><h3>{item.work_label}</h3><p>{item.case_id}</p><div className="case-footer"><span>{item.commercial_stage}</span><span>{item.case_lifecycle}</span></div></button>)}</div>{isPatron && caseResolution?.economic_coverage && <div className="economic-coverage" aria-label="Couverture économique de l’affaire"><div className="subheading"><strong>COUVERTURE ÉCONOMIQUE</strong><span>lecture sourcée · aucun feu vert implicite</span></div><div className="economic-coverage-grid"><div><span>Hypothèses</span><strong className={`coverage-state coverage-${caseResolution.economic_coverage.assumptions.state.toLowerCase()}`}>{caseResolution.economic_coverage.assumptions.state}</strong><small>{caseResolution.economic_coverage.assumptions.note}</small></div><div><span>Validité des devis</span><strong className={`coverage-state coverage-${caseResolution.economic_coverage.quote_validity.state.toLowerCase()}`}>{caseResolution.economic_coverage.quote_validity.state}</strong><small>{caseResolution.economic_coverage.quote_validity.note}</small></div><div><span>Capacité</span><strong className={`coverage-state coverage-${caseResolution.economic_coverage.capacity.state.toLowerCase()}`}>{caseResolution.economic_coverage.capacity.state}</strong><small>{caseResolution.economic_coverage.capacity.note}</small></div><div><span>Financement</span><strong className={`coverage-state coverage-${caseResolution.economic_coverage.financing.state.toLowerCase()}`}>{caseResolution.economic_coverage.financing.state}</strong><small>{caseResolution.economic_coverage.financing.note}</small></div></div></div>}</section>
 
         {isPatron && (
           <BoampOpportunityPanel
@@ -604,11 +835,16 @@ function App() {
           qualificationForm={boamp.qualificationForm}
           loading={boamp.loading}
           qualifying={boamp.qualifying}
+          qualifiedObservationIds={boamp.qualifiedObservationIds}
+          creatingCase={boamp.creatingCase}
+          sourceStatus={boamp.sourceStatus}
           onRefresh={() => void boamp.refreshObservations()}
           onSelect={boamp.selectObservation}
           onDecisionChange={boamp.setDecision}
           onReasonChange={boamp.setReason}
             onQualify={() => void boamp.qualifySelected()}
+            onCreateCase={() => void boamp.createCaseFromSelected()}
+            onManualEntry={() => navigateTo("create-case-section", "create-case")}
           />
         )}
 
@@ -625,7 +861,23 @@ function App() {
           onResetSearch={dceKnowledge.resetSearch}
         />
 
-        {isAuthenticated && <MfaPanel api={api} setMessage={setMessage} />}
+        <DceOpeningPanel
+          selectedCase={selectedCase}
+          consultation={dceOpening.consultation}
+          dceVersionMetadata={dceOpening.dceVersionMetadata}
+          inventory={dceOpening.inventory}
+          loading={dceOpening.loading}
+          busy={dceOpening.busy}
+          sourceChannel={dceOpening.sourceChannel}
+          file={dceOpening.file}
+          step={dceOpening.step}
+          onSourceChannelChange={dceOpening.setSourceChannel}
+          onFileChange={dceOpening.setFile}
+          onOpen={() => void dceOpening.openSpace()}
+          onAdmit={() => void dceOpening.admitSelectedFile()}
+        />
+
+        {isAuthenticated && <MfaPanel api={api} setMessage={setMessage} onAuthenticationChanged={refreshActor} />}
         {isPatron && <PreparationReviewPanel api={api} setMessage={setMessage} />}
 
         <CollaboratorWizardPanel
@@ -643,7 +895,13 @@ function App() {
           wizardDocumentBusy={wizardDocumentBusy}
           taskWorkflow={wizardTaskWorkflow}
           wizardDocumentKind={wizardDocumentKind}
+          wizardDraftSourceDocumentId={wizardDraftSourceDocumentId}
+          wizardDraftSections={wizardDraftSections}
+          wizardDraftSourceRefs={wizardDraftSourceRefs}
           setWizardDocumentKind={setWizardDocumentKind}
+          setWizardDraftSourceDocumentId={setWizardDraftSourceDocumentId}
+          setWizardDraftSections={setWizardDraftSections}
+          setWizardDraftSourceRefs={setWizardDraftSourceRefs}
           setWizardCaseId={setWizardCaseId}
           setWizardPackageId={setWizardPackageId}
           setWizardTaskId={setWizardTaskId}
@@ -653,10 +911,11 @@ function App() {
           setWizardTransmissionId={setWizardTransmissionId}
           onLoad={() => void loadCollaboratorWizard()}
           onClaimTask={() => void claimWizardTask()}
-          onRecordResult={() => void recordWizardTaskResult()}
+          onRecordResult={() => recordWizardTaskResult()}
           onCompleteTask={() => void completeWizardTask()}
           onEvaluateReadiness={() => void evaluateWizardReadiness()}
           onGenerateDocument={() => void generateWizardDocument()}
+          onCreateResponseDraft={() => void createWizardResponseDraft()}
           onTransmitSnapshot={() => void transmitWizardSnapshot()}
           onPreviewDocument={(documentId) => void previewWizardDocument(documentId)}
           onDownloadDocument={(documentId) => void downloadWizardDocument(documentId)}
@@ -749,7 +1008,15 @@ function App() {
           preparationPackageId={submissionActions.preparationPackageId}
           preparationRevision={submissionActions.preparationRevision}
           submissionPackageId={submissionActions.submissionPackageId}
+          submissionPackageVersion={submissionActions.submissionPackageVersion}
+          submissionAuthorizationRationale={submissionActions.submissionAuthorizationRationale}
+          submissionMode={submissionActions.submissionMode}
+          candidatureOnlyReason={submissionActions.candidatureOnlyReason}
+          submissionAuthorized={submissionActions.submissionAuthorized}
+          submissionManifest={submissionActions.submissionManifest}
+          submissionEvidence={submissionActions.submissionEvidence}
           submissionExported={submissionActions.submissionExported}
+          submissionExportState={submissionActions.submissionExportState}
           signatureId={submissionActions.signatureId}
           signaturePackageVersion={submissionActions.signaturePackageVersion}
           signatureStatus={submissionActions.signatureStatus}
@@ -759,10 +1026,17 @@ function App() {
           setPreparationPackageId={submissionActions.setPreparationPackageId}
           setPreparationRevision={submissionActions.setPreparationRevision}
           setSubmissionPackageId={submissionActions.setSubmissionPackageId}
+          setSubmissionPackageVersion={submissionActions.setSubmissionPackageVersion}
+          setSubmissionAuthorizationRationale={submissionActions.setSubmissionAuthorizationRationale}
+          setSubmissionMode={submissionActions.setSubmissionMode}
+          setCandidatureOnlyReason={submissionActions.setCandidatureOnlyReason}
           setSignatureId={submissionActions.setSignatureId}
           setSignaturePackageVersion={submissionActions.setSignaturePackageVersion}
           setEvidenceForm={submissionActions.setEvidenceForm}
           onPrepare={() => void submissionActions.prepareSubmissionPackage()}
+          onAuthorize={() => void submissionActions.authorizeSubmissionPackage()}
+          onLoadManifest={() => void submissionActions.loadSubmissionPackageManifest()}
+          onLoadEvidence={() => void submissionActions.loadSubmissionEvidence()}
           onRequestSignature={() => void submissionActions.requestSignature()}
           onLoadSignature={() => void submissionActions.loadSignature()}
           onExport={() => void submissionActions.exportSubmissionPackage()}

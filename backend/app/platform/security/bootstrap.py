@@ -21,6 +21,7 @@ from app.platform.security.models import (
     PasswordCredentialRecord,
     TenantBootstrapTokenRecord,
     TenantMembershipRecord,
+    TenantOwnerRecord,
 )
 
 _BOOTSTRAP_TOKEN_TTL = timedelta(hours=1)
@@ -256,6 +257,14 @@ class TenantBootstrapService:
                         state="ACTIVE",
                         activated_at=now,
                         revoked_at=None,
+                    )
+                )
+                session.add(
+                    TenantOwnerRecord(
+                        id=uuid4(),
+                        tenant_id=tenant_id,
+                        membership_id=membership_id,
+                        designated_by_membership_id=membership_id,
                     )
                 )
                 token.consumed_at = now

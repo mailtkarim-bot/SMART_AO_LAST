@@ -164,6 +164,7 @@ def test_signature_read_service_authorizes_tenant_scoped_minimal_projection():
         provider=PROVIDER,
         status="REQUESTED",
         expected_package_version=2,
+        manifest_sha256="c" * 64,
         revision=1,
     )
     reader = _Reader(projection)

@@ -11,6 +11,8 @@ from fastapi.responses import JSONResponse
 from app.interfaces.http.dependencies.auth import resolve_bearer_context
 from app.interfaces.http.routes.consultations import ConsultationSecurityRuntime
 from app.modules.dce.public.contracts import (
+    DceDocumentInventoryItemResponse,
+    DceDocumentInventoryResponse,
     DceVersionMetadataResponse,
     RegisterDceVersionRequest,
     RegisterDceVersionResponse,
@@ -154,6 +156,61 @@ def build_dce_version_router(
             aggregate_revision=record.aggregate_revision,
         )
 
+    @router.get(
+        "/{dce_version_id}/documents",
+        response_model=DceDocumentInventoryResponse,
+    )
+    def list_dce_documents(
+        dce_version_id: UUID,
+        authorization: str | None = Header(default=None),
+    ) -> DceDocumentInventoryResponse:
+        context = _resolve_context(
+            authorization=authorization,
+            context_resolver=security_runtime.context_resolver,
+        )
+        owner_tenant_id = runtime.get_dce_version_tenant_id(dce_version_id=dce_version_id)
+        if owner_tenant_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="NOT_FOUND_OR_FORBIDDEN",
+            )
+        decision = security_runtime.policy.authorize(
+            context=context,
+            request=AuthorizationRequest(
+                action=Capability.DCE_PREPARE,
+                resource=AuthorizationResource(
+                    resource_type="DCE_VERSION",
+                    resource_id=dce_version_id,
+                    tenant_id=owner_tenant_id,
+                    classification=DataClassification.PUBLIC_TENDER,
+                ),
+                evaluated_at=datetime.now(tz=UTC),
+            ),
+        )
+        if not decision.allowed:
+            raise HTTPException(status_code=decision.http_status_code, detail=decision.code)
+
+        items = []
+        for document, extraction in runtime.get_dce_document_inventory(
+            tenant_id=context.tenant_id,
+            dce_version_id=dce_version_id,
+        ):
+            items.append(
+                DceDocumentInventoryItemResponse(
+                    document_id=document.id,
+                    original_filename=document.original_filename,
+                    media_type=document.media_type,
+                    byte_size=document.byte_size,
+                    received_from=document.received_from,
+                    processing_state=_processing_state(extraction),
+                    issue_code=extraction.failure_code if extraction is not None else None,
+                )
+            )
+        return DceDocumentInventoryResponse(
+            dce_version_id=dce_version_id,
+            items=items,
+        )
+
     return router
 
 
@@ -162,3 +219,19 @@ def _resolve_context(*, authorization: str | None, context_resolver):
         authorization=authorization,
         context_resolver=context_resolver,
     )
+
+
+def _processing_state(extraction) -> str:
+    if extraction is None:
+        return "RECEIVED"
+    if extraction.status == "COMPLETED":
+        return "READ"
+    if extraction.status == "REVIEW_REQUIRED":
+        return "REVIEW_REQUIRED"
+    if extraction.status == "UNSUPPORTED":
+        return "UNSUPPORTED"
+    if extraction.status == "REJECTED_LIMIT":
+        return "LIMIT_REACHED"
+    if extraction.failure_code == "DOCUMENT_PROTECTED":
+        return "PROTECTED"
+    return "UNREADABLE"

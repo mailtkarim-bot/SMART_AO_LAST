@@ -25,6 +25,8 @@ class SqlAlchemyAssignedCaseReader:
                 CaseRecord.lifecycle,
                 CaseRecord.commercial_stage,
                 CaseRecord.dce_freshness,
+                CaseRecord.consultation_id,
+                CaseRecord.applicable_dce_version_id,
             )
             .where(
                 CaseRecord.tenant_id == tenant_id,
@@ -40,6 +42,8 @@ class SqlAlchemyAssignedCaseReader:
                 case_lifecycle=row.lifecycle,
                 commercial_stage=row.commercial_stage,
                 dce_availability=row.dce_freshness,
+                consultation_id=row.consultation_id,
+                applicable_dce_version_id=row.applicable_dce_version_id,
             )
             for row in rows
         )

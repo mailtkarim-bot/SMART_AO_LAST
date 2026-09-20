@@ -401,3 +401,50 @@ def test_uploaded_object_cannot_be_claimed_for_a_second_byte_stream(
         )
 
     assert (tmp_path / storage_key).read_bytes() == content
+
+
+@pytest.mark.db
+@pytest.mark.integration
+def test_interrupted_stream_is_rejected_and_partial_quarantine_is_removed(
+    session_factory: sessionmaker[Session],
+    tmp_path: Path,
+) -> None:
+    content = b"%PDF-1.7\nDCE interrompu\n"
+    tenant_id, _, storage_object_id, storage_key = _seed_awaiting_staged_object(
+        session_factory,
+        expected_byte_size=len(content),
+    )
+
+    async def interrupted_stream() -> AsyncIterable[bytes]:
+        yield content[:8]
+        raise ConnectionError("client disconnected")
+
+    service = _service(
+        session_factory=session_factory,
+        root=tmp_path,
+        inspector=StaticInspector(media_type="application/pdf"),
+        scanner=StaticScanner(verdict="CLEAN"),
+    )
+
+    with pytest.raises(DceUploadRejectedError):
+        asyncio.run(
+            service.upload(
+                tenant_id=tenant_id,
+                actor_id=uuid4(),
+                actor_kind="PATRON_ADMIN",
+                storage_object_id=storage_object_id,
+                storage_key=storage_key,
+                expected_byte_size=len(content),
+                idempotency_key=uuid4(),
+                stream=interrupted_stream(),
+                content_length=None,
+            )
+        )
+
+    with session_factory() as session:
+        staged_object = session.get(DceStagedObjectRecord, storage_object_id)
+    assert staged_object is not None
+    assert staged_object.state == "REJECTED"
+    assert staged_object.rejection_code == "STORAGE_WRITE_FAILED"
+    assert not (tmp_path / storage_key).exists()
+    assert not list((tmp_path / storage_key).parent.glob(f".{Path(storage_key).name}.*.part"))

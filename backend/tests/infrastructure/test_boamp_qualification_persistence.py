@@ -19,6 +19,7 @@ from app.modules.opportunity.infrastructure.boamp_qualification_repository impor
     BoampQualificationRepository,
 )
 from app.modules.opportunity.infrastructure.observation_models import (
+    BoampOpportunityObservationRecord,
     BoampOpportunityQualificationRecord,
 )
 from app.platform.events.dispatcher import CommandContext
@@ -121,3 +122,57 @@ def test_qualification_is_atomic_idempotent_and_append_only(
             ),
             {"qualification_id": first.qualification_id},
         )
+
+
+def test_score_snapshot_and_p0_decision_are_append_only(
+    session_factory: sessionmaker[Session],
+) -> None:
+    tenant_id, actor_id, observation_id = _persist_observation(session_factory)
+    command = _command(observation_id)
+    context = CommandContext(
+        tenant_id=tenant_id,
+        actor_id=actor_id,
+        actor_kind=ActorKind.PATRON_ADMIN.value,
+        received_at=NOW,
+        correlation_id=command.correlation_id,
+    )
+    service = PatronBoampObservationService(repository=BoampQualificationRepository())
+
+    with session_factory.begin() as session:
+        service.qualify(session=session, context=context, command=command, now=NOW)
+    with (
+        pytest.raises(sa.exc.DBAPIError, match="boamp ingestion runs"),
+        session_factory.begin() as session,
+    ):
+        session.execute(
+            sa.update(BoampOpportunityObservationRecord)
+            .where(BoampOpportunityObservationRecord.id == observation_id)
+            .values(score=0)
+        )
+
+    with session_factory() as session:
+        projection = service.read(
+            session=session,
+            tenant_id=tenant_id,
+            actor_id=actor_id,
+            actor_kind=ActorKind.PATRON_ADMIN.value,
+            now=NOW,
+        )[0]
+
+    assert projection.score == 100
+    assert projection.p0_state.value == "TARGETED"
+    assert projection.p0_decision == QualificationDecision.QUALIFIED
+
+
+def test_last_successful_ingestion_at_is_tenant_scoped(
+    session_factory: sessionmaker[Session],
+) -> None:
+    tenant_id, _actor_id, _observation_id = _persist_observation(session_factory)
+
+    with session_factory() as session:
+        latest = BoampQualificationRepository().last_successful_ingestion_at(
+            session=session,
+            tenant_id=tenant_id,
+        )
+
+    assert latest == NOW

@@ -9,6 +9,8 @@ from fastapi.responses import JSONResponse
 from app.interfaces.http.aggregate_refs import require_aggregate_revision
 from app.interfaces.http.dependencies.auth import resolve_bearer_context as _resolve_context
 from app.interfaces.http.routes.consultations import ConsultationSecurityRuntime
+from app.modules.market_watch.application.ports import PublicNoticeSearchPort
+from app.modules.market_watch.infrastructure.boamp import BoampRegistryUnavailable
 from app.modules.opportunity.application.boamp_case_creation import (
     BoampCaseCreationCommand,
     BoampCaseCreationService,
@@ -29,6 +31,7 @@ from app.modules.opportunity.public.boamp_qualification_contracts import (
     BoampObservationQualificationRequest,
     BoampObservationResponse,
     BoampQualificationReceiptResponse,
+    BoampSourceStatusResponse,
 )
 from app.platform.events.dispatcher import (
     CommandContext,
@@ -46,6 +49,7 @@ def build_patron_boamp_opportunity_router(
     runtime,
     security_runtime: ConsultationSecurityRuntime,
     case_creation_service: BoampCaseCreationService | None = None,
+    source_search: PublicNoticeSearchPort | None = None,
 ) -> APIRouter:
     router = APIRouter(
         prefix="/api/v1/patron/boamp-opportunities",
@@ -69,6 +73,7 @@ def build_patron_boamp_opportunity_router(
             action=Capability.OPPORTUNITY_OBSERVATION_READ,
             resource_id=context.tenant_id,
         )
+        last_success_at = None
         try:
             with runtime.session_factory() as session:
                 observations = service.read(
@@ -78,11 +83,27 @@ def build_patron_boamp_opportunity_router(
                     actor_kind=context.actor_kind.value,
                     limit=limit,
                     min_score=min_score,
+                    now=datetime.now(tz=UTC),
                 )
+                last_success_reader = getattr(
+                    runtime.boamp_qualification_repository,
+                    "last_successful_ingestion_at",
+                    None,
+                )
+                if callable(last_success_reader):
+                    last_success_at = last_success_reader(
+                        session=session,
+                        tenant_id=context.tenant_id,
+                    )
         except PermissionError as error:
             raise HTTPException(status_code=403, detail="FORBIDDEN") from error
         return BoampObservationListResponse(
-            observations=[_observation_response(item) for item in observations]
+            observations=[_observation_response(item) for item in observations],
+            source_status=_source_status(
+                source_search=source_search,
+                checked_at=datetime.now(tz=UTC),
+                last_success_at=last_success_at,
+            ),
         )
 
     @router.post(
@@ -261,6 +282,7 @@ def _observation_response(item) -> BoampObservationResponse:
         observation_id=item.observation_id,
         source_notice_id=item.source_notice_id,
         title=item.title,
+        observed_at=item.observed_at,
         publication_date=item.publication_date,
         response_deadline=item.response_deadline,
         department_codes=list(item.department_codes),
@@ -270,4 +292,42 @@ def _observation_response(item) -> BoampObservationResponse:
         score=item.score,
         score_explanation=item.score_explanation,
         fingerprint_sha256=item.fingerprint_sha256,
+        p0_state=item.p0_state,
+        p0_decision=item.p0_decision,
+        p0_reason_code=item.p0_reason_code,
+        p0_qualification_id=item.p0_qualification_id,
+        p0_decided_at=item.p0_decided_at,
+        p1_state=item.p1_state,
+        p1_case_id=item.p1_case_id,
+        p1_opened_at=item.p1_opened_at,
+        lot_scope_state=item.lot_scope_state,
+        lot_references=list(item.lot_references),
+        lot_scope_source=item.lot_scope_source,
+        deadline_state=item.deadline_state,
+        deadline_source=item.deadline_source,
+        deadline_source_timezone=item.deadline_source_timezone,
+        deadline_normalized_timezone=item.deadline_normalized_timezone,
+        unknowns=[dict(unknown) for unknown in item.unknowns],
+    )
+
+
+def _source_status(
+    *,
+    source_search: PublicNoticeSearchPort | None,
+    checked_at: datetime,
+    last_success_at: datetime | None,
+) -> BoampSourceStatusResponse:
+    if source_search is None:
+        state = "UNKNOWN"
+    else:
+        try:
+            source_search.search(text="travaux", limit=1, offset=0)
+        except (BoampRegistryUnavailable, RuntimeError):
+            state = "UNAVAILABLE"
+        else:
+            state = "AVAILABLE"
+    return BoampSourceStatusResponse(
+        state=state,
+        checked_at=checked_at.isoformat(),
+        last_success_at=last_success_at.isoformat() if last_success_at is not None else None,
     )

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from types import SimpleNamespace
 from typing import cast
 from uuid import uuid4
@@ -33,7 +34,7 @@ class Resolver:
             if self.error is not None:
                 raise self.error
             raise UnauthenticatedError()
-        return SimpleNamespace(tenant_id=uuid4())
+        return SimpleNamespace(tenant_id=uuid4(), mfa_verified_at=datetime.now(UTC))
 
 
 def _runtime(*, error: Exception | None = None) -> ConsultationSecurityRuntime:

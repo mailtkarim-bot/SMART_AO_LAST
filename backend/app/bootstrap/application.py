@@ -29,7 +29,9 @@ from app.interfaces.http.routes.authentication import (
 )
 from app.interfaces.http.routes.case_assigned import build_assigned_case_router
 from app.interfaces.http.routes.case_creation import build_case_creation_router
+from app.interfaces.http.routes.case_dce_applicability import build_case_dce_applicability_router
 from app.interfaces.http.routes.case_dce_reading import build_case_dce_reading_router
+from app.interfaces.http.routes.case_resolution import build_case_resolution_router
 from app.interfaces.http.routes.collaborator_capabilities import (
     build_collaborator_capability_router,
 )
@@ -43,11 +45,13 @@ from app.interfaces.http.routes.consultations import (
     ConsultationSecurityRuntime,
     build_consultation_router,
 )
+from app.interfaces.http.routes.continuity import build_continuity_router
 from app.interfaces.http.routes.dce_requirement_confirmations import (
     build_dce_requirement_confirmation_router,
 )
 from app.interfaces.http.routes.dce_staging import build_dce_staging_router
 from app.interfaces.http.routes.dce_versions import build_dce_version_router
+from app.interfaces.http.routes.invitations import build_invitation_router
 from app.interfaces.http.routes.knowledge import build_knowledge_router
 from app.interfaces.http.routes.market_watch import build_market_watch_router
 from app.interfaces.http.routes.observability import build_observability_router
@@ -96,9 +100,12 @@ from app.interfaces.http.routes.preparation import (
 from app.interfaces.http.routes.preparation_transmission import (
     build_preparation_transmission_router,
 )
+from app.interfaces.http.routes.shared_resources import build_shared_resource_router
 from app.modules.case.application.handlers import CreateCaseHandler
+from app.modules.case.application.link_dce_version_handler import LinkCaseDceVersionHandler
 from app.modules.case.infrastructure.models.case import CaseRecord
 from app.modules.case.infrastructure.repositories import SqlAlchemyCaseRepository
+from app.modules.case.infrastructure.resolution_reader import SqlAlchemyCaseResolutionReader
 from app.modules.dce.application.contract_risk_read import PatronDceContractRiskReadService
 from app.modules.dce.application.handlers import (
     ClaimDceStagedObjectUploadHandler,
@@ -133,8 +140,9 @@ from app.modules.dce.infrastructure.contract_risk_reader import (
     SqlAlchemyDceContractRiskSignalReader,
 )
 from app.modules.dce.infrastructure.models.consultation import ConsultationRecord
+from app.modules.dce.infrastructure.models.dce_extraction import DceDocumentExtractionRecord
 from app.modules.dce.infrastructure.models.dce_staging import DceStagedObjectRecord
-from app.modules.dce.infrastructure.models.dce_version import DceVersionRecord
+from app.modules.dce.infrastructure.models.dce_version import DceDocumentRecord, DceVersionRecord
 from app.modules.dce.infrastructure.quarantine import (
     ClamdTcpMalwareScanAdapter,
     LocalQuarantineStorageAdapter,
@@ -283,6 +291,11 @@ from app.modules.opportunity.application.patron_watch_profile import (
 from app.modules.opportunity.infrastructure.boamp_qualification_repository import (
     BoampQualificationRepository,
 )
+from app.modules.opportunity.infrastructure.case_unknown_reader import (
+    SqlAlchemyBoampCaseUnknownReader,
+)
+from app.modules.patron_action.application.order import CaseOrderService, case_order_handlers
+from app.modules.patron_action.application.outcome import CaseOutcomeService, case_outcome_handlers
 from app.modules.patron_action.application.service import (
     PatronActionService,
     PatronActionWriter,
@@ -349,7 +362,10 @@ from app.platform.observability.http import RequestObservabilityMiddleware
 from app.platform.persistence.schema import EXPECTED_ALEMBIC_HEAD
 from app.platform.security.audit import AuditedAuthorizationPolicy, SecurityAuditWriter
 from app.platform.security.authorization import AuthorizationPolicy
+from app.platform.security.continuity import ContinuityGovernanceService
 from app.platform.security.headers import SecurityHeadersMiddleware
+from app.platform.security.invitations import InvitationService
+from app.platform.security.resource_sharing import ResourceSharingService
 from app.platform.storage.object_storage import S3PrivateObjectStorage
 
 
@@ -404,6 +420,7 @@ class AppRuntime:
                     repository_factory=SqlAlchemyCaseRepository,
                     consultation_reader_factory=SqlAlchemyConsultationRepository,
                 ),
+                "LinkCaseDceVersion": LinkCaseDceVersionHandler(),
                 "ExpireDceStagedObject": ExpireDceStagedObjectHandler(),
                 "PrepareDceStaging": PrepareDceStagingHandler(),
                 "RecordDceStagedObjectQuarantine": RecordDceStagedObjectQuarantineHandler(),
@@ -434,6 +451,8 @@ class AppRuntime:
                 ),
                 **preparation_transmission_handlers(action_writer=PatronActionWriter()),
                 **patron_action_handlers(),
+                **case_outcome_handlers(),
+                **case_order_handlers(),
                 **patron_action_transition_handlers(),
                 **decision_risk_handlers(
                     repository_factory=lambda _session: SqlAlchemyDecisionRiskRepository(),
@@ -521,6 +540,25 @@ class AppRuntime:
                 case_id=case_id,
             )
 
+    def get_case_resolution_index(
+        self, *, tenant_id: UUID, case_id: UUID, membership_id: UUID | None
+    ):
+        """Return the closed partial « À résoudre » index for one Case."""
+
+        with self.session_factory() as session:
+            return SqlAlchemyCaseResolutionReader(
+                session,
+                contract_risk_reader=SqlAlchemyDceContractRiskSignalReader(self.session_factory),
+                contradiction_reader=SqlAlchemyDecisionCctpPricingContradictionReader(
+                    self.session_factory
+                ),
+                unknown_reader=SqlAlchemyBoampCaseUnknownReader(self.session_factory),
+            ).get(
+                tenant_id=tenant_id,
+                case_id=case_id,
+                membership_id=membership_id,
+            )
+
     def get_assigned_case_candidates(self, *, tenant_id: UUID):
         """Return closed same-tenant candidates for the audited ReBAC route."""
 
@@ -570,6 +608,46 @@ class AppRuntime:
                 DceVersionRecord.id == dce_version_id,
             )
             return session.scalar(statement)
+
+    def get_dce_document_inventory(
+        self,
+        *,
+        tenant_id: UUID,
+        dce_version_id: UUID,
+    ) -> list[tuple[DceDocumentRecord, DceDocumentExtractionRecord | None]]:
+        """Return admitted originals with the latest deterministic reading attempt."""
+
+        with self.session_factory() as session:
+            latest_extraction_id = (
+                sa.select(DceDocumentExtractionRecord.id)
+                .where(
+                    DceDocumentExtractionRecord.tenant_id == tenant_id,
+                    DceDocumentExtractionRecord.dce_document_id == DceDocumentRecord.id,
+                )
+                .order_by(
+                    DceDocumentExtractionRecord.created_at.desc(),
+                    DceDocumentExtractionRecord.id.desc(),
+                )
+                .limit(1)
+                .correlate(DceDocumentRecord)
+                .scalar_subquery()
+            )
+            statement = (
+                sa.select(DceDocumentRecord, DceDocumentExtractionRecord)
+                .outerjoin(
+                    DceDocumentExtractionRecord,
+                    sa.and_(
+                        DceDocumentExtractionRecord.tenant_id == tenant_id,
+                        DceDocumentExtractionRecord.id == latest_extraction_id,
+                    ),
+                )
+                .where(
+                    DceDocumentRecord.tenant_id == tenant_id,
+                    DceDocumentRecord.dce_version_id == dce_version_id,
+                )
+                .order_by(DceDocumentRecord.original_filename, DceDocumentRecord.id)
+            )
+            return list(session.execute(statement).all())
 
     def get_consultation_tenant_id(self, *, consultation_id: UUID) -> UUID | None:
         """Return only the owner tenant needed to authorize a requested Consultation."""
@@ -860,6 +938,16 @@ def create_app(
             dispatcher=runtime.dispatcher,
             policy=security_policy,
         )
+        case_outcome_service = CaseOutcomeService(
+            dispatcher=runtime.dispatcher,
+            session_factory=runtime.session_factory,
+            policy=security_policy,
+        )
+        case_order_service = CaseOrderService(
+            dispatcher=runtime.dispatcher,
+            session_factory=runtime.session_factory,
+            policy=security_policy,
+        )
         patron_action_transition_service = PatronActionTransitionService(
             session_factory=runtime.session_factory,
             dispatcher=runtime.dispatcher,
@@ -1004,6 +1092,7 @@ def create_app(
         submission_evidence_service = SubmissionEvidenceService(
             dispatcher=runtime.dispatcher,
             policy=security_policy,
+            session_factory=runtime.session_factory,
         )
         signature_provider = os.getenv("SMART_AO_SIGNATURE_PROVIDER", "").strip()
         signature_callback_secret = os.getenv("SMART_AO_SIGNATURE_CALLBACK_SECRET", "")
@@ -1030,6 +1119,18 @@ def create_app(
         )
         app.include_router(
             build_case_dce_reading_router(
+                runtime=runtime,
+                security_runtime=security_runtime,
+            )
+        )
+        app.include_router(
+            build_case_dce_applicability_router(
+                runtime=runtime,
+                security_runtime=security_runtime,
+            )
+        )
+        app.include_router(
+            build_case_resolution_router(
                 runtime=runtime,
                 security_runtime=security_runtime,
             )
@@ -1073,6 +1174,7 @@ def create_app(
                         session_factory=runtime.session_factory,
                         dispatcher=runtime.dispatcher,
                     ),
+                    source_search=runtime.public_notice_search,
                 )
             )
         if company_registry is not None:
@@ -1085,6 +1187,26 @@ def create_app(
         app.include_router(
             build_case_creation_router(
                 dispatcher=runtime.dispatcher,
+                security_runtime=security_runtime,
+            )
+        )
+        app.include_router(
+            build_invitation_router(
+                service=InvitationService(
+                    session_factory=runtime.session_factory,
+                    policy=security_policy,
+                ),
+                security_runtime=security_runtime,
+            )
+        )
+        app.include_router(
+            build_shared_resource_router(
+                service=ResourceSharingService(session_factory=runtime.session_factory),
+            )
+        )
+        app.include_router(
+            build_continuity_router(
+                service=ContinuityGovernanceService(session_factory=runtime.session_factory),
                 security_runtime=security_runtime,
             )
         )
@@ -1164,6 +1286,8 @@ def create_app(
             build_patron_action_router(
                 service=patron_action_service,
                 transition_service=patron_action_transition_service,
+                outcome_service=case_outcome_service,
+                order_service=case_order_service,
                 security_runtime=security_runtime,
             )
         )

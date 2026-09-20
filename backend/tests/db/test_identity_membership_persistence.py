@@ -228,7 +228,9 @@ def test_membership_state_and_timestamps_are_constrained(connection: sa.Connecti
 
 
 @pytest.mark.db
-def test_only_one_active_patron_admin_is_allowed_per_tenant(connection: sa.Connection) -> None:
+def test_multiple_active_patron_admins_are_allowed_when_owner_is_separate(
+    connection: sa.Connection,
+) -> None:
     tenant_id = _insert_tenant(connection)
     _insert_membership(
         connection,
@@ -237,13 +239,12 @@ def test_only_one_active_patron_admin_is_allowed_per_tenant(connection: sa.Conne
         role="PATRON_ADMIN",
     )
 
-    with pytest.raises(IntegrityError), connection.begin_nested():
-        _insert_membership(
-            connection,
-            tenant_id=tenant_id,
-            identity_id=_insert_identity(connection),
-            role="PATRON_ADMIN",
-        )
+    _insert_membership(
+        connection,
+        tenant_id=tenant_id,
+        identity_id=_insert_identity(connection),
+        role="PATRON_ADMIN",
+    )
 
     _insert_membership(
         connection,

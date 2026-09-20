@@ -152,6 +152,7 @@ class SubmissionSignatureHandler:
             provider=command.provider,
             signer_membership_id=command.signer_membership_id,
             expected_package_version=package.version,
+            manifest_sha256=package.manifest_sha256,
             status="REQUESTED",
             actor_id=context.actor_id,
             membership_id=context.membership_id,
@@ -178,6 +179,7 @@ class SubmissionSignatureHandler:
                     payload={
                         "submission_package_id": str(package.id),
                         "provider": record.provider,
+                        "manifest_sha256": record.manifest_sha256,
                         "status": record.status,
                     },
                 ),

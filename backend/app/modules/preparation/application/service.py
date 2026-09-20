@@ -38,6 +38,7 @@ from app.modules.preparation.infrastructure.models import (
     GeneratedTechnicalDocumentRecord,
     PreparationPackageRecord,
     PreparationReadinessRecord,
+    TechnicalResponseDraftRecord,
 )
 from app.platform.events.dispatcher import (
     CommandContext,
@@ -123,6 +124,7 @@ class PreparationService:
         PreparationPackageRecord,
         PreparationReadinessRecord | None,
         tuple[GeneratedTechnicalDocumentRecord, ...],
+        tuple[TechnicalResponseDraftRecord, ...],
     ]:
         if actor.actor_kind is not ActorKind.COLLABORATEUR or actor.membership_id is None:
             raise PermissionError("COLLABORATOR_REQUIRED")
@@ -184,7 +186,20 @@ class PreparationService:
                     )
                 ).all()
             )
-            return package, readiness, documents
+            drafts = tuple(
+                session.scalars(
+                    sa.select(TechnicalResponseDraftRecord)
+                    .where(
+                        TechnicalResponseDraftRecord.tenant_id == actor.tenant_id,
+                        TechnicalResponseDraftRecord.package_id == package.id,
+                    )
+                    .order_by(
+                        TechnicalResponseDraftRecord.draft_id,
+                        TechnicalResponseDraftRecord.version,
+                    )
+                ).all()
+            )
+            return package, readiness, documents, drafts
 
     def read_generated_document(
         self, *, actor: ActorContext, package_id: UUID, document_id: UUID, now: datetime

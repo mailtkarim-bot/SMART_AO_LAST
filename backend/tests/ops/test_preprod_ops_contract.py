@@ -114,7 +114,7 @@ def test_readiness_contract_uses_shared_schema_head() -> None:
     schema = (ROOT / "backend/app/platform/persistence/schema.py").read_text(encoding="utf-8")
     assert "from app.platform.persistence.schema import EXPECTED_ALEMBIC_HEAD" in application
     assert "EXPECTED_ALEMBIC_HEAD" in application
-    assert 'EXPECTED_ALEMBIC_HEAD = "20260826_0067"' in schema
+    assert 'EXPECTED_ALEMBIC_HEAD = "20260920_0090"' in schema
 
 
 def test_healthcheck_validates_application_json_payloads() -> None:
@@ -428,8 +428,8 @@ def test_deploy_ocr_opt_in_requires_explicit_install_and_local_runtime_preflight
 def test_manual_deployment_guide_matches_current_schema_head_and_ocr_flags() -> None:
     guide = (ROOT / "docs/MANUAL_PREPROD_DEPLOYMENT.md").read_text(encoding="utf-8")
     schema = (ROOT / "backend/app/platform/persistence/schema.py").read_text(encoding="utf-8")
-    assert 'EXPECTED_ALEMBIC_HEAD = "20260826_0067"' in schema
-    assert "20260826_0067" in guide
+    assert 'EXPECTED_ALEMBIC_HEAD = "20260920_0090"' in schema
+    assert "20260920_0090" in guide
     assert "SMART_AO_INSTALL_DOCUMENT_OCR=0" in guide
     assert "SMART_AO_OCR_ENABLED=0" in guide
     assert "ne télécharge aucun modèle ni dictionnaire" in guide

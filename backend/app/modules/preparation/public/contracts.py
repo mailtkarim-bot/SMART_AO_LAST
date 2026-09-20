@@ -145,6 +145,13 @@ class PreparationReviewListResponse(BaseModel):
     reviews: list[PreparationReviewProjection]
 
 
+class PreparationResponseDraftListResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    package_id: UUID
+    drafts: list[TechnicalResponseDraftProjection]
+
+
 class PreparationReadinessProjection(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -167,6 +174,19 @@ class GeneratedDocumentProjection(BaseModel):
     readiness_revision: int = Field(ge=1)
 
 
+class TechnicalResponseDraftProjection(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    draft_id: UUID
+    version: int = Field(ge=1)
+    state: Literal[
+        "DRAFT", "SUBMITTED_FOR_REVIEW", "RETURNED_WITH_CORRECTIONS", "ACCEPTED_CANDIDATE"
+    ]
+    section_codes: list[str]
+    source_refs: list[str]
+    responsible_role: Literal["COLLABORATEUR", "PATRON_REVIEWER"]
+
+
 class PreparationPackageProjection(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -178,3 +198,4 @@ class PreparationPackageProjection(BaseModel):
     aggregate_revision: int = Field(ge=0)
     latest_readiness: PreparationReadinessProjection | None
     generated_documents: list[GeneratedDocumentProjection]
+    response_drafts: list[TechnicalResponseDraftProjection]

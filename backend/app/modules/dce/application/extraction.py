@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -41,6 +42,24 @@ MAX_FRAGMENT_CHARS = 8_000
 MAX_TOTAL_CHARS = 10_000_000
 MAX_TOTAL_DOCUMENT_CHARS = 20_000_000
 SYSTEM_EXTRACTION_ACTOR_ID = UUID("00000000-0000-0000-0000-000000000013")
+
+_HOSTILE_INSTRUCTION_PATTERNS = (
+    re.compile(
+        r"\b(?:ignore|ignorez)\b.{0,120}"
+        r"\b(?:previous|précédentes?|system|système)\b",
+        re.IGNORECASE | re.DOTALL,
+    ),
+    re.compile(
+        r"\b(?:reveal|révélez|exfiltrate|exfiltrez|disclose|divulguez)\b"
+        r".{0,120}\b(?:secret|password|mot de passe|marge|données?)\b",
+        re.IGNORECASE | re.DOTALL,
+    ),
+    re.compile(
+        r"\b(?:send|envoyez|transmettez)\b.{0,160}"
+        r"\b(?:https?://|webhook|url)\b",
+        re.IGNORECASE | re.DOTALL,
+    ),
+)
 
 
 class PrivateDocumentStoragePort(Protocol):
@@ -241,6 +260,12 @@ def _project_document(
             native_unsupported = True
             fragments = ()
         if fragments:
+            if _contains_hostile_instruction(fragments):
+                return ExtractionProjection(
+                    status="REVIEW_REQUIRED",
+                    failure_code="HOSTILE_INSTRUCTION_REVIEW_REQUIRED",
+                    fragments=fragments,
+                )
             return ExtractionProjection(
                 status="COMPLETED",
                 failure_code=None,
@@ -277,14 +302,15 @@ def _project_document(
                 failure_code="MEDIA_TYPE_UNSUPPORTED",
                 fragments=(),
             )
+        if str(error) == "DOCUMENT_PROTECTED":
+            return ExtractionProjection(
+                status="FAILED_SAFE",
+                failure_code="DOCUMENT_PROTECTED",
+                fragments=(),
+            )
         logger.warning(
             "dce_extraction_value_error",
             extra={"error_type": type(error).__name__, "media_type": media_type},
-        )
-        return ExtractionProjection(
-            status="FAILED_SAFE",
-            failure_code="EXTRACTION_PARSE_FAILED",
-            fragments=(),
         )
     except Exception as error:
         logger.warning(
@@ -296,6 +322,16 @@ def _project_document(
             failure_code="EXTRACTION_PARSE_FAILED",
             fragments=(),
         )
+
+
+def _contains_hostile_instruction(fragments: Iterable[ExtractedFragment]) -> bool:
+    """Flag source text that addresses the system instead of treating it as an order."""
+
+    return any(
+        pattern.search(fragment.text) is not None
+        for fragment in fragments
+        for pattern in _HOSTILE_INSTRUCTION_PATTERNS
+    )
 
 
 def _extract_fragments(*, media_type: str, source_bytes: bytes) -> Iterable[ExtractedFragment]:
@@ -313,7 +349,7 @@ def _extract_fragments(*, media_type: str, source_bytes: bytes) -> Iterable[Extr
 def _extract_pdf(*, source_bytes: bytes) -> tuple[ExtractedFragment, ...]:
     reader = PdfReader(BytesIO(source_bytes))
     if reader.is_encrypted:
-        raise ValueError("encrypted PDF")
+        raise ValueError("DOCUMENT_PROTECTED")
     if len(reader.pages) > MAX_PDF_PAGES:
         raise ExtractionLimitError
     return _fragmentize(

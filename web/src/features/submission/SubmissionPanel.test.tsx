@@ -18,7 +18,15 @@ function renderPanel(overrides: Partial<PanelProps> = {}) {
     preparationPackageId: "preparation-1",
     preparationRevision: "1",
     submissionPackageId: "",
+    submissionPackageVersion: "1",
+    submissionAuthorizationRationale: "Paquet relu et autorisé pour la remise humaine.",
+    submissionMode: "FULL",
+    candidatureOnlyReason: "",
+    submissionAuthorized: false,
+    submissionManifest: null,
+    submissionEvidence: [],
     submissionExported: false,
+    submissionExportState: "IDLE",
     signatureId: "",
     signaturePackageVersion: "1",
     signatureStatus: null,
@@ -28,10 +36,17 @@ function renderPanel(overrides: Partial<PanelProps> = {}) {
     setPreparationPackageId: vi.fn(),
     setPreparationRevision: vi.fn(),
     setSubmissionPackageId: vi.fn(),
+    setSubmissionPackageVersion: vi.fn(),
+    setSubmissionAuthorizationRationale: vi.fn(),
+    setSubmissionMode: vi.fn(),
+    setCandidatureOnlyReason: vi.fn(),
     setSignatureId: vi.fn(),
     setSignaturePackageVersion: vi.fn(),
     setEvidenceForm: vi.fn(),
     onPrepare: vi.fn(),
+    onAuthorize: vi.fn(),
+    onLoadManifest: vi.fn(),
+    onLoadEvidence: vi.fn(),
     onRequestSignature: vi.fn(),
     onLoadSignature: vi.fn(),
     onExport: vi.fn(),
@@ -54,10 +69,27 @@ describe("SubmissionPanel integration", () => {
     expect(screen.queryByRole("button", { name: /exporter le dossier zip/i })).not.toBeInTheDocument();
   });
 
+  it("exposes an explicit reason before preparing a candidature-only package", () => {
+    const setSubmissionMode = vi.fn();
+    const setCandidatureOnlyReason = vi.fn();
+    renderPanel({ submissionMode: "CANDIDATURE_ONLY", setSubmissionMode, setCandidatureOnlyReason });
+
+    fireEvent.change(screen.getByLabelText("Mode de remise"), {
+      target: { value: "CANDIDATURE_ONLY" },
+    });
+    fireEvent.change(screen.getByLabelText("Justification de la candidature seule"), {
+      target: { value: "Pièces financières non disponibles à la date de dépôt." },
+    });
+
+    expect(setSubmissionMode).toHaveBeenCalledWith("CANDIDATURE_ONLY");
+    expect(setCandidatureOnlyReason).toHaveBeenCalledWith("Pièces financières non disponibles à la date de dépôt.");
+  });
+
   it("reveals the audited export action only after a package exists", () => {
     const onExport = vi.fn();
     const { rerender, props } = renderPanel({
       submissionPackageId: "submission-1",
+      submissionAuthorized: true,
       submissionExported: true,
       onExport,
     });
@@ -93,6 +125,59 @@ describe("SubmissionPanel integration", () => {
     expect(onLoadSignature).toHaveBeenCalledOnce();
   });
 
+  it("requires P5 authorization before revealing the export action", () => {
+    const onAuthorize = vi.fn();
+    const { rerender, props } = renderPanel({
+      submissionPackageId: "submission-1",
+      onAuthorize,
+    });
+
+    expect(screen.getByText("Autorisation P5")).toBeInTheDocument();
+    expect(screen.getByLabelText("Version du paquet")).toHaveValue(1);
+    expect(screen.queryByRole("button", { name: /exporter le dossier zip/i })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /autoriser la remise humaine/i }));
+    expect(onAuthorize).toHaveBeenCalledOnce();
+
+    rerender(
+      <SubmissionPanel
+        {...props}
+        submissionPackageId="submission-1"
+        submissionAuthorized
+      />,
+    );
+    expect(screen.getByRole("button", { name: /exporter le dossier zip/i })).toBeInTheDocument();
+  });
+
+  it("shows the exact manifest preview and delegates its reload", () => {
+    const onLoadManifest = vi.fn();
+    renderPanel({
+      submissionPackageId: "submission-1",
+      onLoadManifest,
+      submissionManifest: {
+        submission_package_id: "submission-1",
+        package_version: 3,
+        state: "PRET_CONTROLE",
+        manifest_sha256: "c".repeat(64),
+        manifest: {
+          entries: [{ path: "dce/index.pdf" }],
+          scope: { kind: "SINGLE_LOT", lot_numbers: ["01"] },
+          exclusions: ["private_storage", "financial_amounts", "external_submission_result"],
+        },
+        authorization_status: "NOT_AUTHORIZED",
+        external_submission: "NOT_PERFORMED",
+      },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /prévisualiser le manifeste/i }));
+
+    expect(onLoadManifest).toHaveBeenCalledOnce();
+    expect(screen.getByText("Manifeste exact · v3")).toBeInTheDocument();
+    expect(screen.getByText(/1 entrée\(s\) partagée\(s\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/Périmètre gelé.*SINGLE_LOT/i)).toBeInTheDocument();
+    expect(screen.getByText(/P5 à autoriser/i)).toBeInTheDocument();
+    expect(screen.getByText(/Exclus : private_storage, financial_amounts, external_submission_result/i)).toBeInTheDocument();
+  });
+
   it("records only the redacted manual evidence action", () => {
     const onRecordEvidence = vi.fn();
     const setEvidenceForm = vi.fn();
@@ -109,5 +194,29 @@ describe("SubmissionPanel integration", () => {
     expect(setEvidenceForm).toHaveBeenCalled();
     expect(onRecordEvidence).toHaveBeenCalledOnce();
     expect(screen.getByPlaceholderText("Aucune donnée sensible")).toBeInTheDocument();
+  });
+
+  it("shows partial receipt evidence without claiming external success", () => {
+    const onLoadEvidence = vi.fn();
+    renderPanel({
+      submissionPackageId: "submission-1",
+      onLoadEvidence,
+      submissionEvidence: [{
+        evidence_id: "evidence-1",
+        submission_package_id: "submission-1",
+        package_version: 3,
+        manifest_sha256: "c".repeat(64),
+        evidence_type: "MANUAL_RECEIPT",
+        status: "RECEIVED",
+        reconciliation_status: "PARTIAL",
+        external_submission: "NOT_PERFORMED",
+      }],
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /relire les preuves/i }));
+
+    expect(onLoadEvidence).toHaveBeenCalledOnce();
+    expect(screen.getByText("Réception partielle · v3")).toBeInTheDocument();
+    expect(screen.getByText(/Rapprochement incomplet/i)).toBeInTheDocument();
   });
 });

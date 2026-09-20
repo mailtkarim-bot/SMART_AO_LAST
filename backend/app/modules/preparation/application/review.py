@@ -184,6 +184,51 @@ class PreparationReviewService:
                 for review_id, record in latest.items()
             )
 
+    def read_response_drafts(
+        self, *, actor: ActorContext, package_id: UUID, now: datetime
+    ) -> tuple[TechnicalResponseDraftRecord, ...]:
+        """Read versioned non-financial drafts for a patron review."""
+        if actor.actor_kind not in {ActorKind.PATRON_ADMIN, ActorKind.PATRON_DELEGATE}:
+            raise PermissionError("PATRON_REQUIRED")
+        with self._session_factory() as session:
+            package = session.scalar(
+                sa.select(PreparationPackageRecord).where(
+                    PreparationPackageRecord.tenant_id == actor.tenant_id,
+                    PreparationPackageRecord.id == package_id,
+                )
+            )
+            if package is None:
+                raise PermissionError("NOT_FOUND_OR_FORBIDDEN")
+            decision = self._policy.authorize(
+                context=actor,
+                request=AuthorizationRequest(
+                    action=Capability.PREPARATION_REVIEW_DECIDE,
+                    resource=AuthorizationResource(
+                        resource_type="PREPARATION_PACKAGE",
+                        resource_id=package.id,
+                        tenant_id=actor.tenant_id,
+                        classification=DataClassification.INTERNAL_OPERATIONAL,
+                        case_id=package.case_id,
+                    ),
+                    evaluated_at=now,
+                ),
+            )
+            if not decision.allowed:
+                raise PermissionError(decision.code)
+            return tuple(
+                session.scalars(
+                    sa.select(TechnicalResponseDraftRecord)
+                    .where(
+                        TechnicalResponseDraftRecord.tenant_id == actor.tenant_id,
+                        TechnicalResponseDraftRecord.package_id == package.id,
+                    )
+                    .order_by(
+                        TechnicalResponseDraftRecord.draft_id,
+                        TechnicalResponseDraftRecord.version,
+                    )
+                ).all()
+            )
+
     def _resolve_package(self, *, actor: ActorContext, command) -> PreparationPackageRecord | None:
         with self._session_factory() as session:
             package = session.scalar(

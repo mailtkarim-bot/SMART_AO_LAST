@@ -1,0 +1,942 @@
+{
+  "schema_version": 1,
+  "catalog_id": "SMART_AO_G01_G52",
+  "scenarios": [
+    {
+      "recipe_id": "G01",
+      "canonical_spaces": [
+        "C06",
+        "C05",
+        "C08"
+      ],
+      "role": "RESPONSABLE_OFFRE",
+      "initial_state": "DCE_DECLARED_PLAN_MISSING",
+      "action": "IMPORT_AND_QUALIFY",
+      "refusal_expected": "P3_P5_BLOCKED_UNTIL_SOURCE_OR_BOUNDED_RISK",
+      "append_only_evidence": [
+        "SOURCE_REFERENCE",
+        "BLOCKER_EVENT"
+      ],
+      "final_state": "DEPENDENCY_UNPROVEN",
+      "execution_mode": "LOCAL"
+    },
+    {
+      "recipe_id": "G02",
+      "canonical_spaces": [
+        "C06",
+        "C07",
+        "C11"
+      ],
+      "role": "RESPONSABLE_PATRON",
+      "initial_state": "P5_AUTHORIZED_THEN_RECTIFICATIVE_RECEIVED",
+      "action": "ADMIT_NEW_DCE_VERSION",
+      "refusal_expected": "OLD_AUTHORIZATION_REFUSED_FOR_NEW_PACKAGE",
+      "append_only_evidence": [
+        "OLD_VERSION",
+        "INVALIDATION_EVENT",
+        "NEW_VERSION"
+      ],
+      "final_state": "REVALIDATION_REQUIRED",
+      "execution_mode": "LOCAL"
+    },
+    {
+      "recipe_id": "G03",
+      "canonical_spaces": [
+        "C05",
+        "C06"
+      ],
+      "role": "RESPONSABLE_CONSEIL",
+      "initial_state": "CONTRADICTORY_RC_CCAP",
+      "action": "COMPARE_AND_RESOLVE",
+      "refusal_expected": "NO_AUTOMATIC_SOURCE_PRIORITY",
+      "append_only_evidence": [
+        "SOURCE_A",
+        "SOURCE_B",
+        "RESOLUTION_REASON"
+      ],
+      "final_state": "HUMAN_RESOLUTION_REQUIRED",
+      "execution_mode": "LOCAL"
+    },
+    {
+      "recipe_id": "G04",
+      "canonical_spaces": [
+        "C08"
+      ],
+      "role": "METREUR_ACHATS",
+      "initial_state": "LIFTING_REQUIREMENT_WITHOUT_PRICE_LINE",
+      "action": "QUALIFY_COST_GAP",
+      "refusal_expected": "UNCOVERED_COST_CANNOT_BE_ZERO",
+      "append_only_evidence": [
+        "REQUIREMENT_SOURCE",
+        "COST_GAP"
+      ],
+      "final_state": "COST_HYPOTHESIS_REQUIRED",
+      "execution_mode": "LOCAL"
+    },
+    {
+      "recipe_id": "G05",
+      "canonical_spaces": [
+        "C06",
+        "C10",
+        "C11"
+      ],
+      "role": "METREUR",
+      "initial_state": "IMPOSED_LEGACY_XLS",
+      "action": "IMPORT_WITHOUT_NORMALIZATION_LOSS",
+      "refusal_expected": "UNQUALIFIED_EDITING_CANNOT_BE_PRESENTED_AS_FACT",
+      "append_only_evidence": [
+        "ORIGINAL_HASH",
+        "DERIVED_FILE",
+        "WARNING"
+      ],
+      "final_state": "ORIGINAL_RETAINED_UNQUALIFIED",
+      "execution_mode": "LOCAL"
+    },
+    {
+      "recipe_id": "G06",
+      "canonical_spaces": [
+        "C06",
+        "C05"
+      ],
+      "role": "RESPONSABLE",
+      "initial_state": "ILLEGIBLE_DEADLINE_PAGE",
+      "action": "READ_PARTIAL_DOCUMENT",
+      "refusal_expected": "NO_DEADLINE_INVENTION",
+      "append_only_evidence": [
+        "PAGE_LOCATOR",
+        "READABILITY_ISSUE"
+      ],
+      "final_state": "DEADLINE_UNKNOWN",
+      "execution_mode": "LOCAL"
+    },
+    {
+      "recipe_id": "G07",
+      "canonical_spaces": [
+        "C06"
+      ],
+      "role": "DEPOSANT",
+      "initial_state": "PASSWORD_PROTECTED_FILE",
+      "action": "ATTEMPT_SAFE_OPEN",
+      "refusal_expected": "NO_BYPASS_OR_DECRYPTION",
+      "append_only_evidence": [
+        "FILE_VERSION",
+        "REFUSAL_REASON"
+      ],
+      "final_state": "DEPENDENT_PROCESS_BLOCKED",
+      "execution_mode": "LOCAL"
+    },
+    {
+      "recipe_id": "G08",
+      "canonical_spaces": [
+        "C06",
+        "C00"
+      ],
+      "role": "DEPOSANT",
+      "initial_state": "ARCHIVE_LIMIT_EXCEEDED",
+      "action": "IMPORT_WITH_BOUNDED_INVENTORY",
+      "refusal_expected": "UNPROCESSED_ITEMS_MUST_REMAIN_VISIBLE",
+      "append_only_evidence": [
+        "ARCHIVE_MANIFEST",
+        "LIMIT_EVENT",
+        "REMAINING_ITEMS"
+      ],
+      "final_state": "PARTIAL_INVENTORY",
+      "execution_mode": "LOCAL"
+    },
+    {
+      "recipe_id": "G09",
+      "canonical_spaces": [
+        "C06",
+        "C14"
+      ],
+      "role": "RESPONSABLE_SECURITE",
+      "initial_state": "ACTIVE_CONTENT_DETECTED",
+      "action": "ISOLATE_AND_PREVIEW",
+      "refusal_expected": "NO_EXECUTION_OR_AI_TRANSMISSION",
+      "append_only_evidence": [
+        "QUARANTINE_EVENT",
+        "CONTENT_HASH",
+        "REVIEW_DECISION"
+      ],
+      "final_state": "QUARANTINED_REVIEW_REQUIRED",
+      "execution_mode": "LOCAL"
+    },
+    {
+      "recipe_id": "G10",
+      "canonical_spaces": [
+        "C05",
+        "C11"
+      ],
+      "role": "RESPONSABLE",
+      "initial_state": "MANDATORY_VISIT_WITHOUT_PROOF",
+      "action": "PREPARE_SUBMISSION",
+      "refusal_expected": "P5_BLOCKED_WITH_SOURCE_AND_OWNER",
+      "append_only_evidence": [
+        "REQUIREMENT_SOURCE",
+        "BLOCKER_EVENT",
+        "OWNER"
+      ],
+      "final_state": "SUBMISSION_BLOCKED",
+      "execution_mode": "LOCAL"
+    },
+    {
+      "recipe_id": "G11",
+      "canonical_spaces": [
+        "C03",
+        "C05"
+      ],
+      "role": "RESPONSABLE",
+      "initial_state": "CONFLICTING_DEADLINES",
+      "action": "PROPOSE_NEW_DEADLINE",
+      "refusal_expected": "NO_AUTOMATIC_POSTPONEMENT",
+      "append_only_evidence": [
+        "DATE_SOURCE_A",
+        "DATE_SOURCE_B",
+        "CONFLICT_EVENT"
+      ],
+      "final_state": "DEADLINE_CONFLICT_OPEN",
+      "execution_mode": "LOCAL"
+    },
+    {
+      "recipe_id": "G12",
+      "canonical_spaces": [
+        "C09",
+        "C08",
+        "C07"
+      ],
+      "role": "ACHATS_PATRON",
+      "initial_state": "SUPPLIER_QUOTE_EXPIRED",
+      "action": "REVIEW_PRICING_SCENARIO",
+      "refusal_expected": "EXPIRED_QUOTE_CANNOT_AUTHORIZE_P3",
+      "append_only_evidence": [
+        "QUOTE_VERSION",
+        "EXPIRY_CHECK",
+        "REVIEW_EVENT"
+      ],
+      "final_state": "PRICING_REVIEW_REQUIRED",
+      "execution_mode": "LOCAL"
+    },
+    {
+      "recipe_id": "G13",
+      "canonical_spaces": [
+        "C05",
+        "C14",
+        "N04"
+      ],
+      "role": "SUCCESSOR",
+      "initial_state": "HANDOVER_ACCEPTED_WITH_OPEN_TASKS",
+      "action": "READ_EXPECTED_WORK",
+      "refusal_expected": "NO_AUTOMATIC_POWER_TRANSFER",
+      "append_only_evidence": [
+        "HANDOVER_REQUEST",
+        "ACCEPTANCE",
+        "TASK_PROJECTION"
+      ],
+      "final_state": "WORK_VISIBLE_NO_ELEVATION",
+      "execution_mode": "LOCAL"
+    },
+    {
+      "recipe_id": "G14",
+      "canonical_spaces": [
+        "C14",
+        "C00",
+        "N04"
+      ],
+      "role": "OWNER_SECURITE",
+      "initial_state": "MEMBER_SUSPENDED_WITH_FUTURE_SHARE",
+      "action": "SUSPEND_MEMBER",
+      "refusal_expected": "SESSION_AND_FUTURE_PUBLICATION_REFUSED",
+      "append_only_evidence": [
+        "SUSPENSION_ACT",
+        "SESSION_REVOCATION",
+        "SHARE_BLOCK"
+      ],
+      "final_state": "ACCESS_REVOKED",
+      "execution_mode": "LOCAL"
+    },
+    {
+      "recipe_id": "G15",
+      "canonical_spaces": [
+        "C07",
+        "C11",
+        "C14"
+      ],
+      "role": "PATRON_DELEGATE",
+      "initial_state": "NO_SUBMISSION_CAPABILITY",
+      "action": "AUTHORIZE_P5",
+      "refusal_expected": "P5_REFUSED_WITHOUT_EXPLICIT_DELEGATION",
+      "append_only_evidence": [
+        "CAPABILITY_CHECK",
+        "REFUSAL_AUDIT"
+      ],
+      "final_state": "PREPARATION_ALLOWED_ONLY",
+      "execution_mode": "LOCAL"
+    },
+    {
+      "recipe_id": "G16",
+      "canonical_spaces": [
+        "C05",
+        "C10",
+        "N01"
+      ],
+      "role": "RESPONSABLE_EXPERT",
+      "initial_state": "SAME_REVISION_TWO_PROPOSALS",
+      "action": "RECORD_CONCURRENT_CONTRIBUTIONS",
+      "refusal_expected": "DIVERGENT_VALIDATION_BLOCKED",
+      "append_only_evidence": [
+        "CONTRIBUTION_A",
+        "CONTRIBUTION_B",
+        "CONFLICT_RECORD"
+      ],
+      "final_state": "CONFLICT_OPEN",
+      "execution_mode": "LOCAL"
+    },
+    {
+      "recipe_id": "G17",
+      "canonical_spaces": [
+        "C14",
+        "C13"
+      ],
+      "role": "ADMINISTRATEUR",
+      "initial_state": "ADMIN_WITHOUT_OWNER_AUTHORITY",
+      "action": "REQUEST_OWNER_ACTION",
+      "refusal_expected": "NO_BROWSER_SELF_ELEVATION",
+      "append_only_evidence": [
+        "AUTHORIZATION_DENIAL",
+        "ACTOR_ROLE"
+      ],
+      "final_state": "FORBIDDEN",
+      "execution_mode": "LOCAL"
+    },
+    {
+      "recipe_id": "G18",
+      "canonical_spaces": [
+        "C14",
+        "C15"
+      ],
+      "role": "OWNER_SECURITE",
+      "initial_state": "LAST_OWNER_COMPROMISED",
+      "action": "SUSPEND_LAST_OWNER",
+      "refusal_expected": "RECOVERY_SUPPORT_CANNOT_RESTORE_POWER",
+      "append_only_evidence": [
+        "SUSPENSION_ACT",
+        "NO_ACTIVE_OWNER",
+        "RECOVERY_PROOF"
+      ],
+      "final_state": "NO_ACTIVE_OWNER",
+      "execution_mode": "LOCAL"
+    },
+    {
+      "recipe_id": "G19",
+      "canonical_spaces": [
+        "C15"
+      ],
+      "role": "UTILISATEUR_SUPPORT",
+      "initial_state": "PASSWORD_ONLY_RECOVERY",
+      "action": "REQUEST_MFA_RECOVERY",
+      "refusal_expected": "EMAIL_ALONE_REFUSED",
+      "append_only_evidence": [
+        "PASSWORD_PROOF",
+        "RECOVERY_CODE",
+        "FACTOR_REVOCATION"
+      ],
+      "final_state": "REENROLLMENT_REQUIRED",
+      "execution_mode": "LOCAL"
+    },
+    {
+      "recipe_id": "G20",
+      "canonical_spaces": [
+        "C10",
+        "C15",
+        "N01"
+      ],
+      "role": "COLLABORATEUR",
+      "initial_state": "SESSION_EXPIRED_WITH_DRAFT",
+      "action": "RECONNECT_AND_RESTORE",
+      "refusal_expected": "UNCONFIRMED_LOCAL_STATE_NOT_PRESENTED_AS_SAVED",
+      "append_only_evidence": [
+        "SESSION_EXPIRY",
+        "LAST_CONFIRMED_REVISION",
+        "DRAFT_STATE"
+      ],
+      "final_state": "CONFIRMED_STATE_RESTORED",
+      "execution_mode": "LOCAL"
+    },
+    {
+      "recipe_id": "G21",
+      "canonical_spaces": [
+        "C09",
+        "C10",
+        "C11",
+        "C13"
+      ],
+      "role": "MANDATAIRE",
+      "initial_state": "GROUP_RESPONSE_WITHOUT_MEMBER_MANDATE",
+      "action": "CHECK_MANDATE",
+      "refusal_expected": "P5_BLOCKED_FOR_MISSING_MANDATE",
+      "append_only_evidence": [
+        "ENTITY_REFERENCE",
+        "MANDATE_GAP",
+        "PACKAGE_BLOCK"
+      ],
+      "final_state": "MANDATE_REQUIRED",
+      "execution_mode": "EXTERNAL_DEPENDENCY"
+    },
+    {
+      "recipe_id": "G22",
+      "canonical_spaces": [
+        "C09",
+        "C10"
+      ],
+      "role": "ACHATS",
+      "initial_state": "CONSULTED_PARTNER_ONLY",
+      "action": "GENERATE_PREPARATION",
+      "refusal_expected": "CONSULTATION_DOES_NOT_CREATE_COMMITMENT",
+      "append_only_evidence": [
+        "PARTNER_STATUS",
+        "GENERATION_EVENT"
+      ],
+      "final_state": "PARTNER_NOT_COMMITTED",
+      "execution_mode": "LOCAL"
+    },
+    {
+      "recipe_id": "G23",
+      "canonical_spaces": [
+        "C12",
+        "C06",
+        "C07"
+      ],
+      "role": "PATRON",
+      "initial_state": "PRIVATE_ORDER_DIFFERENT_FROM_OFFER",
+      "action": "IMPORT_AND_COMPARE_ORDER",
+      "refusal_expected": "NO_FINAL_WIN_OR_HANDOVER_WITHOUT_AGREEMENT",
+      "append_only_evidence": [
+        "OFFER_VERSION",
+        "ORDER_VERSION",
+        "COMPARISON"
+      ],
+      "final_state": "AGREEMENT_REVIEW_REQUIRED",
+      "execution_mode": "EXTERNAL_DEPENDENCY"
+    },
+    {
+      "recipe_id": "G24",
+      "canonical_spaces": [
+        "N03",
+        "C16",
+        "C14"
+      ],
+      "role": "OWNER_SECURITE",
+      "initial_state": "SHARE_REVOKED_AFTER_PREVIEW",
+      "action": "REVOKE_SHARE",
+      "refusal_expected": "FUTURE_ACCESS_REFUSED_NO_RECALL_OF_PAST_DOWNLOAD",
+      "append_only_evidence": [
+        "SHARE_VERSION",
+        "REVOCATION_EVENT",
+        "ACCESS_LOG"
+      ],
+      "final_state": "FUTURE_ACCESS_CUT",
+      "execution_mode": "LOCAL"
+    },
+    {
+      "recipe_id": "G25",
+      "canonical_spaces": [
+        "C00",
+        "C11",
+        "N02"
+      ],
+      "role": "RESPONSABLE_PATRON",
+      "initial_state": "AI_UNAVAILABLE_DURING_FINAL_CHECK",
+      "action": "OPEN_MANUAL_COFFRE",
+      "refusal_expected": "NO_AUTOMATIC_EXPORT_SUCCESS",
+      "append_only_evidence": [
+        "AI_OUTAGE",
+        "MANUAL_REVIEW",
+        "EXPORT_STATE"
+      ],
+      "final_state": "MANUAL_CONTINUITY",
+      "execution_mode": "LOCAL"
+    },
+    {
+      "recipe_id": "G26",
+      "canonical_spaces": [
+        "C02"
+      ],
+      "role": "COMMERCIAL",
+      "initial_state": "BOAMP_UNAVAILABLE",
+      "action": "REFRESH_RADAR_OR_MANUAL_INTAKE",
+      "refusal_expected": "NO_FRESHNESS_CLAIM",
+      "append_only_evidence": [
+        "SOURCE_OUTAGE",
+        "LAST_SUCCESS",
+        "MANUAL_OBSERVATION"
+      ],
+      "final_state": "FRESHNESS_VISIBLE",
+      "execution_mode": "EXTERNAL_DEPENDENCY"
+    },
+    {
+      "recipe_id": "G27",
+      "canonical_spaces": [
+        "C05",
+        "N05"
+      ],
+      "role": "CONDUCTEUR",
+      "initial_state": "OFFLINE_LOCAL_CAPTURE",
+      "action": "CAPTURE_NOTE_AND_PHOTO",
+      "refusal_expected": "LOCAL_CAPTURE_NEVER_SHARED_AS_CONFIRMED",
+      "append_only_evidence": [
+        "LOCAL_CAPTURE",
+        "SYNC_STATE",
+        "LOSS_WARNING"
+      ],
+      "final_state": "LOCAL_OR_PENDING",
+      "execution_mode": "UI_MANUAL"
+    },
+    {
+      "recipe_id": "G28",
+      "canonical_spaces": [
+        "C00",
+        "C11"
+      ],
+      "role": "RESPONSABLE",
+      "initial_state": "PARIS_SOURCE_MOROCCO_USER",
+      "action": "DISPLAY_SOURCE_AND_LOCAL_TIME",
+      "refusal_expected": "NO_DEVICE_ONLY_RECALCULATION",
+      "append_only_evidence": [
+        "SOURCE_TIME",
+        "TIMEZONE_CONVERSION"
+      ],
+      "final_state": "SAME_INSTANT_EXPLICIT",
+      "execution_mode": "LOCAL"
+    },
+    {
+      "recipe_id": "G29",
+      "canonical_spaces": [
+        "C06",
+        "C00"
+      ],
+      "role": "RESPONSABLE_SECURITE",
+      "initial_state": "HOSTILE_DCE_INSTRUCTION",
+      "action": "ANALYZE_WITHOUT_EXECUTION",
+      "refusal_expected": "NO_EXTERNAL_ACTION_OR_RIGHT_CHANGE",
+      "append_only_evidence": [
+        "HOSTILE_FRAGMENT",
+        "REVIEW_REQUIRED",
+        "NO_ACTION_EVENT"
+      ],
+      "final_state": "SAFE_MANUAL_REVIEW",
+      "execution_mode": "LOCAL"
+    },
+    {
+      "recipe_id": "G30",
+      "canonical_spaces": [
+        "C11"
+      ],
+      "role": "RESPONSABLE_PATRON",
+      "initial_state": "AUTHORIZED_PACKAGE_MODIFIED",
+      "action": "EXPORT_PACKAGE",
+      "refusal_expected": "OLD_AUTHORIZATION_REFUSED",
+      "append_only_evidence": [
+        "OLD_MANIFEST",
+        "NEW_HASH",
+        "REFUSAL_EVENT"
+      ],
+      "final_state": "NEW_CANDIDATE_REQUIRED",
+      "execution_mode": "LOCAL"
+    },
+    {
+      "recipe_id": "G31",
+      "canonical_spaces": [
+        "C11",
+        "N02"
+      ],
+      "role": "OPERATEUR",
+      "initial_state": "DECLARED_TRANSMISSION_WITHOUT_RECEIPT",
+      "action": "RECORD_TRANSMISSION_ATTEMPT",
+      "refusal_expected": "NO_EXTERNAL_RECEIPT_PRESUMED",
+      "append_only_evidence": [
+        "TRANSMISSION_ATTEMPT",
+        "EXTERNAL_RECEIPT_UNKNOWN"
+      ],
+      "final_state": "UNKNOWN_RECEIPT",
+      "execution_mode": "EXTERNAL_DEPENDENCY"
+    },
+    {
+      "recipe_id": "G32",
+      "canonical_spaces": [
+        "C11"
+      ],
+      "role": "OPERATEUR_PATRON",
+      "initial_state": "RECEIPT_WRONG_LOT_OR_LATE",
+      "action": "RECONCILE_RECEIPT",
+      "refusal_expected": "SUCCESS_BLOCKED_ON_MISMATCH",
+      "append_only_evidence": [
+        "RECEIPT",
+        "LOT_REFERENCE",
+        "TIME_COMPARISON"
+      ],
+      "final_state": "RECEIPT_INCONSISTENT",
+      "execution_mode": "EXTERNAL_DEPENDENCY"
+    },
+    {
+      "recipe_id": "G33",
+      "canonical_spaces": [
+        "C11"
+      ],
+      "role": "RESPONSABLE",
+      "initial_state": "RECEIPT_WITHOUT_FILE_INVENTORY",
+      "action": "REGISTER_PARTIAL_RECEIPT",
+      "refusal_expected": "NO_INTEGRAL_CONTENT_CLAIM",
+      "append_only_evidence": [
+        "RECEIPT_PROOF",
+        "PARTIAL_MANIFEST",
+        "LIMITATION"
+      ],
+      "final_state": "RECEIPT_PROVEN_CONTENT_PARTIAL",
+      "execution_mode": "EXTERNAL_DEPENDENCY"
+    },
+    {
+      "recipe_id": "G34",
+      "canonical_spaces": [
+        "C11"
+      ],
+      "role": "RESPONSABLE_PATRON",
+      "initial_state": "MISSING_FILE_AFTER_SUBMISSION",
+      "action": "PREPARE_FULL_REDEPOSIT",
+      "refusal_expected": "OLD_PACKAGE_NOT_REPLACED",
+      "append_only_evidence": [
+        "OLD_PACKAGE",
+        "NEW_CANDIDATE",
+        "NEW_RECEIPT"
+      ],
+      "final_state": "FULL_REDEPOSIT_REQUIRED",
+      "execution_mode": "EXTERNAL_DEPENDENCY"
+    },
+    {
+      "recipe_id": "G35",
+      "canonical_spaces": [
+        "C11"
+      ],
+      "role": "OPERATEUR",
+      "initial_state": "BACKUP_COPY_PREPARED",
+      "action": "RECORD_BACKUP_SEPARATELY",
+      "refusal_expected": "NO_AUTOMATIC_PRIMARY_REPLACEMENT",
+      "append_only_evidence": [
+        "BACKUP_MANIFEST",
+        "PRIMARY_PACKAGE",
+        "SEPARATE_EVENT"
+      ],
+      "final_state": "BACKUP_DISTINCT",
+      "execution_mode": "LOCAL"
+    },
+    {
+      "recipe_id": "G36",
+      "canonical_spaces": [
+        "C10",
+        "C12"
+      ],
+      "role": "CONDUCTEUR_PATRON",
+      "initial_state": "WON_WITH_TWO_HOUR_PROMISE",
+      "action": "PREPARE_HANDOVER",
+      "refusal_expected": "CLOSURE_BLOCKED_IF_COMMITMENT_OMITTED",
+      "append_only_evidence": [
+        "COMMITMENT_SOURCE",
+        "HANDOVER_ENTRY",
+        "BLOCKER"
+      ],
+      "final_state": "COMMITMENT_RETAINED_OR_ARBITRATED",
+      "execution_mode": "LOCAL"
+    },
+    {
+      "recipe_id": "G37",
+      "canonical_spaces": [
+        "C03",
+        "C10",
+        "C11"
+      ],
+      "role": "ADMINISTRATIF",
+      "initial_state": "APPLICATION_ONLY_WITHOUT_PRICE",
+      "action": "PREPARE_CANDIDATURE_PACKAGE",
+      "refusal_expected": "NO_ARTIFICIAL_PRICING_REQUIREMENT",
+      "append_only_evidence": [
+        "PHASE_DECISION",
+        "CANDIDATURE_REASON"
+      ],
+      "final_state": "CANDIDATURE_ONLY",
+      "execution_mode": "LOCAL"
+    },
+    {
+      "recipe_id": "G38",
+      "canonical_spaces": [
+        "C12"
+      ],
+      "role": "RESPONSABLE",
+      "initial_state": "TWO_LOTS_ONE_WON",
+      "action": "RECORD_LOT_OUTCOME",
+      "refusal_expected": "LOST_LOT_EXCLUDED_FROM_HANDOVER",
+      "append_only_evidence": [
+        "LOT_OUTCOME_A",
+        "LOT_OUTCOME_B",
+        "HANDOVER_SCOPE"
+      ],
+      "final_state": "ONE_LOT_TRANSMITTED",
+      "execution_mode": "LOCAL"
+    },
+    {
+      "recipe_id": "G39",
+      "canonical_spaces": [
+        "C08"
+      ],
+      "role": "DAF",
+      "initial_state": "SALE_120_COST_100_THEN_UNKNOWN",
+      "action": "CALCULATE_MARGIN",
+      "refusal_expected": "UNKNOWN_COST_NOT_ZERO",
+      "append_only_evidence": [
+        "SALE_SOURCE",
+        "COST_SOURCE",
+        "FORMULA",
+        "UNKNOWN_STATE"
+      ],
+      "final_state": "MARGIN_20_PERCENT_THEN_INCOMPLETE",
+      "execution_mode": "LOCAL"
+    },
+    {
+      "recipe_id": "G40",
+      "canonical_spaces": [
+        "C08",
+        "C06"
+      ],
+      "role": "METREUR",
+      "initial_state": "EXCEL_TOTAL_NOT_RECALCULATED",
+      "action": "IMPORT_AND_VERIFY_TOTAL",
+      "refusal_expected": "NO_UNCHECKED_TOTAL_ACCEPTANCE",
+      "append_only_evidence": [
+        "ORIGINAL_FILE",
+        "RECALCULATION_RESULT",
+        "HIDDEN_ROW_WARNING"
+      ],
+      "final_state": "TOTAL_TO_VERIFY",
+      "execution_mode": "LOCAL"
+    },
+    {
+      "recipe_id": "G41",
+      "canonical_spaces": [
+        "C08"
+      ],
+      "role": "CONDUCTEUR_PATRON",
+      "initial_state": "RESOURCE_CONFLICT",
+      "action": "RUN_CAPACITY_CHECK",
+      "refusal_expected": "CAPACITY_NOT_DEMONSTRATED_BLOCKS_GO",
+      "append_only_evidence": [
+        "RESOURCE_PERIOD",
+        "CAPACITY_RUN",
+        "CONFLICT"
+      ],
+      "final_state": "CAPACITY_REVIEW_REQUIRED",
+      "execution_mode": "LOCAL"
+    },
+    {
+      "recipe_id": "G42",
+      "canonical_spaces": [
+        "C08",
+        "C07"
+      ],
+      "role": "DAF_PATRON",
+      "initial_state": "CASH_GAP_BEFORE_FIRST_PAYMENT",
+      "action": "REVIEW_FINANCING",
+      "refusal_expected": "NO_FINANCIAL_GO_ON_POSITIVE_MARGIN_ONLY",
+      "append_only_evidence": [
+        "PAYMENT_SCHEDULE",
+        "CASH_GAP",
+        "DECISION"
+      ],
+      "final_state": "FINANCING_UNPROVEN",
+      "execution_mode": "LOCAL"
+    },
+    {
+      "recipe_id": "G43",
+      "canonical_spaces": [
+        "C13",
+        "C10"
+      ],
+      "role": "ADMINISTRATIF_QSE",
+      "initial_state": "INSURANCE_VALID_BUT_ACTIVITY_OUTSIDE_SCOPE",
+      "action": "REUSE_CAPABILITY",
+      "refusal_expected": "DATE_ALONE_CANNOT_MAKE_APPLICABLE",
+      "append_only_evidence": [
+        "INSURANCE_VERSION",
+        "ACTIVITY_SCOPE",
+        "APPLICABILITY_DECISION"
+      ],
+      "final_state": "CAPABILITY_NOT_APPLICABLE",
+      "execution_mode": "LOCAL"
+    },
+    {
+      "recipe_id": "G44",
+      "canonical_spaces": [
+        "C13",
+        "C10",
+        "N03"
+      ],
+      "role": "ADMINISTRATIF",
+      "initial_state": "CV_WITH_SENSITIVE_DATA",
+      "action": "CREATE_MINIMIZED_SHARE_VERSION",
+      "refusal_expected": "SENSITIVE_SHARE_BLOCKED_UNTIL_REVIEW",
+      "append_only_evidence": [
+        "ORIGINAL_RESTRICTED",
+        "MINIMIZED_VERSION",
+        "REVIEW"
+      ],
+      "final_state": "MINIMIZED_REVIEW_REQUIRED",
+      "execution_mode": "UI_MANUAL"
+    },
+    {
+      "recipe_id": "G45",
+      "canonical_spaces": [
+        "C14",
+        "C13"
+      ],
+      "role": "OWNER",
+      "initial_state": "DIRECTION_EXPORT_WITHOUT_AUTHORITY",
+      "action": "REQUEST_SCOPED_EXPORT",
+      "refusal_expected": "SENSITIVE_EXPORT_REQUIRES_DIRECTION_AUTHORITY",
+      "append_only_evidence": [
+        "EXPORT_REQUEST",
+        "AUTHORITY_CHECK",
+        "APPROVAL"
+      ],
+      "final_state": "EXPORT_BLOCKED_OR_APPROVED",
+      "execution_mode": "LOCAL"
+    },
+    {
+      "recipe_id": "G46",
+      "canonical_spaces": [
+        "C14"
+      ],
+      "role": "SUPPORT",
+      "initial_state": "SUPPORT_AFTER_EXPIRY",
+      "action": "REQUEST_DIAGNOSTIC_ACCESS",
+      "refusal_expected": "EXPIRED_ACCESS_REFUSED",
+      "append_only_evidence": [
+        "EXPIRY",
+        "ACCESS_ATTEMPT",
+        "REFUSAL_AUDIT"
+      ],
+      "final_state": "ACCESS_REFUSED",
+      "execution_mode": "LOCAL"
+    },
+    {
+      "recipe_id": "G47",
+      "canonical_spaces": [
+        "C14",
+        "N02"
+      ],
+      "role": "OWNER_DATA",
+      "initial_state": "EXPORT_INTERRUPTED_OR_LITIGATION_OPEN",
+      "action": "REQUEST_CLOSURE",
+      "refusal_expected": "CLOSURE_BLOCKED",
+      "append_only_evidence": [
+        "EXPORT_STATE",
+        "LITIGATION_STATE",
+        "CLOSURE_REFUSAL"
+      ],
+      "final_state": "CLOSURE_BLOCKED",
+      "execution_mode": "LOCAL"
+    },
+    {
+      "recipe_id": "G48",
+      "canonical_spaces": [
+        "C14",
+        "C00"
+      ],
+      "role": "EXPLOITATION",
+      "initial_state": "RESTORE_WITH_REVOKED_MEMBER",
+      "action": "RESTORE_ISOLATED_COPY",
+      "refusal_expected": "REVOKED_ACCESS_NOT_REINTRODUCED",
+      "append_only_evidence": [
+        "BACKUP_HASH",
+        "REVOCATION_SET",
+        "RESTORE_CHECK"
+      ],
+      "final_state": "RESTORE_REJECTED_OR_SANITIZED",
+      "execution_mode": "UI_MANUAL"
+    },
+    {
+      "recipe_id": "G49",
+      "canonical_spaces": [
+        "C00",
+        "C07",
+        "C11"
+      ],
+      "role": "PATRON",
+      "initial_state": "KEYBOARD_ONLY_AUTHORIZATION",
+      "action": "NAVIGATE_AND_CONFIRM_WITH_KEYBOARD",
+      "refusal_expected": "NO_MOUSE_ONLY_ACTION",
+      "append_only_evidence": [
+        "FOCUS_ORDER",
+        "LABELS",
+        "AUTHORIZATION_EVENT"
+      ],
+      "final_state": "KEYBOARD_COMPLETE",
+      "execution_mode": "UI_MANUAL"
+    },
+    {
+      "recipe_id": "G50",
+      "canonical_spaces": [
+        "C05",
+        "C10",
+        "C13"
+      ],
+      "role": "QSE_RESPONSABLE",
+      "initial_state": "ENVIRONMENTAL_CRITERION_WITHOUT_RELEVANT_PROOF",
+      "action": "QUALIFY_RESPONSE",
+      "refusal_expected": "NO_GENERIC_NOTE_AS_EVIDENCE",
+      "append_only_evidence": [
+        "CRITERION_SOURCE",
+        "MISSING_PROOF",
+        "REVIEW"
+      ],
+      "final_state": "EVIDENCE_REQUIRED",
+      "execution_mode": "LOCAL"
+    },
+    {
+      "recipe_id": "G51",
+      "canonical_spaces": [
+        "C07",
+        "C11",
+        "N01"
+      ],
+      "role": "PATRON_DELEGATE",
+      "initial_state": "EXPIRED_CONDITION_OR_CONCURRENT_DECISIONS",
+      "action": "VALIDATE_GATE",
+      "refusal_expected": "OPEN_CONDITION_OR_CONFLICT_BLOCKS",
+      "append_only_evidence": [
+        "CONDITION_EXPIRY",
+        "CONCURRENT_DECISIONS",
+        "BLOCKING_GATE"
+      ],
+      "final_state": "VALIDATION_BLOCKED",
+      "execution_mode": "LOCAL"
+    },
+    {
+      "recipe_id": "G52",
+      "canonical_spaces": [
+        "C00",
+        "C01",
+        "C08",
+        "C13",
+        "C16"
+      ],
+      "role": "RESPONSABLE_SECURITE",
+      "initial_state": "MARGIN_REQUEST_OR_REVOKED_OUTPUT",
+      "action": "READ_ALLOWED_SURFACE",
+      "refusal_expected": "NO_DIRECT_OR_DERIVED_MARGIN_DISCLOSURE",
+      "append_only_evidence": [
+        "ACCESS_DENIAL",
+        "CLASSIFICATION",
+        "REVOKED_SHARE"
+      ],
+      "final_state": "SAFE_REFUSAL",
+      "execution_mode": "LOCAL"
+    }
+  ]
+}

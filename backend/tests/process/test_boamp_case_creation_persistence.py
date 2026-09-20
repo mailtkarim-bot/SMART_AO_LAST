@@ -11,11 +11,17 @@ from app.modules.opportunity.application.boamp_case_creation import (
     BoampCaseCreationCommand,
     BoampCaseCreationService,
 )
+from app.modules.opportunity.application.boamp_qualification import (
+    PatronBoampObservationService,
+)
+from app.modules.opportunity.infrastructure.boamp_qualification_repository import (
+    BoampQualificationRepository,
+)
 from app.modules.opportunity.infrastructure.observation_models import (
     BoampOpportunityObservationRecord,
     BoampOpportunityQualificationRecord,
 )
-from app.platform.events.dispatcher import CommandContext, CommandDispatcher
+from app.platform.events.dispatcher import CommandContext, CommandDispatcher, CommandExecutionError
 from app.platform.persistence.models import (
     CommandReceiptRecord,
     DomainEventRecord,
@@ -199,6 +205,23 @@ def test_qualified_signal_creates_one_case_and_replays_durably(
             == 1
         )
 
+        projection = PatronBoampObservationService(repository=BoampQualificationRepository()).read(
+            session=session,
+            tenant_id=tenant_id,
+            actor_id=identity_id,
+            actor_kind="PATRON_ADMIN",
+            now=NOW,
+        )[0]
+        assert projection.p0_state.value == "TARGETED"
+        assert projection.p1_state.value == "OPEN_WITH_UNKNOWNS"
+        assert projection.p1_case_id == case_id
+        assert projection.lot_scope_state.value == "UNKNOWN"
+        assert projection.lot_scope_source == "BOAMP"
+        assert {unknown["code"] for unknown in projection.unknowns} == {
+            "LOT_SCOPE",
+            "DCE_NOT_RECEIVED",
+        }
+
 
 def test_case_creation_requires_a_qualified_signal(
     database_engine: sa.Engine,
@@ -239,6 +262,57 @@ def test_case_creation_requires_a_qualified_signal(
             )
             == 0
         )
+
+
+def test_same_qualified_signal_with_new_idempotency_key_cannot_duplicate_case(
+    database_engine: sa.Engine,
+    session_factory: sessionmaker[Session],
+) -> None:
+    tenant_id, identity_id, membership_id, observation_id = _seed_signal(database_engine)
+    service = BoampCaseCreationService(
+        session_factory=session_factory,
+        dispatcher=_dispatcher(session_factory),
+    )
+    context = _context(
+        tenant_id=tenant_id,
+        identity_id=identity_id,
+        membership_id=membership_id,
+    )
+
+    first = service.create(
+        context=context,
+        command=_command(observation_id=observation_id),
+        now=NOW,
+    )
+    with pytest.raises(CommandExecutionError) as failure:
+        service.create(
+            context=context,
+            command=_command(observation_id=observation_id),
+            now=NOW,
+        )
+
+    assert isinstance(failure.value.__cause__, ValueError)
+    assert str(failure.value.__cause__) == "DUPLICATE_FUNCTIONAL_IDENTITY"
+    with session_factory() as session:
+        assert (
+            session.scalar(
+                sa.select(sa.func.count(CaseRecord.id)).where(CaseRecord.tenant_id == tenant_id)
+            )
+            == 1
+        )
+        assert (
+            session.scalar(
+                sa.select(sa.func.count(DomainEventRecord.id)).where(
+                    DomainEventRecord.tenant_id == tenant_id,
+                    DomainEventRecord.event_type == "CASE_CREATED",
+                )
+            )
+            == 1
+        )
+        case = session.get(CaseRecord, UUID(str(first.aggregate_refs[0]["aggregate_id"])))
+        assert case is not None
+        assert case.business_origin == "OPPORTUNITY"
+        assert case.origin_reference_id == observation_id
 
 
 def test_case_creation_does_not_cross_tenant_boundary(

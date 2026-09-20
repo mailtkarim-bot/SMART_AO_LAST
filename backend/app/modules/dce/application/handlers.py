@@ -57,6 +57,10 @@ from app.modules.dce.infrastructure.models.dce_classification import (
     DceDocumentClassificationResultRecord,
     DceDocumentClassificationRunRecord,
 )
+from app.modules.dce.infrastructure.models.dce_contributions import (
+    DceRequirementConflictRecord,
+    DceRequirementConflictResolutionRecord,
+)
 from app.modules.dce.infrastructure.models.dce_extraction import (
     DceDocumentExtractionFragmentRecord,
     DceDocumentExtractionRecord,
@@ -1751,6 +1755,25 @@ class RecordDceRequirementConfirmationHandler:
         )
         if requirement is None:
             raise ValueError("NOT_FOUND_OR_FORBIDDEN")
+        open_conflict = session.scalar(
+            sa.select(DceRequirementConflictRecord.id)
+            .outerjoin(
+                DceRequirementConflictResolutionRecord,
+                sa.and_(
+                    DceRequirementConflictResolutionRecord.tenant_id
+                    == DceRequirementConflictRecord.tenant_id,
+                    DceRequirementConflictResolutionRecord.conflict_id
+                    == DceRequirementConflictRecord.id,
+                ),
+            )
+            .where(
+                DceRequirementConflictRecord.tenant_id == context.tenant_id,
+                DceRequirementConflictRecord.requirement_id == requirement.id,
+                DceRequirementConflictResolutionRecord.id.is_(None),
+            )
+        )
+        if open_conflict is not None:
+            raise ValueError("DCE_REQUIREMENT_CONFLICT_OPEN")
         current = session.scalar(
             sa.select(DceRequirementConfirmationCurrentRecord)
             .where(

@@ -169,6 +169,7 @@ def build_collaborator_work_task_router(
                 expected_revision=request.expected_revision,
                 result_text=request.result_text,
                 source_locator=request.source_locator,
+                lot_reference=request.lot_reference,
                 outcome=request.outcome,
             ),
         )

@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 
 import type {
@@ -27,6 +28,9 @@ type CollaboratorWizardPanelProps = {
   wizardPreviewContent: string | null;
   wizardDocumentBusy: boolean;
   wizardDocumentKind: "TECHNICAL_RESPONSE" | "DC1" | "DC2" | "DC4";
+  wizardDraftSourceDocumentId: string;
+  wizardDraftSections: string;
+  wizardDraftSourceRefs: string;
   setWizardCaseId: Dispatch<SetStateAction<string>>;
   setWizardPackageId: Dispatch<SetStateAction<string>>;
   setWizardTaskId: Dispatch<SetStateAction<string>>;
@@ -35,12 +39,16 @@ type CollaboratorWizardPanelProps = {
   setWizardSnapshotId: Dispatch<SetStateAction<string>>;
   setWizardTransmissionId: Dispatch<SetStateAction<string>>;
   setWizardDocumentKind: Dispatch<SetStateAction<"TECHNICAL_RESPONSE" | "DC1" | "DC2" | "DC4">>;
+  setWizardDraftSourceDocumentId: Dispatch<SetStateAction<string>>;
+  setWizardDraftSections: Dispatch<SetStateAction<string>>;
+  setWizardDraftSourceRefs: Dispatch<SetStateAction<string>>;
   onLoad: () => void;
   onClaimTask: () => void;
-  onRecordResult: () => void;
+  onRecordResult: () => void | Promise<boolean | void>;
   onCompleteTask: () => void;
   onEvaluateReadiness: () => void;
   onGenerateDocument: () => void;
+  onCreateResponseDraft: () => void;
   onTransmitSnapshot: () => void;
   onPreviewDocument: (documentId: string) => void;
   onDownloadDocument: (documentId: string) => void;
@@ -70,16 +78,23 @@ export function CollaboratorWizardPanel({
   setWizardSnapshotId,
   setWizardTransmissionId,
   setWizardDocumentKind,
+  setWizardDraftSourceDocumentId,
+  setWizardDraftSections,
+  setWizardDraftSourceRefs,
   wizardPreviewDocumentId,
   wizardPreviewContent,
   wizardDocumentBusy,
   wizardDocumentKind,
+  wizardDraftSourceDocumentId,
+  wizardDraftSections,
+  wizardDraftSourceRefs,
   onLoad,
   onClaimTask,
   onRecordResult,
   onCompleteTask,
   onEvaluateReadiness,
   onGenerateDocument,
+  onCreateResponseDraft,
   onTransmitSnapshot,
   onPreviewDocument,
   onDownloadDocument,
@@ -90,6 +105,24 @@ export function CollaboratorWizardPanel({
   onDeclareTaskBlocker,
   onResolveTaskBlocker,
 }: CollaboratorWizardPanelProps) {
+  const [captureState, setCaptureState] = useState<"NONE" | "LOCAL" | "PENDING" | "CONFIRMED">("NONE");
+
+  useEffect(() => {
+    setCaptureState("NONE");
+  }, [wizardTaskId]);
+
+  function saveTerrainCaptureLocally() {
+    if (wizardResultText.trim()) setCaptureState("LOCAL");
+  }
+
+  async function synchronizeTerrainCapture() {
+    if (!wizardResultText.trim() || !wizardTaskId) return;
+    if (typeof navigator !== "undefined" && navigator.onLine === false) return;
+    setCaptureState("PENDING");
+    const result = await onRecordResult();
+    setCaptureState(result === false ? "PENDING" : "CONFIRMED");
+  }
+
   return (
     <section className="section-block wizard-section" id="collaborator-wizard-section">
       <div className="section-heading">
@@ -229,6 +262,29 @@ export function CollaboratorWizardPanel({
                       Clôturer
                     </button>
                   </div>
+                  <div className="detail-panel terrain-capture-card">
+                    <strong>Capture terrain</strong>
+                    <p>
+                      Disponibilité réelle : seules les pièces déjà chargées sont visibles ; aucun
+                      dossier complet hors connexion n’est promis.
+                    </p>
+                    <p>
+                      La capture locale reste visible comme locale ou en attente ; elle ne confirme
+                      la synchronisation qu’après l’enregistrement serveur.
+                    </p>
+                    <div className="workflow-summary">
+                      <span>État : <strong>{captureState}</strong></span>
+                      {captureState === "LOCAL" && <span>Risque : perte possible avant synchronisation</span>}
+                    </div>
+                    <div className="wizard-action-row">
+                      <button className="secondary-button" type="button" disabled={!wizardResultText.trim()} onClick={saveTerrainCaptureLocally}>
+                        Conserver localement
+                      </button>
+                      <button className="secondary-button" type="button" disabled={!wizardResultText.trim() || !wizardTaskId || captureState === "CONFIRMED"} onClick={() => void synchronizeTerrainCapture()}>
+                        Synchroniser la capture
+                      </button>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -260,6 +316,21 @@ export function CollaboratorWizardPanel({
                 >
                   Générer la réponse technique
                 </button>
+              </div>
+              <div className="response-draft-form">
+                <label>
+                  <span>Document source (UUID)</span>
+                  <input value={wizardDraftSourceDocumentId} onChange={(event) => setWizardDraftSourceDocumentId(event.target.value)} placeholder="Par défaut : premier document généré" />
+                </label>
+                <label>
+                  <span>Sections (séparées par des virgules)</span>
+                  <input value={wizardDraftSections} onChange={(event) => setWizardDraftSections(event.target.value)} />
+                </label>
+                <label>
+                  <span>Sources (UUID séparés par des virgules)</span>
+                  <input value={wizardDraftSourceRefs} onChange={(event) => setWizardDraftSourceRefs(event.target.value)} placeholder="UUID exigence ou tâche" />
+                </label>
+                <button className="secondary-button" type="button" onClick={onCreateResponseDraft}>Créer le brouillon de réponse</button>
               </div>
               {wizardPackage.latest_readiness ? (
                 <div className="readiness-card">
@@ -320,6 +391,28 @@ export function CollaboratorWizardPanel({
                           Télécharger
                         </button>
                       </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {wizardPackage.response_drafts.length > 0 && (
+                <div className="response-plan" aria-label="Plan de réponse">
+                  <div className="panel-heading">
+                    <div>
+                      <h3>Plan de réponse</h3>
+                      <p>Sections et sources réutilisables, sans donnée financière.</p>
+                    </div>
+                    <span className="rule-tag">
+                      {wizardPackage.response_drafts.length} brouillon{wizardPackage.response_drafts.length > 1 ? "s" : ""}
+                    </span>
+                  </div>
+                  {wizardPackage.response_drafts.map((draft) => (
+                    <div className="response-plan-row" key={`${draft.draft_id}-${draft.version}`}>
+                      <div>
+                        <strong>Brouillon v{draft.version}</strong>
+                        <small>{draft.state} · {draft.responsible_role}</small>
+                      </div>
+                      <span>{draft.section_codes.join(" · ")}</span>
                     </div>
                   ))}
                 </div>

@@ -17,11 +17,13 @@ from app.platform.security.context import (
     AssignmentScope,
     DataClassification,
     MembershipState,
+    OperationalProfile,
 )
 from app.platform.security.models import (
     AuthSessionRecord,
     CaseAssignmentRecord,
     IdentityRecord,
+    TenantDelegationRecord,
     TenantMembershipRecord,
 )
 from app.platform.security.tokens import AccessTokenRejectedError, JwtAccessTokenCodec
@@ -102,10 +104,22 @@ class AuthenticationContextResolver:
                     )
                     try:
                         actor_kind = ActorKind(membership.role)
+                        operational_profile = (
+                            OperationalProfile(membership.operational_profile)
+                            if membership.operational_profile is not None
+                            else None
+                        )
                     except ValueError:
                         rejected = True
                     else:
                         assignment_scopes = self._active_assignment_scopes(
+                            session=session,
+                            tenant_id=membership.tenant_id,
+                            membership_id=membership.id,
+                            actor_kind=actor_kind,
+                            now=now,
+                        )
+                        delegated_capabilities, delegated_case_ids = self._active_delegation_scope(
                             session=session,
                             tenant_id=membership.tenant_id,
                             membership_id=membership.id,
@@ -119,7 +133,9 @@ class AuthenticationContextResolver:
                             membership_id=membership.id,
                             actor_kind=actor_kind,
                             membership_state=MembershipState.ACTIVE,
-                            capabilities=capabilities_for(actor_kind),
+                            capabilities=capabilities_for(
+                                actor_kind, delegated_capabilities=delegated_capabilities
+                            ),
                             assigned_case_ids=frozenset(
                                 scope.case_id for scope in assignment_scopes
                             ),
@@ -128,11 +144,42 @@ class AuthenticationContextResolver:
                             mfa_verified_at=auth_session.mfa_verified_at,
                             correlation_id=uuid4(),
                             assignment_scopes=assignment_scopes,
+                            operational_profile=operational_profile,
+                            delegated_case_ids=delegated_case_ids,
                         )
 
         if rejected or resolved_context is None:
             raise UnauthenticatedError()
         return resolved_context
+
+    @staticmethod
+    def _active_delegation_scope(
+        *,
+        session: Session,
+        tenant_id,
+        membership_id,
+        actor_kind: ActorKind,
+        now: datetime,
+    ) -> tuple[frozenset[str], frozenset]:
+        if actor_kind is not ActorKind.PATRON_DELEGATE:
+            return frozenset(), frozenset()
+        records = session.scalars(
+            sa.select(TenantDelegationRecord).where(
+                TenantDelegationRecord.tenant_id == tenant_id,
+                TenantDelegationRecord.delegatee_membership_id == membership_id,
+                TenantDelegationRecord.state == "ACTIVE",
+                TenantDelegationRecord.starts_at <= now,
+                TenantDelegationRecord.expires_at > now,
+            )
+        )
+        capabilities: set[str] = set()
+        case_ids = set()
+        for record in records:
+            capabilities.update(record.capabilities_json)
+            case_ids.update(record.case_ids_json)
+        from uuid import UUID as UUIDType
+
+        return frozenset(capabilities), frozenset(UUIDType(value) for value in case_ids)
 
     @staticmethod
     def _active_assignment_scopes(

@@ -46,6 +46,7 @@ def _seed_principal(
     engine: sa.Engine,
     *,
     role: str = "PATRON_ADMIN",
+    mfa_verified: bool = True,
 ) -> tuple[UUID, UUID, UUID, UUID]:
     tenant_id = uuid4()
     identity_id = uuid4()
@@ -82,13 +83,13 @@ def _seed_principal(
                 membership_id=membership_id,
                 identity_id=identity_id,
                 state="ACTIVE",
-                auth_strength="PASSWORD",
+                auth_strength="MFA" if mfa_verified else "PASSWORD",
                 token_version=1,
                 issued_at=NOW,
                 last_seen_at=NOW,
                 expires_at=NOW + timedelta(hours=8),
                 absolute_expires_at=NOW + timedelta(hours=12),
-                mfa_verified_at=None,
+                mfa_verified_at=NOW if mfa_verified else None,
                 revoked_at=None,
                 revoke_reason=None,
             )
@@ -155,6 +156,20 @@ def _payload() -> dict[str, str]:
     }
 
 
+def _case_payload() -> dict[str, object]:
+    return {
+        "command_id": str(uuid4()),
+        "idempotency_key": str(uuid4()),
+        "correlation_id": str(uuid4()),
+        "title": "Première Affaire",
+        "object_description": "Travaux de réhabilitation.",
+        "scope_kind": "SINGLE_LOT",
+        "lot_numbers": ["01"],
+        "origin_kind": "MANUAL",
+        "origin_rationale": "Création depuis EXP-01.",
+    }
+
+
 @pytest.mark.api
 @pytest.mark.db
 @pytest.mark.security
@@ -169,6 +184,32 @@ def test_consultation_routes_require_server_resolved_bearer_context(
 
     assert response.status_code == 401
     assert response.json()["detail"] == "UNAUTHENTICATED"
+
+
+@pytest.mark.api
+@pytest.mark.db
+@pytest.mark.security
+def test_consultation_routes_reject_password_only_session(
+    database_engine: sa.Engine,
+    session_factory: sessionmaker[Session],
+) -> None:
+    _, identity_id, _, auth_session_id = _seed_principal(
+        database_engine,
+        mfa_verified=False,
+    )
+    client, access_tokens = _client(session_factory)
+
+    response = client.get(
+        f"/api/v1/consultations/{uuid4()}",
+        headers=_headers(
+            access_tokens,
+            identity_id=identity_id,
+            session_id=auth_session_id,
+        ),
+    )
+
+    assert response.status_code == 403
+    assert response.json() == {"detail": "STEP_UP_REQUIRED"}
 
 
 @pytest.mark.api
@@ -189,6 +230,31 @@ def test_patron_can_create_and_read_consultation_with_authenticated_context(
     assert created.status_code == 201
     assert read.status_code == 200
     assert read.json()["id"] == payload["consultation_id"]
+
+
+@pytest.mark.api
+@pytest.mark.db
+@pytest.mark.security
+def test_mfa_patron_replay_returns_the_same_first_case(
+    database_engine: sa.Engine,
+    session_factory: sessionmaker[Session],
+) -> None:
+    _, identity_id, _, auth_session_id = _seed_principal(database_engine)
+    client, access_tokens = _client(session_factory)
+    headers = _headers(
+        access_tokens,
+        identity_id=identity_id,
+        session_id=auth_session_id,
+    )
+    payload = _case_payload()
+
+    created = client.post("/api/v1/cases", json=payload, headers=headers)
+    replayed = client.post("/api/v1/cases", json=payload, headers=headers)
+
+    assert created.status_code == 201
+    assert replayed.status_code == 200
+    assert replayed.json()["case_id"] == created.json()["case_id"]
+    assert replayed.json()["replayed"] is True
 
 
 @pytest.mark.api

@@ -150,6 +150,45 @@ def test_authorization__when_sensitive_action_has_stale_mfa__then_requires_step_
     assert decision.http_status_code == 403
 
 
+@pytest.mark.parametrize(
+    "action",
+    ["decision.finalize", "submission.authorize", "submission.signature.write"],
+)
+def test_sensitive_actions_share_the_same_recent_mfa_boundary(action: str) -> None:
+    now = datetime(2026, 8, 13, 10, 0, tzinfo=UTC)
+    context = _context(
+        capabilities=frozenset({action}),
+        mfa_verified_at=now - timedelta(minutes=16),
+    )
+
+    decision = AuthorizationPolicy().authorize(
+        context=context,
+        request=AuthorizationRequest(
+            action=action,
+            resource=_resource(context),
+            mfa_required=True,
+            evaluated_at=now,
+        ),
+    )
+
+    assert decision.code == "STEP_UP_REQUIRED"
+
+
+def test_authorization__when_mfa_is_from_the_future__then_requires_step_up() -> None:
+    now = datetime(2026, 8, 13, 10, 0, tzinfo=UTC)
+    context = _context(mfa_verified_at=now + timedelta(seconds=1))
+    request = AuthorizationRequest(
+        action="decision.finalize",
+        resource=_resource(context),
+        mfa_required=True,
+        evaluated_at=now,
+    )
+
+    decision = AuthorizationPolicy().authorize(context=context, request=request)
+
+    assert decision.code == "STEP_UP_REQUIRED"
+
+
 def test_patron_allowed_with_recent_mfa() -> None:
     now = datetime(2026, 8, 13, 10, 0, tzinfo=UTC)
     context = _context(mfa_verified_at=now - timedelta(minutes=14))

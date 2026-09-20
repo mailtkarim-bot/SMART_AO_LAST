@@ -16,9 +16,12 @@ export type AuthenticationState = {
   accessToken: string;
   currentActor: CurrentActor | null;
   isRestoring: boolean;
+  sessionExpired: boolean;
+  hasSession: boolean;
   isAuthenticated: boolean;
   api: ApiClient;
   login: (input: LoginInput) => Promise<CurrentActor>;
+  refreshActor: () => Promise<CurrentActor>;
   logout: () => Promise<void>;
 };
 
@@ -26,6 +29,7 @@ export function useAuthentication(baseUrl: string): AuthenticationState {
   const [accessToken, setAccessToken] = useState("");
   const [currentActor, setCurrentActor] = useState<CurrentActor | null>(null);
   const [isRestoring, setIsRestoring] = useState(true);
+  const [sessionExpired, setSessionExpired] = useState(false);
 
   const handleTokenRefreshed = useCallback((session: AuthSession) => {
     setAccessToken(session.access_token);
@@ -33,6 +37,7 @@ export function useAuthentication(baseUrl: string): AuthenticationState {
   const handleSessionExpired = useCallback(() => {
     setAccessToken("");
     setCurrentActor(null);
+    setSessionExpired(true);
   }, []);
 
   const api = useMemo(
@@ -49,6 +54,7 @@ export function useAuthentication(baseUrl: string): AuthenticationState {
     setIsRestoring(true);
     setAccessToken("");
     setCurrentActor(null);
+    setSessionExpired(false);
 
     async function restoreSession() {
       try {
@@ -64,6 +70,7 @@ export function useAuthentication(baseUrl: string): AuthenticationState {
         if (!cancelled) {
           setAccessToken(session.access_token);
           setCurrentActor(actor);
+          setSessionExpired(false);
         }
       } catch {
         if (!cancelled) {
@@ -93,10 +100,17 @@ export function useAuthentication(baseUrl: string): AuthenticationState {
       const actor = await authenticatedApi.getCurrentActor();
       setAccessToken(session.access_token);
       setCurrentActor(actor);
+      setSessionExpired(false);
       return actor;
     },
     [api, baseUrl, handleSessionExpired, handleTokenRefreshed],
   );
+
+  const refreshActor = useCallback(async () => {
+    const actor = await api.getCurrentActor();
+    setCurrentActor(actor);
+    return actor;
+  }, [api]);
 
   const logout = useCallback(async () => {
     try {
@@ -104,6 +118,7 @@ export function useAuthentication(baseUrl: string): AuthenticationState {
     } finally {
       setAccessToken("");
       setCurrentActor(null);
+      setSessionExpired(false);
     }
   }, [api]);
 
@@ -111,9 +126,12 @@ export function useAuthentication(baseUrl: string): AuthenticationState {
     accessToken,
     currentActor,
     isRestoring,
-    isAuthenticated: Boolean(accessToken && currentActor),
+    sessionExpired,
+    hasSession: Boolean(accessToken && currentActor),
+    isAuthenticated: Boolean(accessToken && currentActor?.mfa_verified),
     api,
     login,
+    refreshActor,
     logout,
   };
 }

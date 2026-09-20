@@ -60,6 +60,13 @@ export function DceKnowledgePanel({
           <div className="dce-reading-panel">
             <div className="dce-reading-heading"><div><span className="section-kicker">PROJECTION DCE</span><h3>{reading.work_label}</h3></div><span className="state-badge state-monitor">{reading.dce_freshness}</span></div>
             <div className="dce-meta"><span>{reading.dce.lifecycle}</span><span>Version {reading.dce.dce_version_id}</span><span>Reçu le {formatDate(reading.dce.source_received_at)}</span></div>
+            <div className="dce-readiness" role="status">
+              <div><span>Classification</span><strong>{reading.dce.classification_readiness}</strong></div>
+              <div><span>Analyse</span><strong>{reading.dce.analysis_readiness}</strong></div>
+              {reading.dce.classification_readiness !== "CLASSIFIED" && (
+                <p>La synthèse reste partielle : les pièces non classifiées ou à revoir restent visibles.</p>
+              )}
+            </div>
             <div className="dce-counter-grid">
               <div><strong>{reading.counters.total}</strong><span>Exigences</span></div>
               <div><strong>{reading.counters.pending_human_confirmation}</strong><span>À confirmer</span></div>

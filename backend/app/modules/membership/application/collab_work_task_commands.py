@@ -55,11 +55,12 @@ class RecordTaskResultCommand(ApplicationCommand):
     expected_revision: int = Field(ge=0)
     result_text: str = Field(min_length=1, max_length=8_000)
     source_locator: str | None = Field(default=None, max_length=500)
+    lot_reference: str | None = Field(default=None, min_length=1, max_length=120)
     outcome: Literal["RECORDED", "NOT_APPLICABLE", "UNABLE_TO_COMPLETE"]
 
     @model_validator(mode="after")
     def validate_result(self) -> RecordTaskResultCommand:
-        if contains_forbidden_text(self.result_text, self.source_locator or ""):
+        if contains_forbidden_text(self.result_text, self.source_locator or "", self.lot_reference or ""):
             raise ValueError("FINANCIAL_DATA_FORBIDDEN")
         return self
 

@@ -24,9 +24,12 @@ def resolve_bearer_context(
     if scheme.casefold() != "bearer" or not access_token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="UNAUTHENTICATED")
     try:
-        return context_resolver.resolve(access_token=access_token)
+        context = context_resolver.resolve(access_token=access_token)
     except UnauthenticatedError as error:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="UNAUTHENTICATED",
         ) from error
+    if context.mfa_verified_at is None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="STEP_UP_REQUIRED")
+    return context

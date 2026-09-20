@@ -64,12 +64,60 @@ class SubmissionPackageRecord(TenantScopedRecord, Base):
     dce_version_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     technical_document_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     technical_document_version: Mapped[int] = mapped_column(sa.Integer, nullable=False)
-    financial_snapshot_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
-    financial_snapshot_revision: Mapped[int] = mapped_column(sa.Integer, nullable=False)
+    financial_snapshot_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), nullable=True)
+    financial_snapshot_revision: Mapped[int | None] = mapped_column(sa.Integer, nullable=True)
     version: Mapped[int] = mapped_column(sa.Integer, nullable=False)
     state: Mapped[str] = mapped_column(sa.String(24), nullable=False)
     manifest_sha256: Mapped[str] = mapped_column(sa.CHAR(64), nullable=False)
     manifest_json: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    actor_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    membership_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    command_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    idempotency_key: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    correlation_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True))
+
+
+class SubmissionPackageAuthorizationRecord(TenantScopedRecord, Base):
+    """Immutable Patron authorization for one exact submission package version."""
+
+    __tablename__ = "submission_package_authorizations"
+    __table_args__ = (
+        sa.ForeignKeyConstraint(
+            ["tenant_id"],
+            ["tenants.id"],
+            name="fk_submission_authorization__tenant",
+            ondelete="RESTRICT",
+        ),
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "submission_package_id"],
+            ["submission_packages.tenant_id", "submission_packages.id"],
+            name="fk_submission_authorization__package",
+            ondelete="RESTRICT",
+        ),
+        sa.UniqueConstraint("tenant_id", "id", name="uq_submission_authorization__tenant_id"),
+        sa.UniqueConstraint("tenant_id", "command_id", name="uq_submission_authorization__command"),
+        sa.UniqueConstraint(
+            "tenant_id",
+            "submission_package_id",
+            "package_version",
+            name="uq_submission_authorization__package_version",
+        ),
+        sa.CheckConstraint("package_version > 0", name="package_version_positive"),
+        sa.CheckConstraint("manifest_sha256 ~ '^[a-f0-9]{64}$'", name="manifest_sha256"),
+        sa.CheckConstraint("state = 'AUTHORIZED'", name="state"),
+        sa.Index(
+            "ix_submission_authorizations__tenant_package",
+            "tenant_id",
+            "submission_package_id",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    submission_package_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    package_version: Mapped[int] = mapped_column(sa.Integer, nullable=False)
+    manifest_sha256: Mapped[str] = mapped_column(sa.CHAR(64), nullable=False)
+    state: Mapped[str] = mapped_column(sa.String(16), nullable=False)
+    rationale: Mapped[str] = mapped_column(sa.String(2000), nullable=False)
     actor_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     membership_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     command_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
@@ -91,15 +139,20 @@ class SubmissionEvidenceRecord(TenantScopedRecord, Base):
         sa.UniqueConstraint("tenant_id", "id", name="uq_submission_evidence__tenant_id"),
         sa.UniqueConstraint("tenant_id", "command_id", name="uq_submission_evidence__command"),
         sa.CheckConstraint(
-            "evidence_type IN ('MANUAL_RECEIPT', 'MANUAL_PORTAL_REFERENCE')", name="evidence_type"
+            "evidence_type IN ("
+            "'MANUAL_RECEIPT', 'MANUAL_PORTAL_REFERENCE', 'HUMAN_DEPOSIT_ATTEMPT'"
+            ")",
+            name="evidence_type",
         ),
-        sa.CheckConstraint("status IN ('RECEIVED', 'REJECTED')", name="status"),
+        sa.CheckConstraint("manifest_sha256 ~ '^[a-f0-9]{64}$'", name="manifest_sha256"),
+        sa.CheckConstraint("status IN ('RECEIVED', 'REJECTED', 'UNKNOWN')", name="status"),
         sa.Index("ix_submission_evidence__tenant_package", "tenant_id", "submission_package_id"),
     )
 
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
     submission_package_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     case_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    manifest_sha256: Mapped[str] = mapped_column(sa.CHAR(64), nullable=False)
     evidence_type: Mapped[str] = mapped_column(sa.String(32), nullable=False)
     status: Mapped[str] = mapped_column(sa.String(16), nullable=False)
     external_reference_hash: Mapped[str] = mapped_column(sa.CHAR(64), nullable=False)
@@ -135,6 +188,7 @@ class SubmissionSignatureRecord(TenantScopedRecord, Base):
         ),
         sa.CheckConstraint("status IN ('REQUESTED', 'SIGNED', 'REJECTED')", name="status"),
         sa.CheckConstraint("expected_package_version > 0", name="expected_package_version"),
+        sa.CheckConstraint("manifest_sha256 ~ '^[a-f0-9]{64}$'", name="manifest_sha256"),
         sa.CheckConstraint(
             "provider_reference_hash IS NULL OR provider_reference_hash ~ '^[a-f0-9]{64}$'",
             name="provider_reference_hash",
@@ -152,6 +206,7 @@ class SubmissionSignatureRecord(TenantScopedRecord, Base):
     provider: Mapped[str] = mapped_column(sa.String(64), nullable=False)
     signer_membership_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     expected_package_version: Mapped[int] = mapped_column(sa.Integer, nullable=False)
+    manifest_sha256: Mapped[str] = mapped_column(sa.CHAR(64), nullable=False)
     status: Mapped[str] = mapped_column(sa.String(16), nullable=False)
     provider_reference_hash: Mapped[str | None] = mapped_column(sa.CHAR(64))
     signature_sha256: Mapped[str | None] = mapped_column(sa.CHAR(64))

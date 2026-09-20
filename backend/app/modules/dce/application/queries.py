@@ -146,6 +146,8 @@ class AssignedCaseProjection:
     case_lifecycle: str
     commercial_stage: str
     dce_availability: str
+    consultation_id: UUID | None
+    applicable_dce_version_id: UUID | None
 
 
 class AssignedCaseReader(Protocol):

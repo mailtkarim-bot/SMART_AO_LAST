@@ -54,6 +54,8 @@ def build_assigned_case_router(
                         case_lifecycle=candidate.case_lifecycle,
                         commercial_stage=candidate.commercial_stage,
                         dce_availability=candidate.dce_availability,
+                        consultation_id=candidate.consultation_id,
+                        applicable_dce_version_id=candidate.applicable_dce_version_id,
                     )
                 )
         return visible

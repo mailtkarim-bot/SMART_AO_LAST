@@ -12,6 +12,8 @@ const cases: AssignedCase[] = [
     case_lifecycle: "ACTIVE",
     commercial_stage: "REVIEW",
     dce_availability: "READY",
+    consultation_id: null,
+    applicable_dce_version_id: null,
   },
 ];
 

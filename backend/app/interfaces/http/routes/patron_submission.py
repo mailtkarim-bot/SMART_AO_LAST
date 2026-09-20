@@ -10,8 +10,10 @@ from app.interfaces.http.dependencies.auth import resolve_bearer_context as _res
 from app.interfaces.http.routes.consultations import ConsultationSecurityRuntime
 from app.modules.submission.application.service import SubmissionPackageService
 from app.modules.submission.public.contracts import (
+    AuthorizeSubmissionPackageRequest,
     PrepareSubmissionPackageRequest,
     SubmissionPackageCommandResponse,
+    SubmissionPackageManifestResponse,
 )
 from app.platform.events.dispatcher import (
     CommandExecutionError,
@@ -79,6 +81,96 @@ def build_patron_submission_router(
             status_code=status.HTTP_200_OK if result.replayed else status.HTTP_201_CREATED,
             content=response.model_dump(mode="json"),
         )
+
+    @router.post(
+        "/submission-packages/{submission_package_id}/authorize",
+        response_model=SubmissionPackageCommandResponse,
+        responses={
+            200: {"description": "Rejeu idempotent de l’autorisation P5."},
+            201: {"description": "Autorisation P5 append-only enregistrée."},
+            401: {"description": "Bearer absent, invalide ou expiré."},
+            403: {"description": "Autorisation réservée au Patron habilité avec step-up."},
+            404: {"description": "Paquet absent ou hors tenant."},
+            409: {"description": "Conflit de version ou d’idempotence."},
+            422: {"description": "Paquet ou décision non prêt."},
+        },
+    )
+    def authorize_submission_package(
+        submission_package_id: UUID,
+        request: AuthorizeSubmissionPackageRequest,
+        authorization: str | None = Header(default=None),
+    ) -> SubmissionPackageCommandResponse:
+        context = _resolve_context(
+            authorization=authorization,
+            context_resolver=security_runtime.context_resolver,
+        )
+        try:
+            result = service.authorize(
+                actor=context,
+                command=request.to_command(submission_package_id=submission_package_id),
+                now=datetime.now(tz=UTC),
+            )
+        except PermissionError as error:
+            if str(error) == "NOT_FOUND_OR_FORBIDDEN":
+                raise HTTPException(status_code=404, detail="NOT_FOUND_OR_FORBIDDEN") from error
+            raise HTTPException(status_code=403, detail="FORBIDDEN") from error
+        except (IdempotencyKeyReusedError, CommandInProgressError) as error:
+            raise HTTPException(status_code=409, detail="IDEMPOTENCY_CONFLICT") from error
+        except CommandExecutionError as error:
+            detail = str(error)
+            code = (
+                status.HTTP_409_CONFLICT
+                if detail in {"VERSION_CONFLICT", "SUBMISSION_PACKAGE_ALREADY_AUTHORIZED"}
+                else status.HTTP_404_NOT_FOUND
+                if detail == "NOT_FOUND_OR_FORBIDDEN"
+                else status.HTTP_422_UNPROCESSABLE_CONTENT
+            )
+            raise HTTPException(status_code=code, detail=detail) from error
+        response = SubmissionPackageCommandResponse(
+            command_id=result.command_id,
+            idempotency_key=result.idempotency_key,
+            result_code=result.result_code,
+            aggregate_refs=list(result.aggregate_refs),
+            event_ids=list(result.event_ids),
+            replayed=result.replayed,
+        )
+        return JSONResponse(
+            status_code=status.HTTP_200_OK if result.replayed else status.HTTP_201_CREATED,
+            content=response.model_dump(mode="json"),
+        )
+
+    @router.get(
+        "/submission-packages/{submission_package_id}/manifest",
+        response_model=SubmissionPackageManifestResponse,
+        responses={
+            200: {"description": "Manifeste exact et borné du paquet candidat."},
+            401: {"description": "Bearer absent, invalide ou expiré."},
+            403: {"description": "Lecture réservée au Patron habilité."},
+            404: {"description": "Paquet absent ou hors tenant."},
+            422: {"description": "Manifeste incohérent."},
+        },
+    )
+    def read_submission_manifest(
+        submission_package_id: UUID,
+        authorization: str | None = Header(default=None),
+    ) -> SubmissionPackageManifestResponse:
+        context = _resolve_context(
+            authorization=authorization,
+            context_resolver=security_runtime.context_resolver,
+        )
+        try:
+            manifest = service.read_manifest(
+                actor=context,
+                submission_package_id=submission_package_id,
+                now=datetime.now(tz=UTC),
+            )
+        except PermissionError as error:
+            if str(error) == "NOT_FOUND_OR_FORBIDDEN":
+                raise HTTPException(status_code=404, detail="NOT_FOUND_OR_FORBIDDEN") from error
+            raise HTTPException(status_code=403, detail="FORBIDDEN") from error
+        except CommandExecutionError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+        return SubmissionPackageManifestResponse.model_validate(manifest)
 
     @router.get(
         "/submission-packages/{submission_package_id}/export",

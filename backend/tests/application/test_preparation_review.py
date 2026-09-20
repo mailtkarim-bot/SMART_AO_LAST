@@ -349,6 +349,13 @@ def test_response_draft_is_versioned_replayed_and_financial_payload_is_rejected(
             instruction="Ajouter le prix et la marge dans le texte.",
         )
 
+    drafts = review.read_response_drafts(actor=_patron(actor), package_id=package_id, now=NOW)
+    assert len(drafts) == 1
+    assert drafts[0].draft_id == draft_id
+    assert drafts[0].section_codes_json == ["METHOD", "SOURCES"]
+    with pytest.raises(PermissionError, match="PATRON_REQUIRED"):
+        review.read_response_drafts(actor=actor, package_id=package_id, now=NOW)
+
 
 @pytest.mark.db
 @pytest.mark.security

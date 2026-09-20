@@ -24,6 +24,7 @@ describe("useAuthentication", () => {
             identity_id: "identity-1",
             actor_kind: "PATRON_ADMIN",
             membership_state: "ACTIVE",
+            mfa_verified: true,
           }),
           { status: 200 },
         ),
@@ -41,6 +42,7 @@ describe("useAuthentication", () => {
 
     expect(result.current.accessToken).toBe("access-1");
     expect(result.current.currentActor?.actor_kind).toBe("PATRON_ADMIN");
+    expect(result.current.isAuthenticated).toBe(true);
     expect(window.localStorage.getItem("smart-ao-token")).toBeNull();
   });
 
@@ -60,6 +62,7 @@ describe("useAuthentication", () => {
             identity_id: "identity-1",
             actor_kind: "PATRON_ADMIN",
             membership_state: "ACTIVE",
+            mfa_verified: true,
           }),
           { status: 200 },
         ),
@@ -77,6 +80,52 @@ describe("useAuthentication", () => {
     );
   });
 
+  it("marks the session expired when a protected request cannot be refreshed", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ access_token: "access-1", token_type: "Bearer", expires_in: 900 }), {
+          status: 200,
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            actor_id: "actor-1",
+            identity_id: "identity-1",
+            tenant_slug: "entreprise-test",
+            actor_kind: "PATRON_ADMIN",
+            operational_profile: null,
+            membership_state: "ACTIVE",
+            mfa_verified: true,
+          }),
+          { status: 200 },
+        ),
+      )
+      .mockResolvedValueOnce(new Response(JSON.stringify({ detail: "UNAUTHENTICATED" }), { status: 401 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ detail: "REFRESH_REJECTED" }), { status: 401 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useAuthentication("https://app.example.test"));
+    await waitFor(() => expect(result.current.isRestoring).toBe(false));
+    document.cookie = "smart_ao_csrf=csrf-expired; path=/";
+
+    await act(async () => {
+      await result.current.login({
+        email: "patron@example.test",
+        password: "x",
+        tenant_id: "tenant-1",
+      });
+    });
+    await act(async () => {
+      await expect(result.current.api.listAssignedCases()).rejects.toThrow("UNAUTHENTICATED");
+    });
+
+    expect(result.current.sessionExpired).toBe(true);
+    expect(result.current.accessToken).toBe("");
+    expect(result.current.currentActor).toBeNull();
+  });
+
   it("clears the in-memory session even when logout fails over the network", async () => {
     const fetchMock = vi
       .fn()
@@ -92,6 +141,7 @@ describe("useAuthentication", () => {
             identity_id: "identity-1",
             actor_kind: "PATRON_ADMIN",
             membership_state: "ACTIVE",
+            mfa_verified: true,
           }),
           { status: 200 },
         ),
@@ -128,6 +178,7 @@ describe("useAuthentication", () => {
             identity_id: "identity-1",
             actor_kind: "PATRON_ADMIN",
             membership_state: "ACTIVE",
+            mfa_verified: true,
           }),
           { status: 200 },
         ),

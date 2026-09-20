@@ -1,7 +1,7 @@
 from datetime import datetime
 
 import sqlalchemy as sa
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, sessionmaker
 
 from app.modules.submission.application.evidence_commands import RecordSubmissionEvidenceCommand
 from app.modules.submission.infrastructure.models import (
@@ -26,9 +26,75 @@ from app.platform.security.context import ActorContext, ActorKind, DataClassific
 
 
 class SubmissionEvidenceService:
-    def __init__(self, *, dispatcher: CommandDispatcher, policy: AuthorizationPolicyPort) -> None:
+    def __init__(
+        self,
+        *,
+        dispatcher: CommandDispatcher,
+        policy: AuthorizationPolicyPort,
+        session_factory: sessionmaker[Session] | None = None,
+    ) -> None:
         self._dispatcher = dispatcher
         self._policy = policy
+        self._session_factory = session_factory
+
+    def read(
+        self, *, actor: ActorContext, submission_package_id, now: datetime
+    ) -> list[dict[str, object]]:
+        if actor.actor_kind is not ActorKind.PATRON_ADMIN or actor.membership_id is None:
+            raise PermissionError("PATRON_REQUIRED")
+        decision = self._policy.authorize(
+            context=actor,
+            request=AuthorizationRequest(
+                action=Capability.SUBMISSION_AUTHORIZE,
+                resource=AuthorizationResource(
+                    resource_type="SUBMISSION_EVIDENCE",
+                    resource_id=submission_package_id,
+                    tenant_id=actor.tenant_id,
+                    classification=DataClassification.INTERNAL_OPERATIONAL,
+                ),
+                evaluated_at=now,
+            ),
+        )
+        if not decision.allowed:
+            raise PermissionError(decision.code)
+        if self._session_factory is None:
+            raise RuntimeError("SUBMISSION_EVIDENCE_READER_UNAVAILABLE")
+        with self._session_factory() as session:
+            package = session.scalar(
+                sa.select(SubmissionPackageRecord).where(
+                    SubmissionPackageRecord.tenant_id == actor.tenant_id,
+                    SubmissionPackageRecord.id == submission_package_id,
+                )
+            )
+            if package is None:
+                raise CommandExecutionError("NOT_FOUND_OR_FORBIDDEN")
+            records = list(
+                session.scalars(
+                    sa.select(SubmissionEvidenceRecord)
+                    .where(
+                        SubmissionEvidenceRecord.tenant_id == actor.tenant_id,
+                        SubmissionEvidenceRecord.submission_package_id == package.id,
+                    )
+                    .order_by(SubmissionEvidenceRecord.created_at)
+                )
+            )
+        projections: list[dict[str, object]] = []
+        for record in records:
+            if record.manifest_sha256 != package.manifest_sha256:
+                raise CommandExecutionError("SUBMISSION_EVIDENCE_MANIFEST_MISMATCH")
+            projections.append(
+                {
+                    "evidence_id": record.id,
+                    "submission_package_id": package.id,
+                    "package_version": package.version,
+                    "manifest_sha256": record.manifest_sha256,
+                    "evidence_type": record.evidence_type,
+                    "status": record.status,
+                    "reconciliation_status": "PARTIAL",
+                    "external_submission": "NOT_PERFORMED",
+                }
+            )
+        return projections
 
     def execute(self, *, actor: ActorContext, command, now: datetime) -> DispatchResult:
         if actor.actor_kind is not ActorKind.PATRON_ADMIN or actor.membership_id is None:
@@ -44,6 +110,7 @@ class SubmissionEvidenceService:
                     classification=DataClassification.INTERNAL_OPERATIONAL,
                 ),
                 evaluated_at=now,
+                mfa_required=True,
             ),
         )
         if not decision.allowed:
@@ -88,8 +155,9 @@ class RecordSubmissionEvidenceHandler:
             tenant_id=context.tenant_id,
             submission_package_id=package.id,
             case_id=package.case_id,
+            manifest_sha256=package.manifest_sha256,
             evidence_type=command.evidence_type,
-            status="RECEIVED",
+            status="UNKNOWN" if command.evidence_type == "HUMAN_DEPOSIT_ATTEMPT" else "RECEIVED",
             external_reference_hash=command.external_reference_hash,
             evidence_sha256=command.evidence_sha256,
             notes_redacted=command.notes_redacted,
@@ -118,6 +186,7 @@ class RecordSubmissionEvidenceHandler:
                     payload={
                         "submission_evidence_id": str(record.id),
                         "submission_package_id": str(package.id),
+                        "manifest_sha256": record.manifest_sha256,
                         "status": record.status,
                         "external_submission": "NOT_PERFORMED",
                     },

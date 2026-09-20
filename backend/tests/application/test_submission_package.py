@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import io
 import json
 import zipfile
@@ -8,10 +9,12 @@ from dataclasses import replace
 from datetime import timedelta
 from types import SimpleNamespace
 from typing import Any, cast
+from unittest.mock import MagicMock
 from uuid import UUID, uuid4
 
 import pytest
 import sqlalchemy as sa
+from app.modules.case.infrastructure.models.case import CaseRecord
 from app.modules.decision.domain.submission_gate import DecisionSubmissionGateSnapshot
 from app.modules.preparation.application.commands import GenerateTechnicalDocumentCommand
 from app.modules.preparation.application.service import PreparationService, preparation_handlers
@@ -20,9 +23,13 @@ from app.modules.preparation.infrastructure.dce_preparation_reader import (
 )
 from app.modules.preparation.infrastructure.document_storage import LocalGeneratedDocumentStorage
 from app.modules.preparation.infrastructure.models import PreparationPackageRecord
-from app.modules.submission.application.commands import PrepareSubmissionPackageCommand
+from app.modules.submission.application.commands import (
+    AuthorizeSubmissionPackageCommand,
+    PrepareSubmissionPackageCommand,
+)
 from app.modules.submission.application.ports import SubmissionDecisionGateReader
 from app.modules.submission.application.service import (
+    AuthorizeSubmissionPackageHandler,
     PrepareSubmissionPackageHandler,
     SubmissionPackageService,
     submission_handlers,
@@ -39,6 +46,7 @@ from app.platform.security.context import ActorContext, ActorKind, MembershipSta
 from app.platform.security.models import (
     FinancialReportSnapshotRecord,
     SecurityAuditEventRecord,
+    SubmissionPackageAuthorizationRecord,
     SubmissionPackageRecord,
 )
 from sqlalchemy.orm import Session, sessionmaker
@@ -180,6 +188,22 @@ def _publish_snapshot(session_factory, *, tenant_id, case_id) -> UUID:
     return snapshot_id
 
 
+def _authorize_package(submission, actor, package_id: UUID, *, version: int = 1):
+    return submission.authorize(
+        actor=actor,
+        command=AuthorizeSubmissionPackageCommand(
+            command_id=uuid4(),
+            idempotency_key=uuid4(),
+            correlation_id=uuid4(),
+            authorization_id=uuid4(),
+            submission_package_id=package_id,
+            expected_package_version=version,
+            rationale="Paquet contrôlé et autorisé pour la remise humaine.",
+        ),
+        now=NOW,
+    )
+
+
 @pytest.mark.db
 @pytest.mark.security
 def test_submission_package_is_hashed_idempotent_and_append_only(services, session_factory) -> None:
@@ -200,6 +224,8 @@ def test_submission_package_is_hashed_idempotent_and_append_only(services, sessi
     assert prepared.result_code == "SUBMISSION_PACKAGE_PREPARED"
     assert replay.replayed is True
     package_id = prepared.aggregate_refs[0]["aggregate_id"]
+    authorized = _authorize_package(submission, actor, UUID(package_id))
+    assert authorized.result_code == "SUBMISSION_PACKAGE_AUTHORIZED"
     archive = submission.export(actor=actor, submission_package_id=UUID(package_id), now=NOW)
     with zipfile.ZipFile(io.BytesIO(archive)) as bundle:
         names = sorted(bundle.namelist())
@@ -207,6 +233,11 @@ def test_submission_package_is_hashed_idempotent_and_append_only(services, sessi
         technical_content = bundle.read("technical-response.md")
     assert names == ["manifest.json", "technical-response.md"]
     assert exported_manifest["schema_version"] == 2
+    assert exported_manifest["exclusions"] == [
+        "private_storage",
+        "financial_amounts",
+        "external_submission_result",
+    ]
     assert "storage_key" not in str(exported_manifest)
     assert "sales_total_minor" not in str(exported_manifest)
     assert technical_content.startswith("# Réponse technique".encode())
@@ -216,6 +247,17 @@ def test_submission_package_is_hashed_idempotent_and_append_only(services, sessi
         assert record.state == "PRET_CONTROLE"
         assert record.financial_snapshot_id == snapshot_id
         assert record.manifest_json["external_submission"] == "NOT_PERFORMED"
+        case = session.get(CaseRecord, case_id)
+        assert case is not None
+        assert record.manifest_json["scope"] == case.scope_json
+        authorization = session.scalar(
+            sa.select(SubmissionPackageAuthorizationRecord).where(
+                SubmissionPackageAuthorizationRecord.submission_package_id == record.id
+            )
+        )
+        assert authorization is not None
+        assert authorization.package_version == record.version
+        assert authorization.manifest_sha256 == record.manifest_sha256
         assert "sales_total_minor" not in str(record.manifest_json)
         assert (
             session.scalar(
@@ -283,6 +325,85 @@ def test_submission_package_is_hashed_idempotent_and_append_only(services, sessi
 
 @pytest.mark.db
 @pytest.mark.security
+def test_candidature_only_package_requires_reason_and_omits_pricing(
+    services, session_factory
+) -> None:
+    _, submission = services
+    actor, preparation_package_id, case_id = _prepare_generated_document(services, session_factory)
+    command = PrepareSubmissionPackageCommand(
+        command_id=uuid4(),
+        idempotency_key=uuid4(),
+        correlation_id=uuid4(),
+        preparation_package_id=preparation_package_id,
+        expected_preparation_revision=3,
+        submission_mode="CANDIDATURE_ONLY",
+        candidature_only_reason="Le dossier porte uniquement sur la phase de candidature.",
+    )
+    with pytest.raises(CommandExecutionError, match="CANDIDATURE_ONLY_REASON_REQUIRED"):
+        submission.prepare(
+            actor=actor,
+            command=command.model_copy(update={"candidature_only_reason": None}),
+            now=NOW,
+        )
+    prepared = submission.prepare(actor=actor, command=command, now=NOW)
+
+    with session_factory() as session:
+        record = session.get(SubmissionPackageRecord, prepared.aggregate_refs[0]["aggregate_id"])
+        assert record is not None
+        assert record.financial_snapshot_id is None
+        assert record.manifest_json["submission_mode"] == "CANDIDATURE_ONLY"
+        assert record.manifest_json["candidature_only_reason"]
+        assert not any(
+            entry.get("kind") == "OFFICIAL_PRICING_VERSION"
+            for entry in record.manifest_json["entries"]
+        )
+
+
+@pytest.mark.db
+@pytest.mark.security
+def test_redeposit_prepares_new_version_and_requires_new_authorization(
+    services, session_factory
+) -> None:
+    _, submission = services
+    actor, preparation_package_id, case_id = _prepare_generated_document(services, session_factory)
+    _publish_snapshot(session_factory, tenant_id=actor.tenant_id, case_id=case_id)
+    first_command = PrepareSubmissionPackageCommand(
+        command_id=uuid4(),
+        idempotency_key=uuid4(),
+        correlation_id=uuid4(),
+        preparation_package_id=preparation_package_id,
+        expected_preparation_revision=3,
+    )
+    first = submission.prepare(actor=actor, command=first_command, now=NOW)
+    second = submission.prepare(
+        actor=actor,
+        command=first_command.model_copy(
+            update={"command_id": uuid4(), "idempotency_key": uuid4()}
+        ),
+        now=NOW,
+    )
+
+    first_id = UUID(first.aggregate_refs[0]["aggregate_id"])
+    second_id = UUID(second.aggregate_refs[0]["aggregate_id"])
+    assert first_id != second_id
+    with session_factory() as session:
+        versions = session.scalars(
+            sa.select(SubmissionPackageRecord.version)
+            .where(SubmissionPackageRecord.preparation_package_id == preparation_package_id)
+            .order_by(SubmissionPackageRecord.version)
+        ).all()
+    assert versions == [1, 2]
+
+    with pytest.raises(CommandExecutionError, match="SUBMISSION_PACKAGE_NOT_AUTHORIZED"):
+        submission.export(actor=actor, submission_package_id=second_id, now=NOW)
+    authorized = _authorize_package(submission, actor, second_id, version=2)
+    assert authorized.result_code == "SUBMISSION_PACKAGE_AUTHORIZED"
+    archive = submission.export(actor=actor, submission_package_id=second_id, now=NOW)
+    assert archive[:2] == b"PK"
+
+
+@pytest.mark.db
+@pytest.mark.security
 def test_submission_export_rejects_missing_unauthorized_unconfigured_and_corrupt_inputs(
     services, session_factory
 ) -> None:
@@ -321,6 +442,61 @@ def test_submission_export_rejects_missing_unauthorized_unconfigured_and_corrupt
             sa.update(SubmissionPackageRecord)
             .where(SubmissionPackageRecord.id == package_id)
             .values(manifest_json={"schema_version": 999})
+        )
+
+
+@pytest.mark.db
+@pytest.mark.security
+def test_submission_manifest_preview_is_bounded_and_reflects_p5_status(
+    services, session_factory
+) -> None:
+    _, submission = services
+    actor, preparation_package_id, case_id = _prepare_generated_document(services, session_factory)
+    _publish_snapshot(session_factory, tenant_id=actor.tenant_id, case_id=case_id)
+    prepared = submission.prepare(
+        actor=actor,
+        command=PrepareSubmissionPackageCommand(
+            command_id=uuid4(),
+            idempotency_key=uuid4(),
+            correlation_id=uuid4(),
+            preparation_package_id=preparation_package_id,
+            expected_preparation_revision=3,
+        ),
+        now=NOW,
+    )
+    package_id = UUID(prepared.aggregate_refs[0]["aggregate_id"])
+
+    before = submission.read_manifest(actor=actor, submission_package_id=package_id, now=NOW)
+    assert before["authorization_status"] == "NOT_AUTHORIZED"
+    assert before["external_submission"] == "NOT_PERFORMED"
+    assert "storage_key" not in str(before["manifest"])
+    assert "sales_total_minor" not in str(before["manifest"])
+    assert before["manifest"]["exclusions"] == [
+        "private_storage",
+        "financial_amounts",
+        "external_submission_result",
+    ]
+
+    authorized = _authorize_package(submission, actor, package_id)
+    assert authorized.result_code == "SUBMISSION_PACKAGE_AUTHORIZED"
+    after = submission.read_manifest(actor=actor, submission_package_id=package_id, now=NOW)
+    assert after["authorization_status"] == "AUTHORIZED"
+    assert after["manifest_sha256"] == before["manifest_sha256"]
+
+
+def test_submission_manifest_preview_rejects_collaborator() -> None:
+    actor = _patron_actor()
+    service = SubmissionPackageService(
+        session_factory=SimpleNamespace(),
+        dispatcher=MagicMock(),
+        policy=MagicMock(),
+    )
+
+    with pytest.raises(PermissionError, match="SUBMISSION_PATRON_REQUIRED"):
+        service.read_manifest(
+            actor=replace(actor, actor_kind=ActorKind.COLLABORATEUR),
+            submission_package_id=uuid4(),
+            now=NOW,
         )
 
 
@@ -683,6 +859,17 @@ def test_submission_export_rejects_unauthorized_policy() -> None:
         service.export(actor=actor, submission_package_id=uuid4(), now=NOW)
 
 
+def test_submission_export_requires_patron_step_up() -> None:
+    policy = MagicMock()
+    policy.authorize.return_value = SimpleNamespace(allowed=False, code="STEP_UP_REQUIRED")
+    service = _service_with_session([], policy=policy)
+
+    with pytest.raises(PermissionError, match="STEP_UP_REQUIRED"):
+        service.export(actor=_patron_actor(), submission_package_id=uuid4(), now=NOW)
+
+    assert policy.authorize.call_args.kwargs["request"].mfa_required is True
+
+
 def test_submission_export_rejects_corrupt_manifest() -> None:
     import hashlib
 
@@ -747,6 +934,57 @@ def test_submission_prepare_rejects_actor_and_policy() -> None:
         ).prepare(actor=_patron_actor(), command=command, now=NOW)
 
 
+def test_submission_authorize_requires_patron_step_up_and_dispatches() -> None:
+    policy = MagicMock()
+    policy.authorize.return_value = SimpleNamespace(allowed=True, code="ALLOWED")
+    dispatcher = MagicMock()
+    dispatcher.dispatch.return_value = SimpleNamespace(result_code="ok")
+    service = SubmissionPackageService(
+        session_factory=SimpleNamespace(),
+        dispatcher=dispatcher,
+        policy=policy,
+    )
+    actor = _patron_actor()
+    command = AuthorizeSubmissionPackageCommand(
+        command_id=uuid4(),
+        idempotency_key=uuid4(),
+        correlation_id=uuid4(),
+        authorization_id=uuid4(),
+        submission_package_id=uuid4(),
+        expected_package_version=1,
+        rationale="Paquet relu.",
+    )
+
+    result = service.authorize(actor=actor, command=command, now=NOW)
+
+    assert result.result_code == "ok"
+    assert dispatcher.dispatch.call_args.kwargs["context"].actor_id == actor.actor_id
+    assert policy.authorize.call_args.kwargs["request"].mfa_required is True
+
+
+def test_submission_authorize_rejects_collaborator() -> None:
+    service = SubmissionPackageService(
+        session_factory=SimpleNamespace(),
+        dispatcher=MagicMock(),
+        policy=MagicMock(),
+    )
+    command = AuthorizeSubmissionPackageCommand(
+        command_id=uuid4(),
+        idempotency_key=uuid4(),
+        authorization_id=uuid4(),
+        submission_package_id=uuid4(),
+        expected_package_version=1,
+        rationale="Paquet relu.",
+    )
+
+    with pytest.raises(PermissionError, match="SUBMISSION_PATRON_REQUIRED"):
+        service.authorize(
+            actor=replace(_patron_actor(), actor_kind=ActorKind.COLLABORATEUR),
+            command=command,
+            now=NOW,
+        )
+
+
 def _handler_context(actor_kind: str = ActorKind.PATRON_ADMIN.value) -> CommandContext:
     return CommandContext(
         tenant_id=uuid4(),
@@ -760,6 +998,82 @@ def _handler_context(actor_kind: str = ActorKind.PATRON_ADMIN.value) -> CommandC
 def _handler_session(values: list[object]) -> SimpleNamespace:
     iterator = iter(values)
     return SimpleNamespace(scalar=lambda *_args, **_kwargs: next(iterator))
+
+
+def test_authorize_handler_appends_exact_manifest_authorization() -> None:
+    manifest = {"schema_version": 2, "external_submission": "NOT_PERFORMED"}
+    manifest_sha256 = hashlib.sha256(
+        json.dumps(manifest, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    package = SimpleNamespace(
+        id=uuid4(),
+        case_id=uuid4(),
+        version=3,
+        state="PRET_CONTROLE",
+        manifest_json=manifest,
+        manifest_sha256=manifest_sha256,
+    )
+    captured: list[object] = []
+
+    class _Session:
+        def __init__(self):
+            self.values = iter([package, None])
+
+        def scalar(self, *_args, **_kwargs):
+            return next(self.values)
+
+        def add(self, value):
+            captured.append(value)
+
+    command = AuthorizeSubmissionPackageCommand(
+        command_id=uuid4(),
+        idempotency_key=uuid4(),
+        authorization_id=uuid4(),
+        submission_package_id=package.id,
+        expected_package_version=3,
+        rationale="Revue P5 effectuée.",
+    )
+    result = AuthorizeSubmissionPackageHandler(
+        decision_gate_reader=_ReadySubmissionDecisionGateReader()
+    ).execute(
+        session=_Session(),
+        command=command,
+        context=_handler_context(),
+    )
+
+    assert result.result_code == "SUBMISSION_PACKAGE_AUTHORIZED"
+    assert len(captured) == 1
+    authorization = captured[0]
+    assert authorization.package_version == 3
+    assert authorization.manifest_sha256 == manifest_sha256
+    assert authorization.state == "AUTHORIZED"
+
+
+def test_authorize_handler_rejects_stale_package_version() -> None:
+    package = SimpleNamespace(
+        id=uuid4(),
+        case_id=uuid4(),
+        version=3,
+        manifest_json={},
+        manifest_sha256=hashlib.sha256(b"{}").hexdigest(),
+    )
+    command = AuthorizeSubmissionPackageCommand(
+        command_id=uuid4(),
+        idempotency_key=uuid4(),
+        authorization_id=uuid4(),
+        submission_package_id=package.id,
+        expected_package_version=2,
+        rationale="Revue P5 effectuée.",
+    )
+
+    with pytest.raises(CommandExecutionError, match="VERSION_CONFLICT"):
+        AuthorizeSubmissionPackageHandler(
+            decision_gate_reader=_ReadySubmissionDecisionGateReader()
+        ).execute(
+            session=_handler_session([package]),
+            command=command,
+            context=_handler_context(),
+        )
 
 
 @pytest.mark.parametrize(

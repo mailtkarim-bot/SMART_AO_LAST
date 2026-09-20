@@ -84,13 +84,13 @@ def _seed_principal(
                 membership_id=membership_id,
                 identity_id=identity_id,
                 state="ACTIVE",
-                auth_strength="PASSWORD",
+                auth_strength="MFA",
                 token_version=1,
                 issued_at=NOW,
                 last_seen_at=NOW,
                 expires_at=NOW + timedelta(hours=8),
                 absolute_expires_at=NOW + timedelta(hours=12),
-                mfa_verified_at=None,
+                mfa_verified_at=NOW,
                 revoked_at=None,
                 revoke_reason=None,
             )
@@ -375,6 +375,8 @@ def test_collection_is_a_closed_projection_without_forbidden_fields(
         "case_lifecycle",
         "commercial_stage",
         "dce_availability",
+        "consultation_id",
+        "applicable_dce_version_id",
     }
     serialized = response.text
     for forbidden in (

@@ -11,6 +11,7 @@ from app.bootstrap.application import AppRuntime, create_app
 from app.interfaces.http.routes.authentication import AuthenticationHttpRuntime
 from app.modules.dce.application.upload import DceUploadService, MalwareScanResult
 from app.modules.dce.infrastructure.models.consultation import ConsultationRecord
+from app.modules.dce.infrastructure.models.dce_extraction import DceDocumentExtractionRecord
 from app.modules.dce.infrastructure.models.dce_staging import DceStagedObjectRecord
 from app.modules.dce.infrastructure.models.dce_version import (
     DceDocumentRecord,
@@ -109,13 +110,13 @@ def _seed_principal(
                 membership_id=membership_id,
                 identity_id=identity_id,
                 state="ACTIVE",
-                auth_strength="PASSWORD",
+                auth_strength="MFA",
                 token_version=1,
                 issued_at=NOW,
                 last_seen_at=NOW,
                 expires_at=NOW + timedelta(hours=8),
                 absolute_expires_at=NOW + timedelta(hours=12),
-                mfa_verified_at=None,
+                mfa_verified_at=NOW,
                 revoked_at=None,
                 revoke_reason=None,
             )
@@ -250,6 +251,114 @@ def test_dce_metadata_requires_bearer_and_exposes_only_authorized_fields(
     }
     for forbidden in forbidden_fields:
         assert forbidden not in response.json()
+
+
+@pytest.mark.api
+@pytest.mark.db
+@pytest.mark.security
+def test_dce_document_inventory_exposes_per_file_reading_states_without_storage_facts(
+    database_engine: sa.Engine,
+    session_factory: sessionmaker[Session],
+) -> None:
+    tenant_id, identity_id, session_id = _seed_principal(database_engine)
+    dce_id = _seed_dce(database_engine, tenant_id=tenant_id)
+    documents = [
+        ("01-recu.pdf", "application/pdf", "b" * 64, None, None),
+        ("02-lisible.pdf", "application/pdf", "c" * 64, "COMPLETED", None),
+        (
+            "03-annexe.xls",
+            "application/vnd.ms-excel",
+            "d" * 64,
+            "UNSUPPORTED",
+            "MEDIA_TYPE_UNSUPPORTED",
+        ),
+        ("04-protege.pdf", "application/pdf", "e" * 64, "FAILED_SAFE", "DOCUMENT_PROTECTED"),
+    ]
+    with Session(database_engine) as session:
+        consultation_id = session.get(DceVersionRecord, dce_id).consultation_id
+        for filename, media_type, digest, extraction_status, failure_code in documents:
+            document_id, storage_object_id = uuid4(), uuid4()
+            session.add(
+                DceStagedObjectRecord(
+                    id=storage_object_id,
+                    tenant_id=tenant_id,
+                    consultation_id=consultation_id,
+                    storage_key=f"dce-staging/{tenant_id}/{storage_object_id}",
+                    original_filename=filename,
+                    expected_byte_size=100,
+                    actual_byte_size=100,
+                    sha256=digest,
+                    media_type=media_type,
+                    source_channel="MANUAL_UPLOAD",
+                    state="CONSUMED",
+                    scan_verdict="CLEAN",
+                    scanner_name="test-scanner",
+                    scanner_signature_version="test-signatures",
+                    scanned_at=NOW,
+                    rejection_code=None,
+                    expires_at=NOW + timedelta(days=1),
+                    consumed_by_dce_version_id=dce_id,
+                    consumed_at=NOW,
+                    created_by_actor_id=None,
+                    updated_by_actor_id=None,
+                )
+            )
+            session.add(
+                DceDocumentRecord(
+                    id=document_id,
+                    tenant_id=tenant_id,
+                    dce_version_id=dce_id,
+                    storage_object_id=storage_object_id,
+                    storage_key=f"dce-staging/{tenant_id}/{storage_object_id}",
+                    original_filename=filename,
+                    media_type=media_type,
+                    byte_size=100,
+                    sha256=digest,
+                    received_from="MANUAL_UPLOAD",
+                )
+            )
+            session.flush()
+            if extraction_status is not None:
+                session.add(
+                    DceDocumentExtractionRecord(
+                        id=uuid4(),
+                        tenant_id=tenant_id,
+                        dce_version_id=dce_id,
+                        dce_document_id=document_id,
+                        input_sha256=digest,
+                        extractor_id="fixture",
+                        extractor_version="1",
+                        status=extraction_status,
+                        fragment_count=1 if extraction_status == "COMPLETED" else 0,
+                        extracted_char_count=1 if extraction_status == "COMPLETED" else 0,
+                        failure_code=failure_code,
+                    )
+                )
+        session.commit()
+
+    client, tokens = _client(session_factory)
+    response = client.get(
+        f"/api/v1/dce-versions/{dce_id}/documents",
+        headers=_headers(tokens, identity_id=identity_id, session_id=session_id),
+    )
+
+    assert response.status_code == 200
+    assert [item["original_filename"] for item in response.json()["items"]] == [
+        "01-recu.pdf",
+        "02-lisible.pdf",
+        "03-annexe.xls",
+        "04-protege.pdf",
+    ]
+    assert [item["processing_state"] for item in response.json()["items"]] == [
+        "RECEIVED",
+        "READ",
+        "UNSUPPORTED",
+        "PROTECTED",
+    ]
+    assert response.json()["items"][2]["issue_code"] == "MEDIA_TYPE_UNSUPPORTED"
+    assert response.json()["items"][3]["issue_code"] == "DOCUMENT_PROTECTED"
+    for item in response.json()["items"]:
+        assert "storage_key" not in item
 
 
 @pytest.mark.api

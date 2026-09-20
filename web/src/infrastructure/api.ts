@@ -1,7 +1,10 @@
 import type {
   AssignedCase,
+  CaseResolution,
   CreateCaseInput,
   CreateCaseResponse,
+  HandoverInput,
+  HandoverReceipt,
   AuthSession,
   CurrentActor,
   BackendReadiness,
@@ -15,7 +18,11 @@ import type {
   PatronDecisionDossier,
   PricingScenario,
   SubmissionEvidenceReceipt,
+  SubmissionEvidenceProjection,
   SubmissionPackageReceipt,
+  SubmissionMode,
+  SubmissionPackageAuthorizationReceipt,
+  SubmissionPackageManifestProjection,
   SubmissionSignatureProjection,
   SubmissionSignatureReceipt,
   CollaboratorTaskList,
@@ -27,9 +34,11 @@ import type {
   TotpEnrollment,
   TotpStepUpResponse,
   PreparationReviewList,
+  PreparationResponseDraftList,
   RequestPreparationReviewInput,
   DecidePreparationReviewInput,
   AddPreparationCorrectionInput,
+  CreateTechnicalResponseDraftInput,
   PreparationPackage,
   CommitPricingImportRequest,
   PricingImportCommitReceipt,
@@ -45,6 +54,9 @@ import type {
   EnterpriseCapabilityInput,
   EnterpriseCapabilityVersionInput,
   BoampObservation,
+  BoampSourceStatus,
+  BoampCaseCreationInput,
+  BoampCaseCreationResponse,
   BoampQualificationInput,
   BoampQualificationReceipt,
   CaseDceReading,
@@ -67,6 +79,16 @@ import type {
   StructuredRiskRegistrationResponse,
   DecisionCctpPricingCrossingResponse,
   DecisionDocumentContradictionsResponse,
+  ConsultationProjection,
+  DceStagingPreparationReceipt,
+  DceUploadReceipt,
+  RegisterDceVersionReceipt,
+  DceVersionMetadata,
+  DceDocumentInventory,
+  PrepareDceStagingInput,
+  RegisterDceVersionInput,
+  LinkCaseDceVersionInput,
+  LinkCaseDceVersionReceipt,
 } from "../shared/types";
 
 const makeId = () => crypto.randomUUID();
@@ -152,6 +174,13 @@ function isReplayableBody(body: BodyInit | null | undefined): boolean {
 }
 
 export type ApiClient = ReturnType<typeof createApiClient>;
+
+type CommandMetadata = {
+  command_id?: string;
+  idempotency_key?: string;
+  correlation_id?: string;
+  authorization_id?: string;
+};
 
 type TokenRefreshListener = (session: AuthSession) => void;
 
@@ -316,12 +345,35 @@ export function createApiClient(
       request<CreateCaseResponse>("/api/v1/cases", {
         method: "POST",
         body: JSON.stringify({
-          command_id: makeId(),
-          idempotency_key: makeId(),
-          correlation_id: makeId(),
           ...input,
+          command_id: input.command_id ?? makeId(),
+          idempotency_key: input.idempotency_key ?? makeId(),
+          correlation_id: input.correlation_id ?? makeId(),
+      }),
+      }),
+    requestHandover: (input: HandoverInput) =>
+      request<HandoverReceipt>("/api/v1/continuity/handovers", {
+        method: "POST",
+        body: JSON.stringify({
+          ...input,
+          handover_id: input.handover_id ?? makeId(),
+          command_id: input.command_id ?? makeId(),
+          idempotency_key: input.idempotency_key ?? makeId(),
+          correlation_id: input.correlation_id ?? makeId(),
         }),
       }),
+    acceptHandover: (handoverId: string, reason: string) =>
+      request<HandoverReceipt>(
+        `/api/v1/continuity/handovers/${encodeURIComponent(handoverId)}/acceptance`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            command_id: makeId(),
+            correlation_id: makeId(),
+            reason,
+          }),
+        },
+      ),
     listPatronAssignments: () =>
       request<{ items: PatronAssignment[] }>("/api/v1/patron/assignments"),
     getAssignmentJournal: (assignmentId: string) =>
@@ -335,7 +387,7 @@ export function createApiClient(
     listPatronActions: () =>
       request<{ items: PatronAction[]; open_count: number }>("/api/v1/patron/actions"),
     listBoampObservations: () =>
-      request<{ observations: BoampObservation[] }>(
+      request<{ observations: BoampObservation[]; source_status?: BoampSourceStatus }>(
         "/api/v1/patron/boamp-opportunities",
       ),
     qualifyBoampObservation: (
@@ -353,9 +405,87 @@ export function createApiClient(
           }),
         },
       ),
+    createCaseFromBoampObservation: (
+      observationId: string,
+      input: BoampCaseCreationInput = {},
+    ) =>
+      request<BoampCaseCreationResponse>(
+        `/api/v1/patron/boamp-opportunities/${encodeURIComponent(observationId)}/case`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            ...input,
+            command_id: input.command_id ?? makeId(),
+            idempotency_key: input.idempotency_key ?? makeId(),
+            correlation_id: input.correlation_id ?? makeId(),
+          }),
+        },
+      ),
     getCaseDceReading: (caseId: string) =>
       request<CaseDceReading>(
         `/api/v1/cases/${encodeURIComponent(caseId)}/dce-reading`,
+      ),
+    getConsultation: (consultationId: string) =>
+      request<ConsultationProjection>(
+        `/api/v1/consultations/${encodeURIComponent(consultationId)}`,
+      ),
+    prepareDceStaging: (input: PrepareDceStagingInput) =>
+      request<DceStagingPreparationReceipt>("/api/v1/dce-staged-objects", {
+        method: "POST",
+        body: JSON.stringify({
+          ...input,
+          command_id: input.command_id ?? makeId(),
+          idempotency_key: input.idempotency_key ?? makeId(),
+          correlation_id: input.correlation_id ?? makeId(),
+        }),
+      }),
+    uploadDceStagedObjectContent: (
+      storageObjectId: string,
+      idempotencyKey: string,
+      file: File,
+    ) =>
+      request<DceUploadReceipt>(
+        `/api/v1/dce-staged-objects/${encodeURIComponent(storageObjectId)}/content`,
+        {
+          method: "PUT",
+          headers: { "Idempotency-Key": idempotencyKey },
+          body: file,
+        },
+      ),
+    registerDceVersion: (input: RegisterDceVersionInput) =>
+      request<RegisterDceVersionReceipt>("/api/v1/dce-versions", {
+        method: "POST",
+        body: JSON.stringify({
+          ...input,
+          command_id: input.command_id ?? makeId(),
+          idempotency_key: input.idempotency_key ?? makeId(),
+          correlation_id: input.correlation_id ?? makeId(),
+        }),
+      }),
+    getDceVersion: (dceVersionId: string) =>
+      request<DceVersionMetadata>(
+        `/api/v1/dce-versions/${encodeURIComponent(dceVersionId)}`,
+      ),
+    listDceVersionDocuments: (dceVersionId: string) =>
+      request<DceDocumentInventory>(
+        `/api/v1/dce-versions/${encodeURIComponent(dceVersionId)}/documents`,
+      ),
+    linkCaseDceVersion: (caseId: string, input: LinkCaseDceVersionInput) =>
+      request<LinkCaseDceVersionReceipt>(
+        `/api/v1/cases/${encodeURIComponent(caseId)}/dce-applicability`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            ...input,
+            command_id: makeId(),
+            idempotency_key: makeId(),
+            correlation_id: makeId(),
+          }),
+        },
+      ),
+    getCaseResolution: (caseId: string) =>
+      request<CaseResolution>(
+        `/api/v1/cases/${encodeURIComponent(caseId)}/resolution`,
       ),
     searchCaseKnowledge: (caseId: string, query: string, topK = 5) => {
       const params = new URLSearchParams({ q: query, top_k: String(topK) });
@@ -592,6 +722,7 @@ export function createApiClient(
       caseId: string,
       file: File,
       documentKind: "DPGF" | "BPU" | "EXCEL" = "EXCEL",
+      metadata: CommandMetadata = {},
     ) => {
       const form = new FormData();
       form.append("upload", file);
@@ -600,7 +731,13 @@ export function createApiClient(
         `/api/v1/patron/cases/${encodeURIComponent(caseId)}/pricing-import/preview?${query}`,
         {
           method: "POST",
-          headers: { "X-Command-Id": makeId(), "Idempotency-Key": makeId() },
+          headers: {
+            "X-Command-Id": metadata.command_id ?? makeId(),
+            "Idempotency-Key": metadata.idempotency_key ?? makeId(),
+            ...(metadata.correlation_id
+              ? { "X-Correlation-Id": metadata.correlation_id }
+              : {}),
+          },
           body: form,
         },
       );
@@ -628,7 +765,11 @@ export function createApiClient(
           }),
         },
       ),
-    prepareSubmissionPackage: (preparationPackageId: string, expectedRevision: number) =>
+    prepareSubmissionPackage: (
+      preparationPackageId: string,
+      expectedRevision: number,
+      options: { submission_mode?: SubmissionMode; candidature_only_reason?: string } = {},
+    ) =>
       request<SubmissionPackageReceipt>(
         `/api/v1/patron/preparation/${encodeURIComponent(preparationPackageId)}/submission-packages`,
         {
@@ -637,8 +778,33 @@ export function createApiClient(
             command_id: makeId(),
             idempotency_key: makeId(),
             expected_preparation_revision: expectedRevision,
+            ...options,
           }),
         },
+      ),
+    authorizeSubmissionPackage: (
+      submissionPackageId: string,
+      expectedPackageVersion: number,
+      rationale: string,
+      metadata: CommandMetadata = {},
+    ) =>
+      request<SubmissionPackageAuthorizationReceipt>(
+        `/api/v1/patron/submission-packages/${encodeURIComponent(submissionPackageId)}/authorize`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            command_id: metadata.command_id ?? makeId(),
+            idempotency_key: metadata.idempotency_key ?? makeId(),
+            authorization_id: metadata.authorization_id ?? makeId(),
+            ...(metadata.correlation_id ? { correlation_id: metadata.correlation_id } : {}),
+            expected_package_version: expectedPackageVersion,
+            rationale,
+          }),
+        },
+      ),
+    getSubmissionPackageManifest: (submissionPackageId: string) =>
+      request<SubmissionPackageManifestProjection>(
+        `/api/v1/patron/submission-packages/${encodeURIComponent(submissionPackageId)}/manifest`,
       ),
     downloadSubmissionPackage: (submissionPackageId: string): Promise<Blob> =>
       requestBlob(
@@ -648,6 +814,10 @@ export function createApiClient(
     listPreparationReviews: (packageId: string) =>
       request<PreparationReviewList>(
         `/api/v1/preparation/${encodeURIComponent(packageId)}/reviews`,
+      ),
+    listPreparationResponseDrafts: (packageId: string) =>
+      request<PreparationResponseDraftList>(
+        `/api/v1/preparation/${encodeURIComponent(packageId)}/response-drafts`,
       ),
     requestPreparationReview: (packageId: string, input: RequestPreparationReviewInput) =>
       request<CommandReceipt>(
@@ -682,6 +852,22 @@ export function createApiClient(
           body: JSON.stringify({
             command_id: makeId(),
             idempotency_key: makeId(),
+            ...input,
+          }),
+        },
+      ),
+    createTechnicalResponseDraft: (
+      packageId: string,
+      input: CreateTechnicalResponseDraftInput,
+    ) =>
+      request<CommandReceipt>(
+        `/api/v1/preparation/${encodeURIComponent(packageId)}/response-drafts`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            command_id: makeId(),
+            idempotency_key: makeId(),
+            draft_id: makeId(),
             ...input,
           }),
         },
@@ -893,7 +1079,7 @@ export function createApiClient(
     recordSubmissionEvidence: (
       submissionPackageId: string,
       input: {
-        evidence_type: "MANUAL_RECEIPT" | "MANUAL_PORTAL_REFERENCE";
+        evidence_type: "MANUAL_RECEIPT" | "MANUAL_PORTAL_REFERENCE" | "HUMAN_DEPOSIT_ATTEMPT";
         external_reference_hash: string;
         evidence_sha256: string;
         notes_redacted?: string;
@@ -910,6 +1096,10 @@ export function createApiClient(
             ...input,
           }),
         },
+      ),
+    getSubmissionEvidence: (submissionPackageId: string) =>
+      request<SubmissionEvidenceProjection[]>(
+        `/api/v1/patron/submission-packages/${encodeURIComponent(submissionPackageId)}/evidence`,
       ),
     createDraft: (caseId: string) =>
       request<CommandReceipt>(

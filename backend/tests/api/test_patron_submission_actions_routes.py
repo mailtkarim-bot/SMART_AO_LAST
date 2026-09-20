@@ -56,7 +56,7 @@ def _actor() -> ActorContext:
         assigned_case_ids=frozenset(),
         session_id=uuid4(),
         authenticated_at=NOW,
-        mfa_verified_at=None,
+        mfa_verified_at=NOW,
         correlation_id=uuid4(),
     )
 
@@ -86,12 +86,13 @@ def _client(*, submission=None, actions=None, transitions=None, resolver_error=N
     return TestClient(app, raise_server_exceptions=False)
 
 
-def _result(*, replayed: bool = False, transition: bool = False):
+def _result(*, replayed: bool = False, transition: bool = False, result_code: str | None = None):
     aggregate_id = uuid4()
     return SimpleNamespace(
         command_id=uuid4(),
         idempotency_key=uuid4(),
-        result_code=(
+        result_code=result_code
+        or (
             "PATRON_ACTION_TRANSITIONED"
             if transition
             else "PATRON_ACTION_CREATED"
@@ -109,6 +110,16 @@ def _submission_payload() -> dict[str, object]:
         "command_id": str(uuid4()),
         "idempotency_key": str(uuid4()),
         "expected_preparation_revision": 3,
+    }
+
+
+def _authorize_payload() -> dict[str, object]:
+    return {
+        "command_id": str(uuid4()),
+        "idempotency_key": str(uuid4()),
+        "authorization_id": str(uuid4()),
+        "expected_package_version": 1,
+        "rationale": "Paquet relu et autorisé pour la remise humaine.",
     }
 
 
@@ -144,10 +155,12 @@ def _transition_payload() -> dict[str, object]:
 
 
 class _SubmissionService:
-    def __init__(self, *, prepare_error=None, export_error=None):
+    def __init__(self, *, prepare_error=None, authorize_error=None, export_error=None):
         self.prepare_error = prepare_error
+        self.authorize_error = authorize_error
         self.export_error = export_error
         self.prepare_calls = 0
+        self.authorize_calls = 0
 
     def prepare(self, **kwargs):
         self.prepare_calls += 1
@@ -159,6 +172,15 @@ class _SubmissionService:
         if self.export_error is not None:
             raise self.export_error
         return b"PK\x03\x04test-archive"
+
+    def authorize(self, **kwargs):
+        self.authorize_calls += 1
+        if self.authorize_error is not None:
+            raise self.authorize_error
+        return _result(
+            replayed=self.authorize_calls > 1,
+            result_code="SUBMISSION_PACKAGE_AUTHORIZED",
+        )
 
 
 class _ActionService:
@@ -287,6 +309,65 @@ def test_prepare_submission_maps_service_errors(error, status_code, detail):
     response = client.post(
         f"/api/v1/patron/preparation/{uuid4()}/submission-packages",
         json=_submission_payload(),
+        headers={"Authorization": "Bearer test-token"},
+    )
+
+    assert response.status_code == status_code
+    assert response.json() == {"detail": detail}
+
+
+def test_authorize_submission_returns_201_then_200_on_replay():
+    submission = _SubmissionService()
+    client = _client(
+        submission=submission,
+        actions=_ActionService(),
+        transitions=_TransitionService(),
+    )
+    package_id = uuid4()
+    payload = _authorize_payload()
+
+    first = client.post(
+        f"/api/v1/patron/submission-packages/{package_id}/authorize",
+        json=payload,
+        headers={"Authorization": "Bearer test-token"},
+    )
+    replay = client.post(
+        f"/api/v1/patron/submission-packages/{package_id}/authorize",
+        json=payload,
+        headers={"Authorization": "Bearer test-token"},
+    )
+
+    assert first.status_code == 201
+    assert first.json()["result_code"] == "SUBMISSION_PACKAGE_AUTHORIZED"
+    assert replay.status_code == 200
+    assert replay.json()["replayed"] is True
+    assert submission.authorize_calls == 2
+
+
+@pytest.mark.parametrize(
+    ("error", "status_code", "detail"),
+    [
+        (PermissionError("NOT_FOUND_OR_FORBIDDEN"), 404, "NOT_FOUND_OR_FORBIDDEN"),
+        (PermissionError("PATRON_REQUIRED"), 403, "FORBIDDEN"),
+        (CommandExecutionError("VERSION_CONFLICT"), 409, "VERSION_CONFLICT"),
+        (
+            CommandExecutionError("SUBMISSION_PACKAGE_ALREADY_AUTHORIZED"),
+            409,
+            "SUBMISSION_PACKAGE_ALREADY_AUTHORIZED",
+        ),
+        (CommandExecutionError("DECISION_SUBMISSION_BLOCKED"), 422, "DECISION_SUBMISSION_BLOCKED"),
+    ],
+)
+def test_authorize_submission_maps_service_errors(error, status_code, detail):
+    client = _client(
+        submission=_SubmissionService(authorize_error=error),
+        actions=_ActionService(),
+        transitions=_TransitionService(),
+    )
+
+    response = client.post(
+        f"/api/v1/patron/submission-packages/{uuid4()}/authorize",
+        json=_authorize_payload(),
         headers={"Authorization": "Bearer test-token"},
     )
 

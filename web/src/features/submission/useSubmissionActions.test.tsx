@@ -5,6 +5,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ApiClient } from "../../infrastructure/api";
 import type {
   SubmissionEvidenceReceipt,
+  SubmissionEvidenceProjection,
+  SubmissionPackageAuthorizationReceipt,
+  SubmissionPackageManifestProjection,
   SubmissionPackageReceipt,
   SubmissionSignatureProjection,
   SubmissionSignatureReceipt,
@@ -14,7 +17,12 @@ import { useSubmissionActions } from "./useSubmissionActions";
 type HookMessage = { tone: "success" | "error" | "warning"; text: string };
 type SubmissionApi = Pick<
   ApiClient,
-  "prepareSubmissionPackage" | "downloadSubmissionPackage" | "recordSubmissionEvidence"
+  | "prepareSubmissionPackage"
+  | "authorizeSubmissionPackage"
+  | "getSubmissionPackageManifest"
+  | "getSubmissionEvidence"
+  | "downloadSubmissionPackage"
+  | "recordSubmissionEvidence"
 >;
 type SignatureApi = SubmissionApi &
   Pick<ApiClient, "requestSubmissionSignature" | "getSubmissionSignature">;
@@ -34,6 +42,43 @@ const packageReceipt = (replayed = false): SubmissionPackageReceipt => ({
   event_ids: ["event-submission-1"],
   replayed,
 });
+
+const authorizationReceipt = (replayed = false): SubmissionPackageAuthorizationReceipt => ({
+  status: "SUCCEEDED",
+  command_id: "command-authorization-1",
+  idempotency_key: "idempotency-authorization-1",
+  result_code: "SUBMISSION_PACKAGE_AUTHORIZED",
+  aggregate_refs: [
+    {
+      aggregate_type: "SubmissionPackageAuthorization",
+      aggregate_id: "authorization-1",
+      aggregate_revision: 1,
+    },
+  ],
+  event_ids: ["event-authorization-1"],
+  replayed,
+});
+
+const manifestProjection = (authorized: "AUTHORIZED" | "NOT_AUTHORIZED" = "NOT_AUTHORIZED"): SubmissionPackageManifestProjection => ({
+  submission_package_id: "submission-package-1",
+  package_version: 3,
+  state: authorized === "AUTHORIZED" ? "AUTORISE_DEPOT" : "PRET_CONTROLE",
+  manifest_sha256: "c".repeat(64),
+  manifest: { entries: [{ path: "dce/index.pdf" }], exclusions: ["storage_key", "amounts"] },
+  authorization_status: authorized,
+  external_submission: "NOT_PERFORMED",
+});
+
+const evidenceProjection = (): SubmissionEvidenceProjection[] => [{
+  evidence_id: "evidence-1",
+  submission_package_id: "submission-package-1",
+  package_version: 3,
+  manifest_sha256: "c".repeat(64),
+  evidence_type: "MANUAL_RECEIPT",
+  status: "RECEIVED",
+  reconciliation_status: "PARTIAL",
+  external_submission: "NOT_PERFORMED",
+}];
 
 const signatureReceipt = (): SubmissionSignatureReceipt => ({
   status: "SUCCEEDED",
@@ -59,6 +104,7 @@ const signatureProjection = (): SubmissionSignatureProjection => ({
   provider: "TEST_PROVIDER",
   status: "SIGNED",
   expected_package_version: 2,
+  manifest_sha256: "c".repeat(64),
   revision: 2,
   external_submission: "NOT_PERFORMED",
 });
@@ -91,6 +137,9 @@ describe("useSubmissionActions", () => {
   it("rejects preparation without a preparation package identifier", async () => {
     const api = {
       prepareSubmissionPackage: vi.fn(),
+      authorizeSubmissionPackage: vi.fn(),
+      getSubmissionPackageManifest: vi.fn(),
+      getSubmissionEvidence: vi.fn(),
       downloadSubmissionPackage: vi.fn(),
       recordSubmissionEvidence: vi.fn(),
     } satisfies SubmissionApi;
@@ -111,6 +160,9 @@ describe("useSubmissionActions", () => {
   it("prepares the submission package and stores the returned aggregate identifier", async () => {
     const api = {
       prepareSubmissionPackage: vi.fn().mockResolvedValue(packageReceipt()),
+      authorizeSubmissionPackage: vi.fn(),
+      getSubmissionPackageManifest: vi.fn(),
+      getSubmissionEvidence: vi.fn(),
       downloadSubmissionPackage: vi.fn(),
       recordSubmissionEvidence: vi.fn(),
     } satisfies SubmissionApi;
@@ -125,11 +177,145 @@ describe("useSubmissionActions", () => {
       await result.current.prepareSubmissionPackage();
     });
 
-    expect(api.prepareSubmissionPackage).toHaveBeenCalledWith("preparation-1", 3);
+    expect(api.prepareSubmissionPackage).toHaveBeenCalledWith("preparation-1", 3, {
+      submission_mode: "FULL",
+      candidature_only_reason: undefined,
+    });
     expect(result.current.submissionPackageId).toBe("submission-package-1");
     expect(setMessage).toHaveBeenCalledWith({
       tone: "success",
       text: "Paquet préparé pour contrôle patronal. Aucun dépôt externe n’a été effectué.",
+    });
+  });
+
+  it("requires a reason for a candidature-only package", async () => {
+    const api = {
+      prepareSubmissionPackage: vi.fn(),
+      authorizeSubmissionPackage: vi.fn(),
+      getSubmissionPackageManifest: vi.fn(),
+      getSubmissionEvidence: vi.fn(),
+      downloadSubmissionPackage: vi.fn(),
+      recordSubmissionEvidence: vi.fn(),
+    } satisfies SubmissionApi;
+    const setMessage = vi.fn() as unknown as Dispatch<SetStateAction<HookMessage | null>>;
+    const { result } = renderSubmissionHook(api, setMessage);
+
+    act(() => {
+      result.current.setPreparationPackageId("preparation-1");
+      result.current.setSubmissionMode("CANDIDATURE_ONLY");
+    });
+    await act(async () => {
+      await result.current.prepareSubmissionPackage();
+    });
+
+    expect(api.prepareSubmissionPackage).not.toHaveBeenCalled();
+    expect(setMessage).toHaveBeenCalledWith({
+      tone: "error",
+      text: "Justifiez la candidature seule avant de préparer le paquet.",
+    });
+  });
+
+  it("replays P5 authorization with the same identifiers after an unknown result", async () => {
+    const authorize = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("résultat réseau inconnu"))
+      .mockResolvedValueOnce(authorizationReceipt(true));
+    const api = {
+      prepareSubmissionPackage: vi.fn(),
+      authorizeSubmissionPackage: authorize,
+      getSubmissionPackageManifest: vi.fn(),
+      getSubmissionEvidence: vi.fn(),
+      downloadSubmissionPackage: vi.fn(),
+      recordSubmissionEvidence: vi.fn(),
+    } satisfies SubmissionApi;
+    const setMessage = vi.fn() as unknown as Dispatch<SetStateAction<HookMessage | null>>;
+    const { result } = renderSubmissionHook(api, setMessage);
+
+    act(() => {
+      result.current.setSubmissionPackageId("submission-package-1");
+      result.current.setSubmissionPackageVersion("3");
+      result.current.setSubmissionAuthorizationRationale("Contrôle P5 validé.");
+    });
+    await act(async () => {
+      await result.current.authorizeSubmissionPackage();
+    });
+    await act(async () => {
+      await result.current.authorizeSubmissionPackage();
+    });
+
+    expect(authorize).toHaveBeenCalledTimes(2);
+    expect(authorize.mock.calls[0]).toEqual(authorize.mock.calls[1]);
+    expect(authorize).toHaveBeenCalledWith(
+      "submission-package-1",
+      3,
+      "Contrôle P5 validé.",
+      expect.objectContaining({
+        command_id: expect.any(String),
+        idempotency_key: expect.any(String),
+        authorization_id: expect.any(String),
+      }),
+    );
+    expect(result.current.submissionAuthorized).toBe(true);
+    expect(setMessage).toHaveBeenLastCalledWith({
+      tone: "success",
+      text: "Autorisation P5 déjà enregistrée; état rechargé.",
+    });
+  });
+
+  it("loads the exact bounded manifest and reflects the P5 status", async () => {
+    const api = {
+      prepareSubmissionPackage: vi.fn(),
+      authorizeSubmissionPackage: vi.fn(),
+      getSubmissionPackageManifest: vi.fn().mockResolvedValue(manifestProjection("AUTHORIZED")),
+      getSubmissionEvidence: vi.fn(),
+      downloadSubmissionPackage: vi.fn(),
+      recordSubmissionEvidence: vi.fn(),
+    } satisfies SubmissionApi;
+    const setMessage = vi.fn() as unknown as Dispatch<SetStateAction<HookMessage | null>>;
+    const { result } = renderSubmissionHook(api, setMessage);
+
+    act(() => {
+      result.current.setSubmissionPackageId(" submission-package-1 ");
+    });
+    await act(async () => {
+      await result.current.loadSubmissionPackageManifest();
+    });
+
+    expect(api.getSubmissionPackageManifest).toHaveBeenCalledWith("submission-package-1");
+    expect(result.current.submissionManifest?.manifest_sha256).toBe("c".repeat(64));
+    expect(result.current.submissionPackageVersion).toBe("3");
+    expect(result.current.submissionAuthorized).toBe(true);
+    expect(setMessage).toHaveBeenLastCalledWith({
+      tone: "success",
+      text: "Manifeste exact rechargé. Les exclusions et l’état P5 sont visibles.",
+    });
+  });
+
+  it("loads partial receipt evidence bound to the package manifest", async () => {
+    const api = {
+      prepareSubmissionPackage: vi.fn(),
+      authorizeSubmissionPackage: vi.fn(),
+      getSubmissionPackageManifest: vi.fn(),
+      getSubmissionEvidence: vi.fn().mockResolvedValue(evidenceProjection()),
+      downloadSubmissionPackage: vi.fn(),
+      recordSubmissionEvidence: vi.fn(),
+    } satisfies SubmissionApi;
+    const setMessage = vi.fn() as unknown as Dispatch<SetStateAction<HookMessage | null>>;
+    const { result } = renderSubmissionHook(api, setMessage);
+
+    act(() => {
+      result.current.setSubmissionPackageId(" submission-package-1 ");
+    });
+    await act(async () => {
+      await result.current.loadSubmissionEvidence();
+    });
+
+    expect(api.getSubmissionEvidence).toHaveBeenCalledWith("submission-package-1");
+    expect(result.current.submissionEvidence[0]?.reconciliation_status).toBe("PARTIAL");
+    expect(result.current.submissionEvidence[0]?.manifest_sha256).toBe("c".repeat(64));
+    expect(setMessage).toHaveBeenLastCalledWith({
+      tone: "success",
+      text: "Preuves de réception rechargées. Le rapprochement reste explicitement partiel.",
     });
   });
 
@@ -142,6 +328,9 @@ describe("useSubmissionActions", () => {
     const originalCreateElement = document.createElement.bind(document);
     const api = {
       prepareSubmissionPackage: vi.fn(),
+      authorizeSubmissionPackage: vi.fn(),
+      getSubmissionPackageManifest: vi.fn(),
+      getSubmissionEvidence: vi.fn(),
       downloadSubmissionPackage: vi.fn().mockResolvedValue(archive),
       recordSubmissionEvidence: vi.fn(),
     } satisfies SubmissionApi;
@@ -176,9 +365,37 @@ describe("useSubmissionActions", () => {
     vi.restoreAllMocks();
   });
 
+  it("keeps a network export result unknown until verification", async () => {
+    const api = {
+      prepareSubmissionPackage: vi.fn(),
+      authorizeSubmissionPackage: vi.fn(),
+      getSubmissionPackageManifest: vi.fn(),
+      getSubmissionEvidence: vi.fn(),
+      downloadSubmissionPackage: vi.fn().mockRejectedValue(new Error("network closed")),
+      recordSubmissionEvidence: vi.fn(),
+    } satisfies SubmissionApi;
+    const setMessage = vi.fn() as unknown as Dispatch<SetStateAction<HookMessage | null>>;
+    const { result } = renderSubmissionHook(api, setMessage);
+    act(() => result.current.setSubmissionPackageId("submission-package-1"));
+
+    await act(async () => {
+      await result.current.exportSubmissionPackage();
+    });
+
+    expect(result.current.submissionExportState).toBe("UNKNOWN");
+    expect(result.current.submissionExported).toBe(false);
+    expect(setMessage).toHaveBeenCalledWith({
+      tone: "warning",
+      text: "Résultat de l’export non confirmé. Vérifiez l’état avant toute nouvelle tentative.",
+    });
+  });
+
   it("requests a signature with the explicit package version", async () => {
     const api = {
       prepareSubmissionPackage: vi.fn(),
+      authorizeSubmissionPackage: vi.fn(),
+      getSubmissionPackageManifest: vi.fn(),
+      getSubmissionEvidence: vi.fn(),
       downloadSubmissionPackage: vi.fn(),
       recordSubmissionEvidence: vi.fn(),
       requestSubmissionSignature: vi.fn().mockResolvedValue(signatureReceipt()),
@@ -208,6 +425,9 @@ describe("useSubmissionActions", () => {
   it("loads only the bounded signature projection", async () => {
     const api = {
       prepareSubmissionPackage: vi.fn(),
+      authorizeSubmissionPackage: vi.fn(),
+      getSubmissionPackageManifest: vi.fn(),
+      getSubmissionEvidence: vi.fn(),
       downloadSubmissionPackage: vi.fn(),
       recordSubmissionEvidence: vi.fn(),
       requestSubmissionSignature: vi.fn(),
@@ -233,6 +453,9 @@ describe("useSubmissionActions", () => {
   it("records redacted manual evidence without changing the external submission invariant", async () => {
     const api = {
       prepareSubmissionPackage: vi.fn(),
+      authorizeSubmissionPackage: vi.fn(),
+      getSubmissionPackageManifest: vi.fn(),
+      getSubmissionEvidence: vi.fn(),
       downloadSubmissionPackage: vi.fn(),
       recordSubmissionEvidence: vi.fn().mockResolvedValue(evidenceReceipt()),
     } satisfies SubmissionApi;

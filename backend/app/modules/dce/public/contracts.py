@@ -139,6 +139,33 @@ class DceVersionMetadataResponse(PublicResponseModel):
     aggregate_revision: int = Field(ge=0)
 
 
+class DceDocumentInventoryItemResponse(PublicResponseModel):
+    """One admitted original with its latest deterministic reading state."""
+
+    document_id: UUID
+    original_filename: str
+    media_type: str
+    byte_size: int = Field(gt=0)
+    received_from: str
+    processing_state: Literal[
+        "RECEIVED",
+        "READ",
+        "REVIEW_REQUIRED",
+        "UNSUPPORTED",
+        "LIMIT_REACHED",
+        "PROTECTED",
+        "UNREADABLE",
+    ]
+    issue_code: str | None = None
+
+
+class DceDocumentInventoryResponse(PublicResponseModel):
+    """Closed per-file inventory; private storage and content stay hidden."""
+
+    dce_version_id: UUID
+    items: list[DceDocumentInventoryItemResponse]
+
+
 class ConsultationProjectionResponse(PublicResponseModel):
     id: UUID
     buyer_legal_name: str
@@ -200,6 +227,8 @@ class AssignedCaseResponse(PublicResponseModel):
     case_lifecycle: str
     commercial_stage: str
     dce_availability: str
+    consultation_id: UUID | None
+    applicable_dce_version_id: UUID | None
 
 
 class AcknowledgeAssignmentRequest(PublicRequestModel):

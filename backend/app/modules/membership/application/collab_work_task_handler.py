@@ -202,6 +202,9 @@ class CollaboratorWorkTaskHandler:
                 outcome=command.outcome,
                 result_text=command.result_text,
                 source_locator=command.source_locator,
+                lot_reference=CollaboratorWorkTaskHandler._resolve_lot_reference(
+                    session=session, task=task, requested=command.lot_reference
+                ),
                 actor_id=context.actor_id,
                 membership_id=context.membership_id,
                 command_id=command.command_id,
@@ -222,15 +225,50 @@ class CollaboratorWorkTaskHandler:
         )
 
     @staticmethod
+    def _resolve_lot_reference(*, session: Session, task, requested: str | None) -> str | None:
+        case = session.scalar(
+            sa.select(CaseRecord).where(
+                CaseRecord.tenant_id == task.tenant_id, CaseRecord.id == task.case_id
+            )
+        )
+        lots = tuple(
+            str(item).strip()
+            for item in (case.scope_json.get("lot_numbers", []) if case else [])
+            if str(item).strip()
+        )
+        if requested:
+            if lots and requested not in lots:
+                raise CommandExecutionError("LOT_NOT_IN_CASE_SCOPE")
+            return requested
+        if len(lots) == 1:
+            return lots[0]
+        if not lots:
+            return None
+        raise CommandExecutionError("LOT_REFERENCE_REQUIRED")
+
+    @staticmethod
     def _complete(*, session: Session, task, context: CommandContext) -> HandlerOutcome:
         if task.state not in {"IN_PROGRESS", "READY"}:
             raise CommandExecutionError("TASK_NOT_COMPLETABLE")
-        result = session.scalar(
-            sa.select(CollaboratorTaskResultRecord.id).where(
-                CollaboratorTaskResultRecord.tenant_id == context.tenant_id,
-                CollaboratorTaskResultRecord.task_id == task.id,
+        case = session.scalar(
+            sa.select(CaseRecord).where(
+                CaseRecord.tenant_id == task.tenant_id, CaseRecord.id == task.case_id
             )
         )
+        lots = tuple(
+            str(item).strip()
+            for item in (case.scope_json.get("lot_numbers", []) if case else [])
+            if str(item).strip()
+        )
+        result_query = sa.select(CollaboratorTaskResultRecord.id).where(
+            CollaboratorTaskResultRecord.tenant_id == context.tenant_id,
+            CollaboratorTaskResultRecord.task_id == task.id,
+        )
+        if lots:
+            result_query = result_query.where(
+                CollaboratorTaskResultRecord.lot_reference.is_not(None)
+            )
+        result = session.scalar(result_query)
         if result is None:
             raise CommandExecutionError("EVIDENCE_OF_COMPLETION_REQUIRED")
         task.state = "COMPLETED"

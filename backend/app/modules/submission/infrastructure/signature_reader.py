@@ -32,5 +32,6 @@ class SqlAlchemySubmissionSignatureReader(SubmissionSignatureReader):
             provider=record.provider,
             status=record.status,
             expected_package_version=record.expected_package_version,
+            manifest_sha256=record.manifest_sha256,
             revision=1 if record.status == "REQUESTED" else 2,
         )

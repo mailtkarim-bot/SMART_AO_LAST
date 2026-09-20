@@ -117,26 +117,472 @@ class TenantMembershipRecord(TenantScopedRecord, Base):
             name="state",
         ),
         sa.CheckConstraint(
+            "operational_profile IS NULL OR ("
+            "role = 'COLLABORATEUR' AND operational_profile IN ('RESPONSABLE', 'EXPERT')"
+            ")",
+            name="operational_profile",
+        ),
+        sa.CheckConstraint(
             "(state = 'INVITED' AND activated_at IS NULL AND revoked_at IS NULL) OR "
             "(state IN ('ACTIVE', 'SUSPENDED', 'EXPIRED') "
             "AND activated_at IS NOT NULL AND revoked_at IS NULL) OR "
             "(state = 'REVOKED' AND revoked_at IS NOT NULL)",
             name="timestamps",
         ),
-        sa.Index(
-            "ux_memberships__active_patron",
-            "tenant_id",
-            unique=True,
-            postgresql_where=sa.text("role = 'PATRON_ADMIN' AND state = 'ACTIVE'"),
-        ),
     )
 
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
     identity_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     role: Mapped[str] = mapped_column(sa.String(32), nullable=False)
+    operational_profile: Mapped[str | None] = mapped_column(sa.String(32))
     state: Mapped[str] = mapped_column(sa.String(32), nullable=False)
     activated_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
     revoked_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
+
+
+class TenantOwnerRecord(TenantScopedRecord, Base):
+    """Nominative organization ownership, deliberately separate from a business role."""
+
+    __tablename__ = "tenant_owners"
+    __table_args__ = (
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "membership_id"],
+            ["tenant_memberships.tenant_id", "tenant_memberships.id"],
+            name="fk_tenant_owners__membership",
+            ondelete="RESTRICT",
+        ),
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "designated_by_membership_id"],
+            ["tenant_memberships.tenant_id", "tenant_memberships.id"],
+            name="fk_tenant_owners__designator",
+            ondelete="RESTRICT",
+        ),
+        sa.UniqueConstraint("tenant_id", "id", name="uq_tenant_owners__tenant_id"),
+        sa.Index(
+            "ux_tenant_owners__active_membership",
+            "tenant_id",
+            "membership_id",
+            unique=True,
+            postgresql_where=sa.text("ended_at IS NULL"),
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    membership_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    designated_by_membership_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    ended_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
+
+
+class TenantOwnerChangeRecord(TenantScopedRecord, Base):
+    """Append-only designation or transfer of organization ownership."""
+
+    __tablename__ = "tenant_owner_changes"
+    __table_args__ = (
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "previous_owner_membership_id"],
+            ["tenant_memberships.tenant_id", "tenant_memberships.id"],
+            name="fk_owner_changes__previous_owner",
+            ondelete="RESTRICT",
+        ),
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "new_owner_membership_id"],
+            ["tenant_memberships.tenant_id", "tenant_memberships.id"],
+            name="fk_owner_changes__new_owner",
+            ondelete="RESTRICT",
+        ),
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "changed_by_membership_id"],
+            ["tenant_memberships.tenant_id", "tenant_memberships.id"],
+            name="fk_owner_changes__actor",
+            ondelete="RESTRICT",
+        ),
+        sa.UniqueConstraint("tenant_id", "id", name="uq_owner_changes__tenant_id"),
+        sa.UniqueConstraint(
+            "tenant_id",
+            "changed_by_membership_id",
+            "idempotency_key",
+            name="uq_owner_changes__idempotency",
+        ),
+        sa.CheckConstraint("action IN ('DESIGNATED', 'TRANSFERRED')", name="action"),
+        sa.CheckConstraint(
+            "(action = 'DESIGNATED' AND previous_owner_membership_id IS NULL) OR "
+            "(action = 'TRANSFERRED' AND previous_owner_membership_id IS NOT NULL)",
+            name="previous_owner_required",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    action: Mapped[str] = mapped_column(sa.String(16), nullable=False)
+    previous_owner_membership_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True))
+    new_owner_membership_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    changed_by_membership_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    rationale: Mapped[str] = mapped_column(sa.String(2_000), nullable=False)
+    changed_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False)
+    command_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    idempotency_key: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    correlation_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True))
+
+
+class TenantDelegationRecord(TenantScopedRecord, Base):
+    """Current bounded delegation projection; its changes are separately append-only."""
+
+    __tablename__ = "tenant_delegations"
+    __table_args__ = (
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "delegator_membership_id"],
+            ["tenant_memberships.tenant_id", "tenant_memberships.id"],
+            name="fk_delegations__delegator",
+            ondelete="RESTRICT",
+        ),
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "delegatee_membership_id"],
+            ["tenant_memberships.tenant_id", "tenant_memberships.id"],
+            name="fk_delegations__delegatee",
+            ondelete="RESTRICT",
+        ),
+        sa.UniqueConstraint("tenant_id", "id", name="uq_delegations__tenant_id"),
+        sa.UniqueConstraint(
+            "tenant_id",
+            "delegator_membership_id",
+            "idempotency_key",
+            name="uq_delegations__idempotency",
+        ),
+        sa.CheckConstraint("state IN ('ACTIVE', 'REVOKED', 'EXPIRED')", name="state"),
+        sa.CheckConstraint("jsonb_typeof(capabilities_json) = 'array'", name="capabilities"),
+        sa.CheckConstraint("jsonb_typeof(doors_json) = 'array'", name="doors"),
+        sa.CheckConstraint("jsonb_typeof(case_ids_json) = 'array'", name="case_ids"),
+        sa.CheckConstraint("expires_at > starts_at", name="expiry"),
+        sa.CheckConstraint(
+            "(state = 'ACTIVE' AND revoked_at IS NULL) OR "
+            "(state IN ('REVOKED', 'EXPIRED') AND revoked_at IS NOT NULL)",
+            name="revocation",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    delegator_membership_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    delegatee_membership_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    capabilities_json: Mapped[list[str]] = mapped_column(JSONB, nullable=False)
+    doors_json: Mapped[list[str]] = mapped_column(JSONB, nullable=False)
+    case_ids_json: Mapped[list[str]] = mapped_column(JSONB, nullable=False)
+    starts_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False)
+    state: Mapped[str] = mapped_column(sa.String(16), nullable=False)
+    rationale: Mapped[str] = mapped_column(sa.String(2_000), nullable=False)
+    command_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    idempotency_key: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    correlation_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True))
+    revoked_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
+    revoke_reason: Mapped[str | None] = mapped_column(sa.String(64))
+
+
+class TenantDelegationEventRecord(TenantScopedRecord, Base):
+    """Append-only grant and revocation facts for one delegation."""
+
+    __tablename__ = "tenant_delegation_events"
+    __table_args__ = (
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "delegation_id"],
+            ["tenant_delegations.tenant_id", "tenant_delegations.id"],
+            name="fk_delegation_events__delegation",
+            ondelete="RESTRICT",
+        ),
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "actor_membership_id"],
+            ["tenant_memberships.tenant_id", "tenant_memberships.id"],
+            name="fk_delegation_events__actor",
+            ondelete="RESTRICT",
+        ),
+        sa.UniqueConstraint("tenant_id", "id", name="uq_delegation_events__tenant_id"),
+        sa.UniqueConstraint(
+            "tenant_id",
+            "delegation_id",
+            "event_type",
+            "command_id",
+            name="uq_delegation_events__command",
+        ),
+        sa.CheckConstraint("event_type IN ('GRANTED', 'REVOKED')", name="event_type"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    delegation_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    event_type: Mapped[str] = mapped_column(sa.String(16), nullable=False)
+    actor_membership_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    occurred_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False)
+    command_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    reason: Mapped[str] = mapped_column(sa.String(2_000), nullable=False)
+
+
+class TenantHandoverRecord(TenantScopedRecord, Base):
+    """Current nominative handover request; acceptance is separately journaled."""
+
+    __tablename__ = "tenant_handovers"
+    __table_args__ = (
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "requested_by_membership_id"],
+            ["tenant_memberships.tenant_id", "tenant_memberships.id"],
+            name="fk_handovers__requester",
+            ondelete="RESTRICT",
+        ),
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "successor_membership_id"],
+            ["tenant_memberships.tenant_id", "tenant_memberships.id"],
+            name="fk_handovers__successor",
+            ondelete="RESTRICT",
+        ),
+        sa.UniqueConstraint("tenant_id", "id", name="uq_handovers__tenant_id"),
+        sa.UniqueConstraint(
+            "tenant_id",
+            "requested_by_membership_id",
+            "idempotency_key",
+            name="uq_handovers__idempotency",
+        ),
+        sa.CheckConstraint(
+            "state IN ('REQUESTED', 'ACCEPTED', 'REFUSED', 'EXPIRED')", name="state"
+        ),
+        sa.CheckConstraint("jsonb_typeof(assignment_ids_json) = 'array'", name="assignment_ids"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    requested_by_membership_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    successor_membership_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    assignment_ids_json: Mapped[list[str]] = mapped_column(JSONB, nullable=False)
+    state: Mapped[str] = mapped_column(sa.String(16), nullable=False)
+    rationale: Mapped[str] = mapped_column(sa.String(2_000), nullable=False)
+    requested_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False)
+    accepted_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
+    command_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    idempotency_key: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    correlation_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True))
+
+
+class TenantHandoverEventRecord(TenantScopedRecord, Base):
+    """Append-only request and acceptance facts for one handover."""
+
+    __tablename__ = "tenant_handover_events"
+    __table_args__ = (
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "handover_id"],
+            ["tenant_handovers.tenant_id", "tenant_handovers.id"],
+            name="fk_handover_events__handover",
+            ondelete="RESTRICT",
+        ),
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "actor_membership_id"],
+            ["tenant_memberships.tenant_id", "tenant_memberships.id"],
+            name="fk_handover_events__actor",
+            ondelete="RESTRICT",
+        ),
+        sa.UniqueConstraint("tenant_id", "id", name="uq_handover_events__tenant_id"),
+        sa.UniqueConstraint(
+            "tenant_id",
+            "handover_id",
+            "event_type",
+            "command_id",
+            name="uq_handover_events__command",
+        ),
+        sa.CheckConstraint("event_type IN ('REQUESTED', 'ACCEPTED', 'REFUSED')", name="event_type"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    handover_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    event_type: Mapped[str] = mapped_column(sa.String(16), nullable=False)
+    actor_membership_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    occurred_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False)
+    command_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    reason: Mapped[str] = mapped_column(sa.String(2_000), nullable=False)
+
+
+class TenantRecoveryRecord(TenantScopedRecord, Base):
+    """Completed R03 recovery proof without granting business rights to support."""
+
+    __tablename__ = "tenant_recoveries"
+    __table_args__ = (
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "target_membership_id"],
+            ["tenant_memberships.tenant_id", "tenant_memberships.id"],
+            name="fk_recoveries__target",
+            ondelete="RESTRICT",
+        ),
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "first_support_membership_id"],
+            ["tenant_memberships.tenant_id", "tenant_memberships.id"],
+            name="fk_recoveries__first_support",
+            ondelete="RESTRICT",
+        ),
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "second_support_membership_id"],
+            ["tenant_memberships.tenant_id", "tenant_memberships.id"],
+            name="fk_recoveries__second_support",
+            ondelete="RESTRICT",
+        ),
+        sa.UniqueConstraint("tenant_id", "id", name="uq_recoveries__tenant_id"),
+        sa.UniqueConstraint(
+            "tenant_id",
+            "first_support_membership_id",
+            "idempotency_key",
+            name="uq_recoveries__idempotency",
+        ),
+        sa.CheckConstraint("status IN ('COMPLETED', 'REFUSED')", name="status"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    target_membership_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    first_support_membership_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    second_support_membership_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True), nullable=False
+    )
+    authority_evidence_ref: Mapped[str] = mapped_column(sa.String(500), nullable=False)
+    approval_ref: Mapped[str] = mapped_column(sa.String(500), nullable=False)
+    status: Mapped[str] = mapped_column(sa.String(16), nullable=False)
+    completed_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False)
+    command_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    idempotency_key: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    correlation_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True))
+
+
+class TenantResourceShareRecord(TenantScopedRecord, Base):
+    """Current projection for one opaque, version-pinned resource share."""
+
+    __tablename__ = "tenant_resource_shares"
+    __table_args__ = (
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "created_by_membership_id"],
+            ["tenant_memberships.tenant_id", "tenant_memberships.id"],
+            name="fk_resource_shares__creator",
+            ondelete="RESTRICT",
+        ),
+        sa.UniqueConstraint("tenant_id", "id", name="uq_resource_shares__tenant_id"),
+        sa.UniqueConstraint(
+            "tenant_id",
+            "created_by_membership_id",
+            "idempotency_key",
+            name="uq_resource_shares__idempotency",
+        ),
+        sa.CheckConstraint("state IN ('ACTIVE', 'REVOKED', 'EXPIRED')", name="state"),
+        sa.CheckConstraint("expires_at > starts_at", name="expiry"),
+        sa.CheckConstraint("length(trim(recipient_ref)) > 0", name="recipient"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    resource_type: Mapped[str] = mapped_column(sa.String(64), nullable=False)
+    resource_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    resource_fingerprint: Mapped[str] = mapped_column(sa.CHAR(64), nullable=False)
+    recipient_ref: Mapped[str] = mapped_column(sa.String(320), nullable=False)
+    purpose: Mapped[str] = mapped_column(sa.String(500), nullable=False)
+    classification: Mapped[str] = mapped_column(sa.String(64), nullable=False)
+    access_token_hash: Mapped[str] = mapped_column(sa.CHAR(64), nullable=False)
+    starts_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False)
+    state: Mapped[str] = mapped_column(sa.String(16), nullable=False)
+    created_by_membership_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    command_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    idempotency_key: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    correlation_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True))
+    revoked_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
+    revoke_reason: Mapped[str | None] = mapped_column(sa.String(500))
+
+
+class TenantResourceShareEventRecord(TenantScopedRecord, Base):
+    """Append-only lifecycle and access facts for one resource share."""
+
+    __tablename__ = "tenant_resource_share_events"
+    __table_args__ = (
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "share_id"],
+            ["tenant_resource_shares.tenant_id", "tenant_resource_shares.id"],
+            name="fk_resource_share_events__share",
+            ondelete="RESTRICT",
+        ),
+        sa.UniqueConstraint("tenant_id", "id", name="uq_resource_share_events__tenant_id"),
+        sa.UniqueConstraint(
+            "tenant_id",
+            "share_id",
+            "event_type",
+            "command_id",
+            name="uq_resource_share_events__command",
+        ),
+        sa.CheckConstraint(
+            "event_type IN ('CREATED', 'ACCESSED', 'REVOKED', 'EXPIRED')", name="event_type"
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    share_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    event_type: Mapped[str] = mapped_column(sa.String(16), nullable=False)
+    actor_membership_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True))
+    recipient_ref: Mapped[str | None] = mapped_column(sa.String(320))
+    occurred_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False)
+    command_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    reason: Mapped[str] = mapped_column(sa.String(500), nullable=False)
+
+
+class MembershipSuspensionRecord(TenantScopedRecord, Base):
+    """Append-only governance fact for an immediate membership suspension."""
+
+    __tablename__ = "membership_suspensions"
+    __table_args__ = (
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "membership_id"],
+            ["tenant_memberships.tenant_id", "tenant_memberships.id"],
+            name="fk_membership_suspensions__membership",
+            ondelete="RESTRICT",
+        ),
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "suspended_by_membership_id"],
+            ["tenant_memberships.tenant_id", "tenant_memberships.id"],
+            name="fk_membership_suspensions__suspender",
+            ondelete="RESTRICT",
+        ),
+        sa.UniqueConstraint("tenant_id", "id", name="uq_membership_suspensions__tenant_id"),
+        sa.UniqueConstraint(
+            "tenant_id",
+            "suspended_by_membership_id",
+            "idempotency_key",
+            name="uq_membership_suspensions__idempotency",
+        ),
+        sa.CheckConstraint("reason_code ~ '^[A-Z0-9_]+$'", name="reason_code"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    membership_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    suspended_by_membership_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    reason_code: Mapped[str] = mapped_column(sa.String(64), nullable=False)
+    rationale: Mapped[str] = mapped_column(sa.String(2_000), nullable=False)
+    suspended_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False)
+    command_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    idempotency_key: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    correlation_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True))
+
+
+class TenantInvitationRecord(TenantScopedRecord, Base):
+    """The current one-time invitation secret for an invited membership."""
+
+    __tablename__ = "tenant_invitations"
+    __table_args__ = (
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "membership_id"],
+            ["tenant_memberships.tenant_id", "tenant_memberships.id"],
+            name="fk_invitations__membership",
+            ondelete="RESTRICT",
+        ),
+        sa.UniqueConstraint("tenant_id", "membership_id", name="uq_invitations__membership"),
+        sa.UniqueConstraint("token_hash", name="uq_invitations__token_hash"),
+        sa.CheckConstraint("token_hash ~ '^[a-f0-9]{64}$'", name="token_hash"),
+        sa.CheckConstraint("expires_at > issued_at", name="expiry"),
+        sa.CheckConstraint(
+            "reissued_at IS NULL OR reissued_at >= issued_at",
+            name="reissued_at",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    membership_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    token_hash: Mapped[str] = mapped_column(sa.CHAR(64), nullable=False)
+    issued_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False)
+    reissued_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
+    accepted_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
 
 
 class TenantBootstrapTokenRecord(TenantScopedRecord, Base):
@@ -957,6 +1403,7 @@ from app.modules.pricing.infrastructure.models.financial import (  # noqa: E402,
 )
 from app.modules.submission.infrastructure.models.submission import (  # noqa: E402, F401
     SubmissionEvidenceRecord,
+    SubmissionPackageAuthorizationRecord,
     SubmissionPackageRecord,
 )
 
@@ -1070,6 +1517,7 @@ class CollaboratorTaskResultRecord(TenantScopedRecord, Base):
     outcome: Mapped[str] = mapped_column(sa.String(24), nullable=False)
     result_text: Mapped[str] = mapped_column(sa.String(8_000), nullable=False)
     source_locator: Mapped[str | None] = mapped_column(sa.String(500))
+    lot_reference: Mapped[str | None] = mapped_column(sa.String(120))
     actor_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     membership_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     command_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)

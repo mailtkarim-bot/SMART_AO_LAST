@@ -31,10 +31,12 @@ from app.modules.preparation.public.contracts import (
     PreparationCommandResponse,
     PreparationPackageProjection,
     PreparationReadinessProjection,
+    PreparationResponseDraftListResponse,
     PreparationReviewCorrectionProjection,
     PreparationReviewListResponse,
     PreparationReviewProjection,
     RequestPreparationReviewRequest,
+    TechnicalResponseDraftProjection,
 )
 from app.platform.events.dispatcher import (
     CommandExecutionError,
@@ -58,7 +60,7 @@ def build_preparation_router(
             context_resolver=security_runtime.context_resolver,
         )
         try:
-            package, readiness, documents = service.read_package(
+            package, readiness, documents, response_drafts = service.read_package(
                 actor=actor, package_id=package_id, now=datetime.now(tz=UTC)
             )
         except PermissionError as error:
@@ -98,6 +100,17 @@ def build_preparation_router(
                     readiness_revision=_readiness_revision(document=document, readiness=readiness),
                 )
                 for document in documents
+            ],
+            response_drafts=[
+                TechnicalResponseDraftProjection(
+                    draft_id=draft.draft_id,
+                    version=draft.version,
+                    state=draft.state,
+                    section_codes=list(draft.section_codes_json),
+                    source_refs=list(draft.source_refs_json),
+                    responsible_role=draft.responsible_role,
+                )
+                for draft in response_drafts
             ],
         )
 
@@ -264,6 +277,45 @@ def build_preparation_review_router(
                     ],
                 )
                 for review, corrections in reviews
+            ],
+        )
+
+    @router.get(
+        "/{package_id}/response-drafts",
+        response_model=PreparationResponseDraftListResponse,
+    )
+    def read_response_drafts(
+        package_id: UUID,
+        authorization: str | None = Header(default=None),
+    ) -> PreparationResponseDraftListResponse:
+        actor = _resolve_context(
+            authorization=authorization,
+            context_resolver=security_runtime.context_resolver,
+        )
+        try:
+            drafts = service.read_response_drafts(
+                actor=actor, package_id=package_id, now=datetime.now(tz=UTC)
+            )
+        except PermissionError as error:
+            if str(error) == "NOT_FOUND_OR_FORBIDDEN":
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND, detail="NOT_FOUND_OR_FORBIDDEN"
+                ) from error
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="FORBIDDEN"
+            ) from error
+        return PreparationResponseDraftListResponse(
+            package_id=package_id,
+            drafts=[
+                TechnicalResponseDraftProjection(
+                    draft_id=draft.draft_id,
+                    version=draft.version,
+                    state=draft.state,
+                    section_codes=list(draft.section_codes_json),
+                    source_refs=list(draft.source_refs_json),
+                    responsible_role=draft.responsible_role,
+                )
+                for draft in drafts
             ],
         )
 

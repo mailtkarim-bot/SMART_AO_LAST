@@ -79,6 +79,7 @@ def _observation() -> SimpleNamespace:
         id=OBSERVATION_ID,
         source_notice_id="A-1",
         title="Réhabilitation école",
+        observed_at=datetime(2026, 8, 23, 12, 0, tzinfo=UTC),
         publication_date=datetime(2026, 8, 20, tzinfo=UTC).date(),
         response_deadline=datetime(2026, 9, 1, 12, tzinfo=UTC),
         department_codes=["59"],
@@ -105,6 +106,9 @@ class FakeRepository:
     def list_observations(self, *, session, tenant_id, limit, min_score):
         return (_observation(),)
 
+    def states_for_observations(self, **_kwargs):
+        return {}
+
     def persist_qualification(self, **_kwargs):
         if self.error is not None:
             raise self.error
@@ -125,6 +129,7 @@ def _client(
         membership_id=uuid4(),
         session_id=uuid4(),
         correlation_id=uuid4(),
+        mfa_verified_at=datetime.now(UTC),
     )
     app = FastAPI()
     app.include_router(
@@ -154,6 +159,13 @@ def test_read_route_requires_bearer_and_returns_closed_projection() -> None:
     body = response.json()["observations"][0]
     assert body["source_notice_id"] == "A-1"
     assert body["score"] == 100
+    assert body["observed_at"] == "2026-08-23T12:00:00+00:00"
+    assert body["p0_state"] == "UNREVIEWED"
+    assert body["p1_state"] == "NOT_OPEN"
+    assert body["lot_scope_state"] == "UNKNOWN"
+    assert body["lot_scope_source"] == "BOAMP"
+    assert body["deadline_state"] == "EXPIRED"
+    assert body["unknowns"] == []
     assert "tenant_id" not in body
     assert "actor_id" not in body
 

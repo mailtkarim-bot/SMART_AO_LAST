@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import type { CollaboratorTask, PreparationPackage } from "../../shared/types";
@@ -27,6 +27,16 @@ const packageProjection: PreparationPackage = {
       document_kind: "TECHNICAL_RESPONSE",
       state: "GENERATED",
       readiness_revision: 2,
+    },
+  ],
+  response_drafts: [
+    {
+      draft_id: "draft-1",
+      version: 1,
+      state: "DRAFT",
+      section_codes: ["METHOD", "SOURCES"],
+      source_refs: ["requirement-1"],
+      responsible_role: "COLLABORATEUR",
     },
   ],
 };
@@ -62,6 +72,9 @@ function renderPanel(
     wizardPreviewContent: null,
     wizardDocumentBusy: false,
     wizardDocumentKind: "TECHNICAL_RESPONSE",
+    wizardDraftSourceDocumentId: "",
+    wizardDraftSections: "METHOD,SOURCES",
+    wizardDraftSourceRefs: "",
     setWizardCaseId: vi.fn(),
     setWizardPackageId: vi.fn(),
     setWizardTaskId: vi.fn(),
@@ -70,12 +83,16 @@ function renderPanel(
     setWizardSnapshotId: vi.fn(),
     setWizardTransmissionId: vi.fn(),
     setWizardDocumentKind: vi.fn(),
+    setWizardDraftSourceDocumentId: vi.fn(),
+    setWizardDraftSections: vi.fn(),
+    setWizardDraftSourceRefs: vi.fn(),
     onLoad: vi.fn(),
     onClaimTask: vi.fn(),
     onRecordResult: vi.fn(),
     onCompleteTask: vi.fn(),
     onEvaluateReadiness: vi.fn(),
     onGenerateDocument: vi.fn(),
+    onCreateResponseDraft: vi.fn(),
     onTransmitSnapshot: vi.fn(),
     onPreviewDocument: vi.fn(),
     onDownloadDocument: vi.fn(),
@@ -112,6 +129,8 @@ describe("CollaboratorWizardPanel", () => {
     expect(screen.getAllByText("READY_WITH_WARNINGS")).toHaveLength(2);
     expect(screen.getByText("OPTIONAL_REFERENCE_MISSING")).toBeInTheDocument();
     expect(screen.getByText("TECHNICAL_RESPONSE")).toBeInTheDocument();
+    expect(screen.getByText("Plan de réponse")).toBeInTheDocument();
+    expect(screen.getByText("METHOD · SOURCES")).toBeInTheDocument();
     expect(screen.getByText("Enregistrer le résultat")).toBeInTheDocument();
     expect(screen.getByRole("option", { name: "DC4" })).toBeInTheDocument();
   });
@@ -220,5 +239,23 @@ describe("CollaboratorWizardPanel", () => {
     expect(onGenerateDocument).toHaveBeenCalledTimes(1);
     expect(onTransmitSnapshot).toHaveBeenCalledTimes(1);
     expect(screen.getByText(/ne dépose jamais le dossier sur un portail externe/)).toBeInTheDocument();
+  });
+
+  it("keeps a terrain capture local until the server confirms synchronization", async () => {
+    const onRecordResult = vi.fn().mockResolvedValue(true);
+    renderPanel({
+      wizardPackage: packageProjection,
+      wizardTasks: [task],
+      wizardTaskId: "task-1",
+      wizardResultText: "Photo de la zone de stockage.",
+      onRecordResult,
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Conserver localement" }));
+    expect(screen.getByText(/Risque : perte possible/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Synchroniser la capture" }));
+
+    await waitFor(() => expect(screen.getByText(/État :/)).toHaveTextContent("CONFIRMED"));
+    expect(onRecordResult).toHaveBeenCalledTimes(1);
   });
 });

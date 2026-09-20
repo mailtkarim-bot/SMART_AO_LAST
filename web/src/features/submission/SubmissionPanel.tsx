@@ -1,7 +1,12 @@
 import type { Dispatch, SetStateAction } from "react";
+import type {
+  SubmissionEvidenceProjection,
+  SubmissionMode,
+  SubmissionPackageManifestProjection,
+} from "../../shared/types";
 
 export type SubmissionEvidenceForm = {
-  evidence_type: "MANUAL_RECEIPT" | "MANUAL_PORTAL_REFERENCE";
+  evidence_type: "MANUAL_RECEIPT" | "MANUAL_PORTAL_REFERENCE" | "HUMAN_DEPOSIT_ATTEMPT";
   external_reference_hash: string;
   evidence_sha256: string;
   notes_redacted: string;
@@ -11,7 +16,15 @@ type SubmissionPanelProps = {
   preparationPackageId: string;
   preparationRevision: string;
   submissionPackageId: string;
+  submissionPackageVersion: string;
+  submissionAuthorizationRationale: string;
+  submissionMode: SubmissionMode;
+  candidatureOnlyReason: string;
+  submissionAuthorized: boolean;
+  submissionManifest: SubmissionPackageManifestProjection | null;
+  submissionEvidence: SubmissionEvidenceProjection[];
   submissionExported: boolean;
+  submissionExportState: "IDLE" | "EXPORTED" | "UNKNOWN";
   signatureId: string;
   signaturePackageVersion: string;
   signatureStatus: "REQUESTED" | "SIGNED" | "REJECTED" | null;
@@ -21,10 +34,17 @@ type SubmissionPanelProps = {
   setPreparationPackageId: Dispatch<SetStateAction<string>>;
   setPreparationRevision: Dispatch<SetStateAction<string>>;
   setSubmissionPackageId: Dispatch<SetStateAction<string>>;
+  setSubmissionPackageVersion: Dispatch<SetStateAction<string>>;
+  setSubmissionAuthorizationRationale: Dispatch<SetStateAction<string>>;
+  setSubmissionMode: Dispatch<SetStateAction<SubmissionMode>>;
+  setCandidatureOnlyReason: Dispatch<SetStateAction<string>>;
   setSignatureId: Dispatch<SetStateAction<string>>;
   setSignaturePackageVersion: Dispatch<SetStateAction<string>>;
   setEvidenceForm: Dispatch<SetStateAction<SubmissionEvidenceForm>>;
   onPrepare: () => void;
+  onAuthorize: () => void;
+  onLoadManifest: () => void;
+  onLoadEvidence: () => void;
   onRequestSignature: () => void;
   onLoadSignature: () => void;
   onExport: () => void;
@@ -35,7 +55,15 @@ export function SubmissionPanel({
   preparationPackageId,
   preparationRevision,
   submissionPackageId,
+  submissionPackageVersion,
+  submissionAuthorizationRationale,
+  submissionMode,
+  candidatureOnlyReason,
+  submissionAuthorized,
+  submissionManifest,
+  submissionEvidence,
   submissionExported,
+  submissionExportState,
   signatureId,
   signaturePackageVersion,
   signatureStatus,
@@ -45,10 +73,17 @@ export function SubmissionPanel({
   setPreparationPackageId,
   setPreparationRevision,
   setSubmissionPackageId,
+  setSubmissionPackageVersion,
+  setSubmissionAuthorizationRationale,
+  setSubmissionMode,
+  setCandidatureOnlyReason,
   setSignatureId,
   setSignaturePackageVersion,
   setEvidenceForm,
   onPrepare,
+  onAuthorize,
+  onLoadManifest,
+  onLoadEvidence,
   onRequestSignature,
   onLoadSignature,
   onExport,
@@ -91,15 +126,106 @@ export function SubmissionPanel({
               onChange={(event) => setPreparationRevision(event.target.value)}
             />
           </label>
+          <label>
+            <span>Mode de remise</span>
+            <select
+              aria-label="Mode de remise"
+              value={submissionMode}
+              onChange={(event) => setSubmissionMode(event.target.value as SubmissionMode)}
+            >
+              <option value="FULL">Paquet complet</option>
+              <option value="CANDIDATURE_ONLY">Candidature seule</option>
+            </select>
+          </label>
+          {submissionMode === "CANDIDATURE_ONLY" && (
+            <label>
+              <span>Justification de la candidature seule</span>
+              <textarea
+                aria-label="Justification de la candidature seule"
+                rows={2}
+                maxLength={1000}
+                value={candidatureOnlyReason}
+                onChange={(event) => setCandidatureOnlyReason(event.target.value)}
+                placeholder="Éléments financiers non disponibles ou hors périmètre"
+              />
+            </label>
+          )}
           <button className="primary-button" type="button" onClick={onPrepare}>
             Préparer le paquet <span>→</span>
           </button>
           {submissionPackageId && (
             <>
-              <button className="secondary-button" type="button" onClick={onExport}>
-                Exporter le dossier ZIP <span>↓</span>
+              <button className="secondary-button" type="button" onClick={onLoadManifest}>
+                Prévisualiser le manifeste <span>⌁</span>
               </button>
-              {submissionExported && <span className="rule-tag">Export audité</span>}
+              {submissionManifest && (
+                <div className="manifest-preview" aria-label="Prévisualisation du manifeste">
+                  <strong>Manifeste exact · v{submissionManifest.package_version}</strong>
+                  <span>SHA-256 : {submissionManifest.manifest_sha256}</span>
+                  <span>
+                    {Array.isArray(submissionManifest.manifest.entries)
+                      ? `${submissionManifest.manifest.entries.length} entrée(s) partagée(s)`
+                      : "Entrées non exposées"}
+                    {" · "}{submissionManifest.authorization_status === "AUTHORIZED" ? "P5 autorisée" : "P5 à autoriser"}
+                  </span>
+                  {typeof submissionManifest.manifest.scope === "object" && submissionManifest.manifest.scope !== null && (
+                    <small>Périmètre gelé : {JSON.stringify(submissionManifest.manifest.scope)}</small>
+                  )}
+                  {typeof submissionManifest.manifest.submission_mode === "string" && (
+                    <small>Mode : {submissionManifest.manifest.submission_mode}</small>
+                  )}
+                  <small>
+                    Exclus : {Array.isArray(submissionManifest.manifest.exclusions)
+                      ? submissionManifest.manifest.exclusions.join(", ")
+                      : "stockage privé, montants et succès externe"}.
+                  </small>
+                </div>
+              )}
+              <div className="panel-heading">
+                <div>
+                  <h3>Autorisation P5</h3>
+                  <p>Le Patron autorise la version exacte du manifeste avant toute remise.</p>
+                </div>
+              </div>
+              <label>
+                <span>Version du paquet</span>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={submissionPackageVersion}
+                  onChange={(event) => setSubmissionPackageVersion(event.target.value)}
+                />
+              </label>
+              <label>
+                <span>Justification de contrôle</span>
+                <textarea
+                  rows={2}
+                  maxLength={2000}
+                  value={submissionAuthorizationRationale}
+                  onChange={(event) => setSubmissionAuthorizationRationale(event.target.value)}
+                />
+              </label>
+              <button className="primary-button" type="button" onClick={onAuthorize}>
+                Autoriser la remise humaine <span>→</span>
+              </button>
+              {submissionAuthorized && (
+                <>
+                  <span className="rule-tag">P5 autorisée</span>
+                  <button className="secondary-button" type="button" onClick={onExport}>
+                    {submissionExportState === "UNKNOWN" ? "Vérifier l’export" : "Exporter le dossier ZIP"} <span>{submissionExportState === "UNKNOWN" ? "↻" : "↓"}</span>
+                  </button>
+                  {submissionExported && <span className="rule-tag">Export audité</span>}
+                  {submissionExportState === "UNKNOWN" && (
+                    <p className="form-status" role="status">
+                      Export non confirmé : dernier état confirmé « paquet autorisé ». Vérifiez avant de relancer.
+                    </p>
+                  )}
+                </>
+              )}
+              <small className="invariant-note">
+                Invariant serveur : <strong>external_submission: NOT_PERFORMED</strong>.
+              </small>
             </>
           )}
         </div>
@@ -131,6 +257,7 @@ export function SubmissionPanel({
             >
               <option value="MANUAL_RECEIPT">Accusé manuel</option>
               <option value="MANUAL_PORTAL_REFERENCE">Référence portail manuelle</option>
+              <option value="HUMAN_DEPOSIT_ATTEMPT">Tentative humaine — résultat inconnu</option>
             </select>
           </label>
           <label>
@@ -172,6 +299,20 @@ export function SubmissionPanel({
           <button className="primary-button" type="button" onClick={onRecordEvidence}>
             Enregistrer la preuve <span>→</span>
           </button>
+          <button className="secondary-button" type="button" onClick={onLoadEvidence}>
+            Relire les preuves <span>↻</span>
+          </button>
+          {submissionEvidence.length > 0 && (
+            <div className="manifest-preview" aria-label="Preuves de réception">
+              {submissionEvidence.map((evidence) => (
+                <div key={evidence.evidence_id}>
+                  <strong>{evidence.status === "UNKNOWN" ? "Tentative inconnue" : "Réception partielle"} · v{evidence.package_version}</strong>
+                  <span>{evidence.evidence_type} · SHA-256 manifeste : {evidence.manifest_sha256}</span>
+                  <small>Rapprochement incomplet · external_submission: NOT_PERFORMED.</small>
+                </div>
+              ))}
+            </div>
+          )}
           <small className="invariant-note">
             Invariant serveur : <strong>external_submission: NOT_PERFORMED</strong>.
           </small>

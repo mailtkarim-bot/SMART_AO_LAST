@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
@@ -40,3 +41,80 @@ class CreateCaseResponse(BaseModel):
     event_ids: list[UUID]
     navigation: Literal["CASE_OVERVIEW"] = "CASE_OVERVIEW"
     replayed: bool = False
+
+
+class LinkCaseDceVersionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    command_id: UUID
+    idempotency_key: UUID
+    correlation_id: UUID | None = None
+    dce_version_id: UUID
+    expected_case_revision: int | None = Field(default=None, ge=0)
+    reason: str = Field(min_length=1, max_length=2_000)
+
+
+class LinkCaseDceVersionResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    status: Literal["SUCCEEDED"] = "SUCCEEDED"
+    command_id: UUID
+    idempotency_key: UUID
+    result_code: Literal["CASE_DCE_APPLICABILITY_SET"]
+    aggregate_refs: list[dict[str, object]]
+    event_ids: list[UUID]
+    replayed: bool = False
+
+
+class CaseResolutionItemResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    item_id: UUID
+    item_kind: Literal[
+        "REQUIREMENT",
+        "INFORMATION_REQUEST",
+        "TASK_BLOCKER",
+        "CONTRADICTION",
+        "RISK",
+        "UNKNOWN",
+        "CAPABILITY_GAP",
+    ]
+    native_state: str
+    source_refs: list[str]
+    resolution_owner: str | None
+    next_action: str
+    due_at: datetime | None
+    impact: str | None
+
+
+class CaseEconomicCoverageStatusResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    state: Literal[
+        "PROVEN",
+        "NOT_DEMONSTRATED",
+        "UNKNOWN",
+        "INFEASIBLE",
+        "FORECAST_PRESENT",
+    ]
+    source_refs: list[str]
+    note: str
+
+
+class CaseEconomicCoverageResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    assumptions: CaseEconomicCoverageStatusResponse
+    quote_validity: CaseEconomicCoverageStatusResponse
+    capacity: CaseEconomicCoverageStatusResponse
+    financing: CaseEconomicCoverageStatusResponse
+
+
+class CaseResolutionIndexResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    case_id: UUID
+    work_label: str
+    coverage: Literal["PARTIAL"]
+    items: list[CaseResolutionItemResponse]
+    economic_coverage: CaseEconomicCoverageResponse | None = None

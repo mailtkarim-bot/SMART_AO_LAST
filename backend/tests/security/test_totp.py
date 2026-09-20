@@ -138,17 +138,20 @@ def test_totp_enrollment_confirmation_step_up_replay_recovery_and_disable(
         service.verify_step_up(session_id=session_id, code=next_code, now=next_time)
 
     recovery_code = enrollment.recovery_codes[0]
-    recovery_result = service.verify_step_up(
-        session_id=session_id, code=recovery_code, now=next_time + timedelta(seconds=1)
-    )
-    assert recovery_result.used_recovery_code
-    with pytest.raises(TotpVerificationError, match="TOTP_CODE_INVALID"):
+    with pytest.raises(TotpVerificationError, match="RECOVERY_REENROLLMENT_REQUIRED"):
         service.verify_step_up(
-            session_id=session_id, code=recovery_code, now=next_time + timedelta(seconds=2)
+            session_id=session_id, code=recovery_code, now=next_time + timedelta(seconds=1)
+        )
+
+    with pytest.raises(TotpVerificationError, match="TOTP_CODE_INVALID"):
+        service.disable(
+            session_id=session_id,
+            code=recovery_code,
+            now=next_time + timedelta(seconds=2),
         )
 
     service.disable(
-        identity_id=identity_id,
+        session_id=session_id,
         code=_totp_code(secret, int(next_time.timestamp()) // 30 + 1),
         now=next_time + timedelta(seconds=30),
     )
@@ -159,3 +162,73 @@ def test_totp_enrollment_confirmation_step_up_replay_recovery_and_disable(
         assert auth_session is not None and auth_session.auth_strength == "PASSWORD"
         assert auth_session.mfa_verified_at is None
         assert session.scalar(sa.select(sa.func.count()).select_from(TotpRecoveryCodeRecord)) == 10
+
+
+@pytest.mark.db
+@pytest.mark.security
+def test_recovery_code_requires_a_fresh_password_session_and_revokes_all_sessions(
+    database_engine: Engine,
+    session_factory: sessionmaker[Session],
+) -> None:
+    identity_id, session_id = _seed_identity(database_engine)
+    service = TotpService(
+        session_factory=session_factory,
+        encryption_key=Fernet.generate_key().decode("ascii"),
+    )
+    enrollment = service.begin_enrollment(identity_id=identity_id, now=NOW)
+    secret = enrollment.otpauth_uri.split("secret=", 1)[1].split("&", 1)[0]
+    service.confirm_enrollment(
+        identity_id=identity_id,
+        factor_id=enrollment.factor_id,
+        code=_totp_code(secret, int(NOW.timestamp()) // 30),
+        now=NOW,
+        session_id=session_id,
+    )
+    with pytest.raises(TotpVerificationError, match="PASSWORD_REAUTH_REQUIRED"):
+        service.recover_with_code(session_id=session_id, code=enrollment.recovery_codes[0], now=NOW)
+
+    recovery_session_id = uuid4()
+    recovered_at = NOW + timedelta(seconds=1)
+    with Session(database_engine) as session:
+        original = session.get(AuthSessionRecord, session_id)
+        assert original is not None
+        session.add(
+            AuthSessionRecord(
+                id=recovery_session_id,
+                tenant_id=original.tenant_id,
+                membership_id=original.membership_id,
+                identity_id=identity_id,
+                state="ACTIVE",
+                auth_strength="PASSWORD",
+                token_version=1,
+                issued_at=recovered_at,
+                last_seen_at=recovered_at,
+                expires_at=recovered_at + timedelta(hours=8),
+                absolute_expires_at=recovered_at + timedelta(hours=12),
+                mfa_verified_at=None,
+                revoked_at=None,
+                revoke_reason=None,
+            )
+        )
+        session.commit()
+
+    service.recover_with_code(
+        session_id=recovery_session_id,
+        code=enrollment.recovery_codes[0],
+        now=recovered_at,
+    )
+    with Session(database_engine) as session:
+        factor = session.get(TotpFactorRecord, enrollment.factor_id)
+        sessions = session.scalars(
+            sa.select(AuthSessionRecord).where(AuthSessionRecord.identity_id == identity_id)
+        ).all()
+        recovery = session.scalar(
+            sa.select(TotpRecoveryCodeRecord).where(
+                TotpRecoveryCodeRecord.factor_id == enrollment.factor_id,
+                TotpRecoveryCodeRecord.used_at == recovered_at,
+            )
+        )
+        assert factor is not None and factor.state == "DISABLED"
+        assert recovery is not None
+        assert all(record.state == "REVOKED" for record in sessions)
+        assert all(record.revoke_reason == "MFA_RECOVERY" for record in sessions)

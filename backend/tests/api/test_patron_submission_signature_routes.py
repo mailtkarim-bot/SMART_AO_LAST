@@ -66,7 +66,7 @@ def _actor() -> ActorContext:
         assigned_case_ids=frozenset(),
         session_id=uuid4(),
         authenticated_at=NOW,
-        mfa_verified_at=None,
+        mfa_verified_at=NOW,
         correlation_id=uuid4(),
     )
 
@@ -127,6 +127,7 @@ class _ReadService:
             "provider": PROVIDER,
             "status": "REQUESTED",
             "expected_package_version": 2,
+            "manifest_sha256": "c" * 64,
             "revision": 1,
         }
 
@@ -201,6 +202,16 @@ def test_request_signature_returns_201_then_200_on_replay():
     command = cast(_SignatureCommand, service.calls[0]["command"])
     assert command.signer_membership_id is not None
     assert command.provider == PROVIDER
+
+
+def test_signature_projection_exposes_the_bound_manifest_hash():
+    response = _client().get(
+        f"/api/v1/patron/submission-signatures/{SIGNATURE_ID}",
+        headers=_headers(),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["manifest_sha256"] == "c" * 64
 
 
 def test_signature_request_does_not_accept_provider_or_financial_fields():

@@ -34,6 +34,13 @@ class MembershipState(StrEnum):
     EXPIRED = "EXPIRED"
 
 
+class OperationalProfile(StrEnum):
+    """A server-owned work presentation that never grants authorization."""
+
+    RESPONSABLE = "RESPONSABLE"
+    EXPERT = "EXPERT"
+
+
 class DataClassification(StrEnum):
     """Server-owned classifications used before a representation is serialized."""
 
@@ -71,6 +78,8 @@ class ActorContext:
     mfa_verified_at: datetime | None
     correlation_id: UUID
     assignment_scopes: tuple[AssignmentScope, ...] = ()
+    operational_profile: OperationalProfile | None = None
+    delegated_case_ids: frozenset[UUID] = frozenset()
 
     @property
     def membership_is_active(self) -> bool:

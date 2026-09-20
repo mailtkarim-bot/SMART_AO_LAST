@@ -123,6 +123,12 @@ class AuthorizationPolicy:
                 return AuthorizationDecision.denied(reason="assignment action is missing")
             if resource.classification not in assignment_scope.allowed_classifications:
                 return AuthorizationDecision.denied(reason="assignment classification is missing")
+        if (
+            context.actor_kind is ActorKind.PATRON_DELEGATE
+            and resource.case_id is not None
+            and resource.case_id not in context.delegated_case_ids
+        ):
+            return AuthorizationDecision.denied(reason="delegated case scope is missing")
         if request.mfa_required and (
             request.evaluated_at is None
             or not context.has_recent_mfa(evaluated_at=request.evaluated_at)

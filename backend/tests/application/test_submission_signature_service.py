@@ -61,6 +61,7 @@ def test_request_signature_creates_append_only_intent() -> None:
         tenant_id=TENANT_ID,
         case_id=uuid4(),
         version=2,
+        manifest_sha256="c" * 64,
     )
     added: list[object] = []
     session = SimpleNamespace(
@@ -75,7 +76,9 @@ def test_request_signature_creates_append_only_intent() -> None:
     assert outcome.result_code == "SUBMISSION_SIGNATURE_REQUESTED"
     assert len(added) == 1
     assert cast(SimpleNamespace, added[0]).status == "REQUESTED"
+    assert cast(SimpleNamespace, added[0]).manifest_sha256 == "c" * 64
     assert outcome.events[0].payload["provider"] == "DOCUSIGN"
+    assert outcome.events[0].payload["manifest_sha256"] == "c" * 64
 
 
 def test_request_signature_rejects_missing_package() -> None:

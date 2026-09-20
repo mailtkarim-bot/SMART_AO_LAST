@@ -13,9 +13,12 @@ from app.platform.security.models import (
     AuthSessionRecord,
     IdentityRecord,
     PasswordCredentialRecord,
+    RefreshTokenFamilyRecord,
     RefreshTokenRecord,
+    SecurityAuditEventRecord,
     TenantMembershipRecord,
     TotpFactorRecord,
+    TotpRecoveryCodeRecord,
 )
 from app.platform.security.tokens import JwtAccessTokenCodec
 from app.platform.security.totp import TotpService, _totp_code
@@ -64,10 +67,12 @@ def _active_identity_with_membership(
     engine: sa.Engine,
     *,
     tenant_id: UUID,
+    role: str = "PATRON_ADMIN",
+    operational_profile: str | None = None,
 ) -> tuple[UUID, UUID, str]:
     identity_id = uuid4()
     membership_id = uuid4()
-    email = f"patron-{identity_id}@example.test"
+    email = f"member-{identity_id}@example.test"
     with engine.begin() as connection:
         connection.execute(
             sa.insert(IdentityRecord).values(
@@ -93,7 +98,8 @@ def _active_identity_with_membership(
                 id=membership_id,
                 tenant_id=tenant_id,
                 identity_id=identity_id,
-                role="PATRON_ADMIN",
+                role=role,
+                operational_profile=operational_profile,
                 state="ACTIVE",
                 activated_at=FIXED_NOW,
                 revoked_at=None,
@@ -374,8 +380,64 @@ def test_current_actor_returns_server_resolved_membership_facts(
     assert response.status_code == 200
     body = response.json()
     assert body["identity_id"] == str(identity_id)
+    assert body["tenant_slug"] == f"tenant-{tenant_id}"
     assert body["actor_kind"] == "PATRON_ADMIN"
+    assert body["operational_profile"] is None
     assert body["membership_state"] == "ACTIVE"
+    assert body["mfa_verified"] is False
+
+
+@pytest.mark.api
+@pytest.mark.db
+@pytest.mark.security
+@pytest.mark.parametrize("operational_profile", ["RESPONSABLE", "EXPERT"])
+def test_current_actor_projects_server_profile_without_accepting_browser_override(
+    database_engine: sa.Engine,
+    session_factory: sessionmaker[Session],
+    operational_profile: str,
+) -> None:
+    tenant_id = _insert_tenant(database_engine)
+    _, _, email = _active_identity_with_membership(
+        database_engine,
+        tenant_id=tenant_id,
+        role="COLLABORATEUR",
+        operational_profile=operational_profile,
+    )
+    client, _ = _client(session_factory)
+    login = client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": email,
+            "password": "Correct#Pass123",
+            "tenant_id": str(tenant_id),
+        },
+    )
+
+    response = client.get(
+        "/api/v1/auth/me?operational_profile=RESPONSABLE",
+        headers={"Authorization": f"Bearer {login.json()['access_token']}"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["actor_kind"] == "COLLABORATEUR"
+    assert response.json()["operational_profile"] == operational_profile
+
+
+@pytest.mark.api
+@pytest.mark.db
+@pytest.mark.security
+def test_membership_rejects_operational_profile_outside_collaborator_role(
+    database_engine: sa.Engine,
+) -> None:
+    tenant_id = _insert_tenant(database_engine)
+
+    with pytest.raises(sa.exc.IntegrityError):
+        _active_identity_with_membership(
+            database_engine,
+            tenant_id=tenant_id,
+            role="PATRON_DELEGATE",
+            operational_profile="EXPERT",
+        )
 
 
 @pytest.mark.api
@@ -509,3 +571,138 @@ def test_mfa_confirm_rejects_invalid_code_without_activating_factor(
     with Session(database_engine) as session:
         factor = session.get(TotpFactorRecord, UUID(body["factor_id"]))
         assert factor is not None and factor.state == "PENDING"
+
+
+@pytest.mark.api
+@pytest.mark.db
+@pytest.mark.security
+def test_mfa_recovery_requires_password_and_code_revokes_lineages_then_requires_reenrollment(
+    database_engine: sa.Engine,
+    session_factory: sessionmaker[Session],
+) -> None:
+    tenant_id = _insert_tenant(database_engine)
+    identity_id, _, email = _active_identity_with_membership(database_engine, tenant_id=tenant_id)
+    totp_service = TotpService(
+        session_factory=session_factory,
+        encryption_key=Fernet.generate_key().decode("ascii"),
+    )
+    client, access_tokens = _client(session_factory, totp_service=totp_service)
+    first_login = client.post(
+        "/api/v1/auth/login",
+        json={"email": email, "password": "Correct#Pass123", "tenant_id": str(tenant_id)},
+    )
+    first_headers = {
+        "Authorization": f"Bearer {first_login.json()['access_token']}",
+        "X-CSRF-Token": client.cookies.get("smart_ao_csrf"),
+    }
+    enrollment = client.post("/api/v1/auth/mfa/totp/enroll", headers=first_headers)
+    assert enrollment.status_code == 200
+    enrollment_body = enrollment.json()
+    secret = enrollment_body["otpauth_uri"].split("secret=", 1)[1].split("&", 1)[0]
+    confirmation = client.post(
+        "/api/v1/auth/mfa/totp/confirm",
+        headers=first_headers,
+        json={
+            "factor_id": enrollment_body["factor_id"],
+            "code": _totp_code(secret, int(FIXED_NOW.timestamp()) // 30),
+        },
+    )
+    assert confirmation.status_code == 200
+
+    password_login = client.post(
+        "/api/v1/auth/login",
+        json={"email": email, "password": "Correct#Pass123", "tenant_id": str(tenant_id)},
+    )
+    password_token = password_login.json()["access_token"]
+    password_headers = {
+        "Authorization": f"Bearer {password_token}",
+        "X-CSRF-Token": client.cookies.get("smart_ao_csrf"),
+    }
+    recovery_code = enrollment_body["recovery_codes"][0]
+
+    no_email_only = client.post(
+        "/api/v1/auth/mfa/recovery/start",
+        headers=password_headers,
+        json={"email": email},
+    )
+    assert no_email_only.status_code == 422
+
+    step_up = client.post(
+        "/api/v1/auth/mfa/totp/step-up",
+        headers=password_headers,
+        json={"code": recovery_code},
+    )
+    assert step_up.status_code == 422
+    assert step_up.json() == {"detail": "RECOVERY_REENROLLMENT_REQUIRED"}
+    with Session(database_engine) as session:
+        recovery = session.scalar(
+            sa.select(TotpRecoveryCodeRecord).where(
+                TotpRecoveryCodeRecord.factor_id == UUID(enrollment_body["factor_id"]),
+                TotpRecoveryCodeRecord.used_at.is_(None),
+            )
+        )
+        assert recovery is not None
+
+    recovered = client.post(
+        "/api/v1/auth/mfa/recovery/start",
+        headers=password_headers,
+        json={"code": recovery_code},
+    )
+    assert recovered.status_code == 204
+    assert client.cookies.get("smart_ao_refresh") is None
+    assert client.cookies.get("smart_ao_csrf") is None
+    old_password_session = client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {password_token}"},
+    )
+    assert old_password_session.status_code == 401
+    assert (
+        client.get(
+            "/api/v1/auth/me",
+            headers={"Authorization": f"Bearer {first_login.json()['access_token']}"},
+        ).status_code
+        == 401
+    )
+    with Session(database_engine) as session:
+        sessions = session.scalars(
+            sa.select(AuthSessionRecord).where(AuthSessionRecord.identity_id == identity_id)
+        ).all()
+        families = session.scalars(sa.select(RefreshTokenFamilyRecord)).all()
+        tokens = session.scalars(sa.select(RefreshTokenRecord)).all()
+        factor = session.get(TotpFactorRecord, UUID(enrollment_body["factor_id"]))
+        recovery_audit = session.scalar(
+            sa.select(sa.func.count())
+            .select_from(SecurityAuditEventRecord)
+            .where(SecurityAuditEventRecord.event_type == "AUTH_MFA_RECOVERY_COMPLETED")
+        )
+        assert all(record.state == "REVOKED" for record in sessions)
+        assert all(record.state == "REVOKED" for record in families)
+        assert all(record.state == "REVOKED" for record in tokens)
+        assert factor is not None and factor.state == "DISABLED"
+        assert recovery_audit == 1
+
+    renewed_login = client.post(
+        "/api/v1/auth/login",
+        json={"email": email, "password": "Correct#Pass123", "tenant_id": str(tenant_id)},
+    )
+    renewed_token = renewed_login.json()["access_token"]
+    renewed_headers = {
+        "Authorization": f"Bearer {renewed_token}",
+        "X-CSRF-Token": client.cookies.get("smart_ao_csrf"),
+    }
+    renewed_enrollment = client.post("/api/v1/auth/mfa/totp/enroll", headers=renewed_headers)
+    assert renewed_enrollment.status_code == 200
+    renewed_body = renewed_enrollment.json()
+    renewed_secret = renewed_body["otpauth_uri"].split("secret=", 1)[1].split("&", 1)[0]
+    reenrolled = client.post(
+        "/api/v1/auth/mfa/totp/confirm",
+        headers=renewed_headers,
+        json={
+            "factor_id": renewed_body["factor_id"],
+            "code": _totp_code(renewed_secret, int(FIXED_NOW.timestamp()) // 30),
+        },
+    )
+    assert reenrolled.status_code == 200
+    reenrolled_session = access_tokens.decode(reenrolled.json()["access_token"]).session_id
+    renewed_session = access_tokens.decode(renewed_token).session_id
+    assert reenrolled_session == renewed_session

@@ -49,7 +49,7 @@ def _actor() -> ActorContext:
         assigned_case_ids=frozenset(),
         session_id=uuid4(),
         authenticated_at=NOW,
-        mfa_verified_at=None,
+        mfa_verified_at=NOW,
         correlation_id=uuid4(),
     )
 
@@ -212,6 +212,14 @@ class _PreparationService:
             state="GENERATED",
             readiness_id=readiness.id,
         )
+        draft = SimpleNamespace(
+            draft_id=uuid4(),
+            version=1,
+            state="DRAFT",
+            section_codes_json=["METHOD", "SOURCES"],
+            source_refs_json=[str(uuid4())],
+            responsible_role="COLLABORATEUR",
+        )
         package = SimpleNamespace(
             id=kwargs["package_id"],
             case_id=uuid4(),
@@ -220,7 +228,7 @@ class _PreparationService:
             state="GENERATED",
             aggregate_revision=3,
         )
-        return package, readiness, [document]
+        return package, readiness, [document], [draft]
 
 
 class _ReviewService:
@@ -240,6 +248,18 @@ class _ReviewService:
             "CreateTechnicalResponseDraftCommand": "TECHNICAL_RESPONSE_DRAFT_CREATED",
         }[name]
         return _result(code=code, replayed=self.calls > 1)
+
+    def read_response_drafts(self, **kwargs):
+        return [
+            SimpleNamespace(
+                draft_id=uuid4(),
+                version=1,
+                state="DRAFT",
+                section_codes_json=["METHOD"],
+                source_refs_json=[str(uuid4())],
+                responsible_role="COLLABORATEUR",
+            )
+        ]
 
 
 def _headers():
@@ -277,6 +297,7 @@ def test_read_package_returns_readiness_and_document_revision():
     assert body["package_id"] == str(package_id)
     assert body["latest_readiness"]["state"] == "READY_WITH_WARNINGS"
     assert body["generated_documents"][0]["readiness_revision"] == 2
+    assert body["response_drafts"][0]["section_codes"] == ["METHOD", "SOURCES"]
 
 
 @pytest.mark.parametrize(
@@ -393,6 +414,17 @@ def test_review_routes_return_each_command_result():
         response = client.post(path, json=payload, headers=_headers())
         assert response.status_code == (201 if index == 0 else 200)
         assert response.json()["result_code"] == code
+
+
+def test_patron_can_read_response_draft_projection_without_content():
+    response = _client(review_service=cast(Any, _ReviewService())).get(
+        f"/api/v1/preparation/{uuid4()}/response-drafts", headers=_headers()
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["drafts"][0]["section_codes"] == ["METHOD"]
+    assert "storage_key" not in body["drafts"][0]
 
 
 @pytest.mark.parametrize(

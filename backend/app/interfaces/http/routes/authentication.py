@@ -16,6 +16,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.platform.persistence.models import TenantRecord
 from app.platform.security.audit import (
     AuditEventType,
     AuditOutcome,
@@ -147,8 +148,11 @@ class CurrentActorResponse(BaseModel):
 
     actor_id: UUID
     identity_id: UUID
+    tenant_slug: str
     actor_kind: str
+    operational_profile: str | None
     membership_state: str
+    mfa_verified: bool
 
 
 class TotpCodeRequest(BaseModel):
@@ -478,6 +482,72 @@ def build_authentication_router(*, runtime: AuthenticationHttpRuntime) -> APIRou
             used_recovery_code=result.used_recovery_code,
         )
 
+    @router.post("/mfa/recovery/start", status_code=status.HTTP_204_NO_CONTENT)
+    def recover_mfa(
+        request: TotpCodeRequest,
+        http_request: Request,
+        authorization: str | None = Header(default=None),
+        csrf_header: str | None = Header(default=None, alias=_CSRF_HEADER_NAME),
+    ) -> Response:
+        context = _resolve_authenticated_context(
+            authorization=authorization,
+            context_resolver=runtime.context_resolver,
+        )
+        session_id = _require_authenticated_session(context)
+        _require_csrf(request=http_request, csrf_header=csrf_header)
+        identity, source_ip = _mfa_rate_limit_identity(
+            runtime=runtime, context=context, request=http_request, namespace="mfa-recovery"
+        )
+        decision = runtime.rate_limiter.check(
+            namespace="mfa-recovery", identity=identity, source_ip=source_ip
+        )
+        if not decision.allowed:
+            _record_mfa_rate_limit_denial(
+                runtime=runtime,
+                context=context,
+                action="auth.mfa.recovery",
+            )
+            raise _rate_limited(decision.retry_after_seconds)
+        service = _require_totp_service(runtime)
+        try:
+            service.recover_with_code(
+                session_id=session_id,
+                code=request.code,
+                now=runtime.clock.now(),
+            )
+        except TotpVerificationError as error:
+            runtime.rate_limiter.record_failure(
+                namespace="mfa-recovery", identity=identity, source_ip=source_ip
+            )
+            _record_mfa_event(
+                runtime=runtime,
+                context=context,
+                event_type=AuditEventType.AUTH_MFA_VERIFICATION_DENIED,
+                outcome=AuditOutcome.DENIED,
+                severity=AuditSeverity.WARNING,
+                action="auth.mfa.recovery",
+                reason_code=str(error),
+            )
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=str(error),
+            ) from error
+        runtime.rate_limiter.record_success(
+            namespace="mfa-recovery", identity=identity, source_ip=source_ip
+        )
+        _record_mfa_event(
+            runtime=runtime,
+            context=context,
+            event_type=AuditEventType.AUTH_MFA_RECOVERY_COMPLETED,
+            outcome=AuditOutcome.SUCCEEDED,
+            severity=AuditSeverity.WARNING,
+            action="auth.mfa.recovery",
+            reason_code="MFA_RECOVERY_COMPLETED",
+        )
+        response = Response(status_code=status.HTTP_204_NO_CONTENT)
+        _clear_authentication_cookies(response)
+        return response
+
     @router.post("/mfa/totp/disable", status_code=status.HTTP_204_NO_CONTENT)
     def disable_totp(
         request: TotpCodeRequest,
@@ -489,7 +559,7 @@ def build_authentication_router(*, runtime: AuthenticationHttpRuntime) -> APIRou
             authorization=authorization,
             context_resolver=runtime.context_resolver,
         )
-        _require_authenticated_session(context)
+        session_id = _require_authenticated_session(context)
         _require_csrf(request=http_request, csrf_header=csrf_header)
         identity, source_ip = _mfa_rate_limit_identity(
             runtime=runtime, context=context, request=http_request, namespace="mfa"
@@ -505,7 +575,7 @@ def build_authentication_router(*, runtime: AuthenticationHttpRuntime) -> APIRou
         service = _require_totp_service(runtime)
         try:
             service.disable(
-                identity_id=context.identity_id,
+                session_id=session_id,
                 code=request.code,
                 now=runtime.clock.now(),
             )
@@ -535,11 +605,25 @@ def build_authentication_router(*, runtime: AuthenticationHttpRuntime) -> APIRou
             authorization=authorization,
             context_resolver=runtime.context_resolver,
         )
+        with runtime.session_factory() as session:
+            tenant = session.get(TenantRecord, context.tenant_id)
+        if tenant is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="UNAUTHENTICATED",
+            )
         return CurrentActorResponse(
             actor_id=context.actor_id,
             identity_id=context.identity_id,
+            tenant_slug=tenant.slug,
             actor_kind=str(context.actor_kind),
+            operational_profile=(
+                str(context.operational_profile)
+                if context.operational_profile is not None
+                else None
+            ),
             membership_state=str(context.membership_state),
+            mfa_verified=context.mfa_verified_at is not None,
         )
 
     @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
@@ -679,6 +763,8 @@ def auth_strength_for_event(event_type: AuditEventType) -> str | None:
         AuditEventType.AUTH_MFA_RECOVERY_USED,
     }:
         return "MFA_STEP_UP"
+    if event_type is AuditEventType.AUTH_MFA_RECOVERY_COMPLETED:
+        return None
     return "MFA"
 
 

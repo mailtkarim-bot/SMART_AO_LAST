@@ -56,9 +56,13 @@ export function useDceKnowledge(
       setResults(response.results);
     } catch (error) {
       setResults([]);
+      const apiError = error as { status?: number; detail?: string };
+      const text = apiError.status === 503 || apiError.detail === "KNOWLEDGE_RETRIEVAL_UNAVAILABLE"
+        ? "Assistance IA indisponible. La lecture des sources et les contrôles manuels restent disponibles."
+        : error instanceof Error ? error.message : "Recherche knowledge indisponible.";
       setMessage({
         tone: "error",
-        text: error instanceof Error ? error.message : "Recherche knowledge indisponible.",
+        text,
       });
     } finally {
       setSearching(false);

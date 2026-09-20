@@ -4,6 +4,7 @@ import type { PricingImportBatchRead, PricingScenario } from "../../shared/types
 import type {
   PricingImportReloadState,
   PricingImportState,
+  PricingImportUnknownAction,
 } from "./usePricingImport";
 
 type PricingPanelProps = {
@@ -15,6 +16,7 @@ type PricingPanelProps = {
   pricingImportBatchRevision: string;
   pricingImportReportRevision: string;
   pricingImportState: PricingImportState;
+  pricingImportUnknownAction: PricingImportUnknownAction;
   pricingImportPreview: PricingImportBatchRead | null;
   pricingImportReloadState: PricingImportReloadState;
   pricingImportUploading: boolean;
@@ -24,6 +26,8 @@ type PricingPanelProps = {
   setPricingImportBatchRevision: Dispatch<SetStateAction<string>>;
   setPricingImportReportRevision: Dispatch<SetStateAction<string>>;
   onPreview: (file: File) => void;
+  onRetryPreview: () => void;
+  onRetryCommit: () => void;
   onReload: () => void;
   onCommit: () => void;
 };
@@ -37,6 +41,7 @@ export function PricingPanel({
   pricingImportBatchRevision,
   pricingImportReportRevision,
   pricingImportState,
+  pricingImportUnknownAction,
   pricingImportPreview,
   pricingImportReloadState,
   pricingImportUploading,
@@ -46,6 +51,8 @@ export function PricingPanel({
   setPricingImportBatchRevision,
   setPricingImportReportRevision,
   onPreview,
+  onRetryPreview,
+  onRetryCommit,
   onReload,
   onCommit,
 }: PricingPanelProps) {
@@ -87,7 +94,11 @@ export function PricingPanel({
             <p>Seules les lignes validées du batch DPGF/BPU/Excel sont appliquées, côté patron.</p>
           </div>
           <span className={`state-badge state-${pricingImportState.toLowerCase()}`}>
-            {pricingImportState === "IDLE" ? "PRÊT" : pricingImportState}
+            {pricingImportState === "IDLE"
+              ? "PRÊT"
+              : pricingImportState === "UNKNOWN"
+                ? "À VÉRIFIER"
+                : pricingImportState}
           </span>
         </div>
         <div className="import-commit-grid">
@@ -181,6 +192,21 @@ export function PricingPanel({
           Le serveur verrouille le batch et le brouillon, refuse les erreurs, applique l’idempotence
           et ne retourne aucun montant dans ce receipt.
         </small>
+        {pricingImportUnknownAction && (
+          <div className="form-actions">
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={pricingImportUnknownAction === "PREVIEW" ? onRetryPreview : onRetryCommit}
+              disabled={pricingImportUploading || pricingImportSubmitting}
+            >
+              {pricingImportUnknownAction === "PREVIEW" ? "Rejouer la preview" : "Rejouer le commit"}
+            </button>
+            <small className="invariant-note warning">
+              Résultat inconnu : aucun succès n’est présumé et le rejeu conserve les mêmes identifiants.
+            </small>
+          </div>
+        )}
         {pricingImportReloadState === "FAILED" && (
           <small className="invariant-note warning">
             Commit confirmé. Rechargez le brouillon pour resynchroniser l’affichage.

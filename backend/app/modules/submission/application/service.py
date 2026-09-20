@@ -10,6 +10,7 @@ from uuid import UUID, uuid4
 import sqlalchemy as sa
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.modules.case.infrastructure.models.case import CaseRecord
 from app.modules.decision.domain.submission_gate import evaluate_submission_gate
 from app.modules.enterprise.infrastructure.models import (
     CaseCapabilityProposalRecord,
@@ -24,10 +25,16 @@ from app.modules.preparation.infrastructure.models import (
     PreparationReadinessRecord,
 )
 from app.modules.pricing.infrastructure.models import FinancialReportSnapshotRecord
-from app.modules.submission.application.commands import PrepareSubmissionPackageCommand
+from app.modules.submission.application.commands import (
+    AuthorizeSubmissionPackageCommand,
+    PrepareSubmissionPackageCommand,
+)
 from app.modules.submission.application.notifications import SUBMISSION_EXPORT_EMAIL_TOPIC
 from app.modules.submission.application.ports import SubmissionDecisionGateReader
-from app.modules.submission.infrastructure.models import SubmissionPackageRecord
+from app.modules.submission.infrastructure.models import (
+    SubmissionPackageAuthorizationRecord,
+    SubmissionPackageRecord,
+)
 from app.platform.events.dispatcher import (
     CommandContext,
     CommandDispatcher,
@@ -90,6 +97,7 @@ class SubmissionPackageService:
                     classification=DataClassification.FINANCIAL_PRIVATE,
                 ),
                 evaluated_at=now,
+                mfa_required=True,
             ),
         )
         if not decision.allowed:
@@ -120,6 +128,11 @@ class SubmissionPackageService:
                 session=session,
                 tenant_id=actor.tenant_id,
                 case_id=record.case_id,
+            )
+            self._assert_package_authorized(
+                session=session,
+                tenant_id=actor.tenant_id,
+                package=record,
             )
             technical_bytes = self._storage.read(storage_key=document.storage_key)
         with tempfile.SpooledTemporaryFile(max_size=8 * 1024 * 1024, mode="w+b") as archive:
@@ -229,6 +242,106 @@ class SubmissionPackageService:
             )
         return archive_bytes
 
+    def authorize(
+        self,
+        *,
+        actor: ActorContext,
+        command: AuthorizeSubmissionPackageCommand,
+        now: datetime,
+    ) -> DispatchResult:
+        if (
+            actor.actor_kind not in {ActorKind.PATRON_ADMIN, ActorKind.PATRON_DELEGATE}
+            or not actor.membership_is_active
+        ):
+            raise PermissionError("SUBMISSION_PATRON_REQUIRED")
+        decision = self._policy.authorize(
+            context=actor,
+            request=AuthorizationRequest(
+                action=Capability.SUBMISSION_AUTHORIZE,
+                resource=AuthorizationResource(
+                    resource_type="SUBMISSION_PACKAGE",
+                    resource_id=command.submission_package_id,
+                    tenant_id=actor.tenant_id,
+                    classification=DataClassification.FINANCIAL_PRIVATE,
+                ),
+                evaluated_at=now,
+                mfa_required=True,
+            ),
+        )
+        if not decision.allowed:
+            raise PermissionError(decision.code)
+        return self._dispatcher.dispatch(
+            command=command,
+            context=CommandContext(
+                tenant_id=actor.tenant_id,
+                actor_id=actor.actor_id,
+                actor_kind=actor.actor_kind.value,
+                received_at=now,
+                identity_id=actor.identity_id,
+                membership_id=actor.membership_id,
+                session_id=actor.session_id,
+                correlation_id=actor.correlation_id,
+            ),
+        )
+
+    def read_manifest(
+        self, *, actor: ActorContext, submission_package_id: UUID, now: datetime
+    ) -> dict[str, object]:
+        if (
+            actor.actor_kind not in {ActorKind.PATRON_ADMIN, ActorKind.PATRON_DELEGATE}
+            or not actor.membership_is_active
+        ):
+            raise PermissionError("SUBMISSION_PATRON_REQUIRED")
+        decision = self._policy.authorize(
+            context=actor,
+            request=AuthorizationRequest(
+                action=Capability.SUBMISSION_AUTHORIZE,
+                resource=AuthorizationResource(
+                    resource_type="SUBMISSION_PACKAGE",
+                    resource_id=submission_package_id,
+                    tenant_id=actor.tenant_id,
+                    classification=DataClassification.FINANCIAL_PRIVATE,
+                ),
+                evaluated_at=now,
+            ),
+        )
+        if not decision.allowed:
+            raise PermissionError(decision.code)
+        with self._session_factory() as session:
+            package = session.scalar(
+                sa.select(SubmissionPackageRecord).where(
+                    SubmissionPackageRecord.tenant_id == actor.tenant_id,
+                    SubmissionPackageRecord.id == submission_package_id,
+                )
+            )
+            if package is None:
+                raise PermissionError("NOT_FOUND_OR_FORBIDDEN")
+            manifest_bytes = json.dumps(
+                package.manifest_json, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+            ).encode("utf-8")
+            if hashlib.sha256(manifest_bytes).hexdigest() != package.manifest_sha256:
+                raise CommandExecutionError("SUBMISSION_MANIFEST_INTEGRITY_FAILED")
+            authorization = session.scalar(
+                sa.select(SubmissionPackageAuthorizationRecord).where(
+                    SubmissionPackageAuthorizationRecord.tenant_id == actor.tenant_id,
+                    SubmissionPackageAuthorizationRecord.submission_package_id == package.id,
+                    SubmissionPackageAuthorizationRecord.package_version == package.version,
+                    SubmissionPackageAuthorizationRecord.manifest_sha256 == package.manifest_sha256,
+                    SubmissionPackageAuthorizationRecord.state == "AUTHORIZED",
+                )
+            )
+            return {
+                "submission_package_id": package.id,
+                "package_version": package.version,
+                "state": package.state,
+                "manifest_sha256": package.manifest_sha256,
+                "manifest": package.manifest_json,
+                "authorization_status": "AUTHORIZED"
+                if authorization is not None
+                else "NOT_AUTHORIZED",
+                "external_submission": "NOT_PERFORMED",
+            }
+
     def _assert_decision_gate(self, *, session: Session, tenant_id: UUID, case_id: UUID) -> None:
         if self._decision_gate_reader is None:
             raise CommandExecutionError("DECISION_GATE_NOT_CONFIGURED")
@@ -242,6 +355,22 @@ class SubmissionPackageService:
         result = evaluate_submission_gate(snapshot)
         if not result.can_submit:
             raise CommandExecutionError("DECISION_SUBMISSION_BLOCKED")
+
+    @staticmethod
+    def _assert_package_authorized(
+        *, session: Session, tenant_id: UUID, package: SubmissionPackageRecord
+    ) -> None:
+        authorization = session.scalar(
+            sa.select(SubmissionPackageAuthorizationRecord).where(
+                SubmissionPackageAuthorizationRecord.tenant_id == tenant_id,
+                SubmissionPackageAuthorizationRecord.submission_package_id == package.id,
+                SubmissionPackageAuthorizationRecord.package_version == package.version,
+                SubmissionPackageAuthorizationRecord.manifest_sha256 == package.manifest_sha256,
+                SubmissionPackageAuthorizationRecord.state == "AUTHORIZED",
+            )
+        )
+        if authorization is None:
+            raise CommandExecutionError("SUBMISSION_PACKAGE_NOT_AUTHORIZED")
 
     def prepare(
         self,
@@ -339,27 +468,41 @@ class PrepareSubmissionPackageHandler:
         )
         if document is None:
             raise CommandExecutionError("TECHNICAL_DOCUMENT_REQUIRED")
-        snapshot = session.scalar(
-            sa.select(FinancialReportSnapshotRecord)
-            .where(
-                FinancialReportSnapshotRecord.tenant_id == context.tenant_id,
-                FinancialReportSnapshotRecord.case_id == preparation.case_id,
-                FinancialReportSnapshotRecord.state == "PUBLISHED",
+        submission_mode = getattr(command, "submission_mode", "FULL")
+        candidature_only_reason = getattr(command, "candidature_only_reason", None)
+        if submission_mode == "CANDIDATURE_ONLY" and not candidature_only_reason:
+            raise CommandExecutionError("CANDIDATURE_ONLY_REASON_REQUIRED")
+        snapshot = None
+        if submission_mode == "FULL":
+            snapshot = session.scalar(
+                sa.select(FinancialReportSnapshotRecord)
+                .where(
+                    FinancialReportSnapshotRecord.tenant_id == context.tenant_id,
+                    FinancialReportSnapshotRecord.case_id == preparation.case_id,
+                    FinancialReportSnapshotRecord.state == "PUBLISHED",
+                )
+                .order_by(
+                    FinancialReportSnapshotRecord.published_at.desc(),
+                    FinancialReportSnapshotRecord.id.desc(),
+                )
+                .limit(1)
             )
-            .order_by(
-                FinancialReportSnapshotRecord.published_at.desc(),
-                FinancialReportSnapshotRecord.id.desc(),
-            )
-            .limit(1)
-        )
-        if snapshot is None:
-            raise CommandExecutionError("OFFICIAL_PRICE_NOT_PUBLISHED")
+            if snapshot is None:
+                raise CommandExecutionError("OFFICIAL_PRICE_NOT_PUBLISHED")
         _assert_decision_gate(
             reader=self._decision_gate_reader,
             session=session,
             tenant_id=UUID(str(context.tenant_id)),
             case_id=preparation.case_id,
         )
+        case = session.scalar(
+            sa.select(CaseRecord).where(
+                CaseRecord.tenant_id == context.tenant_id,
+                CaseRecord.id == preparation.case_id,
+            )
+        )
+        if case is None:
+            raise CommandExecutionError("NOT_FOUND_OR_FORBIDDEN")
         enterprise_entries = self._validated_enterprise_entries(
             session=session,
             preparation=preparation,
@@ -374,31 +517,39 @@ class PrepareSubmissionPackageHandler:
             )
             + 1
         )
+        entries: list[dict[str, object]] = [
+            {
+                "kind": document.document_kind,
+                "document_id": str(document.id),
+                "version": document.version,
+                "sha256": document.content_sha256,
+            }
+        ]
+        if snapshot is not None:
+            entries.append(
+                {
+                    "kind": "OFFICIAL_PRICING_VERSION",
+                    "snapshot_id": str(snapshot.id),
+                    "revision": snapshot.aggregate_revision,
+                }
+            )
+        entries.extend(enterprise_entries)
         manifest = {
             "schema_version": 2,
+            "submission_mode": command.submission_mode,
+            "candidature_only_reason": command.candidature_only_reason,
             "case_id": str(preparation.case_id),
             "preparation_package_id": str(preparation.id),
             "dce_version_id": str(preparation.dce_version_id),
+            "scope": case.scope_json,
             "readiness": {
                 "revision": readiness.revision,
                 "state": readiness.state,
                 "blocker_codes": sorted(readiness.blocker_codes_json),
                 "warning_codes": sorted(readiness.warning_codes_json),
             },
-            "entries": [
-                {
-                    "kind": document.document_kind,
-                    "document_id": str(document.id),
-                    "version": document.version,
-                    "sha256": document.content_sha256,
-                },
-                {
-                    "kind": "OFFICIAL_PRICING_VERSION",
-                    "snapshot_id": str(snapshot.id),
-                    "revision": snapshot.aggregate_revision,
-                },
-                *enterprise_entries,
-            ],
+            "entries": entries,
+            "exclusions": ["private_storage", "financial_amounts", "external_submission_result"],
             "external_submission": "NOT_PERFORMED",
         }
         serialized = json.dumps(
@@ -413,8 +564,10 @@ class PrepareSubmissionPackageHandler:
             dce_version_id=preparation.dce_version_id,
             technical_document_id=document.id,
             technical_document_version=document.version,
-            financial_snapshot_id=snapshot.id,
-            financial_snapshot_revision=snapshot.aggregate_revision,
+            financial_snapshot_id=snapshot.id if snapshot is not None else None,
+            financial_snapshot_revision=(
+                snapshot.aggregate_revision if snapshot is not None else None
+            ),
             version=version,
             state="PRET_CONTROLE",
             manifest_sha256=manifest_sha256,
@@ -447,6 +600,7 @@ class PrepareSubmissionPackageHandler:
                         "version": record.version,
                         "state": record.state,
                         "manifest_sha256": manifest_sha256,
+                        "submission_mode": command.submission_mode,
                         "external_submission": "NOT_PERFORMED",
                     },
                 ),
@@ -545,11 +699,111 @@ class PrepareSubmissionPackageHandler:
         return tuple(entries)
 
 
+class AuthorizeSubmissionPackageHandler:
+    """Append a Patron P5 authorization without mutating the immutable package."""
+
+    def __init__(self, *, decision_gate_reader: SubmissionDecisionGateReader | None = None) -> None:
+        self._decision_gate_reader = decision_gate_reader
+
+    def execute(
+        self,
+        *,
+        session: Session,
+        command: AuthorizeSubmissionPackageCommand,
+        context: CommandContext,
+    ) -> HandlerOutcome:
+        if (
+            context.actor_kind
+            not in {ActorKind.PATRON_ADMIN.value, ActorKind.PATRON_DELEGATE.value}
+            or context.membership_id is None
+        ):
+            raise CommandExecutionError("SUBMISSION_PATRON_REQUIRED")
+        package = session.scalar(
+            sa.select(SubmissionPackageRecord)
+            .where(
+                SubmissionPackageRecord.tenant_id == context.tenant_id,
+                SubmissionPackageRecord.id == command.submission_package_id,
+            )
+            .with_for_update()
+        )
+        if package is None:
+            raise CommandExecutionError("NOT_FOUND_OR_FORBIDDEN")
+        if package.version != command.expected_package_version:
+            raise CommandExecutionError("VERSION_CONFLICT")
+        manifest_bytes = json.dumps(
+            package.manifest_json, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+        ).encode("utf-8")
+        if hashlib.sha256(manifest_bytes).hexdigest() != package.manifest_sha256:
+            raise CommandExecutionError("SUBMISSION_MANIFEST_INTEGRITY_FAILED")
+        existing = session.scalar(
+            sa.select(SubmissionPackageAuthorizationRecord).where(
+                SubmissionPackageAuthorizationRecord.tenant_id == context.tenant_id,
+                SubmissionPackageAuthorizationRecord.submission_package_id == package.id,
+                SubmissionPackageAuthorizationRecord.package_version == package.version,
+            )
+        )
+        if existing is not None:
+            raise CommandExecutionError("SUBMISSION_PACKAGE_ALREADY_AUTHORIZED")
+        _assert_decision_gate(
+            reader=self._decision_gate_reader,
+            session=session,
+            tenant_id=UUID(str(context.tenant_id)),
+            case_id=package.case_id,
+        )
+        authorization = SubmissionPackageAuthorizationRecord(
+            id=command.authorization_id,
+            tenant_id=context.tenant_id,
+            submission_package_id=package.id,
+            package_version=package.version,
+            manifest_sha256=package.manifest_sha256,
+            state="AUTHORIZED",
+            rationale=command.rationale.strip(),
+            actor_id=context.actor_id,
+            membership_id=context.membership_id,
+            command_id=command.command_id,
+            idempotency_key=command.idempotency_key,
+            correlation_id=command.correlation_id,
+        )
+        session.add(authorization)
+        return HandlerOutcome(
+            result_code="SUBMISSION_PACKAGE_AUTHORIZED",
+            aggregate_refs=(
+                {
+                    "aggregate_type": "SubmissionPackageAuthorization",
+                    "aggregate_id": str(authorization.id),
+                    "aggregate_revision": 1,
+                },
+            ),
+            events=(
+                PendingDomainEvent(
+                    aggregate_type="SubmissionPackageAuthorization",
+                    aggregate_id=authorization.id,
+                    aggregate_revision=1,
+                    event_type="SubmissionPackageAuthorized",
+                    payload={
+                        "authorization_id": str(authorization.id),
+                        "submission_package_id": str(package.id),
+                        "package_version": package.version,
+                        "manifest_sha256": package.manifest_sha256,
+                        "state": "AUTHORIZED",
+                        "external_submission": "NOT_PERFORMED",
+                    },
+                ),
+            ),
+        )
+
+
 def submission_handlers(
     *, decision_gate_reader: SubmissionDecisionGateReader | None = None
-) -> dict[str, PrepareSubmissionPackageHandler]:
+) -> dict[str, object]:
     handler = PrepareSubmissionPackageHandler(decision_gate_reader=decision_gate_reader)
-    return {PrepareSubmissionPackageCommand.command_type: handler}
+    authorization_handler = AuthorizeSubmissionPackageHandler(
+        decision_gate_reader=decision_gate_reader
+    )
+    return {
+        PrepareSubmissionPackageCommand.command_type: handler,
+        AuthorizeSubmissionPackageCommand.command_type: authorization_handler,
+    }
 
 
 def _assert_decision_gate(

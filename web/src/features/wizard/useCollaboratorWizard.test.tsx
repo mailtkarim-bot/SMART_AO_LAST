@@ -13,6 +13,7 @@ type WizardApi = Pick<
   | "listCollaboratorTasks"
   | "evaluatePreparationReadiness"
   | "generateTechnicalDocument"
+  | "createTechnicalResponseDraft"
   | "claimCollaboratorTask"
   | "recordCollaboratorTaskResult"
   | "completeCollaboratorTask"
@@ -36,6 +37,7 @@ const preparation = (): PreparationPackage => ({
     checked_task_count: 2,
   },
   generated_documents: [],
+  response_drafts: [],
 });
 
 const task = (id = "task-1"): CollaboratorTask => ({
@@ -66,6 +68,7 @@ describe("useCollaboratorWizard", () => {
       listCollaboratorTasks: vi.fn(),
       evaluatePreparationReadiness: vi.fn(),
       generateTechnicalDocument: vi.fn(),
+      createTechnicalResponseDraft: vi.fn(),
       claimCollaboratorTask: vi.fn(),
       recordCollaboratorTaskResult: vi.fn(),
       completeCollaboratorTask: vi.fn(),
@@ -92,6 +95,7 @@ describe("useCollaboratorWizard", () => {
       listCollaboratorTasks: vi.fn().mockResolvedValue({ case_id: "case-1", tasks: [task()] }),
       evaluatePreparationReadiness: vi.fn(),
       generateTechnicalDocument: vi.fn(),
+      createTechnicalResponseDraft: vi.fn(),
       claimCollaboratorTask: vi.fn(),
       recordCollaboratorTaskResult: vi.fn(),
       completeCollaboratorTask: vi.fn(),
@@ -124,6 +128,7 @@ describe("useCollaboratorWizard", () => {
       listCollaboratorTasks: vi.fn().mockResolvedValue({ case_id: "case-1", tasks: [task()] }),
       evaluatePreparationReadiness: vi.fn().mockResolvedValue({}),
       generateTechnicalDocument: vi.fn(),
+      createTechnicalResponseDraft: vi.fn(),
       claimCollaboratorTask: vi.fn(),
       recordCollaboratorTaskResult: vi.fn(),
       completeCollaboratorTask: vi.fn(),
@@ -162,6 +167,7 @@ describe("useCollaboratorWizard", () => {
       listCollaboratorTasks: vi.fn().mockResolvedValue({ case_id: "case-1", tasks: [task()] }),
       evaluatePreparationReadiness: vi.fn(),
       generateTechnicalDocument: vi.fn(),
+      createTechnicalResponseDraft: vi.fn(),
       claimCollaboratorTask: vi.fn(),
       recordCollaboratorTaskResult: vi.fn().mockResolvedValue({}),
       completeCollaboratorTask: vi.fn(),
@@ -192,12 +198,51 @@ describe("useCollaboratorWizard", () => {
     expect(result.current.wizardResultText).toBe("");
   });
 
+  it("creates a trimmed response draft from the package revision", async () => {
+    const api = {
+      getCollaboratorPreparation: vi.fn().mockResolvedValue(preparation()),
+      listCollaboratorTasks: vi.fn().mockResolvedValue({ case_id: "case-1", tasks: [] }),
+      evaluatePreparationReadiness: vi.fn(),
+      generateTechnicalDocument: vi.fn(),
+      createTechnicalResponseDraft: vi.fn().mockResolvedValue({}),
+      claimCollaboratorTask: vi.fn(),
+      recordCollaboratorTaskResult: vi.fn(),
+      completeCollaboratorTask: vi.fn(),
+      transmitPreparationSnapshot: vi.fn(),
+    } satisfies WizardApi;
+    const setMessage = vi.fn() as unknown as Dispatch<SetStateAction<HookMessage | null>>;
+    const { result } = renderWizardHook(api, setMessage);
+
+    act(() => {
+      result.current.setWizardCaseId("case-1");
+      result.current.setWizardPackageId("package-1");
+      result.current.setWizardDraftSourceDocumentId(" document-1 ");
+      result.current.setWizardDraftSections(" METHOD, SOURCES ");
+      result.current.setWizardDraftSourceRefs(" requirement-1, task-1 ");
+    });
+    await act(async () => {
+      await result.current.loadCollaboratorWizard();
+    });
+    await act(async () => {
+      await result.current.createWizardResponseDraft();
+    });
+
+    expect(api.createTechnicalResponseDraft).toHaveBeenCalledWith("package-1", {
+      expected_package_revision: 7,
+      source_document_id: "document-1",
+      section_codes: ["METHOD", "SOURCES"],
+      source_refs: ["requirement-1", "task-1"],
+    });
+    expect(result.current.wizardDraftSourceRefs).toBe("");
+  });
+
   it("transmits a selected snapshot with an optimistic package revision and no external deposit", async () => {
     const api = {
       getCollaboratorPreparation: vi.fn().mockResolvedValue(preparation()),
       listCollaboratorTasks: vi.fn().mockResolvedValue({ case_id: "case-1", tasks: [] }),
       evaluatePreparationReadiness: vi.fn(),
       generateTechnicalDocument: vi.fn(),
+      createTechnicalResponseDraft: vi.fn(),
       claimCollaboratorTask: vi.fn(),
       recordCollaboratorTaskResult: vi.fn(),
       completeCollaboratorTask: vi.fn(),

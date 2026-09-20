@@ -30,6 +30,9 @@ export function useCollaboratorWizard(api: ApiClient, setMessage: SetMessage) {
   const [wizardPreviewContent, setWizardPreviewContent] = useState<string | null>(null);
   const [wizardDocumentBusy, setWizardDocumentBusy] = useState(false);
   const [wizardDocumentKind, setWizardDocumentKind] = useState<"TECHNICAL_RESPONSE" | "DC1" | "DC2" | "DC4">("TECHNICAL_RESPONSE");
+  const [wizardDraftSourceDocumentId, setWizardDraftSourceDocumentId] = useState("");
+  const [wizardDraftSections, setWizardDraftSections] = useState("METHOD,SOURCES");
+  const [wizardDraftSourceRefs, setWizardDraftSourceRefs] = useState("");
   const [wizardTaskWorkflow, setWizardTaskWorkflow] = useState<CollaboratorTaskWorkflow | null>(null);
 
   async function loadCollaboratorWizard(notify = true) {
@@ -98,6 +101,30 @@ export function useCollaboratorWizard(api: ApiClient, setMessage: SetMessage) {
         tone: "error",
         text: error instanceof Error ? error.message : "La génération documentaire a échoué.",
       });
+    }
+  }
+
+  async function createWizardResponseDraft() {
+    if (!wizardPackage) return;
+    const sourceDocumentId = wizardDraftSourceDocumentId.trim() || wizardPackage.generated_documents[0]?.document_id;
+    const sectionCodes = wizardDraftSections.split(",").map((value) => value.trim()).filter(Boolean);
+    const sourceRefs = wizardDraftSourceRefs.split(",").map((value) => value.trim()).filter(Boolean);
+    if (!sourceDocumentId || sectionCodes.length === 0 || sourceRefs.length === 0) {
+      setMessage({ tone: "error", text: "Renseignez le document, les sections et au moins une source du brouillon." });
+      return;
+    }
+    try {
+      await api.createTechnicalResponseDraft(wizardPackage.package_id, {
+        expected_package_revision: wizardPackage.aggregate_revision,
+        source_document_id: sourceDocumentId,
+        section_codes: sectionCodes,
+        source_refs: sourceRefs,
+      });
+      setWizardDraftSourceRefs("");
+      setMessage({ tone: "success", text: "Brouillon de réponse créé et versionné." });
+      await refreshCollaboratorWizard();
+    } catch (error) {
+      setMessage({ tone: "error", text: error instanceof Error ? error.message : "Impossible de créer le brouillon de réponse." });
     }
   }
 
@@ -206,9 +233,9 @@ export function useCollaboratorWizard(api: ApiClient, setMessage: SetMessage) {
     }
   }
 
-  async function recordWizardTaskResult() {
+  async function recordWizardTaskResult(): Promise<boolean> {
     const task = wizardTasks.find((item) => item.task_id === wizardTaskId);
-    if (!task || !wizardResultText.trim()) return;
+    if (!task || !wizardResultText.trim()) return false;
     try {
       await api.recordCollaboratorTaskResult(task.task_id, {
         expected_revision: task.aggregate_revision,
@@ -218,11 +245,13 @@ export function useCollaboratorWizard(api: ApiClient, setMessage: SetMessage) {
       setWizardResultText("");
       setMessage({ tone: "success", text: "Résultat structuré enregistré." });
       await refreshCollaboratorWizard();
+      return true;
     } catch (error) {
       setMessage({
         tone: "error",
         text: error instanceof Error ? error.message : "Le résultat n’a pas été enregistré.",
       });
+      return false;
     }
   }
 
@@ -277,6 +306,9 @@ export function useCollaboratorWizard(api: ApiClient, setMessage: SetMessage) {
     wizardDocumentBusy,
     wizardTaskWorkflow,
     wizardDocumentKind,
+    wizardDraftSourceDocumentId,
+    wizardDraftSections,
+    wizardDraftSourceRefs,
     setWizardCaseId,
     setWizardPackageId,
     setWizardTaskId,
@@ -285,6 +317,9 @@ export function useCollaboratorWizard(api: ApiClient, setMessage: SetMessage) {
     setWizardSnapshotId,
     setWizardTransmissionId,
     setWizardDocumentKind,
+    setWizardDraftSourceDocumentId,
+    setWizardDraftSections,
+    setWizardDraftSourceRefs,
     previewWizardDocument,
     downloadWizardDocument,
     loadWizardTaskWorkflow,
@@ -296,6 +331,7 @@ export function useCollaboratorWizard(api: ApiClient, setMessage: SetMessage) {
     refreshCollaboratorWizard,
     evaluateWizardReadiness,
     generateWizardDocument,
+    createWizardResponseDraft,
     claimWizardTask,
     recordWizardTaskResult,
     completeWizardTask,

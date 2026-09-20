@@ -11,6 +11,7 @@ from app.modules.submission.application.evidence_service import SubmissionEviden
 from app.modules.submission.public.evidence_contracts import (
     RecordSubmissionEvidenceRequest,
     SubmissionEvidenceCommandResponse,
+    SubmissionEvidenceProjection,
 )
 from app.platform.events.dispatcher import (
     CommandExecutionError,
@@ -74,5 +75,33 @@ def build_patron_submission_evidence_router(
             status_code=200 if result.replayed else 201,
             content=response.model_dump(mode="json"),
         )
+
+    @router.get(
+        "/submission-packages/{submission_package_id}/evidence",
+        response_model=list[SubmissionEvidenceProjection],
+    )
+    def read_evidence(
+        submission_package_id: UUID,
+        authorization: str | None = Header(default=None),
+    ) -> list[SubmissionEvidenceProjection]:
+        actor = _resolve_context(
+            authorization=authorization,
+            context_resolver=security_runtime.context_resolver,
+        )
+        try:
+            return [
+                SubmissionEvidenceProjection.model_validate(item)
+                for item in service.read(
+                    actor=actor,
+                    submission_package_id=submission_package_id,
+                    now=datetime.now(tz=UTC),
+                )
+            ]
+        except PermissionError as error:
+            raise HTTPException(status_code=403, detail="FORBIDDEN") from error
+        except CommandExecutionError as error:
+            if str(error) == "NOT_FOUND_OR_FORBIDDEN":
+                raise HTTPException(status_code=404, detail="NOT_FOUND_OR_FORBIDDEN") from error
+            raise HTTPException(status_code=422, detail="COMMAND_REJECTED") from error
 
     return router

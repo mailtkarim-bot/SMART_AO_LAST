@@ -10,6 +10,8 @@ from uuid import UUID, uuid4, uuid5
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
+from app.modules.case.infrastructure.models.case import CaseRecord
+
 if TYPE_CHECKING:
     from app.modules.opportunity.application.boamp_qualification import (
         BoampQualificationCommand,
@@ -19,6 +21,7 @@ from app.modules.opportunity.application.boamp_qualification_errors import (
     BoampQualificationIdempotencyConflict,
 )
 from app.modules.opportunity.infrastructure.observation_models import (
+    BoampIngestionRunRecord,
     BoampOpportunityObservationRecord,
     BoampOpportunityQualificationRecord,
 )
@@ -30,6 +33,13 @@ class QualificationPersistenceResult:
     qualification_id: UUID
     event_id: UUID
     replayed: bool
+
+
+@dataclass(frozen=True, slots=True)
+class BoampObservationState:
+    latest_qualification: BoampOpportunityQualificationRecord | None = None
+    case_id: UUID | None = None
+    case_created_at: datetime | None = None
 
 
 class BoampQualificationRepository:
@@ -51,6 +61,68 @@ class BoampQualificationRepository:
                 .limit(limit)
             )
         )
+
+    def last_successful_ingestion_at(
+        self, *, session: Session, tenant_id: UUID
+    ) -> datetime | None:
+        """Return the latest completed, recorded BOAMP ingestion for one tenant."""
+        return session.scalar(
+            sa.select(BoampIngestionRunRecord.completed_at)
+            .where(
+                BoampIngestionRunRecord.tenant_id == tenant_id,
+                BoampIngestionRunRecord.status == "RECORDED",
+            )
+            .order_by(
+                BoampIngestionRunRecord.completed_at.desc(),
+                BoampIngestionRunRecord.id.desc(),
+            )
+            .limit(1)
+        )
+
+    def states_for_observations(
+        self,
+        *,
+        session: Session,
+        tenant_id: UUID,
+        observation_ids: tuple[UUID, ...],
+    ) -> dict[UUID, BoampObservationState]:
+        if not observation_ids:
+            return {}
+        states = {observation_id: BoampObservationState() for observation_id in observation_ids}
+        for qualification in session.scalars(
+            sa.select(BoampOpportunityQualificationRecord)
+            .where(
+                BoampOpportunityQualificationRecord.tenant_id == tenant_id,
+                BoampOpportunityQualificationRecord.observation_id.in_(observation_ids),
+            )
+            .order_by(
+                BoampOpportunityQualificationRecord.created_at.desc(),
+                BoampOpportunityQualificationRecord.id.desc(),
+            )
+        ):
+            current = states[qualification.observation_id]
+            if current.latest_qualification is None:
+                states[qualification.observation_id] = BoampObservationState(
+                    latest_qualification=qualification,
+                    case_id=current.case_id,
+                    case_created_at=current.case_created_at,
+                )
+        for case in session.scalars(
+            sa.select(CaseRecord).where(
+                CaseRecord.tenant_id == tenant_id,
+                CaseRecord.business_origin == "OPPORTUNITY",
+                CaseRecord.origin_reference_id.in_(observation_ids),
+                CaseRecord.lifecycle != "ARCHIVED",
+            )
+        ):
+            current = states[case.origin_reference_id]
+            if current.case_id is None:
+                states[case.origin_reference_id] = BoampObservationState(
+                    latest_qualification=current.latest_qualification,
+                    case_id=case.id,
+                    case_created_at=case.created_at,
+                )
+        return states
 
     def persist_qualification(
         self,

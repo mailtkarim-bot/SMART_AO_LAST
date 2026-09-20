@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 
-import type { CreateCaseInput } from "../../shared/types";
+import type { ApiError, CreateCaseInput } from "../../shared/types";
 
 type Props = {
   onCreate: (input: CreateCaseInput) => Promise<void>;
@@ -15,11 +15,10 @@ const scopeOptions: Array<{ value: CreateCaseInput["scope_kind"]; label: string 
   { value: "CUSTOM", label: "Périmètre personnalisé" },
 ];
 
+// ponytail: keep EXP-01 manual until a reference picker can provide the
+// mandatory origin_reference_id for opportunity/import/customer origins.
 const originOptions: Array<{ value: NonNullable<CreateCaseInput["origin_kind"]>; label: string }> = [
   { value: "MANUAL", label: "Création manuelle" },
-  { value: "CLIENT_REQUEST", label: "Demande client" },
-  { value: "OPPORTUNITY", label: "Opportunité qualifiée" },
-  { value: "IMPORT", label: "Import contrôlé" },
 ];
 
 const initialForm: CreateCaseInput = {
@@ -37,8 +36,16 @@ export function CreateCasePanel({ onCreate, disabled = false }: Props) {
   const [form, setForm] = useState<CreateCaseInput>(initialForm);
   const [lotText, setLotText] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [submissionState, setSubmissionState] = useState<"idle" | "unknown">("idle");
+  const pendingCommand = useRef<{
+    signature: string;
+    command_id: string;
+    idempotency_key: string;
+    correlation_id: string;
+  } | null>(null);
 
   function update<K extends keyof CreateCaseInput>(key: K, value: CreateCaseInput[K]) {
+    setSubmissionState("idle");
     setForm((current) => ({ ...current, [key]: value }));
   }
 
@@ -48,19 +55,42 @@ export function CreateCasePanel({ onCreate, disabled = false }: Props) {
       .split(",")
       .map((value) => value.trim())
       .filter(Boolean);
+    setSubmissionState("idle");
+    const normalized = {
+      ...form,
+      title: form.title.trim(),
+      object_description: form.object_description.trim(),
+      lot_numbers: lots,
+      tranche_reference: form.tranche_reference?.trim() || undefined,
+      variant_reference: form.variant_reference?.trim() || undefined,
+      scope_justification: form.scope_justification?.trim() || undefined,
+    };
+    const signature = JSON.stringify(normalized);
+    if (pendingCommand.current?.signature !== signature) {
+      pendingCommand.current = {
+        signature,
+        command_id: crypto.randomUUID(),
+        idempotency_key: crypto.randomUUID(),
+        correlation_id: crypto.randomUUID(),
+      };
+    }
     setSubmitting(true);
     try {
       await onCreate({
-        ...form,
-        title: form.title.trim(),
-        object_description: form.object_description.trim(),
-        lot_numbers: lots,
-        tranche_reference: form.tranche_reference?.trim() || undefined,
-        variant_reference: form.variant_reference?.trim() || undefined,
-        scope_justification: form.scope_justification?.trim() || undefined,
+        ...normalized,
+        command_id: pendingCommand.current.command_id,
+        idempotency_key: pendingCommand.current.idempotency_key,
+        correlation_id: pendingCommand.current.correlation_id,
       });
+      pendingCommand.current = null;
+      setSubmissionState("idle");
       setForm(initialForm);
       setLotText("");
+    } catch (error) {
+      // The parent reports known failures. Keep identifiers for uncertain network outcomes.
+      if (!(error instanceof Error && typeof (error as ApiError).status === "number")) {
+        setSubmissionState("unknown");
+      }
     } finally {
       setSubmitting(false);
     }
@@ -116,7 +146,10 @@ export function CreateCasePanel({ onCreate, disabled = false }: Props) {
           <span>Numéros de lots</span>
           <input
             value={lotText}
-            onChange={(event) => setLotText(event.target.value)}
+            onChange={(event) => {
+              setSubmissionState("idle");
+              setLotText(event.target.value);
+            }}
             placeholder="01, 02A, 04"
           />
           <small>Séparez les lots par des virgules.</small>
@@ -162,9 +195,18 @@ export function CreateCasePanel({ onCreate, disabled = false }: Props) {
         </label>
         <div className="form-actions form-wide">
           <button className="primary-button" type="submit" disabled={disabled || submitting}>
-            {submitting ? "Création en cours…" : "Créer l’affaire"}<span>→</span>
+            {submitting
+              ? "Vérification en cours…"
+              : submissionState === "unknown"
+                ? "Vérifier et réessayer"
+                : "Créer l’affaire"}<span>→</span>
           </button>
         </div>
+        {submissionState === "unknown" && (
+          <p className="form-wide form-status" role="status">
+            Création à vérifier : la réponse du serveur n’a pas été reçue. L’intention sera rejouée avec les mêmes identifiants.
+          </p>
+        )}
       </form>
     </section>
   );

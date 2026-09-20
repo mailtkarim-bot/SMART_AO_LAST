@@ -52,5 +52,6 @@ class SubmissionSignatureProjection(BaseModel):
     provider: str
     status: Literal["REQUESTED", "SIGNED", "REJECTED"]
     expected_package_version: int
+    manifest_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
     revision: Literal[1, 2]
     external_submission: Literal["NOT_PERFORMED"] = "NOT_PERFORMED"

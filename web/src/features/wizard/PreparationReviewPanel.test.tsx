@@ -20,6 +20,17 @@ function renderPanel() {
         corrections: [],
       }],
     }),
+    listPreparationResponseDrafts: vi.fn().mockResolvedValue({
+      package_id: "package-1",
+      drafts: [{
+        draft_id: "draft-1",
+        version: 1,
+        state: "DRAFT",
+        section_codes: ["METHOD"],
+        source_refs: ["requirement-1"],
+        responsible_role: "COLLABORATEUR",
+      }],
+    }),
     decidePreparationReview: vi.fn().mockResolvedValue({ result_code: "PREPARATION_REVIEW_DECIDED" }),
     requestPreparationReview: vi.fn().mockResolvedValue({ result_code: "PREPARATION_REVIEW_REQUESTED" }),
     addPreparationCorrection: vi.fn().mockResolvedValue({ result_code: "PREPARATION_CORRECTION_ADDED" }),
@@ -35,6 +46,7 @@ describe("PreparationReviewPanel", () => {
     fireEvent.change(screen.getByPlaceholderText("UUID du package"), { target: { value: "package-1" } });
     fireEvent.click(screen.getByRole("button", { name: "Charger les revues" }));
     expect(await screen.findByText("document-1 · v2")).toBeInTheDocument();
+    expect(screen.getByText("Plans de réponse reçus")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Accepter" }));
     await waitFor(() => expect(api.decidePreparationReview).toHaveBeenCalledWith("package-1", expect.objectContaining({
       review_id: "review-1",

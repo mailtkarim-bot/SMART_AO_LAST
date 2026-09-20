@@ -26,7 +26,7 @@ from app.platform.events.dispatcher import (
 from app.platform.security.authorization import AuthorizationPolicy
 from app.platform.security.capabilities import capabilities_for
 from app.platform.security.context import ActorKind
-from app.platform.security.models import SubmissionEvidenceRecord
+from app.platform.security.models import SubmissionEvidenceRecord, SubmissionPackageRecord
 from sqlalchemy.orm import Session, sessionmaker
 
 from tests.application.test_submission_package import (
@@ -79,6 +79,7 @@ def test_manual_submission_evidence_is_hashed_idempotent_and_append_only(
 ) -> None:
     _, submission = services
     actor, preparation_package_id, case_id = _prepare_generated_document(services, session_factory)
+    actor = replace(actor, mfa_verified_at=NOW)
     _publish_snapshot(session_factory, tenant_id=actor.tenant_id, case_id=case_id)
     package_result = submission.prepare(
         actor=actor,
@@ -98,6 +99,7 @@ def test_manual_submission_evidence_is_hashed_idempotent_and_append_only(
             handlers=submission_evidence_handlers(),
         ),
         policy=AuthorizationPolicy(),
+        session_factory=session_factory,
     )
     command = RecordSubmissionEvidenceCommand(
         command_id=uuid4(),
@@ -114,11 +116,20 @@ def test_manual_submission_evidence_is_hashed_idempotent_and_append_only(
     replay = evidence.execute(actor=actor, command=command, now=NOW)
     assert created.result_code == "SUBMISSION_EVIDENCE_RECORDED"
     assert replay.replayed is True
+    projection = evidence.read(actor=actor, submission_package_id=package_id, now=NOW)
+    assert len(projection) == 1
+    assert projection[0]["manifest_sha256"]
+    assert projection[0]["package_version"] == 1
+    assert projection[0]["reconciliation_status"] == "PARTIAL"
+    assert projection[0]["external_submission"] == "NOT_PERFORMED"
     with session_factory() as session:
         record = session.get(SubmissionEvidenceRecord, command.evidence_id)
         assert record is not None
         assert record.status == "RECEIVED"
         assert record.evidence_sha256 == "b" * 64
+        package = session.get(SubmissionPackageRecord, package_id)
+        assert package is not None
+        assert record.manifest_sha256 == package.manifest_sha256
         assert "external_submission" not in record.notes_redacted
         with pytest.raises(sa.exc.DatabaseError), session.begin_nested():
             session.execute(
@@ -147,11 +158,56 @@ def test_manual_submission_evidence_is_hashed_idempotent_and_append_only(
 
 @pytest.mark.db
 @pytest.mark.security
+def test_human_deposit_attempt_remains_unknown(services, session_factory) -> None:
+    _, submission = services
+    actor, preparation_package_id, case_id = _prepare_generated_document(services, session_factory)
+    actor = replace(actor, mfa_verified_at=NOW)
+    _publish_snapshot(session_factory, tenant_id=actor.tenant_id, case_id=case_id)
+    package_result = submission.prepare(
+        actor=actor,
+        command=PrepareSubmissionPackageCommand(
+            command_id=uuid4(),
+            idempotency_key=uuid4(),
+            correlation_id=uuid4(),
+            preparation_package_id=preparation_package_id,
+            expected_preparation_revision=3,
+        ),
+        now=NOW,
+    )
+    package_id = UUID(package_result.aggregate_refs[0]["aggregate_id"])
+    evidence = SubmissionEvidenceService(
+        dispatcher=CommandDispatcher(
+            session_factory=session_factory,
+            handlers=submission_evidence_handlers(),
+        ),
+        policy=AuthorizationPolicy(),
+        session_factory=session_factory,
+    )
+    command = RecordSubmissionEvidenceCommand(
+        command_id=uuid4(),
+        idempotency_key=uuid4(),
+        correlation_id=uuid4(),
+        evidence_id=uuid4(),
+        submission_package_id=package_id,
+        evidence_type="HUMAN_DEPOSIT_ATTEMPT",
+        external_reference_hash="c" * 64,
+        evidence_sha256="d" * 64,
+        notes_redacted="Tentative humaine déclarée ; résultat du portail inconnu.",
+    )
+    evidence.execute(actor=actor, command=command, now=NOW)
+    projection = evidence.read(actor=actor, submission_package_id=package_id, now=NOW)
+    assert projection[0]["status"] == "UNKNOWN"
+    assert projection[0]["external_submission"] == "NOT_PERFORMED"
+
+
+@pytest.mark.db
+@pytest.mark.security
 def test_submission_evidence_rejects_collaborator_and_missing_package(
     services, session_factory
 ) -> None:
     _, submission = services
     actor, preparation_package_id, case_id = _prepare_generated_document(services, session_factory)
+    actor = replace(actor, mfa_verified_at=NOW)
     _publish_snapshot(session_factory, tenant_id=actor.tenant_id, case_id=case_id)
     package_result = submission.prepare(
         actor=actor,
@@ -181,6 +237,7 @@ def test_submission_evidence_rejects_collaborator_and_missing_package(
             handlers=submission_evidence_handlers(),
         ),
         policy=AuthorizationPolicy(),
+        session_factory=session_factory,
     )
     collaborator = replace(
         actor,
@@ -204,6 +261,7 @@ def test_submission_evidence_rejects_collaborator_and_missing_package(
 def test_submission_evidence_rejects_denied_capability(services, session_factory) -> None:
     _, submission = services
     actor, preparation_package_id, case_id = _prepare_generated_document(services, session_factory)
+    actor = replace(actor, mfa_verified_at=NOW)
     _publish_snapshot(session_factory, tenant_id=actor.tenant_id, case_id=case_id)
     package_result = submission.prepare(
         actor=actor,
@@ -230,7 +288,10 @@ def test_submission_evidence_rejects_denied_capability(services, session_factory
     )
 
     class DeniedPolicy:
+        request = None
+
         def authorize(self, **kwargs):
+            self.request = kwargs["request"]
             return type("Decision", (), {"allowed": False, "code": "AUTHORIZATION_DENIED"})()
 
     evidence = SubmissionEvidenceService(
@@ -239,6 +300,8 @@ def test_submission_evidence_rejects_denied_capability(services, session_factory
             handlers=submission_evidence_handlers(),
         ),
         policy=DeniedPolicy(),
+        session_factory=session_factory,
     )
     with pytest.raises(PermissionError, match="AUTHORIZATION_DENIED"):
         evidence.execute(actor=patron, command=command, now=NOW)
+    assert evidence._policy.request.mfa_required is True  # noqa: SLF001

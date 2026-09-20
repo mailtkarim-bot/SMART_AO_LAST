@@ -54,7 +54,11 @@ def _resolver(
     )
 
 
-def _seed_collaborator_assignment(database_engine: sa.Engine) -> tuple:
+def _seed_collaborator_assignment(
+    database_engine: sa.Engine,
+    *,
+    operational_profile: str | None = None,
+) -> tuple:
     tenant_id = uuid4()
     identity_id = uuid4()
     membership_id = uuid4()
@@ -83,6 +87,7 @@ def _seed_collaborator_assignment(database_engine: sa.Engine) -> tuple:
                 tenant_id=tenant_id,
                 identity_id=identity_id,
                 role="COLLABORATEUR",
+                operational_profile=operational_profile,
                 state="ACTIVE",
                 activated_at=NOW,
                 revoked_at=None,
@@ -187,6 +192,34 @@ def test_context_resolver_derives_collaborator_capabilities_and_case_scope_from_
         {Capability.DCE_PREPARE, Capability.CONSULTATION_READ}
     )
     assert len(scope.allowed_classifications) == 2
+
+
+@pytest.mark.db
+@pytest.mark.security
+@pytest.mark.parametrize("operational_profile", ["RESPONSABLE", "EXPERT"])
+def test_context_resolver_projects_profiles_without_changing_collaborator_capabilities(
+    database_engine: sa.Engine,
+    session_factory: sessionmaker[Session],
+    operational_profile: str,
+) -> None:
+    _, identity_id, _, case_id, session_id = _seed_collaborator_assignment(
+        database_engine,
+        operational_profile=operational_profile,
+    )
+    resolver, access_tokens = _resolver(session_factory)
+
+    context = resolver.resolve(
+        access_token=access_tokens.issue(
+            identity_id=identity_id,
+            session_id=session_id,
+            token_version=1,
+        )
+    )
+
+    assert str(context.operational_profile) == operational_profile
+    assert Capability.DCE_PREPARE in context.capabilities
+    assert Capability.PRICING_READ not in context.capabilities
+    assert context.assigned_case_ids == frozenset({case_id})
 
 
 @pytest.mark.db

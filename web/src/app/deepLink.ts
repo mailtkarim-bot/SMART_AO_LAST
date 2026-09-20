@@ -5,6 +5,7 @@ export const NAV_KEYS = [
   "review",
   "opportunities",
   "dce",
+  "dce-opening",
   "wizard",
   "library",
   "decision",

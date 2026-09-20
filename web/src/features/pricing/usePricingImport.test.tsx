@@ -94,7 +94,16 @@ describe("usePricingImport", () => {
       await result.current.previewPricingImport(file);
     });
 
-    expect(api.createPricingImportPreview).toHaveBeenCalledWith("case-1", file);
+    expect(api.createPricingImportPreview).toHaveBeenCalledWith(
+      "case-1",
+      file,
+      "EXCEL",
+      expect.objectContaining({
+        command_id: expect.any(String),
+        idempotency_key: expect.any(String),
+        correlation_id: expect.any(String),
+      }),
+    );
     expect(result.current.pricingImportBatchId).toBe("batch-2");
     expect(result.current.pricingImportBatchRevision).toBe("1");
     expect(result.current.pricingImportState).toBe("PREVIEWED");
@@ -120,6 +129,32 @@ describe("usePricingImport", () => {
     const message = mockSetMessage.mock.calls.at(-1)?.[0] ?? null;
     expect(message?.tone).toBe("warning");
     expect(message?.text).toContain("limite de lignes");
+  });
+
+  it("keeps an unknown preview and replays it with the same identifiers", async () => {
+    const api = {
+      createPricingImportPreview: vi
+        .fn()
+        .mockRejectedValueOnce(new TypeError("network unavailable"))
+        .mockResolvedValueOnce(preview({ replayed: true })),
+    } satisfies PricingApi;
+    const setMessage = vi.fn() as unknown as Dispatch<SetStateAction<HookMessage | null>>;
+    const { result } = renderPricingHook(api, setMessage);
+    const file = new File(["xlsx"], "pricing.xlsx");
+
+    await act(async () => {
+      await result.current.previewPricingImport(file);
+    });
+    expect(result.current.pricingImportState).toBe("UNKNOWN");
+    expect(result.current.pricingImportUnknownAction).toBe("PREVIEW");
+
+    await act(async () => {
+      await result.current.retryPricingImportPreview();
+    });
+    expect(result.current.pricingImportState).toBe("PREVIEWED");
+    const first = api.createPricingImportPreview.mock.calls[0]?.[3];
+    const second = api.createPricingImportPreview.mock.calls[1]?.[3];
+    expect(second).toEqual(first);
   });
 
   it("reloads a persisted batch and reflects its committed state", async () => {
@@ -175,6 +210,8 @@ describe("usePricingImport", () => {
       report_id: "report-1",
       expected_batch_revision: 1,
       expected_report_revision: 0,
+      command_id: expect.any(String),
+      idempotency_key: expect.any(String),
     });
     expect(onDraftReload).toHaveBeenCalledOnce();
     expect(result.current.pricingImportState).toBe("COMMITTED");
@@ -218,6 +255,32 @@ describe("usePricingImport", () => {
       tone: "success",
       text: "Import déjà commité : rejeu idempotent sans nouvelle ligne.",
     });
+  });
+
+  it("keeps an unknown commit and replays it with the same identifiers", async () => {
+    const api = {
+      commitPricingImport: vi
+        .fn()
+        .mockRejectedValueOnce(new TypeError("network unavailable"))
+        .mockResolvedValueOnce(receipt(true)),
+    } satisfies PricingApi;
+    const setMessage = vi.fn() as unknown as Dispatch<SetStateAction<HookMessage | null>>;
+    const { result } = renderPricingHook(api, setMessage);
+    setBatch(result);
+
+    await act(async () => {
+      await result.current.commitPricingImport();
+    });
+    expect(result.current.pricingImportState).toBe("UNKNOWN");
+    expect(result.current.pricingImportUnknownAction).toBe("COMMIT");
+
+    await act(async () => {
+      await result.current.retryPricingImportCommit();
+    });
+    expect(result.current.pricingImportState).toBe("REPLAYED");
+    const first = api.commitPricingImport.mock.calls[0]?.[2];
+    const second = api.commitPricingImport.mock.calls[1]?.[2];
+    expect(second).toEqual(first);
   });
 
   it("ignores a second invocation while the first commit is pending", async () => {

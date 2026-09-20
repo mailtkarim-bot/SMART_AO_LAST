@@ -122,4 +122,30 @@ describe("useDceKnowledge", () => {
     expect(hook.current.reading).toBeNull();
     expect(setMessage).not.toHaveBeenCalled();
   });
+
+  it("keeps manual reading available when knowledge retrieval is unavailable", async () => {
+    const api = {
+      getCaseDceReading: vi.fn(),
+      searchCaseKnowledge: vi.fn().mockRejectedValue(
+        Object.assign(new Error("KNOWLEDGE_RETRIEVAL_UNAVAILABLE"), {
+          status: 503,
+          detail: "KNOWLEDGE_RETRIEVAL_UNAVAILABLE",
+        }),
+      ),
+    } satisfies DceApi;
+    const setMessage = vi.fn() as unknown as Dispatch<SetStateAction<HookMessage | null>>;
+    const { result: hook } = renderDceHook(api, setMessage);
+    await act(async () => {
+      hook.current.setQuery("délai");
+    });
+    await act(async () => {
+      await hook.current.searchKnowledge();
+    });
+
+    expect(hook.current.results).toEqual([]);
+    expect(setMessage).toHaveBeenCalledWith({
+      tone: "error",
+      text: "Assistance IA indisponible. La lecture des sources et les contrôles manuels restent disponibles.",
+    });
+  });
 });

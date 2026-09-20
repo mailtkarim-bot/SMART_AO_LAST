@@ -13,7 +13,7 @@ class RecordSubmissionEvidenceCommand(ApplicationCommand):
 
     evidence_id: UUID
     submission_package_id: UUID
-    evidence_type: Literal["MANUAL_RECEIPT", "MANUAL_PORTAL_REFERENCE"]
+    evidence_type: Literal["MANUAL_RECEIPT", "MANUAL_PORTAL_REFERENCE", "HUMAN_DEPOSIT_ATTEMPT"]
     external_reference_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
     evidence_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     notes_redacted: str | None = Field(default=None, max_length=1000)

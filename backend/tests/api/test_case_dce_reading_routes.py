@@ -38,7 +38,7 @@ class _Resolver:
             assigned_case_ids=frozenset(),
             session_id=uuid4(),
             authenticated_at=NOW,
-            mfa_verified_at=None,
+            mfa_verified_at=NOW,
             correlation_id=uuid4(),
         )
 

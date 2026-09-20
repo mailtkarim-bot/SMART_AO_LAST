@@ -478,13 +478,14 @@ def test_read_package_returns_latest_readiness_and_documents(
         now=NOW,
     )
 
-    package, readiness, documents = preparation_service.read_package(
+    package, readiness, documents, response_drafts = preparation_service.read_package(
         actor=actor, package_id=package_id, now=NOW
     )
 
     assert package.id == package_id
     assert readiness is not None and readiness.revision == 2
     assert [document.id for document in documents] == [document_id]
+    assert response_drafts == ()
 
 
 @pytest.mark.db

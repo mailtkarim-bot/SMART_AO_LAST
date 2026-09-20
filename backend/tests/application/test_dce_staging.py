@@ -543,3 +543,36 @@ def test_staged_object_database_trigger_rejects_invalid_state_transition(
         staged_object = session.get(DceStagedObjectRecord, prepare.storage_object_id)
         assert staged_object is not None
         staged_object.state = "CLEAN"
+
+
+@pytest.mark.db
+@pytest.mark.integration
+def test_recovery_prepares_a_new_intention_after_rejected_upload(
+    session_factory: sessionmaker[Session],
+) -> None:
+    tenant_id, consultation_id = _seed_consultation(session_factory)
+    dispatcher = _dispatcher(session_factory)
+    first = _prepare_command(consultation_id=consultation_id)
+    dispatcher.dispatch(command=first, context=_context(tenant_id))
+    dispatcher.dispatch(
+        command=_claim_command(storage_object_id=first.storage_object_id),
+        context=_context(tenant_id),
+    )
+    dispatcher.dispatch(
+        command=_reject_command(storage_object_id=first.storage_object_id),
+        context=_context(tenant_id, actor_kind="SYSTEM"),
+    )
+
+    second = _prepare_command(consultation_id=consultation_id)
+    result = dispatcher.dispatch(command=second, context=_context(tenant_id))
+
+    assert result.result_code == "DCE_STAGING_PREPARED"
+    assert second.storage_object_id != first.storage_object_id
+    with session_factory() as session:
+        first_record = session.get(DceStagedObjectRecord, first.storage_object_id)
+        second_record = session.get(DceStagedObjectRecord, second.storage_object_id)
+    assert first_record is not None
+    assert second_record is not None
+    assert first_record.state == "REJECTED"
+    assert second_record.state == "AWAITING_UPLOAD"
+    assert second_record.consultation_id == consultation_id

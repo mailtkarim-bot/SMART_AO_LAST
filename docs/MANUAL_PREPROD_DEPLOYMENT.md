@@ -104,7 +104,7 @@ COMPOSE=(docker compose --env-file ops/.env.preprod -f ops/docker-compose.prepro
 "${COMPOSE[@]}" port clamav 3310
 ```
 
-`alembic current` doit atteindre l’unique head attendue par `backend/app/platform/persistence/schema.py`, actuellement `20260826_0067` pour le code OCR fusionné. Les commandes de port PostgreSQL et ClamAV doivent ne retourner aucun endpoint public. Toute divergence de head, tout conteneur non sain ou tout port interne publié laisse la recette en état REJECTED.
+`alembic current` doit atteindre l’unique head attendue par `backend/app/platform/persistence/schema.py`, actuellement `20260920_0090`. Les commandes de port PostgreSQL et ClamAV doivent ne retourner aucun endpoint public. Toute divergence de head, tout conteneur non sain ou tout port interne publié laisse la recette en état REJECTED.
 
 ## 6. Live, readiness et contrôles de sécurité
 
@@ -157,7 +157,7 @@ Le dossier de preuve doit contenir le SHA déployé, les versions/outils, les se
 |---|---|
 | Code | Commit fusionné dans `main`, arbre VPS propre, CI correspondante verte |
 | Images | Services applicatifs construits ou tirés avec les digests attendus |
-| Migration | Unique head Alembic atteinte, actuellement `20260826_0067` |
+| Migration | Unique head Alembic atteinte, actuellement `20260920_0090` |
 | Réseau | Seul Caddy expose les ports publics ; PostgreSQL et ClamAV restent internes |
 | Santé | Live, readiness, conteneurs, PostgreSQL, ClamAV et Caddy sains |
 | Sécurité | Fichier env en `0600`, aucun secret dans les preuves, EICAR rejeté si la recette est autorisée |

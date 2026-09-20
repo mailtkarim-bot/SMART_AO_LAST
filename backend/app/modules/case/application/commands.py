@@ -28,3 +28,14 @@ class CreateCaseCommand(ApplicationCommand):
     origin_kind: Literal["MANUAL", "OPPORTUNITY", "IMPORT", "CLIENT_REQUEST"] = "MANUAL"
     origin_rationale: str | None = Field(default=None, max_length=2_000)
     origin_reference_id: UUID | None = None
+
+
+class LinkCaseDceVersionCommand(ApplicationCommand):
+    """Attach one admitted, verified DCE version to its owning Case."""
+
+    command_type = "LinkCaseDceVersion"
+
+    case_id: UUID
+    dce_version_id: UUID
+    expected_case_revision: int | None = Field(default=None, ge=0)
+    reason: str = Field(min_length=1, max_length=2_000)

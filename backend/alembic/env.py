@@ -8,6 +8,7 @@ from app.modules.dce.infrastructure.models import (  # noqa: F401
     case_dce_impact,
     consultation,
     dce_classification,
+    dce_contributions,
     dce_extraction,
     dce_rc_analysis,
     dce_requirement_confirmations,

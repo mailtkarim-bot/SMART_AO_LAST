@@ -75,6 +75,39 @@ describe("BOAMP transport", () => {
     expect(body.idempotency_key).toEqual(expect.any(String));
   });
 
+  it("posts a conversion command with caller-supplied idempotency identifiers", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({
+        status: "SUCCEEDED",
+        command_id: "command-1",
+        idempotency_key: "idempotency-1",
+        result_code: "CASE_CREATED",
+        case_id: "case-1",
+        version: 1,
+        event_ids: ["event-1"],
+        replayed: false,
+      }), { status: 201 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const client = createApiClient("https://app.example.test", "access-1");
+
+    await expect(client.createCaseFromBoampObservation("obs/1", {
+      command_id: "command-1",
+      idempotency_key: "idempotency-1",
+      correlation_id: "correlation-1",
+    })).resolves.toMatchObject({ case_id: "case-1", replayed: false });
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "https://app.example.test/api/v1/patron/boamp-opportunities/obs%2F1/case",
+    );
+    const request = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    expect(JSON.parse(String(request.body))).toEqual({
+      command_id: "command-1",
+      idempotency_key: "idempotency-1",
+      correlation_id: "correlation-1",
+    });
+  });
+
   it("reads DCE metadata and searches knowledge with encoded query parameters", async () => {
     const fetchMock = vi
       .fn()
@@ -83,18 +116,37 @@ describe("BOAMP transport", () => {
       )
       .mockResolvedValueOnce(
         new Response(JSON.stringify({ case_id: "case-1", query: "délai", results: [] }), { status: 200 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            case_id: "case-1",
+            work_label: "Affaire test",
+            coverage: "PARTIAL",
+            items: [],
+            economic_coverage: null,
+          }),
+          { status: 200 },
+        ),
       );
     vi.stubGlobal("fetch", fetchMock);
     const client = createApiClient("https://app.example.test", "access-1");
 
     await expect(client.getCaseDceReading("case/1")).resolves.toMatchObject({ availability: "AVAILABLE" });
     await expect(client.searchCaseKnowledge("case/1", "délai d’exécution", 5)).resolves.toMatchObject({ results: [] });
+    await expect(client.getCaseResolution("case/1")).resolves.toMatchObject({
+      coverage: "PARTIAL",
+      economic_coverage: null,
+    });
 
     expect(fetchMock.mock.calls[0]?.[0]).toBe(
       "https://app.example.test/api/v1/cases/case%2F1/dce-reading",
     );
     expect(fetchMock.mock.calls[1]?.[0]).toBe(
       "https://app.example.test/api/v1/cases/case%2F1/knowledge/search?q=d%C3%A9lai+d%E2%80%99ex%C3%A9cution&top_k=5",
+    );
+    expect(fetchMock.mock.calls[2]?.[0]).toBe(
+      "https://app.example.test/api/v1/cases/case%2F1/resolution",
     );
   });
 });
@@ -181,6 +233,7 @@ describe("Preparation review transport", () => {
   it("reads reviews and sends revision-checked patron decisions", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ package_id: "package-1", reviews: [] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ package_id: "package-1", drafts: [] }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ result_code: "PREPARATION_REVIEW_REQUESTED" }), { status: 201 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ result_code: "PREPARATION_REVIEW_DECIDED" }), { status: 201 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ result_code: "PREPARATION_CORRECTION_ADDED" }), { status: 201 }));
@@ -188,6 +241,7 @@ describe("Preparation review transport", () => {
     const client = createApiClient("https://app.example.test", "access-1");
 
     await client.listPreparationReviews("package/1");
+    await client.listPreparationResponseDrafts("package/1");
     await client.requestPreparationReview("package/1", {
       expected_package_revision: 3,
       target_document_id: "document-1",
@@ -209,11 +263,12 @@ describe("Preparation review transport", () => {
 
     expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
       "https://app.example.test/api/v1/preparation/package%2F1/reviews",
+      "https://app.example.test/api/v1/preparation/package%2F1/response-drafts",
       "https://app.example.test/api/v1/preparation/package%2F1/reviews",
       "https://app.example.test/api/v1/preparation/package%2F1/reviews/review%2F1/decision",
       "https://app.example.test/api/v1/preparation/package%2F1/reviews/review%2F1/corrections",
     ]);
-    const decisionBody = JSON.parse(String((fetchMock.mock.calls[2]?.[1] as RequestInit).body)) as Record<string, unknown>;
+    const decisionBody = JSON.parse(String((fetchMock.mock.calls[3]?.[1] as RequestInit).body)) as Record<string, unknown>;
     expect(decisionBody).toMatchObject({ expected_review_revision: 1, decision_code: "ACCEPTED", command_id: expect.any(String) });
   });
 });
@@ -327,6 +382,33 @@ describe("Preparation generated document transport", () => {
     );
     expect((fetchMock.mock.calls[0]?.[1] as RequestInit).credentials).toBe("include");
     expect(((fetchMock.mock.calls[0]?.[1] as RequestInit).headers as Headers).get("Accept")).toBe("text/markdown");
+  });
+
+  it("creates a response draft with generated command and draft identifiers", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ result_code: "TECHNICAL_RESPONSE_DRAFT_CREATED" }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const client = createApiClient("https://app.example.test", "access-1");
+
+    await client.createTechnicalResponseDraft("package/1", {
+      expected_package_revision: 3,
+      source_document_id: "document-1",
+      section_codes: ["METHOD"],
+      source_refs: ["requirement-1"],
+    });
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "https://app.example.test/api/v1/preparation/package%2F1/response-drafts",
+    );
+    const body = JSON.parse(String((fetchMock.mock.calls[0]?.[1] as RequestInit).body)) as Record<string, unknown>;
+    expect(body).toMatchObject({
+      expected_package_revision: 3,
+      source_document_id: "document-1",
+      section_codes: ["METHOD"],
+      source_refs: ["requirement-1"],
+    });
+    expect(body.command_id).toEqual(expect.any(String));
+    expect(body.idempotency_key).toEqual(expect.any(String));
+    expect(body.draft_id).toEqual(expect.any(String));
   });
 });
 
@@ -465,6 +547,100 @@ describe("browser authentication transport", () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
+  it("posts a P5 authorization with stable caller-supplied identifiers", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          status: "SUCCEEDED",
+          command_id: "command-authorization-1",
+          idempotency_key: "idempotency-authorization-1",
+          result_code: "SUBMISSION_PACKAGE_AUTHORIZED",
+          aggregate_refs: [],
+          event_ids: [],
+          replayed: false,
+        }),
+        { status: 201 },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createApiClient("https://app.example.test", "access-1");
+    await expect(
+      client.authorizeSubmissionPackage(
+        "package/1",
+        3,
+        "Contrôle P5 validé.",
+        {
+          command_id: "command-authorization-1",
+          idempotency_key: "idempotency-authorization-1",
+          authorization_id: "authorization-1",
+          correlation_id: "correlation-1",
+        },
+      ),
+    ).resolves.toMatchObject({ result_code: "SUBMISSION_PACKAGE_AUTHORIZED" });
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "https://app.example.test/api/v1/patron/submission-packages/package%2F1/authorize",
+    );
+    const request = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    expect(JSON.parse(String(request.body))).toEqual({
+      command_id: "command-authorization-1",
+      idempotency_key: "idempotency-authorization-1",
+      authorization_id: "authorization-1",
+      correlation_id: "correlation-1",
+      expected_package_version: 3,
+      rationale: "Contrôle P5 validé.",
+    });
+  });
+
+  it("reads the bounded submission manifest projection", async () => {
+    const projection = {
+      submission_package_id: "package-1",
+      package_version: 3,
+      state: "PRET_CONTROLE",
+      manifest_sha256: "c".repeat(64),
+      manifest: { entries: [{ path: "dce/index.pdf" }] },
+      authorization_status: "NOT_AUTHORIZED",
+      external_submission: "NOT_PERFORMED",
+    };
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(projection), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createApiClient("https://app.example.test", "access-1");
+    await expect(client.getSubmissionPackageManifest("package/1")).resolves.toEqual(projection);
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "https://app.example.test/api/v1/patron/submission-packages/package%2F1/manifest",
+    );
+    const request = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    expect(request.method).toBeUndefined();
+  });
+
+  it("reads package-bound manual receipt evidence", async () => {
+    const projection = [{
+      evidence_id: "evidence-1",
+      submission_package_id: "package-1",
+      package_version: 3,
+      manifest_sha256: "c".repeat(64),
+      evidence_type: "MANUAL_RECEIPT",
+      status: "RECEIVED",
+      reconciliation_status: "PARTIAL",
+      external_submission: "NOT_PERFORMED",
+    }];
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(projection), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createApiClient("https://app.example.test", "access-1");
+    await expect(client.getSubmissionEvidence("package/1")).resolves.toEqual(projection);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "https://app.example.test/api/v1/patron/submission-packages/package%2F1/evidence",
+    );
+  });
+
   it("logs out with the double-submit CSRF header", async () => {
     document.cookie = "smart_ao_csrf=csrf-logout; path=/";
     const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
@@ -529,5 +705,158 @@ describe("Case creation transport", () => {
     expect(body.idempotency_key).toEqual(expect.any(String));
     expect(body.correlation_id).toEqual(expect.any(String));
     expect(new Headers(request.headers).get("Authorization")).toBe("Bearer access-1");
+  });
+});
+
+describe("nominative handover transport", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("sends a bounded handover and accepts it without browser identity fields", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ record_id: "handover-1", state: "REQUESTED", replayed: false }), { status: 201 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ record_id: "handover-1", state: "ACCEPTED", replayed: false }), { status: 201 }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const client = createApiClient("https://app.example.test", "access-1");
+
+    await expect(client.requestHandover({
+      handover_id: "handover-1",
+      successor_membership_id: "member-2",
+      assignment_ids: ["assignment-1"],
+      command_id: "command-1",
+      idempotency_key: "idempotency-1",
+      rationale: "Relève nominative.",
+      correlation_id: "correlation-1",
+    })).resolves.toMatchObject({ state: "REQUESTED" });
+    await expect(client.acceptHandover("handover-1", "Je prends la relève.")).resolves.toMatchObject({ state: "ACCEPTED" });
+
+    const requestBody = JSON.parse(String((fetchMock.mock.calls[0]?.[1] as RequestInit).body)) as Record<string, unknown>;
+    expect(requestBody).toMatchObject({
+      handover_id: "handover-1",
+      successor_membership_id: "member-2",
+      assignment_ids: ["assignment-1"],
+      idempotency_key: "idempotency-1",
+    });
+    expect(requestBody).not.toHaveProperty("actor_kind");
+    expect(fetchMock.mock.calls[1]?.[0]).toBe(
+      "https://app.example.test/api/v1/continuity/handovers/handover-1/acceptance",
+    );
+  });
+});
+
+describe("DCE opening transport", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("reads the consultation projection and the applicable DCE version documents", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: "consultation-1" }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: "dce-1" }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ dce_version_id: "dce-1", items: [] }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const client = createApiClient("https://app.example.test", "access-1");
+
+    await expect(client.getConsultation("consultation/1")).resolves.toMatchObject({ id: "consultation-1" });
+    await expect(client.getDceVersion("dce/1")).resolves.toMatchObject({ id: "dce-1" });
+    await expect(client.listDceVersionDocuments("dce/1")).resolves.toMatchObject({ items: [] });
+
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      "https://app.example.test/api/v1/consultations/consultation%2F1",
+      "https://app.example.test/api/v1/dce-versions/dce%2F1",
+      "https://app.example.test/api/v1/dce-versions/dce%2F1/documents",
+    ]);
+  });
+
+  it("posts the staging preparation and version registration commands with generated identifiers", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        status: "SUCCEEDED",
+        command_id: "command-1",
+        idempotency_key: "idempotency-1",
+        result_code: "DCE_STAGING_PREPARED",
+        aggregate_refs: [],
+        event_ids: [],
+        staging: { storage_object_id: "storage-1", state: "AWAITING_UPLOAD", expires_at: "2026-09-20T14:00:00Z" },
+        replayed: false,
+      }), { status: 201 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        status: "SUCCEEDED",
+        command_id: "command-2",
+        idempotency_key: "idempotency-2",
+        result_code: "DCE_VERSION_REGISTERED",
+        aggregate_refs: [],
+        event_ids: [],
+        replayed: false,
+      }), { status: 201 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const client = createApiClient("https://app.example.test", "access-1");
+
+    await expect(client.prepareDceStaging({
+      consultation_id: "consultation-1",
+      consultation_revision: 3,
+      original_filename: "cce.pdf",
+      expected_byte_size: 1024,
+      source_channel: "MANUAL_UPLOAD",
+      expires_at: "2026-09-20T14:00:00Z",
+    })).resolves.toMatchObject({ result_code: "DCE_STAGING_PREPARED" });
+    await expect(client.registerDceVersion({
+      dce_version_id: "dce-2",
+      consultation_id: "consultation-1",
+      consultation_revision: 3,
+      corpus_hash: "a".repeat(64),
+      provenance_channel: "MANUAL_UPLOAD",
+      source_received_at: "2026-09-20T12:00:00Z",
+      documents: [{ document_id: "doc-1", storage_object_id: "storage-1" }],
+    })).resolves.toMatchObject({ result_code: "DCE_VERSION_REGISTERED" });
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("https://app.example.test/api/v1/dce-staged-objects");
+    expect(fetchMock.mock.calls[1]?.[0]).toBe("https://app.example.test/api/v1/dce-versions");
+    const prepareBody = JSON.parse(String((fetchMock.mock.calls[0]?.[1] as RequestInit).body)) as Record<string, unknown>;
+    expect(prepareBody).toMatchObject({
+      consultation_id: "consultation-1",
+      consultation_revision: 3,
+      original_filename: "cce.pdf",
+      expected_byte_size: 1024,
+      source_channel: "MANUAL_UPLOAD",
+      command_id: expect.any(String),
+      idempotency_key: expect.any(String),
+    });
+    const registerBody = JSON.parse(String((fetchMock.mock.calls[1]?.[1] as RequestInit).body)) as Record<string, unknown>;
+    expect(registerBody).toMatchObject({
+      dce_version_id: "dce-2",
+      corpus_hash: "a".repeat(64),
+      documents: [{ document_id: "doc-1", storage_object_id: "storage-1" }],
+      command_id: expect.any(String),
+      idempotency_key: expect.any(String),
+    });
+  });
+
+  it("puts the raw binary file with the preparation idempotency key and no JSON content type", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ storage_object_id: "storage-1", state: "CLEAN" }), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const client = createApiClient("https://app.example.test", "access-1");
+    const file = new File(["pdf-bytes"], "cce.pdf", { type: "application/pdf" });
+
+    await expect(
+      client.uploadDceStagedObjectContent("storage/1", "idempotency-prepare-1", file),
+    ).resolves.toMatchObject({ state: "CLEAN" });
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "https://app.example.test/api/v1/dce-staged-objects/storage%2F1/content",
+    );
+    const request = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    expect(request.method).toBe("PUT");
+    expect(request.body).toBe(file);
+    const headers = new Headers(request.headers);
+    expect(headers.get("Idempotency-Key")).toBe("idempotency-prepare-1");
+    expect(headers.get("Content-Type")).not.toBe("application/json");
   });
 });

@@ -82,6 +82,13 @@ describe("DceKnowledgePanel", () => {
     expect(screen.queryByText("texte intégral secret")).not.toBeInTheDocument();
   });
 
+  it("makes a partial classification explicit", () => {
+    renderPanel({ reading: { ...reading, dce: { ...reading.dce, classification_readiness: "PARTIALLY_CLASSIFIED" } } });
+
+    expect(screen.getByText("PARTIALLY_CLASSIFIED")).toBeInTheDocument();
+    expect(screen.getByText(/La synthèse reste partielle/)).toBeInTheDocument();
+  });
+
   it("delegates query, search, reset and reload actions", () => {
     const onQueryChange = vi.fn();
     const onLoad = vi.fn();

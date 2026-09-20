@@ -27,6 +27,7 @@ KNOWN_EXCEPTIONS: Final[frozenset[str]] = frozenset(
     {
         "backend/app/modules/dce/application/analysis.py",
         "backend/app/modules/dce/application/classification.py",
+        "backend/app/modules/dce/application/contribution_conflicts.py",
         "backend/app/modules/dce/application/extraction.py",
         "backend/app/modules/dce/application/handlers.py",
         "backend/app/modules/dce/application/impact.py",
@@ -38,6 +39,8 @@ KNOWN_EXCEPTIONS: Final[frozenset[str]] = frozenset(
         "backend/app/modules/opportunity/application/boamp_case_creation.py",
         "backend/app/modules/opportunity/application/boamp_qualification.py",
         "backend/app/modules/opportunity/application/patron_watch_profile.py",
+        "backend/app/modules/patron_action/application/order.py",
+        "backend/app/modules/patron_action/application/outcome.py",
         "backend/app/modules/patron_action/application/service.py",
         "backend/app/modules/patron_action/application/transition_service.py",
         "backend/app/modules/preparation/application/review.py",

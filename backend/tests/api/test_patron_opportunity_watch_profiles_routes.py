@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from types import SimpleNamespace
 from typing import Any, cast
 from uuid import UUID, uuid4
@@ -68,7 +69,7 @@ class FakeProfileService:
 
 
 def _client(service: Any) -> TestClient:
-    context = SimpleNamespace(tenant_id=TENANT_ID)
+    context = SimpleNamespace(tenant_id=TENANT_ID, mfa_verified_at=datetime.now(UTC))
     app = FastAPI()
     app.include_router(
         build_patron_opportunity_watch_profile_router(

@@ -7,9 +7,10 @@ type Message = { tone: "success" | "error" | "warning"; text: string };
 type MfaPanelProps = {
   api: ApiClient;
   setMessage: Dispatch<SetStateAction<Message | null>>;
+  onAuthenticationChanged?: () => Promise<unknown>;
 };
 
-export function MfaPanel({ api, setMessage }: MfaPanelProps) {
+export function MfaPanel({ api, setMessage, onAuthenticationChanged }: MfaPanelProps) {
   const [enrollment, setEnrollment] = useState<TotpEnrollment | null>(null);
   const [enrollmentCode, setEnrollmentCode] = useState("");
   const [disableCode, setDisableCode] = useState("");
@@ -34,6 +35,7 @@ export function MfaPanel({ api, setMessage }: MfaPanelProps) {
     setBusy(true);
     try {
       await api.confirmTotpEnrollment(enrollment.factor_id, enrollmentCode.trim());
+      await onAuthenticationChanged?.();
       setEnrollment(null);
       setEnrollmentCode("");
       setMessage({ tone: "success", text: "MFA TOTP activée pour cette identité." });
@@ -50,6 +52,7 @@ export function MfaPanel({ api, setMessage }: MfaPanelProps) {
     setBusy(true);
     try {
       await api.stepUpTotp(stepUpCode.trim());
+      await onAuthenticationChanged?.();
       setStepUpCode("");
       setMessage({ tone: "success", text: "Step-up MFA validé pour les actions sensibles pendant la fenêtre de session." });
     } catch (error) {
@@ -65,6 +68,7 @@ export function MfaPanel({ api, setMessage }: MfaPanelProps) {
     setBusy(true);
     try {
       await api.disableTotp(disableCode.trim());
+      await onAuthenticationChanged?.();
       setDisableCode("");
       setMessage({ tone: "success", text: "MFA TOTP désactivée après vérification." });
     } catch (error) {

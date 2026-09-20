@@ -4,6 +4,7 @@ import type { ApiClient } from "../../infrastructure/api";
 import type {
   AddPreparationCorrectionInput,
   DecidePreparationReviewInput,
+  PreparationResponseDraftList,
   PreparationReviewList,
   RequestPreparationReviewInput,
 } from "../../shared/types";
@@ -20,6 +21,7 @@ export function PreparationReviewPanel({ api, setMessage }: PreparationReviewPan
   const [documentId, setDocumentId] = useState("");
   const [documentVersion, setDocumentVersion] = useState("1");
   const [reviews, setReviews] = useState<PreparationReviewList | null>(null);
+  const [drafts, setDrafts] = useState<PreparationResponseDraftList | null>(null);
   const [note, setNote] = useState("");
   const [correctionInstruction, setCorrectionInstruction] = useState("");
   const [correctionCode, setCorrectionCode] = useState<AddPreparationCorrectionInput["correction_code"]>("SECTION_INCOMPLETE");
@@ -29,7 +31,12 @@ export function PreparationReviewPanel({ api, setMessage }: PreparationReviewPan
     if (!packageId.trim()) return;
     setBusy(true);
     try {
-      setReviews(await api.listPreparationReviews(packageId.trim()));
+      const [reviewResult, draftResult] = await Promise.all([
+        api.listPreparationReviews(packageId.trim()),
+        api.listPreparationResponseDrafts(packageId.trim()),
+      ]);
+      setReviews(reviewResult);
+      setDrafts(draftResult);
     } catch (error) {
       setMessage({ tone: "error", text: error instanceof Error ? error.message : "Impossible de charger les revues." });
     } finally {
@@ -91,6 +98,7 @@ export function PreparationReviewPanel({ api, setMessage }: PreparationReviewPan
         <label><span>Package de préparation</span><input value={packageId} onChange={(event) => setPackageId(event.target.value)} placeholder="UUID du package" /></label>
         <button className="secondary-button" type="button" disabled={busy || !packageId.trim()} onClick={() => void loadReviews()}>Charger les revues</button>
       </div>
+      {drafts && <div className="response-plan patron-response-plan"><div className="panel-heading"><div><h3>Plans de réponse reçus</h3><p>Versions, sections et sources ; le contenu reste privé et non financier.</p></div><span className="rule-tag">{drafts.drafts.length} brouillon{drafts.drafts.length > 1 ? "s" : ""}</span></div>{drafts.drafts.length === 0 ? <p className="panel-empty">Aucun brouillon reçu.</p> : drafts.drafts.map((draft) => <div className="response-plan-row" key={`${draft.draft_id}-${draft.version}`}><div><strong>Brouillon v{draft.version}</strong><small>{draft.state} · {draft.responsible_role}</small></div><span>{draft.section_codes.join(" · ")}</span></div>)}</div>}
       <div className="review-request-grid">
         <form className="workflow-form" onSubmit={requestReview}><h3>Demander une revue</h3><label><span>Révision package</span><input required min="0" type="number" value={packageRevision} onChange={(event) => setPackageRevision(event.target.value)} /></label><label><span>Document</span><input required value={documentId} onChange={(event) => setDocumentId(event.target.value)} placeholder="UUID du document" /></label><label><span>Version</span><input required min="1" type="number" value={documentVersion} onChange={(event) => setDocumentVersion(event.target.value)} /></label><button className="primary-button" type="submit" disabled={busy}>Demander la revue</button></form>
         <div className="workflow-form"><h3>Note de décision</h3><textarea rows={4} value={note} onChange={(event) => setNote(event.target.value)} placeholder="Note facultative appliquée à la prochaine décision" /></div>

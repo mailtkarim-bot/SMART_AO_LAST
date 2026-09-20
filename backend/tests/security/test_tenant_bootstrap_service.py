@@ -17,6 +17,7 @@ from app.platform.security.models import (
     PasswordCredentialRecord,
     TenantBootstrapTokenRecord,
     TenantMembershipRecord,
+    TenantOwnerRecord,
 )
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -137,6 +138,9 @@ def test_complete_bootstrap_creates_active_patron_and_consumes_token_atomically(
                 TenantBootstrapTokenRecord.tenant_id == provisioned.tenant_id
             )
         )
+        owner = session.scalar(
+            sa.select(TenantOwnerRecord).where(TenantOwnerRecord.tenant_id == provisioned.tenant_id)
+        )
 
         assert identity is not None
         assert identity.email_normalized == "patron@example.test"
@@ -147,6 +151,9 @@ def test_complete_bootstrap_creates_active_patron_and_consumes_token_atomically(
         assert membership.role == "PATRON_ADMIN"
         assert membership.state == "ACTIVE"
         assert membership.activated_at == FIXED_NOW
+        assert owner is not None
+        assert owner.membership_id == completed.membership_id
+        assert owner.designated_by_membership_id == completed.membership_id
         assert credential is not None
         assert credential.algorithm == "ARGON2ID"
         assert credential.password_hash.startswith("$argon2id$")

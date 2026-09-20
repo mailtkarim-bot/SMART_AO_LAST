@@ -18,6 +18,8 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.platform.security.models import (
     AuthSessionRecord,
     IdentityRecord,
+    RefreshTokenFamilyRecord,
+    RefreshTokenRecord,
     TotpFactorRecord,
     TotpRecoveryCodeRecord,
 )
@@ -27,6 +29,8 @@ _TOTP_DIGITS: Final = 6
 _TOTP_SECRET_BYTES: Final = 20
 _ENROLLMENT_TTL: Final = timedelta(minutes=10)
 _RECOVERY_CODE_COUNT: Final = 10
+_RECOVERY_PASSWORD_MAX_AGE: Final = timedelta(minutes=5)
+_MFA_DISABLE_MAX_AGE: Final = timedelta(minutes=15)
 
 
 class TotpConfigurationError(ValueError):
@@ -39,6 +43,14 @@ class TotpEnrollmentError(ValueError):
 
 class TotpVerificationError(ValueError):
     """The supplied TOTP or recovery code cannot authorize the operation."""
+
+
+@dataclass(frozen=True, slots=True)
+class TotpRecoveryResult:
+    """The recovery ceremony invalidated the compromised authentication state."""
+
+    identity_id: UUID
+    recovered_at: datetime
 
 
 @dataclass(frozen=True, slots=True)
@@ -239,24 +251,110 @@ class TotpService:
                     verified_at=current,
                 )
             recovery = _find_recovery_code(session, factor_id=factor.id, code=code)
-            if recovery is None:
-                raise TotpVerificationError("TOTP_CODE_INVALID")
-            recovery.used_at = current
-            auth_session.mfa_verified_at = current
-            auth_session.auth_strength = "MFA_STEP_UP"
-            return TotpVerificationResult(
-                session_id=session_id,
-                used_recovery_code=True,
-                verified_at=current,
-            )
+            if recovery is not None:
+                raise TotpVerificationError("RECOVERY_REENROLLMENT_REQUIRED")
+            raise TotpVerificationError("TOTP_CODE_INVALID")
 
-    def disable(self, *, identity_id: UUID, code: str, now: datetime) -> None:
+    def recover_with_code(
+        self, *, session_id: UUID, code: str, now: datetime
+    ) -> TotpRecoveryResult:
+        """Consume one recovery code, revoke the identity's lineages and disable TOTP.
+
+        Recovery requires a fresh password-created session. It deliberately does
+        not issue a token: the user must authenticate again and enroll a new
+        factor before the common MFA guard allows business access.
+        """
         current = _utc(now)
         with self._session_factory.begin() as session:
+            auth_session = session.scalar(
+                sa.select(AuthSessionRecord)
+                .where(AuthSessionRecord.id == session_id)
+                .with_for_update()
+            )
+            if (
+                auth_session is None
+                or auth_session.state != "ACTIVE"
+                or auth_session.auth_strength != "PASSWORD"
+                or auth_session.mfa_verified_at is not None
+                or current - auth_session.issued_at > _RECOVERY_PASSWORD_MAX_AGE
+            ):
+                raise TotpVerificationError("PASSWORD_REAUTH_REQUIRED")
             factor = session.scalar(
                 sa.select(TotpFactorRecord)
                 .where(
-                    TotpFactorRecord.identity_id == identity_id,
+                    TotpFactorRecord.identity_id == auth_session.identity_id,
+                    TotpFactorRecord.state == "ACTIVE",
+                )
+                .with_for_update()
+            )
+            if factor is None:
+                raise TotpVerificationError("TOTP_NOT_ENABLED")
+            recovery = _find_recovery_code(session, factor_id=factor.id, code=code)
+            if recovery is None:
+                raise TotpVerificationError("TOTP_CODE_INVALID")
+
+            recovery.used_at = current
+            factor.state = "DISABLED"
+            factor.confirmed_at = current
+            active_sessions = session.scalars(
+                sa.select(AuthSessionRecord)
+                .where(
+                    AuthSessionRecord.identity_id == auth_session.identity_id,
+                    AuthSessionRecord.state == "ACTIVE",
+                )
+                .with_for_update()
+            ).all()
+            for active_session in active_sessions:
+                active_session.state = "REVOKED"
+                active_session.revoked_at = current
+                active_session.revoke_reason = "MFA_RECOVERY"
+                active_session.token_version += 1
+            active_session_ids = [active_session.id for active_session in active_sessions]
+            if active_session_ids:
+                families = session.scalars(
+                    sa.select(RefreshTokenFamilyRecord)
+                    .where(
+                        RefreshTokenFamilyRecord.session_id.in_(active_session_ids),
+                        RefreshTokenFamilyRecord.state == "ACTIVE",
+                    )
+                    .with_for_update()
+                ).all()
+                for family in families:
+                    family.state = "REVOKED"
+                    family.revoked_at = current
+                    family.revoke_reason = "MFA_RECOVERY"
+                    session.execute(
+                        sa.update(RefreshTokenRecord)
+                        .where(
+                            RefreshTokenRecord.family_id == family.id,
+                            RefreshTokenRecord.state == "ACTIVE",
+                        )
+                        .values(state="REVOKED", revoked_at=current)
+                    )
+            return TotpRecoveryResult(
+                identity_id=auth_session.identity_id,
+                recovered_at=current,
+            )
+
+    def disable(self, *, session_id: UUID, code: str, now: datetime) -> None:
+        current = _utc(now)
+        with self._session_factory.begin() as session:
+            auth_session = session.scalar(
+                sa.select(AuthSessionRecord)
+                .where(AuthSessionRecord.id == session_id)
+                .with_for_update()
+            )
+            if (
+                auth_session is None
+                or auth_session.state != "ACTIVE"
+                or auth_session.mfa_verified_at is None
+                or current - auth_session.mfa_verified_at > _MFA_DISABLE_MAX_AGE
+            ):
+                raise TotpVerificationError("MFA_REAUTH_REQUIRED")
+            factor = session.scalar(
+                sa.select(TotpFactorRecord)
+                .where(
+                    TotpFactorRecord.identity_id == auth_session.identity_id,
                     TotpFactorRecord.state == "ACTIVE",
                 )
                 .with_for_update()
@@ -267,17 +365,12 @@ class TotpService:
             counter = _matching_counter(secret=secret, code=code, now=current)
             valid = counter is not None and factor.last_used_step != counter
             if not valid:
-                recovery = _find_recovery_code(session, factor_id=factor.id, code=code)
-                if recovery is not None:
-                    recovery.used_at = current
-                    valid = True
-            if not valid:
                 raise TotpVerificationError("TOTP_CODE_INVALID")
             factor.state = "DISABLED"
             session.execute(
                 sa.update(AuthSessionRecord)
                 .where(
-                    AuthSessionRecord.identity_id == identity_id,
+                    AuthSessionRecord.identity_id == auth_session.identity_id,
                     AuthSessionRecord.state == "ACTIVE",
                 )
                 .values(auth_strength="PASSWORD", mfa_verified_at=None)

@@ -47,7 +47,7 @@ def _actor() -> ActorContext:
         assigned_case_ids=frozenset(),
         session_id=uuid4(),
         authenticated_at=datetime.now(tz=UTC),
-        mfa_verified_at=None,
+        mfa_verified_at=datetime.now(tz=UTC),
         correlation_id=uuid4(),
     )
 

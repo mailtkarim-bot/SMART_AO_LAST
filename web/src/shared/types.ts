@@ -4,9 +4,51 @@ export type AssignedCase = {
   case_lifecycle: string;
   commercial_stage: string;
   dce_availability: string;
+  consultation_id: string | null;
+  applicable_dce_version_id: string | null;
+};
+
+export type CaseEconomicCoverageState =
+  | "PROVEN"
+  | "NOT_DEMONSTRATED"
+  | "UNKNOWN"
+  | "INFEASIBLE"
+  | "FORECAST_PRESENT";
+
+export type CaseEconomicCoverageStatus = {
+  state: CaseEconomicCoverageState;
+  source_refs: string[];
+  note: string;
+};
+
+export type CaseEconomicCoverage = {
+  assumptions: CaseEconomicCoverageStatus;
+  quote_validity: CaseEconomicCoverageStatus;
+  capacity: CaseEconomicCoverageStatus;
+  financing: CaseEconomicCoverageStatus;
+};
+
+export type CaseResolution = {
+  case_id: string;
+  work_label: string;
+  coverage: "PARTIAL";
+  items: Array<{
+    item_id: string;
+    item_kind: string;
+    native_state: string;
+    source_refs: string[];
+    resolution_owner: string | null;
+    next_action: string;
+    due_at: string | null;
+    impact: string | null;
+  }>;
+  economic_coverage: CaseEconomicCoverage | null;
 };
 
 export type CreateCaseInput = {
+  command_id?: string;
+  idempotency_key?: string;
+  correlation_id?: string;
   title: string;
   object_description: string;
   scope_kind: "SINGLE_LOT" | "MULTI_LOT" | "TRANCHE" | "VARIANT" | "CUSTOM";
@@ -26,6 +68,39 @@ export type CreateCaseResponse = {
   version: number;
   event_ids: string[];
   navigation: "CASE_OVERVIEW";
+  replayed: boolean;
+};
+
+export type HandoverInput = {
+  handover_id?: string;
+  successor_membership_id: string;
+  assignment_ids: string[];
+  command_id?: string;
+  idempotency_key?: string;
+  rationale: string;
+  correlation_id?: string;
+};
+
+export type HandoverReceipt = {
+  record_id: string;
+  state: "REQUESTED" | "ACCEPTED";
+  replayed: boolean;
+};
+
+export type BoampCaseCreationInput = {
+  command_id?: string;
+  idempotency_key?: string;
+  correlation_id?: string;
+};
+
+export type BoampCaseCreationResponse = {
+  status: "SUCCEEDED";
+  command_id: string;
+  idempotency_key: string;
+  result_code: "CASE_CREATED";
+  case_id: string;
+  version: number;
+  event_ids: string[];
   replayed: boolean;
 };
 
@@ -621,8 +696,35 @@ export type SubmissionPackageReceipt = CommandReceipt & {
   result_code: "SUBMISSION_PACKAGE_PREPARED";
 };
 
+export type SubmissionMode = "FULL" | "CANDIDATURE_ONLY";
+
+export type SubmissionPackageAuthorizationReceipt = CommandReceipt & {
+  result_code: "SUBMISSION_PACKAGE_AUTHORIZED";
+};
+
+export type SubmissionPackageManifestProjection = {
+  submission_package_id: string;
+  package_version: number;
+  state: "PRET_CONTROLE" | "AUTORISE_DEPOT";
+  manifest_sha256: string;
+  manifest: Record<string, unknown>;
+  authorization_status: "AUTHORIZED" | "NOT_AUTHORIZED";
+  external_submission: "NOT_PERFORMED";
+};
+
 export type SubmissionEvidenceReceipt = CommandReceipt & {
   result_code: "SUBMISSION_EVIDENCE_RECORDED";
+  external_submission: "NOT_PERFORMED";
+};
+
+export type SubmissionEvidenceProjection = {
+  evidence_id: string;
+  submission_package_id: string;
+  package_version: number;
+  manifest_sha256: string;
+  evidence_type: "MANUAL_RECEIPT" | "MANUAL_PORTAL_REFERENCE" | "HUMAN_DEPOSIT_ATTEMPT";
+  status: "RECEIVED" | "REJECTED" | "UNKNOWN";
+  reconciliation_status: "PARTIAL";
   external_submission: "NOT_PERFORMED";
 };
 
@@ -638,6 +740,7 @@ export type SubmissionSignatureProjection = {
   provider: string;
   status: "REQUESTED" | "SIGNED" | "REJECTED";
   expected_package_version: number;
+  manifest_sha256: string;
   revision: 1 | 2;
   external_submission: "NOT_PERFORMED";
 };
@@ -662,6 +765,15 @@ export type GeneratedDocument = {
   readiness_revision: number;
 };
 
+export type TechnicalResponseDraft = {
+  draft_id: string;
+  version: number;
+  state: "DRAFT" | "SUBMITTED_FOR_REVIEW" | "RETURNED_WITH_CORRECTIONS" | "ACCEPTED_CANDIDATE";
+  section_codes: string[];
+  source_refs: string[];
+  responsible_role: "COLLABORATEUR" | "PATRON_REVIEWER";
+};
+
 export type PreparationPackage = {
   package_id: string;
   case_id: string;
@@ -671,6 +783,7 @@ export type PreparationPackage = {
   aggregate_revision: number;
   latest_readiness: PreparationReadiness | null;
   generated_documents: GeneratedDocument[];
+  response_drafts: TechnicalResponseDraft[];
 };
 
 export type CollaboratorTask = {
@@ -795,6 +908,11 @@ export type PreparationReviewList = {
   reviews: PreparationReview[];
 };
 
+export type PreparationResponseDraftList = {
+  package_id: string;
+  drafts: TechnicalResponseDraft[];
+};
+
 export type RequestPreparationReviewInput = {
   expected_package_revision: number;
   target_document_id: string;
@@ -815,6 +933,13 @@ export type AddPreparationCorrectionInput = {
   correction_code: PreparationReviewCorrection["correction_code"];
   instruction: string;
   source_locator?: string | null;
+};
+
+export type CreateTechnicalResponseDraftInput = {
+  expected_package_revision: number;
+  source_document_id: string;
+  section_codes: string[];
+  source_refs: string[];
 };
 
 export type TotpEnrollment = {
@@ -850,12 +975,16 @@ export type AuthSession = {
 
 export type ActorKind = "PATRON_ADMIN" | "PATRON_DELEGATE" | "COLLABORATEUR";
 export type MembershipState = "ACTIVE" | "SUSPENDED" | "REVOKED";
+export type OperationalProfile = "RESPONSABLE" | "EXPERT";
 
 export type CurrentActor = {
   actor_id: string;
   identity_id: string;
+  tenant_slug: string;
   actor_kind: ActorKind;
+  operational_profile: OperationalProfile | null;
   membership_state: MembershipState;
+  mfa_verified: boolean;
 };
 
 
@@ -863,6 +992,7 @@ export type BoampObservation = {
   observation_id: string;
   source_notice_id: string;
   title: string | null;
+  observed_at: string;
   publication_date: string | null;
   response_deadline: string | null;
   department_codes: string[];
@@ -872,6 +1002,41 @@ export type BoampObservation = {
   score: number;
   score_explanation: Record<string, unknown>;
   fingerprint_sha256: string;
+  p0_state: "UNREVIEWED" | "TARGETED" | "SNOOZED" | "DISCARDED";
+  p0_decision: BoampQualificationDecision | null;
+  p0_reason_code: BoampQualificationReason | null;
+  p0_qualification_id: string | null;
+  p0_decided_at: string | null;
+  p1_state: "NOT_OPEN" | "OPEN_WITH_UNKNOWNS";
+  p1_case_id: string | null;
+  p1_opened_at: string | null;
+  lot_scope_state: "UNKNOWN" | "IDENTIFIED" | "CONFLICTING" | "NOT_APPLICABLE";
+  lot_references: string[];
+  lot_scope_source: string | null;
+  deadline_state: "KNOWN" | "MISSING" | "EXPIRED" | "CONFLICTING";
+  deadline_source: string | null;
+  deadline_source_timezone: string | null;
+  deadline_normalized_timezone: "UTC" | null;
+  unknowns: Array<{
+    code: "LOT_SCOPE" | "DCE_NOT_RECEIVED" | "DEADLINE_MISSING" | "DEADLINE_CONFLICT";
+    missing: string;
+    why_it_matters: string;
+    possible_impact: string;
+    responsible: string | null;
+    next_action: string;
+    due_at: string | null;
+    state: "OPEN";
+    source_ref: string;
+  }>;
+};
+
+export type BoampSourceStatus = {
+  source: "BOAMP";
+  state: "AVAILABLE" | "UNAVAILABLE" | "UNKNOWN";
+  checked_at: string;
+  last_success_at: string | null;
+  retryable: boolean;
+  manual_entry_available: boolean;
 };
 
 export type BoampQualificationDecision = "QUALIFIED" | "REJECTED" | "SNOOZED";
@@ -945,4 +1110,121 @@ export type KnowledgeSearchResponse = {
   case_id: string;
   query: string;
   results: KnowledgeSearchResult[];
+};
+
+export type ConsultationProjection = {
+  id: string;
+  buyer_legal_name: string;
+  external_reference: string;
+  object_label: string;
+  location_label: string;
+  lifecycle: string;
+  freshness: string;
+  aggregate_revision: number;
+  lots: string[];
+  tranches: string[];
+  projection_status: string;
+};
+
+export type DceStagingPreparationReceipt = {
+  status: "SUCCEEDED";
+  command_id: string;
+  idempotency_key: string;
+  result_code: "DCE_STAGING_PREPARED";
+  aggregate_refs: CommandReceipt["aggregate_refs"];
+  event_ids: string[];
+  staging: {
+    storage_object_id: string;
+    state: "AWAITING_UPLOAD";
+    expires_at: string;
+  };
+  replayed: boolean;
+};
+
+export type DceUploadReceipt = {
+  storage_object_id: string;
+  state: "CLEAN";
+};
+
+export type RegisterDceVersionReceipt = CommandReceipt & {
+  result_code: "DCE_VERSION_REGISTERED";
+};
+
+export type DceVersionMetadata = {
+  id: string;
+  consultation_id: string;
+  predecessor_dce_version_id: string | null;
+  source_received_at: string;
+  lifecycle: string;
+  integrity: string;
+  classification_readiness: string;
+  analysis_readiness: string;
+  aggregate_revision: number;
+};
+
+export type DceDocumentProcessingState =
+  | "RECEIVED"
+  | "READ"
+  | "REVIEW_REQUIRED"
+  | "UNSUPPORTED"
+  | "LIMIT_REACHED"
+  | "PROTECTED"
+  | "UNREADABLE";
+
+export type DceDocumentInventoryItem = {
+  document_id: string;
+  original_filename: string;
+  media_type: string;
+  byte_size: number;
+  received_from: string;
+  processing_state: DceDocumentProcessingState;
+  issue_code: string | null;
+};
+
+export type DceDocumentInventory = {
+  dce_version_id: string;
+  items: DceDocumentInventoryItem[];
+};
+
+export type LinkCaseDceVersionInput = {
+  dce_version_id: string;
+  expected_case_revision?: number;
+  reason: string;
+};
+
+export type LinkCaseDceVersionReceipt = CommandReceipt & {
+  result_code: "CASE_DCE_APPLICABILITY_SET";
+};
+
+export type DceProvenanceChannel =
+  | "BUYER_PLATFORM"
+  | "EMAIL"
+  | "MANUAL_UPLOAD"
+  | "RECTIFICATION";
+
+export type PrepareDceStagingInput = {
+  command_id?: string;
+  idempotency_key?: string;
+  correlation_id?: string | null;
+  consultation_id: string;
+  consultation_revision: number;
+  original_filename: string;
+  expected_byte_size: number;
+  source_channel: DceProvenanceChannel;
+  expires_at: string;
+};
+
+export type RegisterDceVersionInput = {
+  command_id?: string;
+  idempotency_key?: string;
+  correlation_id?: string;
+  dce_version_id: string;
+  consultation_id: string;
+  consultation_revision: number;
+  corpus_hash: string;
+  provenance_channel: DceProvenanceChannel;
+  provenance_reference?: string;
+  provenance_url?: string;
+  source_received_at: string;
+  documents: Array<{ document_id: string; storage_object_id: string }>;
 };
