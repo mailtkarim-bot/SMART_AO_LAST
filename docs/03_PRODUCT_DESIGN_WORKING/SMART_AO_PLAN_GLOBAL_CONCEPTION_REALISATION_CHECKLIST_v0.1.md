@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 20 septembre 2026  
 **Statut global :** EN COURS  
 **Tranche active :** PHASE 10 — Product Freeze et cahier technique d’exécution
-**Prochaine étape unique :** cartographier chaque exigence gelée vers code, test, migration, observabilité et procédure d’exploitation.
+**Prochaine étape unique :** interdire toute divergence silencieuse entre le Product Freeze v1.0 et l’implémentation.
 
 ## 1. Rôle de ce document
 
@@ -271,7 +271,8 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 - [x] Consolider les décisions d'expérience validées dans le Product Freeze v1.0 `docs/00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v1.0.md`.
 - [x] Approuver et promouvoir le Product Freeze v1.0 comme nouvelle autorité produit/métier ; v0.4 archivé dans `_ARCHIVE/produit_metier/`.
 - [x] Écrire le cahier technique d'exécution : architecture cible, modules, données, API, événements et sécurité dans `docs/02_FUTURE_TECHNICAL/SMART_AO_CAHIER_TECHNIQUE_EXECUTION_v1.0.md`.
-- [>] Cartographier chaque exigence gelée vers code, test, migration, observabilité et procédure d'exploitation.
+- [x] Cartographier chaque exigence gelée vers code, test, migration, observabilité et procédure d'exploitation dans `docs/02_FUTURE_TECHNICAL/SMART_AO_PRODUCT_FREEZE_TRACEABILITY_MATRIX_v1.0.md`.
+- [>] Interdire toute divergence silencieuse entre le Product Freeze v1.0 et l'implémentation.
 - [ ] Archiver le cahier propriétaire v0.4 lorsqu'il est réellement remplacé.
 - [ ] Écrire le cahier technique d'exécution : architecture cible, modules, données, API, événements et sécurité.
 - [ ] Cartographier chaque exigence gelée vers code, test, migration, observabilité et procédure d'exploitation.
@@ -433,6 +434,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 20/09/2026 | Product Freeze v1.0 promu | cahier v0.4, catalogue UX, freezes d’expérience, G01–G09 validés et contraintes de confidentialité/IA/accessibilité consolidés ; v0.4 archivé, v1.0 devient l’autorité active | écrire le cahier technique d’exécution |
 | 20/09/2026 | Promotion de l’autorité produit/métier | approbation explicite reçue : « Je promeus le Product Freeze v1.0 et j’archive le v0.4 » ; index, README et références actives réalignés ; dépôt publié sur SMART_AO_LAST | écrire le cahier technique d’exécution |
 | 20/09/2026 | Cahier technique d’exécution v1.0 candidat | modular monolith FastAPI/React/PostgreSQL, commandes idempotentes, sécurité, données, événements, IA/RAG, exploitation et tests consolidés sans rewrite Rust ; document `SMART_AO_CAHIER_TECHNIQUE_EXECUTION_v1.0.md` | cartographier chaque exigence gelée vers code, test, migration, observabilité et procédure d’exploitation |
+| 20/09/2026 | Matrice de traçabilité Product Freeze | exigences v1.0 reliées à code, tests, migrations, exploitation et gaps explicites dans `SMART_AO_PRODUCT_FREEZE_TRACEABILITY_MATRIX_v1.0.md` ; portes P2/P3/P4 et production restent `PARTIAL` | interdire toute divergence silencieuse entre le Product Freeze v1.0 et l’implémentation |
 
 ## 7. Règle de mise à jour
 
