@@ -11,6 +11,7 @@
 - `pnpm --registry=https://registry.npmjs.org audit --prod --json` : **0 vulnérabilité** (3 dépendances de production) ;
 - Bandit sur `backend/app` : **vert** ;
 - detect-secrets avec `.secrets.baseline` : **vert** ;
+- `scripts/simulate_staging_deploy.sh --static-only` et `--compose-config` : **verts**, sans démarrer de services ;
 - recherche de clés privées, tokens GitHub et secrets versionnés hors fixtures explicitement marquées : **aucun secret de production trouvé** ;
 - uploads protégés, archives limitées, contenu hostile, antivirus fail-closed et quarantaine : couverts par les tests backend complets ;
 - contrat d’autorité Product Freeze : **2 tests verts**, v1.0 actif et v0.4 archivé.
@@ -22,6 +23,7 @@ Les tests de sécurité couvrent tenant, membership, affectation, MFA, délégat
 ## Limites restant à traiter
 
 - la restauration réelle d’une sauvegarde PostgreSQL et la rotation opérationnelle des secrets doivent encore être exécutées dans l’environnement de préproduction ;
+- `ops/preflight-checklist.sh` refuse l’exécution sans `.env.preprod` et `SMART_AO_PUBLIC_HOST` réels ; cette absence de secrets/runtime est une limite de l’environnement local ;
 - les deux skips PIL concernent l’option OCR avancée, pas le chemin nominal ;
 - l’audit pnpm via le miroir `registry.npmmirror.com` reste indisponible, mais le même audit contre npm officiel est vert ;
 - les vulnérabilités détectées dans l’environnement Python système global ne sont pas attribuées au projet : l’audit projet ciblé est celui de `pip-audit .`.
