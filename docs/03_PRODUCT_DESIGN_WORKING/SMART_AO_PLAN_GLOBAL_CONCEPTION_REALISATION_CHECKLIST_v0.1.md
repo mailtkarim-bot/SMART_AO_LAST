@@ -4,8 +4,8 @@
 **Créé le :** 14 septembre 2026  
 **Dernière mise à jour :** 20 septembre 2026  
 **Statut global :** EN COURS  
-**Tranche active :** PHASE 10 — Product Freeze et cahier technique d’exécution
-**Prochaine étape unique :** interdire toute divergence silencieuse entre le Product Freeze v1.0 et l’implémentation.
+**Tranche active :** PHASE 11 — Qualification de production
+**Prochaine étape unique :** exécuter les suites unitaires, intégration PostgreSQL, contrats, end-to-end et non-régression Golden.
 
 ## 1. Rôle de ce document
 
@@ -272,17 +272,13 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 - [x] Approuver et promouvoir le Product Freeze v1.0 comme nouvelle autorité produit/métier ; v0.4 archivé dans `_ARCHIVE/produit_metier/`.
 - [x] Écrire le cahier technique d'exécution : architecture cible, modules, données, API, événements et sécurité dans `docs/02_FUTURE_TECHNICAL/SMART_AO_CAHIER_TECHNIQUE_EXECUTION_v1.0.md`.
 - [x] Cartographier chaque exigence gelée vers code, test, migration, observabilité et procédure d'exploitation dans `docs/02_FUTURE_TECHNICAL/SMART_AO_PRODUCT_FREEZE_TRACEABILITY_MATRIX_v1.0.md`.
-- [>] Interdire toute divergence silencieuse entre le Product Freeze v1.0 et l'implémentation.
-- [ ] Archiver le cahier propriétaire v0.4 lorsqu'il est réellement remplacé.
-- [ ] Écrire le cahier technique d'exécution : architecture cible, modules, données, API, événements et sécurité.
-- [ ] Cartographier chaque exigence gelée vers code, test, migration, observabilité et procédure d'exploitation.
-- [ ] Interdire toute divergence silencieuse entre le produit gelé et l'implémentation.
+- [x] Interdire toute divergence silencieuse entre le Product Freeze v1.0 et l'implémentation ; contrat documentaire dans `backend/tests/ops/test_product_freeze_authority_contract.py`.
 
 **Sortie de phase :** une vérité produit v1.0 et une vérité technique exécutable remplacent les documents de transition.
 
 ### PHASE 11 — Qualification de production
 
-- [ ] Suites unitaires, intégration PostgreSQL, contrats, end-to-end et non-régression Golden.
+- [>] Suites unitaires, intégration PostgreSQL, contrats, end-to-end et non-régression Golden.
 - [ ] Sécurité : isolation tenant, ReBAC, secrets, dépendances, upload hostile, journal d'audit et restauration.
 - [ ] Fiabilité : idempotence, concurrence, reprise, files de travail et opérations d'issue inconnue.
 - [ ] Performance : budgets mesurés, gros DCE, charge, stockage et coûts IA.
@@ -435,6 +431,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 20/09/2026 | Promotion de l’autorité produit/métier | approbation explicite reçue : « Je promeus le Product Freeze v1.0 et j’archive le v0.4 » ; index, README et références actives réalignés ; dépôt publié sur SMART_AO_LAST | écrire le cahier technique d’exécution |
 | 20/09/2026 | Cahier technique d’exécution v1.0 candidat | modular monolith FastAPI/React/PostgreSQL, commandes idempotentes, sécurité, données, événements, IA/RAG, exploitation et tests consolidés sans rewrite Rust ; document `SMART_AO_CAHIER_TECHNIQUE_EXECUTION_v1.0.md` | cartographier chaque exigence gelée vers code, test, migration, observabilité et procédure d’exploitation |
 | 20/09/2026 | Matrice de traçabilité Product Freeze | exigences v1.0 reliées à code, tests, migrations, exploitation et gaps explicites dans `SMART_AO_PRODUCT_FREEZE_TRACEABILITY_MATRIX_v1.0.md` ; portes P2/P3/P4 et production restent `PARTIAL` | interdire toute divergence silencieuse entre le Product Freeze v1.0 et l’implémentation |
+| 20/09/2026 | Contrat anti-divergence Product Freeze | tests d’architecture vérifiant l’unicité du v1.0 actif, l’archivage du v0.4 et la présence de la matrice de traçabilité ; 2 tests passent | exécuter les suites de qualification de production |
 
 ## 7. Règle de mise à jour
 
