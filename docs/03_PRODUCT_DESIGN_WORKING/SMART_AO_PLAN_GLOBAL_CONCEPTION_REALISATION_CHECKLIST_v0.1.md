@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 20 septembre 2026  
 **Statut global :** EN COURS  
 **Tranche active :** PHASE 11 — Qualification de production
-**Prochaine étape unique :** exécuter les suites unitaires, intégration PostgreSQL, contrats, end-to-end et non-régression Golden.
+**Prochaine étape unique :** vérifier la sécurité de production, les secrets, les dépendances, les uploads hostiles, l’audit et la restauration.
 
 ## 1. Rôle de ce document
 
@@ -278,7 +278,8 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 
 ### PHASE 11 — Qualification de production
 
-- [>] Suites unitaires, intégration PostgreSQL, contrats, end-to-end et non-régression Golden.
+- [x] Suites unitaires, intégration PostgreSQL, contrats, end-to-end et non-régression Golden ; 1 717 tests backend passent, 2 tests PIL sont ignorés faute de dépendance optionnelle.
+- [>] Vérifier la sécurité de production, les secrets, les dépendances, les uploads hostiles, l'audit et la restauration.
 - [ ] Sécurité : isolation tenant, ReBAC, secrets, dépendances, upload hostile, journal d'audit et restauration.
 - [ ] Fiabilité : idempotence, concurrence, reprise, files de travail et opérations d'issue inconnue.
 - [ ] Performance : budgets mesurés, gros DCE, charge, stockage et coûts IA.
@@ -432,6 +433,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 20/09/2026 | Cahier technique d’exécution v1.0 candidat | modular monolith FastAPI/React/PostgreSQL, commandes idempotentes, sécurité, données, événements, IA/RAG, exploitation et tests consolidés sans rewrite Rust ; document `SMART_AO_CAHIER_TECHNIQUE_EXECUTION_v1.0.md` | cartographier chaque exigence gelée vers code, test, migration, observabilité et procédure d’exploitation |
 | 20/09/2026 | Matrice de traçabilité Product Freeze | exigences v1.0 reliées à code, tests, migrations, exploitation et gaps explicites dans `SMART_AO_PRODUCT_FREEZE_TRACEABILITY_MATRIX_v1.0.md` ; portes P2/P3/P4 et production restent `PARTIAL` | interdire toute divergence silencieuse entre le Product Freeze v1.0 et l’implémentation |
 | 20/09/2026 | Contrat anti-divergence Product Freeze | tests d’architecture vérifiant l’unicité du v1.0 actif, l’archivage du v0.4 et la présence de la matrice de traçabilité ; 2 tests passent | exécuter les suites de qualification de production |
+| 20/09/2026 | Qualification backend complète | PostgreSQL Docker : 1 717 tests passés, 2 skips PIL, 10 avertissements Starlette/httpx ou alias HTTP non fonctionnels ; la tête de suite reste verte | vérifier la sécurité de production, les secrets, les dépendances, les uploads hostiles, l’audit et la restauration |
 
 ## 7. Règle de mise à jour
 
