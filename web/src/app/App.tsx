@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { PricingPanel } from "../features/pricing/PricingPanel";
 import { usePricingImport } from "../features/pricing/usePricingImport";
 import { SubmissionPanel } from "../features/submission/SubmissionPanel";
@@ -119,6 +119,8 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ tone: "success" | "error" | "warning"; text: string } | null>(null);
   const [showConnection, setShowConnection] = useState(false);
+  const connectionDialogRef = useRef<HTMLFormElement | null>(null);
+  const connectionReturnFocus = useRef<HTMLElement | null>(null);
   const [contextConfirmed, setContextConfirmed] = useState(false);
   const [resumePending, setResumePending] = useState(false);
   const lastConfirmedView = useRef<ConfirmedView | null>(null);
@@ -356,6 +358,41 @@ function App() {
   }, [businessReady, isPatron]);
 
   useEffect(() => {
+    if (!showConnection) return;
+    const dialog = connectionDialogRef.current;
+    if (!dialog) return;
+    const focusable = () =>
+      Array.from(
+        dialog.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
+        ),
+      );
+    const first = focusable()[0];
+    first?.focus();
+    function trapFocus(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeConnection();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const items = focusable();
+      if (items.length === 0) return;
+      const firstItem = items[0];
+      const lastItem = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === firstItem) {
+        event.preventDefault();
+        lastItem.focus();
+      } else if (!event.shiftKey && document.activeElement === lastItem) {
+        event.preventDefault();
+        firstItem.focus();
+      }
+    }
+    document.addEventListener("keydown", trapFocus);
+    return () => document.removeEventListener("keydown", trapFocus);
+  }, [showConnection]);
+
+  useEffect(() => {
     if (!selectedCaseId || !businessReady) return;
     if (isPatron) {
       void refreshScenarios(selectedCaseId);
@@ -571,6 +608,18 @@ function App() {
     document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
+  function openConnection(event?: ReactMouseEvent<HTMLElement>) {
+    connectionReturnFocus.current = event?.currentTarget ?? (
+      document.activeElement instanceof HTMLElement ? document.activeElement : null
+    );
+    setShowConnection(true);
+  }
+
+  function closeConnection() {
+    setShowConnection(false);
+    window.setTimeout(() => connectionReturnFocus.current?.focus(), 0);
+  }
+
   function openHomePrimaryAction() {
     if (primaryAction) {
       if (primaryAction.case_id) setSelectedCaseId(primaryAction.case_id);
@@ -622,7 +671,7 @@ function App() {
       await checkBackendReadiness();
       await login({ email: loginEmail, password: loginPassword, tenant_id: tenantId });
       setLoginPassword("");
-      setShowConnection(false);
+      closeConnection();
       setMessage({ tone: "success", text: "Connexion sécurisée active." });
     } catch (error) {
       setMessage({
@@ -675,7 +724,7 @@ function App() {
           <div><div className="eyebrow">ACCÈS SÉCURISÉ</div><h1>Validez votre second facteur</h1><p className="lede">Aucune donnée métier n'est accessible avant cette validation.</p></div>
           <button className="secondary-button" onClick={() => void signOut()}>Se déconnecter</button>
         </header>
-        {message && <div className={`notice ${message.tone}`} role="status"><span>!</span>{message.text}</div>}
+        {message && <div className={`notice ${message.tone}`} role={message.tone === "error" ? "alert" : "status"}><span aria-hidden="true">!</span>{message.text}</div>}
         <MfaPanel api={api} setMessage={setMessage} onAuthenticationChanged={refreshActor} />
       </main>
     );
@@ -721,7 +770,7 @@ function App() {
           {isPatron && <button className={`nav-item ${activeNav === "submission" ? "active" : ""}`} onClick={() => navigateTo("submission-section", "submission")}><span className="nav-icon">↗</span>Dépôt</button>}
         </nav>
         <div className="sidebar-bottom">
-          <button className="nav-item" onClick={() => setShowConnection(true)}><span className="nav-icon">⚙</span>{isAuthenticated ? "Session" : "Connexion"}</button>
+          <button className="nav-item" onClick={openConnection}><span className="nav-icon" aria-hidden="true">⚙</span>{isAuthenticated ? "Session" : "Connexion"}</button>
           {isAuthenticated && <button className="nav-item" onClick={() => void signOut()}><span className="nav-icon">↪</span>Se déconnecter</button>}
           <div className="operator-card"><div className="avatar">{currentActor?.actor_kind === "COLLABORATEUR" ? "CO" : "PA"}</div><div><strong>{currentActor ? roleLabel : "Utilisateur non connecté"}</strong><span>{currentActor ? `Membership ${currentActor.membership_state}` : "Authentification requise"}</span></div></div>
         </div>
@@ -733,7 +782,7 @@ function App() {
           <div className="top-actions"><div className="secure-pill"><span className="status-dot" />Données confidentielles</div><button className="refresh-button" onClick={() => void refreshCases()} disabled={loading}><span>↻</span> Actualiser</button></div>
         </header>
 
-        {message && <div className={`notice ${message.tone}`} role="status"><span>{message.tone === "success" ? "✓" : "!"}</span>{message.text}</div>}
+        {message && <div className={`notice ${message.tone}`} role={message.tone === "error" ? "alert" : "status"}><span aria-hidden="true">{message.tone === "success" ? "✓" : "!"}</span>{message.text}</div>}
         {resumePending && <div className="notice warning" role="status"><span>!</span>Reprise du dernier état confirmé en cours ; aucune donnée nouvelle n’est considérée comme confirmée avant le rechargement.</div>}
 
         <section className="section-block home-section" id="overview-section" aria-labelledby="home-title">
@@ -826,7 +875,7 @@ function App() {
           <div className="metric-stack"><div className="small-metric"><span className="metric-label">AFFAIRES ACTIVES</span><strong>{cases.length.toString().padStart(2, "0")}</strong><span className="metric-meta">dans votre périmètre</span></div><div className="small-metric"><span className="metric-label">ÉTAT DE LA CONNEXION</span><strong className={isAuthenticated ? "text-green" : "text-amber"}>{isAuthenticated ? "Prête" : isRestoring ? "Restauration…" : "À configurer"}</strong><span className="metric-meta">{baseUrl}</span></div></div>
         </section>
 
-        <section className="section-block" id="review-section"><div className="section-heading"><div><span className="section-kicker">PORTEFEUILLE</span><h2>Mes affaires</h2></div><span className="count-pill">{cases.length} visible{cases.length > 1 ? "s" : ""}</span></div><div className="case-grid">{cases.length === 0 ? <div className="empty-card"><strong>Aucune affaire chargée</strong><p>Connectez-vous avec votre compte pour charger les affaires auxquelles vous avez accès.</p><button className="secondary-button" onClick={() => setShowConnection(true)}>Configurer la connexion</button></div> : cases.map((item) => <button key={item.case_id} className={`case-card ${item.case_id === selectedCaseId ? "selected" : ""}`} onClick={() => setSelectedCaseId(item.case_id)}><div className="case-top"><span className="case-status">{item.dce_availability}</span><span className="case-arrow">↗</span></div><h3>{item.work_label}</h3><p>{item.case_id}</p><div className="case-footer"><span>{item.commercial_stage}</span><span>{item.case_lifecycle}</span></div></button>)}</div>{isPatron && caseResolution?.economic_coverage && <div className="economic-coverage" aria-label="Couverture économique de l’affaire"><div className="subheading"><strong>COUVERTURE ÉCONOMIQUE</strong><span>lecture sourcée · aucun feu vert implicite</span></div><div className="economic-coverage-grid"><div><span>Hypothèses</span><strong className={`coverage-state coverage-${caseResolution.economic_coverage.assumptions.state.toLowerCase()}`}>{caseResolution.economic_coverage.assumptions.state}</strong><small>{caseResolution.economic_coverage.assumptions.note}</small></div><div><span>Validité des devis</span><strong className={`coverage-state coverage-${caseResolution.economic_coverage.quote_validity.state.toLowerCase()}`}>{caseResolution.economic_coverage.quote_validity.state}</strong><small>{caseResolution.economic_coverage.quote_validity.note}</small></div><div><span>Capacité</span><strong className={`coverage-state coverage-${caseResolution.economic_coverage.capacity.state.toLowerCase()}`}>{caseResolution.economic_coverage.capacity.state}</strong><small>{caseResolution.economic_coverage.capacity.note}</small></div><div><span>Financement</span><strong className={`coverage-state coverage-${caseResolution.economic_coverage.financing.state.toLowerCase()}`}>{caseResolution.economic_coverage.financing.state}</strong><small>{caseResolution.economic_coverage.financing.note}</small></div></div></div>}</section>
+        <section className="section-block" id="review-section"><div className="section-heading"><div><span className="section-kicker">PORTEFEUILLE</span><h2>Mes affaires</h2></div><span className="count-pill">{cases.length} visible{cases.length > 1 ? "s" : ""}</span></div><div className="case-grid">{cases.length === 0 ? <div className="empty-card"><strong>Aucune affaire chargée</strong><p>Connectez-vous avec votre compte pour charger les affaires auxquelles vous avez accès.</p><button className="secondary-button" onClick={openConnection}>Configurer la connexion</button></div> : cases.map((item) => <button key={item.case_id} className={`case-card ${item.case_id === selectedCaseId ? "selected" : ""}`} onClick={() => setSelectedCaseId(item.case_id)}><div className="case-top"><span className="case-status">{item.dce_availability}</span><span className="case-arrow" aria-hidden="true">↗</span></div><h3>{item.work_label}</h3><p>{item.case_id}</p><div className="case-footer"><span>{item.commercial_stage}</span><span>{item.case_lifecycle}</span></div></button>)}</div>{isPatron && caseResolution?.economic_coverage && <div className="economic-coverage" aria-label="Couverture économique de l’affaire"><div className="subheading"><strong>COUVERTURE ÉCONOMIQUE</strong><span>lecture sourcée · aucun feu vert implicite</span></div><div className="economic-coverage-grid"><div><span>Hypothèses</span><strong className={`coverage-state coverage-${caseResolution.economic_coverage.assumptions.state.toLowerCase()}`}>{caseResolution.economic_coverage.assumptions.state}</strong><small>{caseResolution.economic_coverage.assumptions.note}</small></div><div><span>Validité des devis</span><strong className={`coverage-state coverage-${caseResolution.economic_coverage.quote_validity.state.toLowerCase()}`}>{caseResolution.economic_coverage.quote_validity.state}</strong><small>{caseResolution.economic_coverage.quote_validity.note}</small></div><div><span>Capacité</span><strong className={`coverage-state coverage-${caseResolution.economic_coverage.capacity.state.toLowerCase()}`}>{caseResolution.economic_coverage.capacity.state}</strong><small>{caseResolution.economic_coverage.capacity.note}</small></div><div><span>Financement</span><strong className={`coverage-state coverage-${caseResolution.economic_coverage.financing.state.toLowerCase()}`}>{caseResolution.economic_coverage.financing.state}</strong><small>{caseResolution.economic_coverage.financing.note}</small></div></div></div>}</section>
 
         {isPatron && (
           <BoampOpportunityPanel
@@ -1068,7 +1117,7 @@ function App() {
         <footer className="footer"><span>SMART_AO V8</span><span>Architecture sécurisée · Tenant-scoped · Auditée</span><span>API {baseUrl}</span></footer>
       </main>
 
-      {showConnection && <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) setShowConnection(false); }}><form className="connection-modal" role="dialog" aria-modal="true" aria-labelledby="connection-modal-title" onSubmit={saveConnection}><div className="modal-top"><div><span className="section-kicker">CONFIGURATION</span><h2 id="connection-modal-title">Connexion au backend</h2></div><button type="button" className="close-button" onClick={() => setShowConnection(false)}>×</button></div><p>La session utilise un cookie de renouvellement HttpOnly et un jeton d’accès conservé uniquement en mémoire.</p><label><span>URL API</span><input required value={baseUrl} onChange={(event) => setBaseUrl(event.target.value)} /></label><div className={`readiness-indicator readiness-${backendReadinessState}`} role="status"><strong>{backendReadinessState === "checking" ? "Vérification en cours…" : backendReadinessState === "ready" ? "Backend prêt" : backendReadinessState === "not_ready" ? "Backend non prêt" : backendReadinessState === "error" ? "Backend inaccessible" : "Backend non vérifié"}</strong>{backendReadiness && <small>PostgreSQL : {backendReadiness.checks.database} · ClamAV : {backendReadiness.checks.clamav}</small>}</div><label><span>Email</span><input required type="email" autoComplete="username" value={loginEmail} onChange={(event) => setLoginEmail(event.target.value)} /></label><label><span>Tenant ID</span><input required value={tenantId} onChange={(event) => setTenantId(event.target.value)} /></label><label><span>Mot de passe</span><input required type="password" autoComplete="current-password" value={loginPassword} onChange={(event) => setLoginPassword(event.target.value)} /></label><button className="primary-button" type="submit">Se connecter <span>→</span></button></form></div>}
+      {showConnection && <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) closeConnection(); }}><form ref={connectionDialogRef} className="connection-modal" role="dialog" aria-modal="true" aria-labelledby="connection-modal-title" aria-describedby="connection-modal-description" onSubmit={saveConnection}><div className="modal-top"><div><span className="section-kicker">CONFIGURATION</span><h2 id="connection-modal-title">Connexion au backend</h2></div><button type="button" className="close-button" aria-label="Fermer la configuration de connexion" onClick={closeConnection}>×</button></div><p id="connection-modal-description">La session utilise un cookie de renouvellement HttpOnly et un jeton d’accès conservé uniquement en mémoire.</p><label><span>URL API</span><input required value={baseUrl} onChange={(event) => setBaseUrl(event.target.value)} /></label><div className={`readiness-indicator readiness-${backendReadinessState}`} role="status"><strong>{backendReadinessState === "checking" ? "Vérification en cours…" : backendReadinessState === "ready" ? "Backend prêt" : backendReadinessState === "not_ready" ? "Backend non prêt" : backendReadinessState === "error" ? "Backend inaccessible" : "Backend non vérifié"}</strong>{backendReadiness && <small>PostgreSQL : {backendReadiness.checks.database} · ClamAV : {backendReadiness.checks.clamav}</small>}</div><label><span>Email</span><input required type="email" autoComplete="username" value={loginEmail} onChange={(event) => setLoginEmail(event.target.value)} /></label><label><span>Tenant ID</span><input required value={tenantId} onChange={(event) => setTenantId(event.target.value)} /></label><label><span>Mot de passe</span><input required type="password" autoComplete="current-password" value={loginPassword} onChange={(event) => setLoginPassword(event.target.value)} /></label><button className="primary-button" type="submit">Se connecter <span aria-hidden="true">→</span></button></form></div>}
     </div>
   );
 }

@@ -149,14 +149,23 @@ describe("App readiness integration", () => {
   it("affiche l’état backend et les dépendances dans la configuration API", async () => {
     await renderApp();
 
-    fireEvent.click(screen.getByRole("button", { name: /Session/ }));
+    const sessionButton = screen.getByRole("button", { name: /Session/ });
+    fireEvent.click(sessionButton);
 
     const dialog = screen.getByRole("dialog", { name: "Connexion au backend" });
     expect(dialog).toBeVisible();
+    expect(dialog).toHaveAttribute("aria-describedby", "connection-modal-description");
+    expect(
+      within(dialog).getByRole("button", { name: "Fermer la configuration de connexion" }),
+    ).toBeVisible();
     const readiness = within(dialog).getByRole("status");
     expect(readiness).toHaveTextContent("Backend prêt");
     expect(readiness).toHaveTextContent("PostgreSQL : ok");
     expect(readiness).toHaveTextContent("ClamAV : ok");
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("dialog", { name: "Connexion au backend" })).toBeNull();
+    await waitFor(() => expect(document.activeElement).toBe(sessionButton));
   });
 
   it("limite une session mot de passe à l’étape MFA", async () => {
@@ -357,6 +366,7 @@ describe("App error visibility", () => {
     expect(
       await screen.findByText("Scénarios indisponibles", {}, { timeout: 3000 }),
     ).toBeVisible();
+    expect(screen.getByRole("alert")).toHaveTextContent("Scénarios indisponibles");
   });
 
   it("affiche une erreur visible quand le dossier de décision échoue hors 404", async () => {

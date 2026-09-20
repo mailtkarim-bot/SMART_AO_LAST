@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 20 septembre 2026  
 **Statut global :** EN COURS  
 **Tranche active :** PHASE 9 — couverture produit totale et UX Freeze
-**Prochaine étape unique :** vérifier clavier, lecteur d’écran, contrastes, focus, erreurs et responsive sur les surfaces et parcours G01–G09.
+**Prochaine étape unique :** vérifier l’absence de fuite de marge, de pouvoir induit et de déduction interdite sur les surfaces G01–G09.
 
 ## 1. Rôle de ce document
 
@@ -258,8 +258,8 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 - [x] Fermer PUX-01 : première valeur accessible sans fiche Entreprise complète ; test d’onboarding progressif dans `web/src/app/App.test.tsx`.
 - [x] Fermer PUX-03 et PUX-04 sur le flux DCE privé/manuelle, le rattachement serveur Affaire → Consultation/DCE, l’inventaire et la lecture partielle ; preuve dans `SMART_AO_PHASE9_PUX03_PUX04_PREUVE_VERTICALE_v0.1.md`.
 - [x] Exécuter G01 à G52 avec les rôles et états difficiles applicables ; G01–G09 sont reliés à leurs actes métier réels (gate P3/P5, contrôle P5, résolution DCE, revue Patron, édition dérivée et inconnus) dans `backend/app/platform/quality/data/g01_g09_business.json` et `SMART_AO_PHASE9_G01_G09_ACTES_METIER_PREUVE_v0.1.md` ; la matrice complète reste dans `SMART_AO_PHASE9_G01_G52_EXECUTION_MATRIX_v0.1.md`.
-- [>] Vérifier clavier, lecteur d'écran, contrastes, focus, erreurs et responsive.
-- [ ] Vérifier l'absence de fuite de marge, de pouvoir induit et de déduction interdite.
+- [x] Vérifier clavier, lecteur d'écran, contrastes, focus, erreurs et responsive ; audit structurel et preuve dans `SMART_AO_PHASE9_ACCESSIBILITE_G01_G09_AUDIT_PREUVE_v0.1.md`.
+- [>] Vérifier l'absence de fuite de marge, de pouvoir induit et de déduction interdite.
 - [ ] Corriger les défauts puis recueillir la validation propriétaire.
 - [ ] Produire les `OWNER EXPERIENCE FREEZE` puis l'UX Freeze global.
 
@@ -421,6 +421,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 20/09/2026 | Première exécution réelle G01–G09 | PostgreSQL Docker : 105 tests DCE/extraction/classification/staging/analyse/exigences/lecture/routes passent, 5 avertissements, 115,20 s ; G01/G02/G03/G05/G06/G08 restent partiels, G07/G09 ont une preuve technique, G04 n’est pas exécuté ; détail dans `SMART_AO_PHASE9_G01_G09_EXECUTION_PREUVE_v0.1.md` | compléter les fixtures métier G01–G09 et leurs preuves append-only |
 | 20/09/2026 | Fixtures métier et rejeu des refus G01–G09 | catalogue `g01_g09_business.json`, parseur fermé, 9 tests unitaires et 1 test PostgreSQL passent ; gate P3/P5, conflit de version, contradiction `REVIEW_REQUIRED`, gap levage avec événement append-only, provenance XLSX, échéance absente, fichier protégé, limite archive et contenu hostile rejoués | relier les preuves aux actes métier encore manquants : résolution humaine G03, décision P3/P5 G01/G02, édition dérivée G05 et revue propriétaire G04/G06 |
 | 20/09/2026 | Actes métier G01–G09 reliés | chaque fixture porte `business_act` et `act_proof` ; gate P3/P5, contrôle P5, résolution humaine DCE, gap et inconnue Patron, brouillon dérivé et refus DCE sont reliés à des handlers/projections réels ; suite fixture 10 tests, G03 2 tests PostgreSQL isolés, G05/G02/G06 ciblés verts ; preuve `SMART_AO_PHASE9_G01_G09_ACTES_METIER_PREUVE_v0.1.md` | vérifier clavier, lecteur d’écran, contrastes, focus, erreurs et responsive |
+| 20/09/2026 | Audit accessibilité G01–G09 | focus `:focus-visible`, dialogue fermé par `Escape` avec retour du focus, alertes d’erreur, libellés natifs, cibles interactives et reflow responsive ; 187 tests web, typecheck, lint et build passent ; preuve `SMART_AO_PHASE9_ACCESSIBILITE_G01_G09_AUDIT_PREUVE_v0.1.md` | vérifier l’absence de fuite de marge, de pouvoir induit et de déduction interdite |
 
 ## 7. Règle de mise à jour
 
