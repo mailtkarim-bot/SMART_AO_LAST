@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 20 septembre 2026  
 **Statut global :** EN COURS  
 **Tranche active :** PHASE 11 — Qualification de production
-**Prochaine étape unique :** exécuter la restauration et la rotation sur l’environnement VPS de préproduction réel.
+**Prochaine étape unique :** rendre le registre npm accessible ou provisionner le VPS, puis rejouer le stack complet.
 
 ## 1. Rôle de ce document
 
