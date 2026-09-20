@@ -4,8 +4,8 @@
 **Créé le :** 14 septembre 2026  
 **Dernière mise à jour :** 20 septembre 2026  
 **Statut global :** EN COURS  
-**Tranche active :** PHASE 9 — couverture produit totale et UX Freeze
-**Prochaine étape unique :** produire les `OWNER EXPERIENCE FREEZE` puis l’UX Freeze global.
+**Tranche active :** PHASE 10 — Product Freeze et cahier technique d’exécution
+**Prochaine étape unique :** consolider les décisions d’expérience validées dans le Product Freeze v1.0.
 
 ## 1. Rôle de ce document
 
@@ -262,13 +262,13 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 - [x] Vérifier l'absence de fuite de marge, de pouvoir induit et de déduction interdite ; audit et preuves dans `SMART_AO_PHASE9_G01_G09_CONFIDENTIALITE_DEDUCTIONS_AUDIT_PREUVE_v0.1.md`.
 - [x] Auditer et corriger les défauts ; aucun défaut bloquant n’a été trouvé dans les audits accessibilité et confidentialité.
 - [x] Recueillir la validation propriétaire sur les surfaces G01–G09 à partir du paquet de revue `SMART_AO_PHASE9_G01_G09_OWNER_REVIEW_PACKET_v0.1.md` ; confirmation explicite reçue : « Je valide G01–G09 ».
-- [>] Produire les `OWNER EXPERIENCE FREEZE` puis l'UX Freeze global.
+- [x] Produire les `OWNER EXPERIENCE FREEZE` puis l'UX Freeze global ; G01–G09 dans `SMART_AO_G01_G09_OWNER_EXPERIENCE_FREEZE_v0.1.md`, synthèse globale dans `SMART_AO_UX_FREEZE_GLOBAL_v0.1.md`.
 
 **Sortie de phase :** toutes les surfaces, variantes et recettes disposent d'une preuve ; aucun écran secondaire ne reste implicite.
 
 ### PHASE 10 — Product Freeze et cahier technique d'exécution
 
-- [ ] Consolider les décisions d'expérience validées dans le Product Freeze v1.0.
+- [>] Consolider les décisions d'expérience validées dans le Product Freeze v1.0.
 - [ ] Archiver le cahier propriétaire v0.4 lorsqu'il est réellement remplacé.
 - [ ] Écrire le cahier technique d'exécution : architecture cible, modules, données, API, événements et sécurité.
 - [ ] Cartographier chaque exigence gelée vers code, test, migration, observabilité et procédure d'exploitation.
@@ -426,6 +426,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 20/09/2026 | Audit confidentialité et déductions G01–G09 | 31 tests architecture/sécurité non base, 29 tests API de frontières PostgreSQL et 9 tests G01–G09 verts ; marge/coût absents des surfaces Collaborateur, `economic_coverage` Patron-only, RAG financier exclu, scores BOAMP non financiers ; preuve `SMART_AO_PHASE9_G01_G09_CONFIDENTIALITE_DEDUCTIONS_AUDIT_PREUVE_v0.1.md` | corriger les défauts puis recueillir la validation propriétaire |
 | 20/09/2026 | Paquet de revue propriétaire G01–G09 | aucun défaut bloquant trouvé ; les neuf scénarios, limites, rôles, refus et critères de sortie sont regroupés dans `SMART_AO_PHASE9_G01_G09_OWNER_REVIEW_PACKET_v0.1.md` ; validation métier encore explicitement en attente | recueillir la validation propriétaire sur G01–G09 |
 | 20/09/2026 | Validation propriétaire G01–G09 | confirmation explicite reçue : « Je valide G01–G09 » ; le paquet de revue est passé à `VALIDÉ PAR LE PROPRIÉTAIRE` et les neuf lignes sont marquées `VALIDÉ` | produire les `OWNER EXPERIENCE FREEZE` puis l’UX Freeze global |
+| 20/09/2026 | OWNER EXPERIENCE FREEZE et UX Freeze global | gel G01–G09 validé, règles communes consolidées pour C00–C16, 104 surfaces, PUX et freezes EXP/N déjà existants ; limites `PARTIAL`, recette lecteur d’écran et Product Freeze restent explicites ; preuves dans `SMART_AO_G01_G09_OWNER_EXPERIENCE_FREEZE_v0.1.md` et `SMART_AO_UX_FREEZE_GLOBAL_v0.1.md` | consolider les décisions d’expérience validées dans le Product Freeze v1.0 |
 
 ## 7. Règle de mise à jour
 
