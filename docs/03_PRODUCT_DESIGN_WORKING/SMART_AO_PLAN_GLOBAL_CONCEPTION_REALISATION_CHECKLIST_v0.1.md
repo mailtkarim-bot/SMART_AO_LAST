@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 21 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** PHASE 11 — Qualification de production
-**Prochaine étape unique :** auditer les ancres et les refus du retrieval RAG temporaire avant toute indexation persistante.
+**Prochaine étape unique :** fermer le refus financier explicite à la frontière applicative avant toute indexation RAG persistante.
 
 ## 1. Rôle de ce document
 
@@ -455,6 +455,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 21/09/2026 | Paquet de revue propriétaire corpus DCE | paquet `SMART_AO_PHASE11_DCE_CORPUS_OWNER_REVIEW_PACKET_v0.1.md` produit avec périmètre, exclusions, hashes, limites, critères de requêtes et décision `APPROUVÉ/REFUSÉ` ; index permanent toujours interdit | obtenir la validation propriétaire du paquet redacted |
 | 21/09/2026 | Qualification RAG one-shot redacted | 116 fragments redacted, 3 requêtes, vecteurs dimension 1 024, 181 556,10 ms, zéro écriture DB et aucun index persistant ; échéance → RC et planning → planning ; prescriptions communes → résultat CCTP/CCAP, donc retrieval `PARTIAL` | corriger le retrieval des prescriptions communes et rejouer la qualification RAG temporaire |
 | 21/09/2026 | Correction retrieval source-aware | `scripts/qualify_redacted_rag.py` préfixe uniquement le titre de source dans l’entrée d’embedding ; rejoue 116 fragments et 3 requêtes en 201 814,11 ms ; RC, CCTC et Planning sont tous retrouvés dans le top 3 ; aucun index ni écrit DB | auditer les ancres et les refus du retrieval RAG temporaire avant toute indexation persistante |
+| 21/09/2026 | Audit ancres/refus RAG temporaire | ancres source-aware 3/3 ; tests existants couvrent tenant/Case/version/classification et exclusion `FINANCIAL_PRIVATE` ; index permanent absent ; refus financier explicite à la frontière applicative reste à fermer ; preuve `SMART_AO_PHASE11_DCE_RAG_ANCHOR_REFUSAL_AUDIT_v0.1.md` | fermer le refus financier explicite à la frontière applicative avant toute indexation RAG persistante |
 
 ## 7. Règle de mise à jour
 
