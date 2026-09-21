@@ -1,10 +1,11 @@
 # SMART AO — Dossier GO/NO-GO local Phase 11 v0.1
 
 **Date :** 21 septembre 2026  
-**Statut :** SOUMIS AU PROPRIÉTAIRE — DÉCISION EN ATTENTE  
+**Statut :** DÉCISION PROPRIÉTAIRE REÇUE
 **Décision proposée :** `GO CONDITIONNEL LOCAL` / `NO-GO OUVERTURE PUBLIQUE`
 
 **Soumission :** 21 septembre 2026 — la recette locale peut continuer ; aucune ouverture publique n’est autorisée.
+**Décision propriétaire :** « J’approuve le GO conditionnel local et je maintiens le NO-GO public. »
 
 ## 1. Résultat proposé
 
@@ -37,7 +38,7 @@ SMART AO peut continuer sa recette locale et ses qualifications techniques. L’
 
 ## 4. Décision propriétaire attendue
 
-- [ ] **GO CONDITIONNEL LOCAL** : poursuivre les recettes, benchmarks, corpus et corrections sans ouvrir au public ; décision propriétaire à cocher ;
+- [x] **GO CONDITIONNEL LOCAL** : poursuivre les recettes, benchmarks, corpus et corrections sans ouvrir au public ;
 - [x] **NO-GO PUBLIC MAINTENU** : aucune mise en ligne ni donnée client ; position soumise ;
 - [ ] **OUVERTURE PUBLIQUE** : impossible à approuver tant que les bloqueurs ci-dessus ne sont pas fermés.
 

@@ -4,6 +4,10 @@
 **Date :** 20 septembre 2026  
 **Prérequis :** Product Freeze v1.0, cahier technique v1.0, Docker Compose préproduction
 
+**Tête Alembic attendue :** `20260920_0090`
+**Configuration OCR/RAG par défaut :** `SMART_AO_INSTALL_DOCUMENT_OCR=0`, `SMART_AO_OCR_ENABLED=0`, `SMART_AO_RAG_ENABLED=0`, `SMART_AO_RAG_INDEXING_ENABLED=0`
+La configuration par défaut ne télécharge aucun modèle ni dictionnaire pendant le déploiement.
+
 ## 1. Dimensionnement minimal
 
 - 4 vCPU dédiés ou burstables ;

@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 21 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** PHASE 11 — Qualification de production
-**Prochaine étape unique :** recueillir la décision propriétaire sur le GO conditionnel local, avec NO-GO public maintenu.
+**Prochaine étape unique :** poursuivre la conception et la qualification locale des parcours restants, sans ouverture publique.
 
 ## 1. Rôle de ce document
 
@@ -464,6 +464,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 21/09/2026 | Verdict qualification Phase 11 | backend 1 720 tests collectés verts, frontend 187/187, ops 45/45, pip-audit sans vulnérabilité, pnpm audit officiel 0, Bandit vert, stack local/restauration/rotation/RAG temporaire vérifiés ; verdict `QUALIFIÉ LOCALEMENT — PAS PRÊT POUR PRODUCTION PUBLIQUE` dans `SMART_AO_PHASE11_QUALIFICATION_VERDICT_v0.1.md` ; VPS, Golden DCE réel, intégrations externes et detect-secrets indisponible restent des limites | préparer le dossier GO/NO-GO local et maintenir les limites VPS/Golden DCE avant toute ouverture publique |
 | 21/09/2026 | Dossier GO/NO-GO local | paquet `SMART_AO_PHASE11_GO_NO_GO_LOCAL_PACKET_v0.1.md` produit ; preuves vertes, bloqueurs NO-GO public, conditions de réouverture et décision propriétaire attendue explicités ; proposition `GO CONDITIONNEL LOCAL / NO-GO PUBLIC` | soumettre le dossier GO/NO-GO local à la décision propriétaire |
 | 21/09/2026 | Soumission GO/NO-GO au propriétaire | dossier soumis avec `NO-GO PUBLIC MAINTENU` coché et `GO CONDITIONNEL LOCAL` laissé en attente ; aucune ouverture ni donnée client autorisée | recueillir la décision propriétaire sur le GO conditionnel local |
+| 21/09/2026 | Décision propriétaire GO conditionnel local | approbation explicite reçue : « J’approuve le GO conditionnel local et je maintiens le NO-GO public » ; conception, code et qualification locale autorisés ; VPS et ouverture publique reportés à la phase d’exploitation | poursuivre la conception et la qualification locale des parcours restants, sans ouverture publique |
 
 ## 7. Règle de mise à jour
 
