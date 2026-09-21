@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 21 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** PHASE 11 — Qualification de production
-**Prochaine étape unique :** préparer un corpus DCE non financier et qualifier une indexation RAG one-shot, sans données métier réelles.
+**Prochaine étape unique :** faire approuver la copie redacted puis qualifier l’indexation RAG one-shot non financière, sans données métier réelles.
 
 ## 1. Rôle de ce document
 
@@ -451,6 +451,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 21/09/2026 | Mesure des artefacts et embedding isolé | Docling offline `COMPLETED` en 6 361,68 ms / 61 caractères, RapidOCR `REVIEW_REQUIRED` en 2 818,22 ms / 1 fragment, BGE offline dimension 1 024 en environ 4 435 ms ; aucun index ni accès DB métier | préparer un corpus DCE non financier et qualifier une indexation RAG one-shot, sans données métier réelles |
 | 21/09/2026 | Source DCE candidate inventoriée | dossier `DCE Type` : 379 fichiers, 35 financiers, 16 sensibles, 236 non classés, 9 fichiers système ; premier paquet technique `CENTRALE GROUPE ELEC` de 10 PDF RC/CCAP/CCTC/CCTP/planning, hashes calculés, originaux non copiés ni indexés ; preuve `SMART_AO_PHASE11_DCE_SOURCE_INVENTORY_v0.1.md` | revoir les droits/anonymisation du paquet, puis créer une copie de travail non financière hors Git |
 | 21/09/2026 | Copie de travail DCE filtrée | 10 PDF copiés hors Git, 30 320 lignes extraites, 567 lignes retirées par motifs financiers/identitaires/secrets, 19 178 lignes techniques conservées ; noms d’établissement, sites, codes postaux et adresses restent visibles, donc statut `REVIEW_REQUIRED` et aucune indexation ; preuve `SMART_AO_PHASE11_DCE_WORKING_COPY_SCREENING_v0.1.md` | revoir manuellement l’anonymisation et les droits avant toute indexation BGE/RAG |
+| 21/09/2026 | Copie redacted et embedding BGE one-shot | seconde passe : 687 lignes redacted, motifs email/téléphone/code postal/adresse absents ; 10 fragments encodés offline en 18 390,81 ms, dimension 1 024, zéro écriture DB ; statut toujours `REVIEW_REQUIRED` avant index permanent | faire approuver la copie redacted puis qualifier l’indexation RAG one-shot non financière |
 
 ## 7. Règle de mise à jour
 
