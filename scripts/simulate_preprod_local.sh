@@ -99,11 +99,23 @@ done
 wait
 pass "bounded concurrent readiness load: 20 requests"
 
+load_started="$(date +%s%N)"
+seq 1 100 | xargs -n1 -P10 bash -c \
+  'curl -ksSf --resolve localhost:18443:127.0.0.1 https://localhost:18443/healthz/ready >/dev/null'
+load_elapsed_ms="$(( ( $(date +%s%N) - load_started ) / 1000000 ))"
+load_rate="$(awk -v requests=100 -v elapsed="${load_elapsed_ms}" 'BEGIN { if (elapsed > 0) printf "%.2f", requests / (elapsed / 1000); else print "0" }')"
+pass "bounded load: 100 requests at concurrency 10 in ${load_elapsed_ms}ms (${load_rate} req/s)"
+
 for service in backend frontend postgres; do
   compose restart "${service}" >/dev/null
   wait_ready || fail "readiness did not recover after restarting ${service}"
 done
 pass "controlled restart recovery: backend, frontend, PostgreSQL"
+
+for service in dce-retention-worker submission-export-webhook-worker submission-export-smtp-worker; do
+  compose restart "${service}" >/dev/null
+done
+pass "worker restart recovery: retention, webhook, SMTP"
 
 compose stop clamav >/dev/null
 sleep 5

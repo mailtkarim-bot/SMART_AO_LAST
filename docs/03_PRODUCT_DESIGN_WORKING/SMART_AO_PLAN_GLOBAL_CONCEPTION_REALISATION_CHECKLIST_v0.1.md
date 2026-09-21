@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 21 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** PHASE 11 — Qualification de production
-**Prochaine étape unique :** qualifier les limites de performance locale et les scénarios de reprise prolongée, en conservant les limites VPS.
+**Prochaine étape unique :** mesurer les parcours métier lourds sur un corpus DCE local borné, sans extrapoler les résultats au VPS.
 
 ## 1. Rôle de ce document
 
@@ -441,7 +441,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 20/09/2026 | Contrats d’exploitation préproduction | 45 tests `backend/tests/ops` passent ; scripts shell, Compose digest-pinné, réseau privé, healthchecks, allowlists de secrets, wrappers one-shot, backup/restore et rotation contrôlés | provisionner le VPS de préproduction puis exécuter le runbook |
 | 21/09/2026 | Simulation locale complète du stack | registre npm vérifié depuis l’hôte et Docker ; build frontend complet, migration Alembic `20260920_0090`, PostgreSQL, ClamAV, backend, frontend, Caddy et trois workers démarrés ; HTTPS local via Caddy retourne `200` avec `database=ok`, `schema=ok`, `clamav=ok` ; port 80 occupé isolé par override éphémère `18080/18443` ; correction minimale du PID Nginx non-root dans `ops/docker/frontend.Dockerfile` ; 45 tests ops, syntaxe shell et `git diff --check` passent | provisionner le VPS de préproduction puis exécuter le runbook |
 | 21/09/2026 | Décision d’avancer sans VPS | aucun fournisseur, CLI cloud, domaine, secret préproduction ou hôte SSH n’est disponible ; la préproduction locale Docker couvre déjà PostgreSQL, ClamAV, migrations, backend, frontend, Caddy, workers, sauvegarde/restauration et rotation simulée ; DNS public, firewall distant, stockage hors site et reprise matérielle restent différés | industrialiser la simulation locale reproductible, puis rejouer restauration, rotation et smoke tests |
-| 21/09/2026 | Harness local préproduction reproductible | `scripts/simulate_preprod_local.sh` crée un environnement éphémère, remplace les ports Caddy occupés, construit et démarre le stack complet, attend HTTPS/DB/schema/ClamAV, exécute 20 requêtes concurrentes, redémarre backend/frontend/PostgreSQL, provoque une panne ClamAV puis vérifie son retour, sauvegarde PostgreSQL, restaure dans une base isolée, vérifie 127 tables et la tête `20260920_0090`, simule la rotation JWT en fichier `0600`, puis nettoie ; exécution complète réussie | qualifier les limites de performance locale et les scénarios de reprise prolongée |
+| 21/09/2026 | Harness local préproduction reproductible | `scripts/simulate_preprod_local.sh` crée un environnement éphémère, remplace les ports Caddy occupés, construit et démarre le stack complet, attend HTTPS/DB/schema/ClamAV, exécute 20 puis 100 requêtes concurrentes, redémarre backend/frontend/PostgreSQL et les trois workers, provoque une panne ClamAV puis vérifie son retour, sauvegarde PostgreSQL, restaure dans une base isolée, vérifie 127 tables et la tête `20260920_0090`, simule la rotation JWT en fichier `0600`, puis nettoie ; exécution réussie à 151,52 req/s sur ce poste | mesurer les parcours métier lourds sur un corpus DCE local borné, sans extrapoler les résultats au VPS |
 
 ## 7. Règle de mise à jour
 
