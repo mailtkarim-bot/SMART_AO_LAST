@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from math import sqrt
+import re
 from typing import Protocol
 
 from app.modules.knowledge.domain.retrieval import (
@@ -19,6 +20,16 @@ class EmbeddingProvider(Protocol):
     def model_id(self) -> str: ...
 
     def embed(self, texts: Sequence[str]) -> list[tuple[float, ...]]: ...
+
+
+class FinancialRetrievalQueryRejected(ValueError):
+    """A financial query cannot cross a non-financial retrieval scope."""
+
+
+_FINANCIAL_QUERY_PATTERN = re.compile(
+    r"\b(?:prix|montant|marge|co[uû]t|bpu|dpgf|tr[eé]sorerie|financement|rentabilit[eé]|devis)\b",
+    re.IGNORECASE,
+)
 
 
 class VectorIndex(Protocol):
@@ -125,6 +136,11 @@ class RagRetrievalService:
             raise ValueError("query must not be empty")
         if not 1 <= top_k <= MAX_TOP_K:
             raise ValueError(f"top_k must be between 1 and {MAX_TOP_K}")
+        if (
+            DataClassification.FINANCIAL_PRIVATE not in scope.allowed_classifications
+            and _FINANCIAL_QUERY_PATTERN.search(query) is not None
+        ):
+            raise FinancialRetrievalQueryRejected("FINANCIAL_RETRIEVAL_SCOPE_REQUIRED")
         [query_embedding] = self._embedding_provider.embed([query])
         return self._index.search(
             query=EmbeddingVector(values=query_embedding),

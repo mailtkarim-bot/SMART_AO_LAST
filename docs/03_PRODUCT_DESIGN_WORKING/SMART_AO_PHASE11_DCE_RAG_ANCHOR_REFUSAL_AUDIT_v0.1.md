@@ -17,12 +17,11 @@ Chaque résultat conserve le nom de source et le numéro de chunk. Le titre du d
 
 Les tests de retrieval existants vérifient tenant, Case, version DCE, classification autorisée, exclusion des versions `SUPERSEDED` et exclusion des fragments `FINANCIAL_PRIVATE`. La copie redacted ne contient pas de fragment financier approuvé et aucun index permanent n’a été créé.
 
-Une requête explicitement financière doit rester refusée en amont du retrieval métier ; le moteur vectoriel ne doit jamais transformer l’absence de fragment financier en réponse technique affirmative. Cette règle reste à intégrer/recetter à la frontière applicative avant indexation persistante.
+Une requête explicitement financière est maintenant refusée au service de retrieval lorsque le scope n’autorise pas `FINANCIAL_PRIVATE`, avec `FinancialRetrievalQueryRejected` et code `FINANCIAL_RETRIEVAL_SCOPE_REQUIRED`. Le moteur vectoriel ne transforme plus l’absence de fragment financier en réponse technique affirmative.
 
 ## Verdict
 
 - ancres source-aware : **3/3** ;
 - isolation et classification : **couverte par les tests existants** ;
 - index permanent : **non créé** ;
-- refus financier explicite à la frontière applicative : **à fermer avant promotion**.
-
+- refus financier explicite à la frontière applicative : **FERMÉ — 2 tests de contrat**.

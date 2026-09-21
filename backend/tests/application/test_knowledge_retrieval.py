@@ -6,6 +6,7 @@ from uuid import UUID
 
 import pytest
 from app.modules.knowledge.application.retrieval import (
+    FinancialRetrievalQueryRejected,
     InMemoryVectorIndex,
     RagRetrievalService,
 )
@@ -164,17 +165,31 @@ def test_retrieval_excludes_financial_private_chunks_by_default(
         ]
     )
 
-    results = retrieval_service.retrieve(
-        query="prix interne confidentiel",
-        scope=RetrievalScope(
-            tenant_id=TENANT_A,
-            case_id=CASE_A,
-            dce_version_id=VERSION_A,
-        ),
-        top_k=5,
-    )
+    with pytest.raises(FinancialRetrievalQueryRejected, match="FINANCIAL_RETRIEVAL_SCOPE_REQUIRED"):
+        retrieval_service.retrieve(
+            query="prix interne confidentiel",
+            scope=RetrievalScope(
+                tenant_id=TENANT_A,
+                case_id=CASE_A,
+                dce_version_id=VERSION_A,
+            ),
+            top_k=5,
+        )
 
-    assert results == []
+
+def test_financial_query_requires_scope_explicitly_including_private_data(
+    retrieval_service: RagRetrievalService,
+) -> None:
+    with pytest.raises(FinancialRetrievalQueryRejected):
+        retrieval_service.retrieve(
+            query="marge",
+            scope=RetrievalScope(
+                tenant_id=TENANT_A,
+                case_id=CASE_A,
+                dce_version_id=VERSION_A,
+            ),
+            top_k=1,
+        )
 
 
 def test_retrieval_requires_positive_bounded_top_k(
