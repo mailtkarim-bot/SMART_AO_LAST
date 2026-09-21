@@ -21,7 +21,10 @@ Une requête explicitement financière est maintenant refusée au service de ret
 
 ## Verdict
 
-- ancres source-aware : **3/3** ;
+- ancres source-aware : **3/3** ; locators source/chunk complets ;
 - isolation et classification : **couverte par les tests existants** ;
+- fuite de marqueurs financiers dans les réponses : **0** ;
+- refus financier hors scope privé : **REFUSED / FINANCIAL_RETRIEVAL_SCOPE_REQUIRED** ;
 - index permanent : **non créé** ;
+- index mémoire avant nettoyage : **116 entrées** ; après nettoyage : **0** ;
 - refus financier explicite à la frontière applicative : **FERMÉ — 2 tests de contrat**.
