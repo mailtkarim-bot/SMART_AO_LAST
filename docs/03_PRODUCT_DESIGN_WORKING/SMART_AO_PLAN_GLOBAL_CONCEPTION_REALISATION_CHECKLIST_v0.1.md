@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 21 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** PHASE 11 — Qualification de production
-**Prochaine étape unique :** mesurer OCR/RapidOCR et Docling sur des fixtures locales approuvées, puis vérifier un embedding BGE isolé sans indexation métier.
+**Prochaine étape unique :** provisionner les artefacts de modèles Docling/RapidOCR et mesurer un embedding BGE dans une fenêtre mémoire dédiée, sans indexation métier.
 
 ## 1. Rôle de ce document
 
@@ -447,6 +447,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 21/09/2026 | Parcours DCE lourds local borné | PostgreSQL Docker isolé : analyse RC, exigences lourdes et lecture DCE passent 68 tests en 24,54 s ; sources, règles, tenant-scope, atomicité, limites et rejeux vérifiés ; preuve `SMART_AO_PHASE11_LOCAL_DCE_HEAVY_PATHS_BENCHMARK_v0.1.md` ; OCR, Docling, RAG et gros PDF restent hors périmètre | qualifier les limites OCR, Docling, RAG et gros PDF sur des fixtures locales explicitement bornées, sans extrapoler les résultats au VPS |
 | 21/09/2026 | Limites OCR/Docling/RAG/gros PDF | 38 tests passent, 2 tests OCR sont ignorés faute de PIL ; `docling`, RapidOCR, ONNX Runtime, sentence-transformers et PyMuPDF sont absents de `.venv` ; les limites natives PDF/DOCX/texte, archives et projection OCR `REVIEW_REQUIRED` passent ; smoke advanced `NOT_CONFIGURED` explicitement ; preuve `SMART_AO_PHASE11_LOCAL_OPTIONAL_DCE_LIMITS_v0.1.md` | décider l’activation éventuelle des dépendances OCR/Docling/RAG, puis mesurer uniquement celles qui sont installées et approuvées localement |
 | 21/09/2026 | Installation contrôlée des dépendances optionnelles | extras `document-ocr`, `document-advanced` et `rag` installés depuis `uv.lock` ; smoke PyMuPDF/Docling, imports RapidOCR, sentence-transformers et Torch CPU vérifiés ; snapshot `BAAI/bge-m3` téléchargé et cache local vérifié ; flags runtime toujours à `0` ; décision `SMART_AO_PHASE11_OPTIONAL_DEPENDENCIES_DECISION_v0.1.md` mise à jour | mesurer OCR/RapidOCR et Docling sur des fixtures locales approuvées, puis vérifier un embedding BGE isolé sans indexation métier |
+| 21/09/2026 | Mesure optionnelle sur fixture locale | PyMuPDF `COMPLETED` en 9,2 ms sur 2 fragments ; Docling importable mais `NOT_CONFIGURED` faute d’artefacts modèles et DNS Hugging Face ; RapidOCR `OCR_MODELS_REQUIRED` sans chemins locaux ; cache BGE présent mais embedding CPU non forcé sous contrainte mémoire ; aucune indexation métier | provisionner les artefacts de modèles Docling/RapidOCR et mesurer un embedding BGE dans une fenêtre mémoire dédiée, sans indexation métier |
 
 ## 7. Règle de mise à jour
 
