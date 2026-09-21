@@ -76,19 +76,44 @@ compose up -d --build postgres clamav migrate backend frontend \
 pass "preproduction services started"
 
 ready_url="https://localhost:18443/healthz/ready"
-for _ in $(seq 1 60); do
-  if body="$(curl -ksS --resolve localhost:18443:127.0.0.1 "${ready_url}" 2>/dev/null)" \
-    && grep -Eq '"status"[[:space:]]*:[[:space:]]*"ok"' <<<"${body}" \
-    && grep -Eq '"database"[[:space:]]*:[[:space:]]*"ok"' <<<"${body}" \
-    && grep -Eq '"schema"[[:space:]]*:[[:space:]]*"ok"' <<<"${body}" \
-    && grep -Eq '"clamav"[[:space:]]*:[[:space:]]*"ok"' <<<"${body}"; then
-    break
-  fi
-  sleep 2
-done
-[[ -n "${body:-}" ]] || fail "readiness endpoint did not respond"
-grep -Eq '"clamav"[[:space:]]*:[[:space:]]*"ok"' <<<"${body}" || fail "stack never became ready"
+wait_ready() {
+  body=""
+  for _ in $(seq 1 60); do
+    if body="$(curl -ksS --resolve localhost:18443:127.0.0.1 "${ready_url}" 2>/dev/null)" \
+      && grep -Eq '"status"[[:space:]]*:[[:space:]]*"ok"' <<<"${body}" \
+      && grep -Eq '"database"[[:space:]]*:[[:space:]]*"ok"' <<<"${body}" \
+      && grep -Eq '"schema"[[:space:]]*:[[:space:]]*"ok"' <<<"${body}" \
+      && grep -Eq '"clamav"[[:space:]]*:[[:space:]]*"ok"' <<<"${body}"; then
+      return 0
+    fi
+    sleep 2
+  done
+  return 1
+}
+wait_ready || fail "stack never became ready"
 pass "HTTPS smoke test: ${body}"
+
+for _ in $(seq 1 20); do
+  curl -ksSf --resolve localhost:18443:127.0.0.1 "${ready_url}" >/dev/null &
+done
+wait
+pass "bounded concurrent readiness load: 20 requests"
+
+for service in backend frontend postgres; do
+  compose restart "${service}" >/dev/null
+  wait_ready || fail "readiness did not recover after restarting ${service}"
+done
+pass "controlled restart recovery: backend, frontend, PostgreSQL"
+
+compose stop clamav >/dev/null
+sleep 5
+incident_body="$(curl -ksS --resolve localhost:18443:127.0.0.1 "${ready_url}")"
+grep -Eq '"status"[[:space:]]*:[[:space:]]*"not_ready"' <<<"${incident_body}" \
+  || grep -Eq '"clamav"[[:space:]]*:[[:space:]]*"failed"' <<<"${incident_body}" \
+  || fail "ClamAV outage was not visible in readiness"
+compose start clamav >/dev/null
+wait_ready || fail "readiness did not recover after ClamAV restart"
+pass "ClamAV incident detection and recovery"
 
 compose exec -T postgres pg_dump --clean --if-exists --no-owner --no-privileges \
   -U smart_ao smart_ao | gzip -9 >"${BACKUP_FILE}"
