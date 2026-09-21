@@ -5,7 +5,7 @@
 
 ## Décision
 
-Les extras `document-ocr`, `document-advanced` et `rag` sont installés dans `.venv` depuis `uv.lock`. Le modèle `BAAI/bge-m3` est maintenant présent dans le cache local `/home/noor/.cache/smartao/models` et son snapshot est vérifié. Les flags runtime restent désactivés dans la préproduction ; aucun index RAG n’est lancé et aucun modèle OCR n’est activé.
+Les extras `document-ocr`, `document-advanced` et `rag` sont installés dans `.venv` depuis `uv.lock`. Les artefacts Docling layout et RapidOCR sont présents localement, le modèle `BAAI/bge-m3` est dans `/home/noor/.cache/smartao/models`, et les trois chemins ont été mesurés sur fixtures locales. Les flags runtime restent désactivés dans la préproduction ; aucun index RAG n’est lancé.
 
 ## Pourquoi
 
@@ -17,9 +17,9 @@ Le contrat d’exploitation impose déjà `SMART_AO_RAG_ENABLED=0`, `SMART_AO_RA
 
 | Option | Décision | Condition de réouverture |
 |---|---|---|
-| OCR / RapidOCR | INSTALLÉ — runtime désactivé | modèles ONNX vérifiés, corpus OCR approuvé, budget mémoire mesuré |
-| Docling / PyMuPDF | INSTALLÉ — runtime désactivé | besoin métier démontré, corpus multiformat approuvé, mesure locale isolée |
-| RAG / sentence-transformers | INSTALLÉ — BGE en cache, runtime désactivé | index non financier vérifié, benchmark et mémoire acceptés |
+| OCR / RapidOCR | INSTALLÉ — fixture mesurée, runtime désactivé | corpus OCR approuvé et budget mémoire confirmé |
+| Docling / PyMuPDF | INSTALLÉ — fixture mesurée, runtime désactivé | besoin métier et corpus multiformat approuvés |
+| RAG / sentence-transformers | INSTALLÉ — embedding isolé, runtime désactivé | index non financier vérifié, corpus et budget mémoire acceptés |
 
 ## Conséquence
 
