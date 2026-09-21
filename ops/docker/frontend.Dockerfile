@@ -8,7 +8,10 @@ RUN pnpm build
 
 FROM nginx:1.29-alpine@sha256:5616878291a2eed594aee8db4dade5878cf7edcb475e59193904b198d9b830de
 RUN apk upgrade --no-cache \
-    && sed -i 's#pid /var/run/nginx.pid;#pid /tmp/nginx.pid;#' /etc/nginx/nginx.conf \
+    && sed -E -i \
+        -e 's#pid[[:space:]]+/run/nginx.pid;#pid /tmp/nginx.pid;#' \
+        -e 's#pid[[:space:]]+/var/run/nginx.pid;#pid /tmp/nginx.pid;#' \
+        /etc/nginx/nginx.conf \
     && chown -R nginx:nginx /var/cache/nginx /var/log/nginx /usr/share/nginx/html
 COPY ops/nginx/frontend.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /web/dist /usr/share/nginx/html

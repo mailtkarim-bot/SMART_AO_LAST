@@ -12,7 +12,8 @@
 - Bandit sur `backend/app` : **vert** ;
 - detect-secrets avec `.secrets.baseline` : **vert** ;
 - `scripts/simulate_staging_deploy.sh --static-only` et `--compose-config` : **verts**, sans démarrer de services ;
-- simulation locale complète tentée avec PostgreSQL, ClamAV, migration, backend et frontend ; configuration et téléchargement ClamAV passent, mais le build frontend s’arrête sur `pnpm install` après des timeouts du registre npm ; le stack temporaire est nettoyé ;
+- simulation locale complète exécutée avec PostgreSQL, ClamAV, migration, backend, frontend, Caddy et workers ; le registre npm répond depuis l’hôte et un conteneur Docker, `pnpm install --frozen-lockfile` et `pnpm build` passent, la tête Alembic `20260920_0090` s’applique, et le smoke test HTTPS via Caddy retourne `200` avec `database=ok`, `schema=ok` et `clamav=ok` ; le port hôte 80 déjà occupé a été isolé par un override éphémère `18080/18443` ;
+- le build a révélé puis corrigé un défaut réel du Dockerfile frontend : le chemin PID Nginx était réécrit avec un espacement trop strict et laissait `/run/nginx.pid` inaccessible à l’utilisateur non-root ; la réécriture tolère maintenant les espaces et cible `/tmp/nginx.pid` ;
 - exercice PostgreSQL local isolé : **PASS**, sauvegarde compressée puis restauration dans une seconde base temporaire, 127 tables, tête `20260920_0090` et trigger append-only vérifiés ;
 - rotation JWT atomique avec environnement éphémère protégé : **PASS**, ancien fichier supprimé après simulation ;
 - recherche de clés privées, tokens GitHub et secrets versionnés hors fixtures explicitement marquées : **aucun secret de production trouvé** ;
@@ -25,7 +26,7 @@ Les tests de sécurité couvrent tenant, membership, affectation, MFA, délégat
 
 ## Limites restant à traiter
 
-- la restauration réelle d’une sauvegarde PostgreSQL et la rotation opérationnelle des secrets doivent encore être exécutées dans l’environnement de préproduction ;
+- la restauration réelle d’une sauvegarde PostgreSQL et la rotation opérationnelle des secrets restent à exécuter dans l’environnement de préproduction ; l’exercice local isolé ne remplace pas cette preuve ;
 - `ops/preflight-checklist.sh` refuse l’exécution sans `.env.preprod` et `SMART_AO_PUBLIC_HOST` réels ; cette absence de secrets/runtime est une limite de l’environnement local ;
 - les deux skips PIL concernent l’option OCR avancée, pas le chemin nominal ;
 - l’audit pnpm via le miroir `registry.npmmirror.com` reste indisponible, mais le même audit contre npm officiel est vert ;
@@ -39,3 +40,4 @@ Les tests de sécurité couvrent tenant, membership, affectation, MFA, délégat
 - `backend/app/modules/dce/application/extraction.py`
 - `backend/app/modules/knowledge/application/retrieval.py`
 - `backend/tests/ops/test_product_freeze_authority_contract.py`
+- `ops/docker/frontend.Dockerfile`

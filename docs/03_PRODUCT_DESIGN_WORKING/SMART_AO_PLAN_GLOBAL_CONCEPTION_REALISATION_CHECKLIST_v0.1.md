@@ -2,10 +2,10 @@
 ## CHECKLIST PILOTÉE v0.1
 
 **Créé le :** 14 septembre 2026  
-**Dernière mise à jour :** 20 septembre 2026  
+**Dernière mise à jour :** 21 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** PHASE 11 — Qualification de production
-**Prochaine étape unique :** rendre le registre npm accessible ou provisionner le VPS, puis rejouer le stack complet.
+**Prochaine étape unique :** provisionner le VPS de préproduction puis exécuter le runbook de restauration, rotation et smoke tests.
 
 ## 1. Rôle de ce document
 
@@ -439,7 +439,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 20/09/2026 | Preuve locale restauration/rotation | base source isolée migrée puis restaurée dans une base temporaire : 127 tables, tête `20260920_0090`, trigger append-only ; rotation JWT atomique simulée avec fichier 0600 éphémère ; preuve dans `SMART_AO_PHASE11_PRODUCTION_SECURITY_AUDIT_v0.1.md` | exécuter la restauration et la rotation sur le VPS de préproduction réel |
 | 20/09/2026 | Runbook préproduction VPS | dimensionnement, installation, secrets, déploiement, backup, restauration, rotation JWT, smoke tests et rollback décrits dans `docs/02_FUTURE_TECHNICAL/SMART_AO_PREPRODUCTION_VPS_RUNBOOK_v0.1.md` ; infrastructure réelle encore absente | provisionner le VPS de préproduction puis exécuter le runbook |
 | 20/09/2026 | Contrats d’exploitation préproduction | 45 tests `backend/tests/ops` passent ; scripts shell, Compose digest-pinné, réseau privé, healthchecks, allowlists de secrets, wrappers one-shot, backup/restore et rotation contrôlés | provisionner le VPS de préproduction puis exécuter le runbook |
-| 20/09/2026 | Simulation locale complète du stack | PostgreSQL/ClamAV et configuration Compose préproduction validés ; build frontend interrompu par timeouts du registre npm pendant `pnpm install`, stack temporaire nettoyé sans données persistantes | provisionner le VPS ou rendre le registre npm accessible puis rejouer le stack complet |
+| 21/09/2026 | Simulation locale complète du stack | registre npm vérifié depuis l’hôte et Docker ; build frontend complet, migration Alembic `20260920_0090`, PostgreSQL, ClamAV, backend, frontend, Caddy et trois workers démarrés ; HTTPS local via Caddy retourne `200` avec `database=ok`, `schema=ok`, `clamav=ok` ; port 80 occupé isolé par override éphémère `18080/18443` ; correction minimale du PID Nginx non-root dans `ops/docker/frontend.Dockerfile` ; 45 tests ops, syntaxe shell et `git diff --check` passent | provisionner le VPS de préproduction puis exécuter le runbook |
 
 ## 7. Règle de mise à jour
 
