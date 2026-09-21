@@ -14,7 +14,7 @@ Une copie `redacted/` a été produite par remplacement déterministe des établ
 
 Un test BGE one-shot a encodé 10 fragments redacted en vecteurs de dimension 1 024 en 18 390,81 ms, sans indexation ni écriture PostgreSQL.
 
-La première qualification RAG temporaire a encodé 116 fragments redacted et trois requêtes en dimension 1 024, en 181 556,10 ms avec zéro écriture DB ; la requête prescriptions communes était `PARTIAL`. La correction minimale ajoute le titre du document dans le texte vectorisé, sans modifier le fragment source. Rejouée sur 116 fragments, elle retrouve RC, CCTC et Planning dans le top 3 en 201 814,11 ms, toujours sans index persistant.
+La première qualification RAG temporaire a encodé 116 fragments redacted et trois requêtes en dimension 1 024, en 181 556,10 ms avec zéro écriture DB ; la requête prescriptions communes était `PARTIAL`. La correction minimale ajoute le titre du document dans le texte vectorisé, sans modifier le fragment source. Rejouée via le vrai `RagRetrievalService` sur 116 fragments, elle retrouve RC, CCTC et Planning dans le top 3 en 215 732,69 ms et refuse la requête financière avec `FINANCIAL_RETRIEVAL_SCOPE_REQUIRED`, sans index persistant.
 
 ## Pourquoi le paquet reste en revue
 

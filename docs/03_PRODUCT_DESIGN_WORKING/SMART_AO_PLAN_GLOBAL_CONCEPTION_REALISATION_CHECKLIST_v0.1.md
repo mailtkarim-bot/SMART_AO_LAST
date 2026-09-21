@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 21 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** PHASE 11 — Qualification de production
-**Prochaine étape unique :** rejouer le corpus redacted via le service RAG avec refus financier, puis supprimer l’index jetable.
+**Prochaine étape unique :** auditer la réponse RAG, les ancres et la suppression de l’index jetable avant toute promotion.
 
 ## 1. Rôle de ce document
 
@@ -457,6 +457,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 21/09/2026 | Correction retrieval source-aware | `scripts/qualify_redacted_rag.py` préfixe uniquement le titre de source dans l’entrée d’embedding ; rejoue 116 fragments et 3 requêtes en 201 814,11 ms ; RC, CCTC et Planning sont tous retrouvés dans le top 3 ; aucun index ni écrit DB | auditer les ancres et les refus du retrieval RAG temporaire avant toute indexation persistante |
 | 21/09/2026 | Audit ancres/refus RAG temporaire | ancres source-aware 3/3 ; tests existants couvrent tenant/Case/version/classification et exclusion `FINANCIAL_PRIVATE` ; index permanent absent ; refus financier explicite à la frontière applicative reste à fermer ; preuve `SMART_AO_PHASE11_DCE_RAG_ANCHOR_REFUSAL_AUDIT_v0.1.md` | fermer le refus financier explicite à la frontière applicative avant toute indexation RAG persistante |
 | 21/09/2026 | Refus financier explicite RAG | `RagRetrievalService` refuse une requête financière hors scope privé avec `FinancialRetrievalQueryRejected/FINANCIAL_RETRIEVAL_SCOPE_REQUIRED` ; 2 tests de contrat, suite knowledge 7/7 et ops 45/45 passent ; aucune indexation persistante | rejouer le corpus redacted via le service RAG avec refus financier, puis supprimer l’index jetable |
+| 21/09/2026 | Rejeu via le vrai service RAG | 116 fragments redacted indexés en mémoire, RC/CCTC/Planning retrouvés dans le top 3 ; requête financière refusée `FINANCIAL_RETRIEVAL_SCOPE_REQUIRED` ; 215 732,69 ms, zéro écriture DB, index détruit à la fin ; script `scripts/qualify_redacted_rag_service.py` | auditer la réponse RAG, les ancres et la suppression de l’index jetable |
 
 ## 7. Règle de mise à jour
 
