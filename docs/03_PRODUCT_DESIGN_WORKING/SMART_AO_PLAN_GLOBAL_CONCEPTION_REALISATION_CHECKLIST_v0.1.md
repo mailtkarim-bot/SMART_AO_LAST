@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 21 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** PHASE 11 — Qualification de production
-**Prochaine étape unique :** mesurer l’ingestion, la quarantaine et la persistance DCE sur un corpus local borné, sans extrapoler les résultats au VPS.
+**Prochaine étape unique :** mesurer l’analyse RC, les exigences lourdes et la lecture DCE sur un corpus local borné, sans extrapoler les résultats au VPS.
 
 ## 1. Rôle de ce document
 
@@ -443,6 +443,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 21/09/2026 | Décision d’avancer sans VPS | aucun fournisseur, CLI cloud, domaine, secret préproduction ou hôte SSH n’est disponible ; la préproduction locale Docker couvre déjà PostgreSQL, ClamAV, migrations, backend, frontend, Caddy, workers, sauvegarde/restauration et rotation simulée ; DNS public, firewall distant, stockage hors site et reprise matérielle restent différés | industrialiser la simulation locale reproductible, puis rejouer restauration, rotation et smoke tests |
 | 21/09/2026 | Harness local préproduction reproductible | `scripts/simulate_preprod_local.sh` crée un environnement éphémère, remplace les ports Caddy occupés, construit et démarre le stack complet, attend HTTPS/DB/schema/ClamAV, exécute 20 puis 100 requêtes concurrentes, redémarre backend/frontend/PostgreSQL et les trois workers, provoque une panne ClamAV puis vérifie son retour, sauvegarde PostgreSQL, restaure dans une base isolée, vérifie 127 tables et la tête `20260920_0090`, simule la rotation JWT en fichier `0600`, puis nettoie ; exécution réussie à 151,52 req/s sur ce poste | mesurer les parcours métier lourds sur un corpus DCE local borné, sans extrapoler les résultats au VPS |
 | 21/09/2026 | Benchmark DCE local borné | `scripts/benchmark_dce_local.py` mesure trois itérations de texte UTF-8 (20 000 lignes), DOCX (2 000 paragraphes) et XLSX (12 000 cellules) ; tous les formats passent `COMPLETED` ; médianes locales 105,881 ms / 75,915 ms / 182,319 ms ; limites explicites dans `SMART_AO_PHASE11_LOCAL_DCE_BENCHMARK_v0.1.md` | mesurer l’ingestion, la quarantaine et la persistance DCE sur un corpus local borné, sans extrapoler les résultats au VPS |
+| 21/09/2026 | Qualification pipeline DCE local | PostgreSQL Docker isolé et migrations fraîches ; ingestion/quarantaine 36 tests en 22,73 s, extraction/classification 22 tests en 25,12 s, exigences/persistance 18 tests en 22,06 s ; total 76 tests passés ; preuve `SMART_AO_PHASE11_LOCAL_DCE_PIPELINE_QUALIFICATION_v0.1.md` ; OCR, RAG, Docling, analyse RC lourde et corpus PDF volumineux restent hors périmètre | mesurer l’analyse RC, les exigences lourdes et la lecture DCE sur un corpus local borné, sans extrapoler les résultats au VPS |
 
 ## 7. Règle de mise à jour
 
