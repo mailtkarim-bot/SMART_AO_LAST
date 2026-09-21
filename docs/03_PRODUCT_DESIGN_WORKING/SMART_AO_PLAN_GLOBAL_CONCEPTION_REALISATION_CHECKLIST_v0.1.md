@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 21 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** PHASE 11 — Qualification de production
-**Prochaine étape unique :** provisionner le VPS de préproduction puis exécuter le runbook de restauration, rotation et smoke tests.
+**Prochaine étape unique :** industrialiser la préproduction locale reproductible, puis rejouer restauration, rotation et smoke tests sans dépendre d’un VPS.
 
 ## 1. Rôle de ce document
 
@@ -440,7 +440,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 20/09/2026 | Runbook préproduction VPS | dimensionnement, installation, secrets, déploiement, backup, restauration, rotation JWT, smoke tests et rollback décrits dans `docs/02_FUTURE_TECHNICAL/SMART_AO_PREPRODUCTION_VPS_RUNBOOK_v0.1.md` ; infrastructure réelle encore absente | provisionner le VPS de préproduction puis exécuter le runbook |
 | 20/09/2026 | Contrats d’exploitation préproduction | 45 tests `backend/tests/ops` passent ; scripts shell, Compose digest-pinné, réseau privé, healthchecks, allowlists de secrets, wrappers one-shot, backup/restore et rotation contrôlés | provisionner le VPS de préproduction puis exécuter le runbook |
 | 21/09/2026 | Simulation locale complète du stack | registre npm vérifié depuis l’hôte et Docker ; build frontend complet, migration Alembic `20260920_0090`, PostgreSQL, ClamAV, backend, frontend, Caddy et trois workers démarrés ; HTTPS local via Caddy retourne `200` avec `database=ok`, `schema=ok`, `clamav=ok` ; port 80 occupé isolé par override éphémère `18080/18443` ; correction minimale du PID Nginx non-root dans `ops/docker/frontend.Dockerfile` ; 45 tests ops, syntaxe shell et `git diff --check` passent | provisionner le VPS de préproduction puis exécuter le runbook |
-| 21/09/2026 | Audit de provisionnement VPS | runbook relu ; aucun fournisseur, CLI cloud, domaine, secret préproduction ou hôte SSH de VPS n’est configuré sur le poste ; les contrôles statiques et la simulation locale restent disponibles, mais une création réelle ne peut pas être exécutée sans compte/fournisseur autorisé | fournir un fournisseur VPS et un accès de provisionnement, puis exécuter le runbook |
+| 21/09/2026 | Décision d’avancer sans VPS | aucun fournisseur, CLI cloud, domaine, secret préproduction ou hôte SSH n’est disponible ; la préproduction locale Docker couvre déjà PostgreSQL, ClamAV, migrations, backend, frontend, Caddy, workers, sauvegarde/restauration et rotation simulée ; DNS public, firewall distant, stockage hors site et reprise matérielle restent différés | industrialiser la simulation locale reproductible, puis rejouer restauration, rotation et smoke tests |
 
 ## 7. Règle de mise à jour
 
