@@ -63,21 +63,53 @@ def main() -> int:
         ("schedule", "Quel est le calendrier prévisionnel des travaux ?", "Planning"),
     ]
     results = []
+    sensitive_markers = ("€", "BPU", "DPGF", "IBAN", "SIRET", "marge")
     for label, query, expected in checks:
         found = retrieval.retrieve(query=query, scope=scope, top_k=3)
         sources = [str(result.chunk.locator["source"]) for result in found]
-        results.append({"label": label, "sources": sources, "expected_found": any(expected in source for source in sources)})
+        locators_complete = all(
+            "source" in result.chunk.locator and "chunk" in result.chunk.locator
+            for result in found
+        )
+        financial_marker_leak = any(
+            marker.lower() in result.chunk.text.lower()
+            for result in found
+            for marker in sensitive_markers
+        )
+        results.append(
+            {
+                "label": label,
+                "sources": sources,
+                "expected_found": any(expected in source for source in sources),
+                "locators_complete": locators_complete,
+                "financial_marker_leak": financial_marker_leak,
+            }
+        )
     try:
         retrieval.retrieve(query="Quel est le montant du BPU et la marge ?", scope=scope, top_k=3)
     except FinancialRetrievalQueryRejected as error:
         refusal = {"status": "REFUSED", "code": str(error)}
     else:
         refusal = {"status": "ERROR", "code": "financial query was not refused"}
+    entries_before_cleanup = len(retrieval._index._entries)  # in-memory qualification index only
+    retrieval._index._entries.clear()
+    entries_after_cleanup = len(retrieval._index._entries)
     output = {
-        "status": "ok" if all(item["expected_found"] for item in results) and refusal["status"] == "REFUSED" else "FAILED",
+        "status": "ok"
+        if all(
+            item["expected_found"]
+            and item["locators_complete"]
+            and not item["financial_marker_leak"]
+            for item in results
+        )
+        and refusal["status"] == "REFUSED"
+        and entries_after_cleanup == 0
+        else "FAILED",
         "chunks": len(chunks),
         "queries": results,
         "financial_refusal": refusal,
+        "entries_before_cleanup": entries_before_cleanup,
+        "entries_after_cleanup": entries_after_cleanup,
         "elapsed_ms": round((perf_counter() - started) * 1000, 2),
         "persistent_index": False,
         "database_writes": 0,
