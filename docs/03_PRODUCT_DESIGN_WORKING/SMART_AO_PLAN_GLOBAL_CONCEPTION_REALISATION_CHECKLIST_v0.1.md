@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 21 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** PHASE 11 — Qualification de production
-**Prochaine étape unique :** qualifier les critères Phase 11 restants et documenter les limites avant tout déploiement public.
+**Prochaine étape unique :** préparer le dossier GO/NO-GO local et maintenir les limites VPS/Golden DCE avant toute ouverture publique.
 
 ## 1. Rôle de ce document
 
@@ -461,6 +461,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 21/09/2026 | Audit final RAG temporaire | 3/3 ancres attendues, locators complets, 0 marqueur financier dans les réponses, refus financier `REFUSED`, 116 entrées mémoire puis 0 après nettoyage ; aucun index persistant ; preuve `SMART_AO_PHASE11_DCE_RAG_ANCHOR_REFUSAL_AUDIT_v0.1.md` | publier le verdict RAG local et conserver l’indexation persistante désactivée jusqu’à la décision d’exploitation |
 | 21/09/2026 | Verdict RAG local publié | `SMART_AO_PHASE11_LOCAL_RAG_VERDICT_v0.1.md` classe le RAG `QUALIFIÉ POUR EXPÉRIMENTATION LOCALE — PAS DE PRODUCTION` ; flags runtime restent à `0`, aucun index permanent, corpus et limites explicités | qualifier les critères Phase 11 restants et documenter les limites avant tout déploiement public |
 | 21/09/2026 | Suite backend complète après extras | 1 718 tests passent sur la passe complète ; 2 échecs initiaux dus à `icalendar` retiré par la synchronisation uv ; extra calendrier restauré et 2/2 tests ciblés passent ; couverture effective verte sur 1 720 tests collectés ; 10 avertissements non fonctionnels | qualifier les critères Phase 11 restants et documenter les limites avant tout déploiement public |
+| 21/09/2026 | Verdict qualification Phase 11 | backend 1 720 tests collectés verts, frontend 187/187, ops 45/45, pip-audit sans vulnérabilité, pnpm audit officiel 0, Bandit vert, stack local/restauration/rotation/RAG temporaire vérifiés ; verdict `QUALIFIÉ LOCALEMENT — PAS PRÊT POUR PRODUCTION PUBLIQUE` dans `SMART_AO_PHASE11_QUALIFICATION_VERDICT_v0.1.md` ; VPS, Golden DCE réel, intégrations externes et detect-secrets indisponible restent des limites | préparer le dossier GO/NO-GO local et maintenir les limites VPS/Golden DCE avant toute ouverture publique |
 
 ## 7. Règle de mise à jour
 
