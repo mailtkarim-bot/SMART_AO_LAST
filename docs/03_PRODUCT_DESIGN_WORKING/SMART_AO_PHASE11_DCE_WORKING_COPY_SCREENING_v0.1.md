@@ -14,7 +14,7 @@ Une copie `redacted/` a été produite par remplacement déterministe des établ
 
 Un test BGE one-shot a encodé 10 fragments redacted en vecteurs de dimension 1 024 en 18 390,81 ms, sans indexation ni écriture PostgreSQL.
 
-La qualification RAG temporaire a ensuite encodé 116 fragments redacted et trois requêtes en dimension 1 024, en 181 556,10 ms avec zéro écriture DB et aucun index persistant. La requête d’échéance retrouve le RC, la requête de planning retrouve le planning ; la requête sur les prescriptions communes ne remonte pas encore le CCTC en premier résultat. Le retrieval est donc `PARTIAL` et doit être ajusté avant toute promotion.
+La première qualification RAG temporaire a encodé 116 fragments redacted et trois requêtes en dimension 1 024, en 181 556,10 ms avec zéro écriture DB ; la requête prescriptions communes était `PARTIAL`. La correction minimale ajoute le titre du document dans le texte vectorisé, sans modifier le fragment source. Rejouée sur 116 fragments, elle retrouve RC, CCTC et Planning dans le top 3 en 201 814,11 ms, toujours sans index persistant.
 
 ## Pourquoi le paquet reste en revue
 
@@ -28,3 +28,5 @@ La suppression par motifs ne suffit pas à anonymiser ce DCE : les textes conser
 - revue manuelle des identités, adresses, sites, dates sensibles et mentions financières restantes avant toute activation RAG.
 
 **Manifestes temporaires :** `/tmp/smartao-dce-corpus-work/manifest.json`, `sanitized-manifest.json` et `redacted-manifest.json`.
+
+La commande reproductible de qualification est `scripts/qualify_redacted_rag.py`. Elle ajoute seulement le nom de source à l’entrée d’embedding ; le texte, la source et les ancres restent inchangés.
