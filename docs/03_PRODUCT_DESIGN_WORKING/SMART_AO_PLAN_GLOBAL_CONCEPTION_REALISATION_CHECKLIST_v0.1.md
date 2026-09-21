@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 21 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** PHASE 11 — Qualification de production
-**Prochaine étape unique :** publier le verdict RAG local et conserver l’indexation persistante désactivée jusqu’à la décision d’exploitation.
+**Prochaine étape unique :** qualifier les critères Phase 11 restants et documenter les limites avant tout déploiement public.
 
 ## 1. Rôle de ce document
 
@@ -459,6 +459,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 21/09/2026 | Refus financier explicite RAG | `RagRetrievalService` refuse une requête financière hors scope privé avec `FinancialRetrievalQueryRejected/FINANCIAL_RETRIEVAL_SCOPE_REQUIRED` ; 2 tests de contrat, suite knowledge 7/7 et ops 45/45 passent ; aucune indexation persistante | rejouer le corpus redacted via le service RAG avec refus financier, puis supprimer l’index jetable |
 | 21/09/2026 | Rejeu via le vrai service RAG | 116 fragments redacted indexés en mémoire, RC/CCTC/Planning retrouvés dans le top 3 ; requête financière refusée `FINANCIAL_RETRIEVAL_SCOPE_REQUIRED` ; 215 732,69 ms, zéro écriture DB, index détruit à la fin ; script `scripts/qualify_redacted_rag_service.py` | auditer la réponse RAG, les ancres et la suppression de l’index jetable |
 | 21/09/2026 | Audit final RAG temporaire | 3/3 ancres attendues, locators complets, 0 marqueur financier dans les réponses, refus financier `REFUSED`, 116 entrées mémoire puis 0 après nettoyage ; aucun index persistant ; preuve `SMART_AO_PHASE11_DCE_RAG_ANCHOR_REFUSAL_AUDIT_v0.1.md` | publier le verdict RAG local et conserver l’indexation persistante désactivée jusqu’à la décision d’exploitation |
+| 21/09/2026 | Verdict RAG local publié | `SMART_AO_PHASE11_LOCAL_RAG_VERDICT_v0.1.md` classe le RAG `QUALIFIÉ POUR EXPÉRIMENTATION LOCALE — PAS DE PRODUCTION` ; flags runtime restent à `0`, aucun index permanent, corpus et limites explicités | qualifier les critères Phase 11 restants et documenter les limites avant tout déploiement public |
 
 ## 7. Règle de mise à jour
 
