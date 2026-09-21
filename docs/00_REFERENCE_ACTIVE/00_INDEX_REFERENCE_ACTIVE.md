@@ -1,6 +1,6 @@
 # SMART AO — Index des références actives
 
-**Date : 14 septembre 2026**  
+**Date : 21 septembre 2026**
 **Statut : INDEX DE PRÉCÉDENCE DOCUMENTAIRE**
 
 Cet index indique quel document fait foi pour chaque type de décision. Il ne crée aucune règle produit supplémentaire.
@@ -29,13 +29,15 @@ Répond à : **« Quelles règles visuelles et interactionnelles communes chaque
 
 Il définit le shell, le langage métier, les états, la preuve, la confidentialité, l’IA contextuelle, le responsive et la méthode de conception par expériences.
 
-## 4 — Expériences en cours de conception
+## 4 — Expériences, preuves et qualification
 
-[`../03_PRODUCT_DESIGN_WORKING/SMART_AO_Experience_Utilisateur_Parcours_Pages_WORK_PROPOSAL_v0.1.md`](../03_PRODUCT_DESIGN_WORKING/SMART_AO_Experience_Utilisateur_Parcours_Pages_WORK_PROPOSAL_v0.1.md)
+[`../03_PRODUCT_DESIGN_WORKING/SMART_AO_PLAN_GLOBAL_CONCEPTION_REALISATION_CHECKLIST_v0.1.md`](../03_PRODUCT_DESIGN_WORKING/SMART_AO_PLAN_GLOBAL_CONCEPTION_REALISATION_CHECKLIST_v0.1.md)
 
-Répond à : **« Comment une personne accomplit-elle réellement son travail de bout en bout ? »**
+Répond à : **« Quelle preuve reste active, quel parcours est en cours et quelle est la prochaine sortie ? »**
 
-Ce document est un `WORK_PROPOSAL`. Il ne devient une autorité qu’après arbitrage propriétaire. Une expérience peut porter individuellement le statut `OWNER EXPERIENCE FREEZE` lorsque son périmètre, son parcours, son contenu, ses états et ses critères ont été validés.
+Les anciens documents `WORK_PROPOSAL` sont historiques et se trouvent dans `_ARCHIVE/`. Les preuves et `OWNER EXPERIENCE FREEZE` encore utiles restent dans `03_PRODUCT_DESIGN_WORKING/`.
+
+Le référentiel des dépendances de travail est [`DEPENDENCIES_WORKING/SMART_AO_V8_DEPENDANCES_ARCHITECTURE_WORK_PROPOSAL.md`](DEPENDENCIES_WORKING/SMART_AO_V8_DEPENDANCES_ARCHITECTURE_WORK_PROPOSAL.md). Il décrit l’existant et les options candidates ; il ne constitue pas un Architecture Freeze.
 
 ## 5 — Références d’implémentation existante
 

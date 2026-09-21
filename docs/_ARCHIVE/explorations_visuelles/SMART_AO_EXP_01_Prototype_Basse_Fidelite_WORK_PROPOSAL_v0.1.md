@@ -3,7 +3,7 @@
 
 **Date : 14 septembre 2026**  
 **Statut : PROTOTYPE CANDIDATE — textuel, non visuel, non normatif**  
-**Référence de contenu :** [EXP-01 — Expériences utilisateur, parcours et contrats de pages](SMART_AO_Experience_Utilisateur_Parcours_Pages_WORK_PROPOSAL_v0.1.md)
+**Référence de contenu :** [EXP-01 — Expériences utilisateur, parcours et contrats de pages](../work_reviews/SMART_AO_Experience_Utilisateur_Parcours_Pages_WORK_PROPOSAL_v0.1.md)
 
 ## Objet
 
@@ -203,4 +203,3 @@ L’état vide remplace les trois blocs par une explication claire et une action
 ## Sortie attendue
 
 Le prototype peut être présenté à la revue propriétaire dès que chaque scénario est parcourable. À cette étape, il devra être corrigé, puis EXP-01 pourra éventuellement recevoir le statut `OWNER EXPERIENCE FREEZE`. Les images détaillées viennent seulement après ce gel.
-

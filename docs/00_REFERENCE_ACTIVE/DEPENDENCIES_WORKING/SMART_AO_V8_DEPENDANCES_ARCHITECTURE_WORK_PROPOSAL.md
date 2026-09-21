@@ -5,7 +5,7 @@
 **Date de cadrage initial :** 17 septembre 2026  
 **Date de contre-révision :** 17 septembre 2026  
 **Périmètre :** SMART_AO V8 — application BTP d’analyse DCE, décision Go/No-Go, préparation, chiffrage, sécurisation et dépôt  
-**Destination provisoire recommandée dans le dépôt :** `docs/working/architecture/SMART_AO_V8_DEPENDANCES_ARCHITECTURE_WORK_PROPOSAL_v0.2.md`
+**Emplacement de travail actuel :** `docs/00_REFERENCE_ACTIVE/DEPENDENCIES_WORKING/SMART_AO_V8_DEPENDANCES_ARCHITECTURE_WORK_PROPOSAL.md`
 
 **Autorités amont :** le Cahier directeur Produit & Métier, le Catalogue UX consolidé, les Fondations UX actives et les futurs contrats d’expériences priment sur le présent document pour toute décision visible, métier, d’autorité, de confidentialité ou de parcours. Le présent référentiel décrit l’existant V8, les contraintes techniques connues et les options candidates ; il ne doit pas transformer une hypothèse technique en décision produit irréversible.
 
