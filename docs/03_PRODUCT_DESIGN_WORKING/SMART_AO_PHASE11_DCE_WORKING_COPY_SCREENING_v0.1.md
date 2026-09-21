@@ -14,6 +14,8 @@ Une copie `redacted/` a été produite par remplacement déterministe des établ
 
 Un test BGE one-shot a encodé 10 fragments redacted en vecteurs de dimension 1 024 en 18 390,81 ms, sans indexation ni écriture PostgreSQL.
 
+La qualification RAG temporaire a ensuite encodé 116 fragments redacted et trois requêtes en dimension 1 024, en 181 556,10 ms avec zéro écriture DB et aucun index persistant. La requête d’échéance retrouve le RC, la requête de planning retrouve le planning ; la requête sur les prescriptions communes ne remonte pas encore le CCTC en premier résultat. Le retrieval est donc `PARTIAL` et doit être ajusté avant toute promotion.
+
 ## Pourquoi le paquet reste en revue
 
 La suppression par motifs ne suffit pas à anonymiser ce DCE : les textes conservés contiennent encore des noms d’établissement, sites, codes postaux et marqueurs d’adresse. Le paquet est donc exploitable pour une revue humaine et une préparation de manifeste, mais il n’est pas encore autorisé pour l’indexation BGE/RAG.

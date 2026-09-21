@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 21 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** PHASE 11 — Qualification de production
-**Prochaine étape unique :** obtenir la validation propriétaire du paquet redacted, puis qualifier l’indexation RAG one-shot non financière.
+**Prochaine étape unique :** corriger le retrieval des prescriptions communes et rejouer la qualification RAG temporaire, sans index permanent.
 
 ## 1. Rôle de ce document
 
@@ -453,6 +453,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 21/09/2026 | Copie de travail DCE filtrée | 10 PDF copiés hors Git, 30 320 lignes extraites, 567 lignes retirées par motifs financiers/identitaires/secrets, 19 178 lignes techniques conservées ; noms d’établissement, sites, codes postaux et adresses restent visibles, donc statut `REVIEW_REQUIRED` et aucune indexation ; preuve `SMART_AO_PHASE11_DCE_WORKING_COPY_SCREENING_v0.1.md` | revoir manuellement l’anonymisation et les droits avant toute indexation BGE/RAG |
 | 21/09/2026 | Copie redacted et embedding BGE one-shot | seconde passe : 687 lignes redacted, motifs email/téléphone/code postal/adresse absents ; 10 fragments encodés offline en 18 390,81 ms, dimension 1 024, zéro écriture DB ; statut toujours `REVIEW_REQUIRED` avant index permanent | faire approuver la copie redacted puis qualifier l’indexation RAG one-shot non financière |
 | 21/09/2026 | Paquet de revue propriétaire corpus DCE | paquet `SMART_AO_PHASE11_DCE_CORPUS_OWNER_REVIEW_PACKET_v0.1.md` produit avec périmètre, exclusions, hashes, limites, critères de requêtes et décision `APPROUVÉ/REFUSÉ` ; index permanent toujours interdit | obtenir la validation propriétaire du paquet redacted |
+| 21/09/2026 | Qualification RAG one-shot redacted | 116 fragments redacted, 3 requêtes, vecteurs dimension 1 024, 181 556,10 ms, zéro écriture DB et aucun index persistant ; échéance → RC et planning → planning ; prescriptions communes → résultat CCTP/CCAP, donc retrieval `PARTIAL` | corriger le retrieval des prescriptions communes et rejouer la qualification RAG temporaire |
 
 ## 7. Règle de mise à jour
 
