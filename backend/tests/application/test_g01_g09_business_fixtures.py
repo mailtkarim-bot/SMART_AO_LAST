@@ -219,6 +219,7 @@ def test_g04_missing_lifting_cost_is_a_blocking_case_gap(session_factory) -> Non
             membership_id=None,
         )
 
+    assert projection is not None
     gap = next(item for item in projection.items if item.item_id == gap_id)
     assert fixture.expected_final_state == "COST_HYPOTHESIS_REQUIRED"
     assert gap.item_kind == "CAPABILITY_GAP"
@@ -283,7 +284,7 @@ def test_g06_ill_defined_deadline_stays_unknown() -> None:
         def states_for_observations(self, **_kwargs):
             return {self.record.id: BoampObservationState(case_id=uuid4())}
 
-    projection = PatronBoampObservationService(repository=Repository()).read(
+    projection = PatronBoampObservationService(repository=Repository()).read(  # type: ignore[arg-type]
         session=SimpleNamespace(scalar=lambda _statement: SimpleNamespace(id=uuid4())),
         tenant_id=uuid4(),
         actor_id=uuid4(),

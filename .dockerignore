@@ -5,6 +5,14 @@ backend/tests/
 **/*.pyc
 .git/
 .github/
+.venv/
+**/node_modules/
+.cache/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.codex/
+.serena/
 
 # Documentation is not an input to either production image.
 docs/

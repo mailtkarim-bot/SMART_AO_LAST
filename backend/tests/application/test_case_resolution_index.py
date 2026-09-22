@@ -95,7 +95,7 @@ def test_case_resolution_index_preserves_native_states_and_assignment_scope(
         ),
         now=NOW,
     )
-    task_id = UUID(task.aggregate_refs[0]["aggregate_id"])
+    task_id = UUID(str(task.aggregate_refs[0]["aggregate_id"]))
     info = _info_service(session_factory)
     request = CreateInformationRequestCommand(
         command_id=uuid4(),

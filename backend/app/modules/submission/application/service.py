@@ -39,6 +39,7 @@ from app.platform.events.dispatcher import (
     CommandContext,
     CommandDispatcher,
     CommandExecutionError,
+    CommandHandler,
     DispatchResult,
     HandlerOutcome,
     PendingDomainEvent,
@@ -795,7 +796,7 @@ class AuthorizeSubmissionPackageHandler:
 
 def submission_handlers(
     *, decision_gate_reader: SubmissionDecisionGateReader | None = None
-) -> dict[str, object]:
+) -> dict[str, CommandHandler]:
     handler = PrepareSubmissionPackageHandler(decision_gate_reader=decision_gate_reader)
     authorization_handler = AuthorizeSubmissionPackageHandler(
         decision_gate_reader=decision_gate_reader

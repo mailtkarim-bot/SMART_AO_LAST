@@ -70,6 +70,8 @@ def build_patron_action_router(
         actor = _resolve_context(
             authorization=authorization, context_resolver=security_runtime.context_resolver
         )
+        if outcome_service is None:
+            raise HTTPException(status_code=503, detail="CASE_OUTCOME_SERVICE_UNAVAILABLE")
         try:
             result = outcome_service.transmit(
                 actor=actor,
@@ -95,6 +97,8 @@ def build_patron_action_router(
         actor = _resolve_context(
             authorization=authorization, context_resolver=security_runtime.context_resolver
         )
+        if outcome_service is None:
+            raise HTTPException(status_code=503, detail="CASE_OUTCOME_SERVICE_UNAVAILABLE")
         try:
             rows = outcome_service.list_for_case(
                 actor=actor, case_id=case_id, now=datetime.now(tz=UTC)
@@ -126,6 +130,8 @@ def build_patron_action_router(
         actor = _resolve_context(
             authorization=authorization, context_resolver=security_runtime.context_resolver
         )
+        if outcome_service is None:
+            raise HTTPException(status_code=503, detail="CASE_OUTCOME_SERVICE_UNAVAILABLE")
         try:
             result = outcome_service.execute(
                 actor=actor,

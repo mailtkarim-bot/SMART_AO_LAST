@@ -304,4 +304,4 @@ def test_submission_evidence_rejects_denied_capability(services, session_factory
     )
     with pytest.raises(PermissionError, match="AUTHORIZATION_DENIED"):
         evidence.execute(actor=patron, command=command, now=NOW)
-    assert evidence._policy.request.mfa_required is True  # noqa: SLF001
+    assert evidence._policy.request.mfa_required is True  # type: ignore[attr-defined]  # noqa: SLF001

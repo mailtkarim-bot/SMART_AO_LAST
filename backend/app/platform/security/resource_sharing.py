@@ -184,7 +184,8 @@ class ResourceSharingService:
                 )
         if expired:
             raise PermissionError("SHARE_NOT_AVAILABLE")
-        assert shared is not None
+        if shared is None:
+            raise PermissionError("SHARE_NOT_AVAILABLE")
         return shared
 
     def revoke(

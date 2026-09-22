@@ -31,14 +31,16 @@ command -v gzip >/dev/null 2>&1 || fail "gzip is required"
 command -v openssl >/dev/null 2>&1 || fail "openssl is required"
 
 umask 077
-cat >"${ENV_FILE}" <<'EOF'
+LOCAL_DB_PASSWORD="$(openssl rand -hex 16)"
+LOCAL_JWT_KEY="$(openssl rand -hex 32)"
+cat >"${ENV_FILE}" <<EOF
 SMART_AO_PUBLIC_HOST=localhost
-SMART_AO_DATABASE_URL=postgresql+psycopg://smart_ao:smart_ao_local_only@postgres:5432/smart_ao
+SMART_AO_DATABASE_URL=postgresql+psycopg://smart_ao:${LOCAL_DB_PASSWORD}@postgres:5432/smart_ao
 POSTGRES_DB=smart_ao
 POSTGRES_USER=smart_ao
-POSTGRES_PASSWORD=smart_ao_local_only
-PGPASSWORD=smart_ao_local_only
-SMART_AO_JWT_SIGNING_KEY=smart_ao_local_jwt_key_local_only_32_bytes_minimum
+POSTGRES_PASSWORD=${LOCAL_DB_PASSWORD}
+PGPASSWORD=${LOCAL_DB_PASSWORD}
+SMART_AO_JWT_SIGNING_KEY=${LOCAL_JWT_KEY}
 SMART_AO_JWT_ISSUER=smart-ao-local-preprod
 SMART_AO_JWT_AUDIENCE=smart-ao-local-web
 SMART_AO_MFA_ENABLED=0

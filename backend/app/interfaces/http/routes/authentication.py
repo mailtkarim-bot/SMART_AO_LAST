@@ -400,7 +400,7 @@ def build_authentication_router(*, runtime: AuthenticationHttpRuntime) -> APIRou
                 reason_code=str(error),
             )
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=str(error),
             ) from error
         runtime.rate_limiter.record_success(namespace="mfa", identity=identity, source_ip=source_ip)
@@ -456,7 +456,7 @@ def build_authentication_router(*, runtime: AuthenticationHttpRuntime) -> APIRou
                 reason_code=str(error),
             )
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=str(error),
             ) from error
         runtime.rate_limiter.record_success(namespace="mfa", identity=identity, source_ip=source_ip)
@@ -529,7 +529,7 @@ def build_authentication_router(*, runtime: AuthenticationHttpRuntime) -> APIRou
                 reason_code=str(error),
             )
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=str(error),
             ) from error
         runtime.rate_limiter.record_success(
@@ -584,7 +584,7 @@ def build_authentication_router(*, runtime: AuthenticationHttpRuntime) -> APIRou
                 namespace="mfa", identity=identity, source_ip=source_ip
             )
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=str(error),
             ) from error
         runtime.rate_limiter.record_success(namespace="mfa", identity=identity, source_ip=source_ip)

@@ -54,7 +54,9 @@ class FixedPasswordHasher:
 
 class FixedPasswordVerifier:
     def verify(self, *, password_hash: str, password: str) -> bool:
-        return password_hash == "$argon2id$accept-fixed" and password == "Invitee#Password123"
+        return password_hash == "$argon2id$accept-fixed" and password == (
+            "Invitee#Password123"  # pragma: allowlist secret
+        )
 
 
 @pytest.fixture(autouse=True)
@@ -145,9 +147,7 @@ def test_invitation_is_nominative_reissued_expiring_and_non_disclosing(
     assert valid.status_code == 204 and valid.content == b""
 
     clock.current += timedelta(minutes=1)
-    reissued = client.post(
-        f"/api/v1/patron/invitations/{first['invitation_id']}/reissue"
-    )
+    reissued = client.post(f"/api/v1/patron/invitations/{first['invitation_id']}/reissue")
     assert reissued.status_code == 200
     second = reissued.json()
     assert second["invitation_id"] == first["invitation_id"]
@@ -240,7 +240,7 @@ def test_invitation_acceptance_is_one_time_activates_identity_and_stays_before_m
 
     accepted = client.post(
         "/api/v1/invitations/accept",
-        json={"token": token, "password": "Invitee#Password123"},
+        json={"token": token, "password": "Invitee#Password123"},  # pragma: allowlist secret
     )
     assert accepted.status_code == 204 and accepted.content == b""
 
@@ -271,7 +271,7 @@ def test_invitation_acceptance_is_one_time_activates_identity_and_stays_before_m
     clock.current += timedelta(days=7)
     expired = client.post(
         "/api/v1/invitations/accept",
-        json={"token": second_token, "password": "Invitee#Password123"},
+        json={"token": second_token, "password": "Invitee#Password123"},  # pragma: allowlist secret
     )
     assert expired.status_code == 404
     with session_factory() as session:
@@ -289,7 +289,7 @@ def test_invitation_acceptance_is_one_time_activates_identity_and_stays_before_m
         clock=clock,
     ).login(
         email="invitee@example.test",
-        password="Invitee#Password123",
+        password="Invitee#Password123",  # pragma: allowlist secret
         tenant_id=tenant_id,
     )
     with session_factory() as session:
@@ -299,7 +299,7 @@ def test_invitation_acceptance_is_one_time_activates_identity_and_stays_before_m
 
     reused = client.post(
         "/api/v1/invitations/accept",
-        json={"token": token, "password": "Invitee#Password123"},
+        json={"token": token, "password": "Invitee#Password123"},  # pragma: allowlist secret
     )
     assert reused.status_code == 404
     assert reused.json() == {"detail": "INVITATION_UNAVAILABLE"}
@@ -307,6 +307,6 @@ def test_invitation_acceptance_is_one_time_activates_identity_and_stays_before_m
 
     invalid_password = client.post(
         "/api/v1/invitations/accept",
-        json={"token": "unknown-token", "password": "short"},
+        json={"token": "unknown-token", "password": "short"},  # pragma: allowlist secret
     )
     assert invalid_password.status_code == 404

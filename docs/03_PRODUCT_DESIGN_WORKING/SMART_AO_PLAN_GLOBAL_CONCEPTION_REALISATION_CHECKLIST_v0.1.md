@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 21 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** PHASE 11 — Qualification de production
-**Prochaine étape unique :** poursuivre la conception et la qualification locale des parcours restants, sans ouverture publique.
+**Prochaine étape unique :** traiter les écarts de recette locale bornée et maintenir le NO-GO public.
 
 ## 1. Rôle de ce document
 
@@ -281,12 +281,12 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 - [x] Suites unitaires, intégration PostgreSQL, contrats, end-to-end et non-régression Golden ; 1 717 tests backend passent, 2 tests PIL sont ignorés faute de dépendance optionnelle.
 - [x] Vérifier la sécurité de production, les secrets, les dépendances et les uploads hostiles ; audit dans `SMART_AO_PHASE11_PRODUCTION_SECURITY_AUDIT_v0.1.md`.
 - [x] Exécuter une preuve isolée de restauration PostgreSQL et de rotation JWT avec environnement éphémère ; 127 tables, tête `20260920_0090`, trigger append-only et rotation atomique vérifiés.
-- [>] Exécuter la restauration et la rotation sur l’environnement VPS de préproduction réel.
-- [ ] Fiabilité : idempotence, concurrence, reprise, files de travail et opérations d'issue inconnue.
-- [ ] Performance : budgets mesurés, gros DCE, charge, stockage et coûts IA.
-- [ ] Exploitation : logs, métriques, alertes, sauvegarde/restauration et procédures d'incident.
-- [ ] Migration additive répétée sur une copie représentative et rollback vérifié.
-- [ ] Préproduction, recette métier, pilote encadré et correction des écarts.
+- [ ] Exécuter la restauration et la rotation sur l’environnement VPS de préproduction réel ; aucun VPS disponible, preuve reportée.
+- [x] Fiabilité locale : idempotence, concurrence, reprise, files de travail et opérations d’issue inconnue couvertes par les 1 720 tests backend et la simulation locale ; limites VPS conservées.
+- [x] Performance locale bornée : 100 requêtes à concurrence 10 en 480 ms, soit 208,33 req/s sur ce poste ; aucun budget VPS ou coût IA déduit.
+- [x] Exploitation locale : logs de smoke, métriques de charge, readiness, panne/récupération ClamAV, sauvegarde/restauration et rotation éphémère vérifiés ; supervision distante hors périmètre.
+- [x] Migration additive répétée sur une base locale jetable et rollback vérifié : deux `upgrade head`, `downgrade -1`, puis remontée à `20260920_0090`, 127 tables conservées.
+- [ ] Préproduction, recette métier, pilote encadré et correction des écarts ; recette locale bornée qualifiée, préproduction réelle et pilote restant hors périmètre.
 
 **Sortie de phase :** les critères de production sont mesurés sur un environnement représentatif et les risques résiduels sont acceptés explicitement.
 
@@ -465,6 +465,18 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 21/09/2026 | Dossier GO/NO-GO local | paquet `SMART_AO_PHASE11_GO_NO_GO_LOCAL_PACKET_v0.1.md` produit ; preuves vertes, bloqueurs NO-GO public, conditions de réouverture et décision propriétaire attendue explicités ; proposition `GO CONDITIONNEL LOCAL / NO-GO PUBLIC` | soumettre le dossier GO/NO-GO local à la décision propriétaire |
 | 21/09/2026 | Soumission GO/NO-GO au propriétaire | dossier soumis avec `NO-GO PUBLIC MAINTENU` coché et `GO CONDITIONNEL LOCAL` laissé en attente ; aucune ouverture ni donnée client autorisée | recueillir la décision propriétaire sur le GO conditionnel local |
 | 21/09/2026 | Décision propriétaire GO conditionnel local | approbation explicite reçue : « J’approuve le GO conditionnel local et je maintiens le NO-GO public » ; conception, code et qualification locale autorisés ; VPS et ouverture publique reportés à la phase d’exploitation | poursuivre la conception et la qualification locale des parcours restants, sans ouverture publique |
+| 22/09/2026 | Reprise des gates backend après audit | Ruff, format et mypy passent sur 688 fichiers ; erreurs de production et contrats de test corrigées ; la suite complète a donné 1 719 réussites et un seul échec de typage de faux policy, corrigé puis rejoué avec succès ; PostgreSQL Docker local utilisé | rejouer la suite backend complète après correction du dernier contrat de test |
+| 22/09/2026 | Rejeu backend complet après correction | PostgreSQL Docker local, tête Alembic appliquée automatiquement ; `uv run pytest backend/tests -q` : **1 720 tests passés**, 10 avertissements non bloquants, 658,55 s ; aucun échec backend | poursuivre la qualification locale des critères Phase 11 restants, sans ouverture publique |
+| 22/09/2026 | Simulation préproduction locale bornée | contexte Docker réduit de plus d'1 Go à 1,565 Mo via `.dockerignore` ; build frontend/backend, HTTPS readiness `database/schema/clamav=ok`, 20 requêtes concurrentes, 100 requêtes à concurrence 10 en 480 ms (208,33 req/s), redémarrages backend/frontend/PostgreSQL et workers, panne/récupération ClamAV, sauvegarde, restauration isolée de 127 tables à `20260920_0090` et rotation JWT mode 600 : **PASS** ; aucune extrapolation VPS | qualifier localement la migration additive répétée et le rollback contrôlé |
+| 22/09/2026 | Migration additive répétée et rollback local | base PostgreSQL temporaire dédiée ; `upgrade head` initial et répété idempotents (`20260920_0090`, 127 tables), `downgrade -1` vers `20260920_0089`, puis `upgrade head` restauré avec la même tête et le même nombre de tables ; base supprimée après preuve | préparer la recette métier locale bornée, sans pilote public ni ouverture publique |
+| 22/09/2026 | Recette métier locale bornée | paquet `SMART_AO_PHASE11_RECETTE_METIER_LOCALE_BORNEE_v0.1.md` ; G01–G09, P6/P7 et contrats ops : 62 tests verts ; frontend : 187/187 tests verts sur 34 fichiers ; aucune donnée client ni intégration externe ; verdict `PASS LOCAL BORNÉ`, `NO-GO PUBLIC` maintenu | traiter les écarts de recette locale bornée et maintenir le NO-GO public |
+| 22/09/2026 | Requalification des écarts de recette | typecheck, lint et build frontend rejoués avec succès ; écarts restants classés sans faux succès : lecteur d’écran réel, Golden DCE/droits, VPS et reprise matérielle, fournisseurs externes, detect-secrets/Trivy nécessitent un environnement ou une attestation absente localement | poursuivre les corrections et preuves locales sans fermer artificiellement les limites externes |
+| 22/09/2026 | Corrections locales et rejeu sécurité | assertions applicatives remplacées par des refus explicites, hash factice reconnu comme fixture ; `pip-audit` sans vulnérabilité connue, `pnpm audit` officiel à 0 vulnérabilité, Bandit complet à 0 alerte ; tests ciblés invariants 10/10 verts ; limites externes inchangées | poursuivre les corrections et preuves locales sans fermer artificiellement les limites externes |
+| 22/09/2026 | Rejeu complet après corrections locales | backend `1 720/1 720` tests verts avec PostgreSQL Docker local, 10 avertissements non bloquants ; frontend `187/187`, typecheck, lint et build verts ; hook `detect-secrets` CI vert avec baseline réaligné ; Trivy et limites externes restent ouverts | poursuivre les corrections et preuves locales sans fermer artificiellement les limites externes |
+| 22/09/2026 | Revue statique des images locales | images backend/workers et frontend inspectées en utilisateurs non-root (`smartao`, `nginx`) ; bases digest-pinnées vérifiées ; healthcheck frontend dans l’image, healthchecks backend dans Compose ; Compose refuse correctement une configuration sans secrets runtime | poursuivre les corrections et preuves locales sans fermer artificiellement les limites externes |
+| 22/09/2026 | Réduction des avertissements API | constantes `HTTP_422_UNPROCESSABLE_ENTITY` remplacées par `HTTP_422_UNPROCESSABLE_CONTENT` ; Ruff, format et mypy verts ; suite API **540/540** verte ; seul avertissement restant issu de Starlette/httpx, hors code projet | poursuivre les corrections et preuves locales sans fermer artificiellement les limites externes |
+| 22/09/2026 | Simulation locale après génération dynamique des secrets | stack éphémère reconstruite avec secrets aléatoires, smoke HTTPS/DB/schema/ClamAV vert, charge bornée 100/concurrence 10 en 1 170 ms (85,47 req/s), redémarrages, panne/récupération ClamAV, backup/restauration 127 tables et rotation JWT : **PASS** ; mesure locale non extrapolée au VPS | poursuivre les corrections et preuves locales sans fermer artificiellement les limites externes |
+| 22/09/2026 | Réalignement documentaire du README | quatre liens historiques supprimés remplacés par documentation active, index de références, Product Freeze v1.0, cahier technique et plan global ; vérification automatique : 6 liens locaux, 0 manquant | poursuivre les corrections et preuves locales sans fermer artificiellement les limites externes |
 
 ## 7. Règle de mise à jour
 

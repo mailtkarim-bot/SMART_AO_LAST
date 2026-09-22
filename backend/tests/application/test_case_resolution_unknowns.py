@@ -63,8 +63,5 @@ def test_opportunity_case_unknowns_keep_source_and_deterministic_identity(
         "Éligibilité et exigences non vérifiables.",
     }
     assert {"unknown:LOT_SCOPE", "unknown:DCE_NOT_RECEIVED"} <= {
-        ref
-        for item in first
-        for ref in item.source_refs
-        if ref.startswith("unknown:")
+        ref for item in first for ref in item.source_refs if ref.startswith("unknown:")
     }

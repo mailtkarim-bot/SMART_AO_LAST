@@ -145,6 +145,7 @@ class CaseOutcomeHandler:
                             "aggregate_revision": 1,
                         },
                     ),
+                    events=(),
                 )
             transmission = CaseOutcomeTransmissionRecord(
                 id=command.transmission_id,

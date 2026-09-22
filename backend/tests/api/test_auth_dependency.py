@@ -29,7 +29,7 @@ def test_business_bearer_requires_mfa() -> None:
     with pytest.raises(HTTPException) as raised:
         resolve_bearer_context(
             authorization="Bearer password-only",
-            context_resolver=SimpleNamespace(resolve=lambda **_kwargs: actor),
+            context_resolver=SimpleNamespace(resolve=lambda **_kwargs: actor),  # type: ignore[arg-type]
         )
 
     assert raised.value.status_code == 403

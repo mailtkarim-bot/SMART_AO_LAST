@@ -38,9 +38,7 @@ def test_product_freeze_is_the_only_active_product_authority() -> None:
 def test_product_freeze_and_traceability_contract_are_active() -> None:
     freeze_text = ACTIVE_FREEZE.read_text(encoding="utf-8")
     matrix = (
-        DOCS_ROOT
-        / "02_FUTURE_TECHNICAL"
-        / "SMART_AO_PRODUCT_FREEZE_TRACEABILITY_MATRIX_v1.0.md"
+        DOCS_ROOT / "02_FUTURE_TECHNICAL" / "SMART_AO_PRODUCT_FREEZE_TRACEABILITY_MATRIX_v1.0.md"
     )
     assert "PRODUCT FREEZE v1.0 — AUTORITÉ PRODUIT/MÉTIER ACTIVE" in freeze_text
     assert "Promotion effective" in freeze_text

@@ -7,12 +7,7 @@ import pytest
 from app.platform.quality.recipe_catalog import load_catalog, parse_catalog
 
 CATALOG_PATH = (
-    Path(__file__).resolve().parents[2]
-    / "app"
-    / "platform"
-    / "quality"
-    / "data"
-    / "g01_g52.json"
+    Path(__file__).resolve().parents[2] / "app" / "platform" / "quality" / "data" / "g01_g52.json"
 )
 
 

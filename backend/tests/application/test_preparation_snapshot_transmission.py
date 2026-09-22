@@ -432,7 +432,7 @@ def test_transmit_handler_emits_patron_action_event_when_writer_returns_action(
                 state="OPEN",
             )
 
-    handler = PreparationTransmissionHandler(action_writer=Writer())
+    handler = PreparationTransmissionHandler(action_writer=Writer())  # type: ignore[arg-type]
     command = TransmitPreparationSnapshotCommand(
         command_id=uuid4(),
         idempotency_key=uuid4(),

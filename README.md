@@ -24,12 +24,11 @@ Le dépôt se démarre localement avec Docker Compose ou les services de dévelo
 
 ## Documentation
 
-- [Carte documentaire](docs/reference/SMART_AO_V8_DOCUMENTATION_MAP.md)
-- [État de projet](docs/PROJECT_STATE.md)
-- [Contrat d'arborescence](docs/reference/SMART_AO_V8_ARC_01_CONTRAT_ARBORESCENCE_MODULES.md)
-- [Contrat de domaine](docs/reference/SMART_AO_V8_DOMAIN_01_AGGREGATE_OWNERSHIP_MATRIX.md)
-- [Premier slice : états et invariants](docs/reference/SMART_AO_V8_DOMAIN_03_STATE_MACHINES_INVARIANTS_FIRST_SLICE.md)
-- [Rapport global d’avancement](docs/PROJECT_PROGRESS_REPORT.md)
+- [Documentation active](docs/README_DOCUMENTATION.md)
+- [Index des références actives](docs/00_REFERENCE_ACTIVE/00_INDEX_REFERENCE_ACTIVE.md)
+- [Product Freeze v1.0](docs/00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v1.0.md)
+- [Cahier technique d’exécution](docs/02_FUTURE_TECHNICAL/SMART_AO_CAHIER_TECHNIQUE_EXECUTION_v1.0.md)
+- [Plan global de conception et réalisation](docs/03_PRODUCT_DESIGN_WORKING/SMART_AO_PLAN_GLOBAL_CONCEPTION_REALISATION_CHECKLIST_v0.1.md)
 - [Checklist durable](todo.md)
 
 ## Structure

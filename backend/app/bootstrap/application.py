@@ -357,7 +357,7 @@ from app.modules.submission.infrastructure.signature_reader import (
 from app.modules.submission.infrastructure.smtp_notifications import (
     AioSmtpSubmissionExportNotifier,
 )
-from app.platform.events.dispatcher import CommandDispatcher
+from app.platform.events.dispatcher import CommandDispatcher, CommandHandler
 from app.platform.observability.http import RequestObservabilityMiddleware
 from app.platform.persistence.schema import EXPECTED_ALEMBIC_HEAD
 from app.platform.security.audit import AuditedAuthorizationPolicy, SecurityAuditWriter
@@ -410,81 +410,79 @@ class AppRuntime:
         submission_export_notifier = _build_submission_export_notifier()
         submission_deadline_calendar = _build_submission_deadline_calendar()
         public_notice_search = _build_public_notice_search()
-        dispatcher = CommandDispatcher(
-            session_factory=session_factory,
-            handlers={
-                **enterprise_upload_handlers(),
-                "ClaimDceStagedObjectUpload": ClaimDceStagedObjectUploadHandler(),
-                "CreateConsultation": CreateConsultationHandler(),
-                "CreateCase": CreateCaseHandler(
-                    repository_factory=SqlAlchemyCaseRepository,
-                    consultation_reader_factory=SqlAlchemyConsultationRepository,
-                ),
-                "LinkCaseDceVersion": LinkCaseDceVersionHandler(),
-                "ExpireDceStagedObject": ExpireDceStagedObjectHandler(),
-                "PrepareDceStaging": PrepareDceStagingHandler(),
-                "RecordDceStagedObjectQuarantine": RecordDceStagedObjectQuarantineHandler(),
-                "RecordDceStagedObjectScan": RecordDceStagedObjectScanHandler(),
-                "RecordDceDocumentClassificationRun": RecordDceDocumentClassificationRunHandler(),
-                "RecordDceDocumentExtraction": RecordDceDocumentExtractionHandler(),
-                "RecordDceRcAnalysis": RecordDceRcAnalysisHandler(),
-                "RecordCaseDceImpactRun": RecordCaseDceImpactRunHandler(),
-                "RecordDceRequirementMaterializationRun": (
-                    RecordDceRequirementMaterializationRunHandler()
-                ),
-                "RecordDceRequirementConfirmation": RecordDceRequirementConfirmationHandler(),
-                "CreateFinancialReportDraft": CreateFinancialReportDraftHandler(),
-                "PublishFinancialReport": PublishFinancialReportHandler(),
-                **financial_report_line_handlers(),
-                **enterprise_capability_handlers(),
-                **enterprise_library_handlers(),
-                "RejectDceStagedObjectUpload": RejectDceStagedObjectUploadHandler(),
-                "RegisterDceVersion": RegisterDceVersionHandler(),
-                **assignment_handlers(),
-                **collaborator_work_task_handlers(),
-                **collaborator_capability_handlers(),
-                **collaborator_info_blocker_handlers(),
-                **patron_assignment_handlers(),
-                **preparation_handlers(
-                    storage=preparation_storage,
-                    dce_reader=SqlAlchemyPreparationDceReader(),
-                ),
-                **preparation_transmission_handlers(action_writer=PatronActionWriter()),
-                **patron_action_handlers(),
-                **case_outcome_handlers(),
-                **case_order_handlers(),
-                **patron_action_transition_handlers(),
-                **decision_risk_handlers(
-                    repository_factory=lambda _session: SqlAlchemyDecisionRiskRepository(),
-                    action_writer=PatronActionWriter(),
-                ),
-                **decision_risk_requirement_link_handlers(
-                    repository_factory=_decision_risk_requirement_link_repository,
-                    action_writer=PatronActionWriter(),
-                ),
-                **decision_lifecycle_handlers(
-                    lifecycle_repository=SqlAlchemyDecisionLifecycleRepository(),
-                    repository_factory=lambda session: SqlAlchemyDecisionRepository(session),
-                    condition_repository=SqlAlchemyDecisionConditionRepository(),
-                ),
-                **decision_finalization_handlers(
-                    repository_factory=lambda session: SqlAlchemyDecisionRepository(session),
-                    verified_context_reader=SqlAlchemyDecisionVerifiedContextReader(),
-                    condition_repository=SqlAlchemyDecisionConditionRepository(),
-                ),
-                **pricing_scenario_handlers(),
-                **pricing_scenario_transition_handlers(),
-                **pricing_import_creation_handlers(),
-                **pricing_import_handlers(),
-                **opportunity_watch_profile_handlers(),
-                **preparation_review_handlers(storage=preparation_storage),
-                **submission_handlers(
-                    decision_gate_reader=SqlAlchemySubmissionDecisionGateReader(),
-                ),
-                **submission_evidence_handlers(),
-                **submission_signature_handlers(),
-            },
-        )
+        handlers: dict[str, CommandHandler] = {
+            **enterprise_upload_handlers(),
+            "ClaimDceStagedObjectUpload": ClaimDceStagedObjectUploadHandler(),
+            "CreateConsultation": CreateConsultationHandler(),
+            "CreateCase": CreateCaseHandler(
+                repository_factory=SqlAlchemyCaseRepository,
+                consultation_reader_factory=SqlAlchemyConsultationRepository,
+            ),
+            "LinkCaseDceVersion": LinkCaseDceVersionHandler(),
+            "ExpireDceStagedObject": ExpireDceStagedObjectHandler(),
+            "PrepareDceStaging": PrepareDceStagingHandler(),
+            "RecordDceStagedObjectQuarantine": RecordDceStagedObjectQuarantineHandler(),
+            "RecordDceStagedObjectScan": RecordDceStagedObjectScanHandler(),
+            "RecordDceDocumentClassificationRun": RecordDceDocumentClassificationRunHandler(),
+            "RecordDceDocumentExtraction": RecordDceDocumentExtractionHandler(),
+            "RecordDceRcAnalysis": RecordDceRcAnalysisHandler(),
+            "RecordCaseDceImpactRun": RecordCaseDceImpactRunHandler(),
+            "RecordDceRequirementMaterializationRun": (
+                RecordDceRequirementMaterializationRunHandler()
+            ),
+            "RecordDceRequirementConfirmation": RecordDceRequirementConfirmationHandler(),
+            "CreateFinancialReportDraft": CreateFinancialReportDraftHandler(),
+            "PublishFinancialReport": PublishFinancialReportHandler(),
+            **financial_report_line_handlers(),
+            **enterprise_capability_handlers(),
+            **enterprise_library_handlers(),
+            "RejectDceStagedObjectUpload": RejectDceStagedObjectUploadHandler(),
+            "RegisterDceVersion": RegisterDceVersionHandler(),
+            **assignment_handlers(),
+            **collaborator_work_task_handlers(),
+            **collaborator_capability_handlers(),
+            **collaborator_info_blocker_handlers(),
+            **patron_assignment_handlers(),
+            **preparation_handlers(
+                storage=preparation_storage,
+                dce_reader=SqlAlchemyPreparationDceReader(),
+            ),
+            **preparation_transmission_handlers(action_writer=PatronActionWriter()),
+            **patron_action_handlers(),
+            **case_outcome_handlers(),
+            **case_order_handlers(),
+            **patron_action_transition_handlers(),
+            **decision_risk_handlers(
+                repository_factory=lambda _session: SqlAlchemyDecisionRiskRepository(),
+                action_writer=PatronActionWriter(),
+            ),
+            **decision_risk_requirement_link_handlers(
+                repository_factory=_decision_risk_requirement_link_repository,
+                action_writer=PatronActionWriter(),
+            ),
+            **decision_lifecycle_handlers(
+                lifecycle_repository=SqlAlchemyDecisionLifecycleRepository(),
+                repository_factory=lambda session: SqlAlchemyDecisionRepository(session),
+                condition_repository=SqlAlchemyDecisionConditionRepository(),
+            ),
+            **decision_finalization_handlers(
+                repository_factory=lambda session: SqlAlchemyDecisionRepository(session),
+                verified_context_reader=SqlAlchemyDecisionVerifiedContextReader(),
+                condition_repository=SqlAlchemyDecisionConditionRepository(),
+            ),
+            **pricing_scenario_handlers(),
+            **pricing_scenario_transition_handlers(),
+            **pricing_import_creation_handlers(),
+            **pricing_import_handlers(),
+            **opportunity_watch_profile_handlers(),
+            **preparation_review_handlers(storage=preparation_storage),
+            **submission_handlers(
+                decision_gate_reader=SqlAlchemySubmissionDecisionGateReader(),
+            ),
+            **submission_evidence_handlers(),
+            **submission_signature_handlers(),
+        }
+        dispatcher = CommandDispatcher(session_factory=session_factory, handlers=handlers)
         upload_service = (
             dce_upload_service_factory(dispatcher)
             if dce_upload_service_factory is not None

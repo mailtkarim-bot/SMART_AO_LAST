@@ -76,12 +76,12 @@ def build_case_dce_reading_router(
             )
         if lookup.availability is not CaseDceReadingAvailability.AVAILABLE:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="COMMAND_REJECTED",
             )
         if lookup.reading is None:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="COMMAND_REJECTED",
             )
 

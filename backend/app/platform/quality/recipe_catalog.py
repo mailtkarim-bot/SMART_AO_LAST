@@ -84,22 +84,16 @@ def _parse_scenario(raw: Any) -> RecipeScenario:
     mode = _non_empty(raw["execution_mode"])
     if mode not in _EXECUTION_MODES:
         raise ValueError("RECIPE_SCENARIO_EXECUTION_MODE_INVALID")
-    evidence = _string_tuple(
-        raw["append_only_evidence"], "RECIPE_SCENARIO_EVIDENCE_INVALID"
-    )
+    evidence = _string_tuple(raw["append_only_evidence"], "RECIPE_SCENARIO_EVIDENCE_INVALID")
     if not evidence:
         raise ValueError("RECIPE_SCENARIO_EVIDENCE_INVALID")
     return RecipeScenario(
         recipe_id=recipe_id,
         canonical_spaces=spaces,
         role=_required_text(raw["role"], "RECIPE_SCENARIO_ROLE_INVALID"),
-        initial_state=_required_text(
-            raw["initial_state"], "RECIPE_SCENARIO_INITIAL_STATE_INVALID"
-        ),
+        initial_state=_required_text(raw["initial_state"], "RECIPE_SCENARIO_INITIAL_STATE_INVALID"),
         action=_required_text(raw["action"], "RECIPE_SCENARIO_ACTION_INVALID"),
-        refusal_expected=_required_text(
-            raw["refusal_expected"], "RECIPE_SCENARIO_REFUSAL_INVALID"
-        ),
+        refusal_expected=_required_text(raw["refusal_expected"], "RECIPE_SCENARIO_REFUSAL_INVALID"),
         append_only_evidence=evidence,
         final_state=_required_text(raw["final_state"], "RECIPE_SCENARIO_FINAL_STATE_INVALID"),
         execution_mode=mode,

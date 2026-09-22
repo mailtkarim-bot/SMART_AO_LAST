@@ -168,7 +168,7 @@ def test_patron_read_projects_latest_qualification_and_case_state() -> None:
         created_at=NOW,
     )
     repository.states[repository.record.id] = BoampObservationState(
-        latest_qualification=qualification,
+        latest_qualification=qualification,  # type: ignore[arg-type]
         case_id=uuid4(),
         case_created_at=NOW,
     )

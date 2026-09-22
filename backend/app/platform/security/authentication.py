@@ -36,7 +36,7 @@ _PRIVILEGED_SESSION_ABSOLUTE_TIMEOUT = timedelta(hours=12)
 _PRIVILEGED_ROLES = frozenset({"PATRON_ADMIN", "PATRON_DELEGATE"})
 _DUMMY_PASSWORD_HASH = (
     "$argon2id$v=19$m=65536,t=3,p=4$Giaw2rZ3fORtgw8cIuC7iA$"
-    "oW9YGrFNwJNdZHzh85jLctFhMFXdAq9A94ZYN9gzh7Y"  # pragma: allowlist secret
+    "oW9YGrFNwJNdZHzh85jLctFhMFXdAq9A94ZYN9gzh7Y"  # pragma: allowlist secret  # nosec B105
 )
 
 

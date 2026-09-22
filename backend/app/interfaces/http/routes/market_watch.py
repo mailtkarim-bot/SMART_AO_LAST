@@ -66,7 +66,7 @@ def build_market_watch_router(
             ) from None
         except ValueError:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="PUBLIC_NOTICE_QUERY_INVALID",
             ) from None
         return PublicNoticeSearchResponse(

@@ -1043,7 +1043,7 @@ def test_authorize_handler_appends_exact_manifest_authorization() -> None:
 
     assert result.result_code == "SUBMISSION_PACKAGE_AUTHORIZED"
     assert len(captured) == 1
-    authorization = captured[0]
+    authorization = cast(Any, captured[0])
     assert authorization.package_version == 3
     assert authorization.manifest_sha256 == manifest_sha256
     assert authorization.state == "AUTHORIZED"

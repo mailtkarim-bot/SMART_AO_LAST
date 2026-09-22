@@ -140,7 +140,7 @@ def test_case_resolution_http_is_closed_and_assignment_scoped(session_factory) -
         ),
         now=NOW,
     )
-    task_id = UUID(task.aggregate_refs[0]["aggregate_id"])
+    task_id = UUID(str(task.aggregate_refs[0]["aggregate_id"]))
     CollaboratorInfoBlockerService(
         reader=SqlAlchemyCollaboratorInfoBlockerReader(session_factory),
         dispatcher=CommandDispatcher(

@@ -224,9 +224,7 @@ def _projection(
     qualification = state.latest_qualification
     p0_state = _p0_state(qualification)
     p1_state = (
-        BoampP1State.OPEN_WITH_UNKNOWNS
-        if state.case_id is not None
-        else BoampP1State.NOT_OPEN
+        BoampP1State.OPEN_WITH_UNKNOWNS if state.case_id is not None else BoampP1State.NOT_OPEN
     )
     deadline_state = _deadline_state(
         record.response_deadline,

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import re
 from collections.abc import Sequence
 from math import sqrt
-import re
 from typing import Protocol
 
 from app.modules.knowledge.domain.retrieval import (

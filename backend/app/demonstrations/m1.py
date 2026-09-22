@@ -121,7 +121,8 @@ class M1ScenarioRunner:
             initial_dce = session.get(DceVersionRecord, initial_dce_version_id)
             case = session.get(CaseRecord, case_id)
             decision = session.get(DecisionRecord, decision_id)
-            assert initial_dce is not None and case is not None and decision is not None
+            if initial_dce is None or case is None or decision is None:
+                raise RuntimeError("M1_FIXTURE_STATE_INCOMPLETE")
 
             initial_dce.lifecycle = "SUPERSEDED"
             initial_dce.analysis_readiness = "REVIEW_REQUIRED"

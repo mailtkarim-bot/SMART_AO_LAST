@@ -115,7 +115,7 @@ def build_invitation_router(
             ) from error
         except ValueError as error:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="INVALID_PASSWORD",
             ) from error
         return Response(status_code=status.HTTP_204_NO_CONTENT)

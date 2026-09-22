@@ -62,9 +62,7 @@ class BoampQualificationRepository:
             )
         )
 
-    def last_successful_ingestion_at(
-        self, *, session: Session, tenant_id: UUID
-    ) -> datetime | None:
+    def last_successful_ingestion_at(self, *, session: Session, tenant_id: UUID) -> datetime | None:
         """Return the latest completed, recorded BOAMP ingestion for one tenant."""
         return session.scalar(
             sa.select(BoampIngestionRunRecord.completed_at)

@@ -219,7 +219,7 @@ Avant toute recette, capture :
 python --version
 uv --version
 uv lock --check
-SMART_AO_DATABASE_URL='postgresql+psycopg://audit:audit@127.0.0.1:<port>/smart_ao_audit' \
+SMART_AO_DATABASE_URL='postgresql+psycopg://<user>:<password>@127.0.0.1:<port>/smart_ao_audit' \\
   uv run alembic -c backend/alembic.ini upgrade head --sql > /tmp/smart-ao-upgrade.sql
 ```
 

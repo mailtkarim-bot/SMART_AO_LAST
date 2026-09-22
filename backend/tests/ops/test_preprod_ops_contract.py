@@ -426,7 +426,9 @@ def test_deploy_ocr_opt_in_requires_explicit_install_and_local_runtime_preflight
 
 
 def test_manual_deployment_guide_matches_current_schema_head_and_ocr_flags() -> None:
-    guide = (ROOT / "docs/02_FUTURE_TECHNICAL/SMART_AO_PREPRODUCTION_VPS_RUNBOOK_v0.1.md").read_text(encoding="utf-8")
+    guide = (
+        ROOT / "docs/02_FUTURE_TECHNICAL/SMART_AO_PREPRODUCTION_VPS_RUNBOOK_v0.1.md"
+    ).read_text(encoding="utf-8")
     schema = (ROOT / "backend/app/platform/persistence/schema.py").read_text(encoding="utf-8")
     assert 'EXPECTED_ALEMBIC_HEAD = "20260920_0090"' in schema
     assert "20260920_0090" in guide

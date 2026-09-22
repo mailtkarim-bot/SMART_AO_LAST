@@ -60,7 +60,9 @@ class RecordTaskResultCommand(ApplicationCommand):
 
     @model_validator(mode="after")
     def validate_result(self) -> RecordTaskResultCommand:
-        if contains_forbidden_text(self.result_text, self.source_locator or "", self.lot_reference or ""):
+        if contains_forbidden_text(
+            self.result_text, self.source_locator or "", self.lot_reference or ""
+        ):
             raise ValueError("FINANCIAL_DATA_FORBIDDEN")
         return self
 

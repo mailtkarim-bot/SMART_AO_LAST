@@ -94,7 +94,8 @@ class CreateCaseHandler:
         consultation_reference = None
 
         if command.consultation_id is not None:
-            assert consultation_revision is not None
+            if consultation_revision is None:
+                raise ValueError("CONSULTATION_REQUIRED_OR_STALE")
             consultation_reference = AggregateReference(
                 aggregate_id=command.consultation_id,
                 aggregate_type="CONSULTATION",

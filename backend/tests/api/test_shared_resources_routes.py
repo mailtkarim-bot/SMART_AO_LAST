@@ -34,7 +34,7 @@ class FakeSharingService:
 
 
 def _endpoint(service: FakeSharingService):
-    return build_shared_resource_router(service=service).routes[0].endpoint
+    return build_shared_resource_router(service=service).routes[0].endpoint  # type: ignore[arg-type]
 
 
 def test_recipient_preview_returns_exact_version_metadata_without_storage_details() -> None:

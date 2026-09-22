@@ -312,6 +312,11 @@ def _project_document(
             "dce_extraction_value_error",
             extra={"error_type": type(error).__name__, "media_type": media_type},
         )
+        return ExtractionProjection(
+            status="FAILED_SAFE",
+            failure_code="EXTRACTION_PARSE_FAILED",
+            fragments=(),
+        )
     except Exception as error:
         logger.warning(
             "dce_extraction_parse_failed",

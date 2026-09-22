@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from typing import Any
 from uuid import uuid4
 
 import pytest
@@ -24,8 +25,8 @@ class FakeContextResolver:
 
 class FakeContinuityService:
     def __init__(self) -> None:
-        self.requested = None
-        self.accepted = None
+        self.requested: dict[str, Any] | None = None
+        self.accepted: dict[str, Any] | None = None
 
     def request_handover(self, **kwargs):
         self.requested = kwargs
@@ -58,9 +59,7 @@ def test_request_handover_keeps_actor_server_side_and_returns_created_response()
     service = FakeContinuityService()
     context = _context()
     runtime = SimpleNamespace(context_resolver=FakeContextResolver(context))
-    endpoint = build_continuity_router(
-        service=service, security_runtime=runtime
-    ).routes[0].endpoint
+    endpoint = build_continuity_router(service=service, security_runtime=runtime).routes[0].endpoint  # type: ignore[arg-type]
     handover_id = uuid4()
     response = endpoint(
         RequestHandoverRequest(
@@ -74,6 +73,7 @@ def test_request_handover_keeps_actor_server_side_and_returns_created_response()
         authorization="Bearer session-token",
     )
     assert response.status_code == 201
+    assert service.requested is not None
     assert service.requested["actor"].membership_id == context.membership_id
     assert response.body is not None and b'"state":"REQUESTED"' in response.body
 
@@ -81,27 +81,24 @@ def test_request_handover_keeps_actor_server_side_and_returns_created_response()
 def test_acceptance_replay_is_returned_as_successful_http_response() -> None:
     service = FakeContinuityService()
     runtime = SimpleNamespace(context_resolver=FakeContextResolver(_context()))
-    endpoint = build_continuity_router(
-        service=service, security_runtime=runtime
-    ).routes[1].endpoint
+    endpoint = build_continuity_router(service=service, security_runtime=runtime).routes[1].endpoint  # type: ignore[arg-type]
     response = endpoint(
         uuid4(),
         AcceptHandoverRequest(command_id=uuid4(), reason="Je prends la relève."),
         authorization="Bearer session-token",
     )
     assert response.status_code == 201
+    assert service.accepted is not None
     assert service.accepted["command"].reason == "Je prends la relève."
 
 
 def test_neutral_not_found_and_validation_are_preserved() -> None:
     service = FakeContinuityService()
-    service.request_handover = lambda **_: (_ for _ in ()).throw(
+    service.request_handover = lambda **_: (_ for _ in ()).throw(  # type: ignore[method-assign]
         PermissionError("NOT_FOUND_OR_FORBIDDEN")
     )
     runtime = SimpleNamespace(context_resolver=FakeContextResolver(_context()))
-    endpoint = build_continuity_router(
-        service=service, security_runtime=runtime
-    ).routes[0].endpoint
+    endpoint = build_continuity_router(service=service, security_runtime=runtime).routes[0].endpoint  # type: ignore[arg-type]
     request = RequestHandoverRequest(
         handover_id=uuid4(),
         successor_membership_id=uuid4(),

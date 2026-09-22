@@ -53,7 +53,7 @@ def build_dce_requirement_confirmation_router(
             )
         except RequirementCaseScopeError as error:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="COMMAND_REJECTED",
             ) from error
         except PermissionError as error:
@@ -73,7 +73,7 @@ def build_dce_requirement_confirmation_router(
             ) from error
         except CommandExecutionError as error:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="COMMAND_REJECTED",
             ) from error
 

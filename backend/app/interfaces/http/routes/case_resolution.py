@@ -74,9 +74,7 @@ def build_case_resolution_router(
             tenant_id=context.tenant_id,
             case_id=case_id,
             membership_id=(
-                context.membership_id
-                if context.actor_kind is ActorKind.COLLABORATEUR
-                else None
+                context.membership_id if context.actor_kind is ActorKind.COLLABORATEUR else None
             ),
         )
         if projection is None:
