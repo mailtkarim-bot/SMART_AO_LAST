@@ -282,7 +282,8 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 - [x] Comparer les exigences PF2-01 à PF2-16 aux modèles, services, routes, migrations, tests et surfaces existants ; neuf livrables d'audit sous `docs/03_PRODUCT_DESIGN_WORKING/realignment_v2_audit/`.
 - [x] Corriger dans le cahier technique **candidat** l'omission de REC-41 à REC-45 exigées par le Product Freeze v2 candidat.
 - [x] Soumettre le paquet d'audit et les arbitrages PF2-01 à PF2-16 au propriétaire ; promotion explicite du Product Freeze v2.0 reçue le 24 septembre 2026.
-- [>] Lancer T1 par la première capacité v2 caractérisée, après mise à jour des références UX nécessaires et maintien des validations externes comme gates.
+- [x] Lancer T1 par le contrat pur `RegulatoryProfile` : états d'applicabilité, sources, version et dates testés ; preuve dans `realignment_v2/T1_REGULATORY_PROFILE_TDD.md`.
+- [>] Ajouter la persistance tenant-scoped de `RegulatoryProfile` par migration additive et test PostgreSQL, sans moteur juridique automatique.
 
 **État :** `READY_WITH_BLOCKERS` pour l'implémentation ; aucun nouveau comportement v2 n'est encore codé, aucune règle juridique/assurantielle/HSE n'est déclarée validée. Le GO conditionnel local et le NO-GO public restent en vigueur.
 
@@ -488,6 +489,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 22/09/2026 | Simulation locale après génération dynamique des secrets | stack éphémère reconstruite avec secrets aléatoires, smoke HTTPS/DB/schema/ClamAV vert, charge bornée 100/concurrence 10 en 1 170 ms (85,47 req/s), redémarrages, panne/récupération ClamAV, backup/restauration 127 tables et rotation JWT : **PASS** ; mesure locale non extrapolée au VPS | poursuivre les corrections et preuves locales sans fermer artificiellement les limites externes |
 | 22/09/2026 | Réalignement documentaire du README | quatre liens historiques supprimés remplacés par documentation active, index de références, Product Freeze v1.0, cahier technique et plan global ; vérification automatique : 6 liens locaux, 0 manquant | poursuivre les corrections et preuves locales sans fermer artificiellement les limites externes |
 | 24/09/2026 | Promotion Product Freeze v2 et réalignement documentaire | six documents déplacés depuis `_Update`, v1.0 et l'ancienne matrice archivés, index/README/cahier technique/test d'autorité réalignés ; audit T0 et REC-41–45 intégrés ; 2/2 tests d'autorité ciblés verts, aucune migration ni capacité v2 codée | lancer T1 par la première capacité v2 caractérisée ; maintenir le NO-GO public |
+| 24/09/2026 | T1 contrat pur RegulatoryProfile | RED `ModuleNotFoundError` puis GREEN ; 4 tests, Ruff/format/mypy ciblés verts, couverture ciblée 91 % ; aucun ORM, endpoint, fournisseur ou calcul juridique ajouté | ajouter la persistance tenant-scoped de `RegulatoryProfile` par migration additive et test PostgreSQL |
 
 ## 7. Règle de mise à jour
 
