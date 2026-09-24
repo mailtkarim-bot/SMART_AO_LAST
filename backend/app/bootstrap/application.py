@@ -121,6 +121,7 @@ from app.modules.dce.application.contract_baseline_handler import (
     ContractBaselineImpactReadService,
     contract_baseline_handlers,
 )
+from app.modules.dce.application.contract_review_handler import contract_review_handlers
 from app.modules.dce.application.contract_risk_read import PatronDceContractRiskReadService
 from app.modules.dce.application.handlers import (
     ClaimDceStagedObjectUploadHandler,
@@ -436,6 +437,7 @@ class AppRuntime:
             "LinkCaseDceVersion": LinkCaseDceVersionHandler(),
             **regulatory_profile_handlers(),
             **contract_baseline_handlers(),
+            **contract_review_handlers(),
             "ExpireDceStagedObject": ExpireDceStagedObjectHandler(),
             "PrepareDceStaging": PrepareDceStagingHandler(),
             "RecordDceStagedObjectQuarantine": RecordDceStagedObjectQuarantineHandler(),
