@@ -32,7 +32,8 @@ En tant que système, je veux conserver un profil d'applicabilité réglementair
 - migration `20260924_0091` rejouée sur PostgreSQL Docker éphémère : **1 test de structure passé** ; tête Alembic et downgrade du fixture vérifiés par le harness DB.
 - contrat pur + migration : **5 tests passés** dans le rejeu combiné.
 - commande/service d'écriture : rejeu identique retourne le reçu précédent, une Affaire d'un autre tenant est refusée `CASE_NOT_FOUND_OR_FORBIDDEN`, et la preuve PostgreSQL combinée passe **2 tests**.
+- route Patron contrôlée `POST /api/v1/patron/cases/{case_id}/regulatory-profiles` : contrat fermé, réponse `201`, refus tenant neutre `404`, **2 tests API directs**.
 
 ## Limites
 
-Cette tranche persiste et écrit la structure tenant-scoped via `CommandDispatcher`, sans endpoint HTTP, registre de règles vivantes ou calcul juridique. Elle ne modifie aucune porte P0–P7. La prochaine tranche pourra exposer une route contrôlée si l'impact UX et l'autorisation Patron sont approuvés.
+Cette tranche persiste et écrit la structure tenant-scoped via `CommandDispatcher`, et expose une route Patron contrôlée sans registre de règles vivantes ni calcul juridique. Elle ne modifie aucune porte P0–P7.

@@ -86,6 +86,9 @@ from app.interfaces.http.routes.patron_opportunity_watch_profiles import (
 )
 from app.interfaces.http.routes.patron_pricing import build_patron_pricing_router
 from app.interfaces.http.routes.patron_pricing_import import build_patron_pricing_import_router
+from app.interfaces.http.routes.patron_regulatory_profiles import (
+    build_patron_regulatory_profile_router,
+)
 from app.interfaces.http.routes.patron_submission import build_patron_submission_router
 from app.interfaces.http.routes.patron_submission_evidence import (
     build_patron_submission_evidence_router,
@@ -103,7 +106,10 @@ from app.interfaces.http.routes.preparation_transmission import (
 from app.interfaces.http.routes.shared_resources import build_shared_resource_router
 from app.modules.case.application.handlers import CreateCaseHandler
 from app.modules.case.application.link_dce_version_handler import LinkCaseDceVersionHandler
-from app.modules.case.application.regulatory_profile import regulatory_profile_handlers
+from app.modules.case.application.regulatory_profile import (
+    RegulatoryProfileService,
+    regulatory_profile_handlers,
+)
 from app.modules.case.infrastructure.models.case import CaseRecord
 from app.modules.case.infrastructure.repositories import SqlAlchemyCaseRepository
 from app.modules.case.infrastructure.resolution_reader import SqlAlchemyCaseResolutionReader
@@ -948,6 +954,10 @@ def create_app(
             session_factory=runtime.session_factory,
             policy=security_policy,
         )
+        regulatory_profile_service = RegulatoryProfileService(
+            dispatcher=runtime.dispatcher,
+            policy=security_policy,
+        )
         patron_action_transition_service = PatronActionTransitionService(
             session_factory=runtime.session_factory,
             dispatcher=runtime.dispatcher,
@@ -1141,6 +1151,12 @@ def create_app(
                     reader=SqlAlchemyDceContractRiskSignalReader(runtime.session_factory),
                     policy=security_policy,
                 ),
+                security_runtime=security_runtime,
+            )
+        )
+        app.include_router(
+            build_patron_regulatory_profile_router(
+                service=regulatory_profile_service,
                 security_runtime=security_runtime,
             )
         )
