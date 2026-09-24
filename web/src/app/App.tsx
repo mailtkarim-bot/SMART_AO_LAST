@@ -13,10 +13,12 @@ import { DecisionRiskRequirementsPanel } from "../features/decision/DecisionRisk
 import { DecisionRisksPanel } from "../features/decision/DecisionRisksPanel";
 import { DceContractRiskSignalsPanel } from "../features/decision/DceContractRiskSignalsPanel";
 import { DecisionCrossChecksPanel } from "../features/decision/DecisionCrossChecksPanel";
+import { RegulatoryProfilesPanel } from "../features/decision/RegulatoryProfilesPanel";
 import { useDecisionRiskRequirements } from "../features/decision/useDecisionRiskRequirements";
 import { useDecisionRisks } from "../features/decision/useDecisionRisks";
 import { useDceContractRiskSignals } from "../features/decision/useDceContractRiskSignals";
 import { useDecisionCrossChecks } from "../features/decision/useDecisionCrossChecks";
+import { useRegulatoryProfiles } from "../features/decision/useRegulatoryProfiles";
 import { usePatronCockpit } from "../features/cockpit/usePatronCockpit";
 import { BoampOpportunityPanel } from "../features/opportunities/BoampOpportunityPanel";
 import { useBoampOpportunities } from "../features/opportunities/useBoampOpportunities";
@@ -255,6 +257,11 @@ function App() {
     isPatron ? selectedCaseId : "",
   );
   const decisionCrossChecks = useDecisionCrossChecks(
+    api,
+    setMessage,
+    isPatron ? selectedCaseId : "",
+  );
+  const regulatoryProfiles = useRegulatoryProfiles(
     api,
     setMessage,
     isPatron ? selectedCaseId : "",
@@ -1030,6 +1037,15 @@ function App() {
             canManage={currentActor?.actor_kind === "PATRON_ADMIN"}
             onRefresh={() => void decisionRisks.refresh()}
             onTransition={(risk, input) => void transitionDecisionRisk(risk, input)}
+          />
+        )}
+
+        {isPatron && (
+          <RegulatoryProfilesPanel
+            caseId={selectedCaseId}
+            profiles={regulatoryProfiles.profiles}
+            loading={regulatoryProfiles.loading}
+            onRefresh={() => void regulatoryProfiles.refresh()}
           />
         )}
 

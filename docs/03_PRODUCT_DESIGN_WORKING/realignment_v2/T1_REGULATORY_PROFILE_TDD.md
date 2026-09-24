@@ -34,6 +34,7 @@ En tant que système, je veux conserver un profil d'applicabilité réglementair
 - commande/service d'écriture : rejeu identique retourne le reçu précédent, une Affaire d'un autre tenant est refusée `CASE_NOT_FOUND_OR_FORBIDDEN`, et la preuve PostgreSQL combinée passe **2 tests**.
 - route Patron contrôlée `POST /api/v1/patron/cases/{case_id}/regulatory-profiles` : contrat fermé, réponse `201`, refus tenant neutre `404`, **2 tests API directs**.
 - lecture Patron `GET /api/v1/patron/cases/{case_id}/regulatory-profiles` : projection fermée, version triée et état `UNKNOWN_APPLICABILITY` conservé, **1 test API direct**.
+- UX C07 : `RegulatoryProfilesPanel` et son hook lisent la projection sans action de mutation ; test frontend dédié inclus dans les **188 tests verts**.
 
 ## Limites
 

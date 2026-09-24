@@ -401,6 +401,29 @@ export type DceContractRiskSignalPage = {
   items: DceContractRiskSignal[];
 };
 
+export type RegulatoryProfileStatus =
+  | "ACTIVE"
+  | "FUTURE"
+  | "EXPIRED"
+  | "UNKNOWN_APPLICABILITY"
+  | "REVIEW_REQUIRED";
+
+export type RegulatoryProfileProjection = {
+  profile_id: string;
+  case_id: string;
+  profile_version: number;
+  status: RegulatoryProfileStatus;
+  facts: Record<string, unknown>;
+  source_refs: string[];
+  effective_from: string | null;
+  effective_until: string | null;
+};
+
+export type RegulatoryProfilePage = {
+  case_id: string;
+  items: RegulatoryProfileProjection[];
+};
+
 export type RegisterStructuredRiskInput = {
   risk_id: string;
   dce_version_id: string;

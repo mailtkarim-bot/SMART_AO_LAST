@@ -287,7 +287,8 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 - [x] Ajouter la commande/service d'écriture `RegulatoryProfile`, avec idempotence, refus tenant et test PostgreSQL, sans moteur juridique automatique : rejeu reçu et `CASE_NOT_FOUND_OR_FORBIDDEN` vérifiés.
 - [x] Décider puis implémenter l'exposition HTTP Patron contrôlée de `RegulatoryProfile`, après contrat UX et test API : `POST /api/v1/patron/cases/{case_id}/regulatory-profiles`, 2 tests API directs, réponse fermée et refus tenant neutre.
 - [x] Ajouter la lecture Patron de `RegulatoryProfile` dans C07/C05, avec filtrage tenant et états inchangés : `GET /api/v1/patron/cases/{case_id}/regulatory-profiles`, projection fermée et 1 test API direct.
-- [>] Rejouer les gates backend ciblées et vérifier l'intégration du bootstrap avant d'ajouter le composant UX C07.
+- [x] Rejouer les gates backend ciblées et vérifier l'intégration du bootstrap avant d'ajouter le composant UX C07 : Ruff, format, mypy 697/697, bootstrap import et tests ciblés verts.
+- [x] Ajouter le composant UX C07 de lecture seule du profil réglementaire, sans mutation ni conclusion juridique automatique.
 
 **État :** `READY_WITH_BLOCKERS` pour l'implémentation ; aucun nouveau comportement v2 n'est encore codé, aucune règle juridique/assurantielle/HSE n'est déclarée validée. Le GO conditionnel local et le NO-GO public restent en vigueur.
 
@@ -499,6 +500,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 24/09/2026 | T1 route Patron RegulatoryProfile | `POST /api/v1/patron/cases/{case_id}/regulatory-profiles` rattaché à C07 sans nouvelle destination ; contrat fermé, 201 nominal et 404 `CASE_NOT_FOUND_OR_FORBIDDEN` prouvés par 2 tests API directs ; aucun calcul juridique | ajouter la lecture Patron de `RegulatoryProfile` dans C07/C05, avec filtrage tenant et états inchangés |
 | 24/09/2026 | T1 lecture Patron RegulatoryProfile | `GET /api/v1/patron/cases/{case_id}/regulatory-profiles` renvoie les versions et conserve `UNKNOWN_APPLICABILITY` ; filtrage tenant porté par le service ; suite API ciblée 3/3, Ruff et mypy verts | rejouer les gates backend ciblées et vérifier l'intégration du bootstrap avant d'ajouter le composant UX C07 |
 | 24/09/2026 | Gates backend et bootstrap RegulatoryProfile | Ruff vert, format 697 fichiers, mypy **697/697** sans erreur, suite domaine/API/autorité **9 tests verts**, imports bootstrap/route vérifiés ; aucun composant UX ni calcul juridique ajouté | ajouter le composant UX C07 pour lire les états sans les modifier |
+| 24/09/2026 | UX C07 RegulatoryProfile | hook/API GET, panneau de lecture Patron intégré à C07, état `UNKNOWN_APPLICABILITY` conservé et aucune action de mutation affichée ; frontend **188/188 tests**, typecheck et lint verts | rejouer la suite complète backend après l'ajout UX puis préparer la tranche suivante |
 
 ## 7. Règle de mise à jour
 

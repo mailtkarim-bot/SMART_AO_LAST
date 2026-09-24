@@ -75,6 +75,7 @@ import type {
   StructuredRiskTreatmentResponse,
   TransitionStructuredRiskTreatmentInput,
   DceContractRiskSignalPage,
+  RegulatoryProfilePage,
   RegisterStructuredRiskInput,
   StructuredRiskRegistrationResponse,
   DecisionCctpPricingCrossingResponse,
@@ -504,6 +505,10 @@ export function createApiClient(
     listDceContractRiskSignals: (caseId: string, limit = 50) =>
       request<DceContractRiskSignalPage>(
         `/api/v1/patron/cases/${encodeURIComponent(caseId)}/dce-contract-risk-signals?limit=${limit}`,
+      ),
+    listRegulatoryProfiles: (caseId: string) =>
+      request<RegulatoryProfilePage>(
+        `/api/v1/patron/cases/${encodeURIComponent(caseId)}/regulatory-profiles`,
       ),
     registerStructuredRisk: (caseId: string, input: RegisterStructuredRiskInput) =>
       request<StructuredRiskRegistrationResponse>(
