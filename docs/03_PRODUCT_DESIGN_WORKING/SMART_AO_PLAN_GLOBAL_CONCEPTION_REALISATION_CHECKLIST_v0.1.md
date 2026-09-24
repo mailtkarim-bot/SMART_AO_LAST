@@ -283,7 +283,8 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 - [x] Corriger dans le cahier technique **candidat** l'omission de REC-41 à REC-45 exigées par le Product Freeze v2 candidat.
 - [x] Soumettre le paquet d'audit et les arbitrages PF2-01 à PF2-16 au propriétaire ; promotion explicite du Product Freeze v2.0 reçue le 24 septembre 2026.
 - [x] Lancer T1 par le contrat pur `RegulatoryProfile` : états d'applicabilité, sources, version et dates testés ; preuve dans `realignment_v2/T1_REGULATORY_PROFILE_TDD.md`.
-- [>] Ajouter la persistance tenant-scoped de `RegulatoryProfile` par migration additive et test PostgreSQL, sans moteur juridique automatique.
+- [x] Ajouter la persistance tenant-scoped de `RegulatoryProfile` par migration additive et test PostgreSQL, sans moteur juridique automatique : migration `20260924_0091`, structure fermée et rollback du harness DB vérifiés.
+- [>] Ajouter la commande/service d'écriture `RegulatoryProfile`, avec idempotence, refus tenant et test PostgreSQL, sans moteur juridique automatique.
 
 **État :** `READY_WITH_BLOCKERS` pour l'implémentation ; aucun nouveau comportement v2 n'est encore codé, aucune règle juridique/assurantielle/HSE n'est déclarée validée. Le GO conditionnel local et le NO-GO public restent en vigueur.
 
@@ -490,6 +491,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 22/09/2026 | Réalignement documentaire du README | quatre liens historiques supprimés remplacés par documentation active, index de références, Product Freeze v1.0, cahier technique et plan global ; vérification automatique : 6 liens locaux, 0 manquant | poursuivre les corrections et preuves locales sans fermer artificiellement les limites externes |
 | 24/09/2026 | Promotion Product Freeze v2 et réalignement documentaire | six documents déplacés depuis `_Update`, v1.0 et l'ancienne matrice archivés, index/README/cahier technique/test d'autorité réalignés ; audit T0 et REC-41–45 intégrés ; 2/2 tests d'autorité ciblés verts, aucune migration ni capacité v2 codée | lancer T1 par la première capacité v2 caractérisée ; maintenir le NO-GO public |
 | 24/09/2026 | T1 contrat pur RegulatoryProfile | RED `ModuleNotFoundError` puis GREEN ; 4 tests, Ruff/format/mypy ciblés verts, couverture ciblée 91 % ; aucun ORM, endpoint, fournisseur ou calcul juridique ajouté | ajouter la persistance tenant-scoped de `RegulatoryProfile` par migration additive et test PostgreSQL |
+| 24/09/2026 | T1 persistance RegulatoryProfile | modèle SQLAlchemy tenant-scoped, migration additive `20260924_0091`, checks fermés, FK composites Affaire/tenant, index version et test PostgreSQL sur base éphémère : 5 tests combinés verts | ajouter la commande/service d'écriture `RegulatoryProfile`, avec idempotence, refus tenant et test PostgreSQL |
 
 ## 7. Règle de mise à jour
 

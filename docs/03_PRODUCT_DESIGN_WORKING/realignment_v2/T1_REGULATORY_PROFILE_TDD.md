@@ -29,7 +29,9 @@ En tant que système, je veux conserver un profil d'applicabilité réglementair
 - Ruff et format ciblés : **verts** ;
 - mypy ciblé : **vert** ;
 - couverture ciblée : **91 %**.
+- migration `20260924_0091` rejouée sur PostgreSQL Docker éphémère : **1 test de structure passé** ; tête Alembic et downgrade du fixture vérifiés par le harness DB.
+- contrat pur + migration : **5 tests passés** dans le rejeu combiné.
 
 ## Limites
 
-Cette tranche ne persiste pas encore le profil, ne contient pas de registre de règles vivantes et ne modifie aucune porte P0–P7. La migration, le service tenant-scoped et l'API viennent seulement après validation du contrat d'écriture et du rollback.
+Cette tranche persiste la structure tenant-scoped mais ne contient pas encore de commande/service/API d'écriture, de registre de règles vivantes ou de calcul juridique. Elle ne modifie aucune porte P0–P7. La prochaine tranche ajoute l'écriture applicative avec idempotence et refus tenant.

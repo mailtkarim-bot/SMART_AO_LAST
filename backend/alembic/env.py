@@ -3,7 +3,7 @@ from __future__ import annotations
 from logging.config import fileConfig
 
 from alembic import context
-from app.modules.case.infrastructure.models import case  # noqa: F401
+from app.modules.case.infrastructure.models import case, regulatory_profile  # noqa: F401
 from app.modules.dce.infrastructure.models import (  # noqa: F401
     case_dce_impact,
     consultation,
