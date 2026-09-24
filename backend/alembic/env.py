@@ -7,6 +7,7 @@ from app.modules.case.infrastructure.models import case, regulatory_profile  # n
 from app.modules.dce.infrastructure.models import (  # noqa: F401
     case_dce_impact,
     consultation,
+    contract_baseline,
     dce_classification,
     dce_contributions,
     dce_extraction,

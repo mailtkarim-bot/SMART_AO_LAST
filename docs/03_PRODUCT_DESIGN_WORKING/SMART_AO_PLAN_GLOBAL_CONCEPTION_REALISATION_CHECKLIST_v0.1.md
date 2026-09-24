@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** persister tenant-scoped la preuve baseline → dérogation → impact avec idempotence et refus tenant.
+**Prochaine étape unique :** ajouter l'exposition Patron contrôlée de la preuve baseline → dérogation → impact après contrat UX et test API.
 
 ## 1. Rôle de ce document
 
@@ -506,6 +506,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 24/09/2026 | Clôture T1 RegulatoryProfile | suite complète backend `1 727` tests verts sur PostgreSQL éphémère ; contrats ops réalignés sur `20260924_0091`, preuve API/UX RegulatoryProfile et bootstrap validés ; T1 sans moteur juridique terminé | auditer les signaux contractuels existants et fixer la plus petite preuve baseline → dérogation → impact |
 | 24/09/2026 | T2 preuve baseline → dérogation → impact | audit des signaux CCAP/CCTP existants ; contrat domaine `ContractBaselineDeviationImpact` ajouté avec source obligatoire, dérogation/impact facultatifs et états fermés ; 5 tests domaine verts ; aucune inférence juridique automatique | persister tenant-scoped la preuve baseline → dérogation → impact avec idempotence et refus tenant |
 | 24/09/2026 | Rejeu backend complet après preuve T2 | PostgreSQL éphémère isolé, suite `backend/tests` : **1 734 tests passés**, 1 avertissement Starlette/httpx externe ; conteneur supprimé après exécution, aucune base persistante touchée | persister tenant-scoped la preuve baseline → dérogation → impact avec idempotence et refus tenant |
+| 24/09/2026 | T2 persistance baseline → dérogation → impact | migration additive `20260924_0092`, table tenant-scoped append-only, unicité fonctionnelle par Affaire/observation/révision, handler via dispatcher avec rejeu idempotent et refus `CASE_NOT_FOUND_OR_FORBIDDEN` ; upgrade → downgrade → upgrade Alembic validé sur PostgreSQL éphémère | ajouter l'exposition Patron contrôlée de la preuve baseline → dérogation → impact après contrat UX et test API |
 
 ## 7. Règle de mise à jour
 

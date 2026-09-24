@@ -114,6 +114,7 @@ from app.modules.case.application.regulatory_profile_handler import (
 from app.modules.case.infrastructure.models.case import CaseRecord
 from app.modules.case.infrastructure.repositories import SqlAlchemyCaseRepository
 from app.modules.case.infrastructure.resolution_reader import SqlAlchemyCaseResolutionReader
+from app.modules.dce.application.contract_baseline_handler import contract_baseline_handlers
 from app.modules.dce.application.contract_risk_read import PatronDceContractRiskReadService
 from app.modules.dce.application.handlers import (
     ClaimDceStagedObjectUploadHandler,
@@ -428,6 +429,7 @@ class AppRuntime:
             ),
             "LinkCaseDceVersion": LinkCaseDceVersionHandler(),
             **regulatory_profile_handlers(),
+            **contract_baseline_handlers(),
             "ExpireDceStagedObject": ExpireDceStagedObjectHandler(),
             "PrepareDceStaging": PrepareDceStagingHandler(),
             "RecordDceStagedObjectQuarantine": RecordDceStagedObjectQuarantineHandler(),
