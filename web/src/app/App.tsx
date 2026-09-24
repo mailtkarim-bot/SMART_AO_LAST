@@ -14,11 +14,13 @@ import { DecisionRisksPanel } from "../features/decision/DecisionRisksPanel";
 import { DceContractRiskSignalsPanel } from "../features/decision/DceContractRiskSignalsPanel";
 import { DecisionCrossChecksPanel } from "../features/decision/DecisionCrossChecksPanel";
 import { RegulatoryProfilesPanel } from "../features/decision/RegulatoryProfilesPanel";
+import { ContractBaselineImpactsPanel } from "../features/decision/ContractBaselineImpactsPanel";
 import { useDecisionRiskRequirements } from "../features/decision/useDecisionRiskRequirements";
 import { useDecisionRisks } from "../features/decision/useDecisionRisks";
 import { useDceContractRiskSignals } from "../features/decision/useDceContractRiskSignals";
 import { useDecisionCrossChecks } from "../features/decision/useDecisionCrossChecks";
 import { useRegulatoryProfiles } from "../features/decision/useRegulatoryProfiles";
+import { useContractBaselineImpacts } from "../features/decision/useContractBaselineImpacts";
 import { usePatronCockpit } from "../features/cockpit/usePatronCockpit";
 import { BoampOpportunityPanel } from "../features/opportunities/BoampOpportunityPanel";
 import { useBoampOpportunities } from "../features/opportunities/useBoampOpportunities";
@@ -262,6 +264,11 @@ function App() {
     isPatron ? selectedCaseId : "",
   );
   const regulatoryProfiles = useRegulatoryProfiles(
+    api,
+    setMessage,
+    isPatron ? selectedCaseId : "",
+  );
+  const contractBaselineImpacts = useContractBaselineImpacts(
     api,
     setMessage,
     isPatron ? selectedCaseId : "",
@@ -1046,6 +1053,15 @@ function App() {
             profiles={regulatoryProfiles.profiles}
             loading={regulatoryProfiles.loading}
             onRefresh={() => void regulatoryProfiles.refresh()}
+          />
+        )}
+
+        {isPatron && (
+          <ContractBaselineImpactsPanel
+            caseId={selectedCaseId}
+            items={contractBaselineImpacts.items}
+            loading={contractBaselineImpacts.loading}
+            onRefresh={() => void contractBaselineImpacts.refresh()}
           />
         )}
 

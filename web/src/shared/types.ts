@@ -424,6 +424,20 @@ export type RegulatoryProfilePage = {
   items: RegulatoryProfileProjection[];
 };
 
+export type ContractBaselineImpactStatus = "SOURCE_SIGNAL_ONLY" | "HUMAN_REVIEW_REQUIRED" | "CONFIRMED" | "UNKNOWN";
+export type ContractBaselineImpact = {
+  proof_id: string;
+  case_id: string;
+  baseline_observation_id: string;
+  proof_revision: number;
+  baseline_source_refs: string[];
+  baseline_statement: string;
+  deviation_statement: string | null;
+  impact_statement: string | null;
+  status: ContractBaselineImpactStatus;
+};
+export type ContractBaselineImpactPage = { case_id: string; items: ContractBaselineImpact[] };
+
 export type RegisterStructuredRiskInput = {
   risk_id: string;
   dce_version_id: string;
