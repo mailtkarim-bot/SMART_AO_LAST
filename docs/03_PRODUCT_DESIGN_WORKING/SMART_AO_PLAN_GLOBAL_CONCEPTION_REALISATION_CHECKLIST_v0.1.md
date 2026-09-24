@@ -4,8 +4,8 @@
 **Créé le :** 14 septembre 2026  
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
-**Tranche active :** T0 — réouverture produit v2 candidate, audit d'existant
-**Prochaine étape unique :** présenter l'audit v2 au propriétaire et statuer explicitement sur la promotion du Product Freeze v2.0 ; maintenir le NO-GO public.
+**Tranche active :** T2 — contrat applicable, baseline et dérogations
+**Prochaine étape unique :** auditer les signaux contractuels existants et fixer la plus petite preuve baseline → dérogation → impact, sans moteur juridique automatique.
 
 ## 1. Rôle de ce document
 
@@ -503,6 +503,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 24/09/2026 | UX C07 RegulatoryProfile | hook/API GET, panneau de lecture Patron intégré à C07, état `UNKNOWN_APPLICABILITY` conservé et aucune action de mutation affichée ; frontend **188/188 tests**, typecheck et lint verts | rejouer la suite complète backend après l'ajout UX puis préparer la tranche suivante |
 | 24/09/2026 | Correction des gates après intégration T1 | dette application/infrastructure isolée dans le handler, tête attendue mise à `20260924_0091`, architecture/schema tests ciblés verts ; API RegulatoryProfile 3/3 verts | rejouer la suite complète backend sur PostgreSQL éphémère |
 | 24/09/2026 | Suite backend complète après UX et T1 | PostgreSQL éphémère : **1 727 tests verts**, 2 contrats ops corrigés pour la tête `20260924_0091`, puis suite ciblée ops **31/31** verte ; un avertissement Starlette/httpx reste externe au code | préparer la tranche suivante après validation du contrat produit et des gates |
+| 24/09/2026 | Clôture T1 RegulatoryProfile | suite complète backend `1 727` tests verts sur PostgreSQL éphémère ; contrats ops réalignés sur `20260924_0091`, preuve API/UX RegulatoryProfile et bootstrap validés ; T1 sans moteur juridique terminé | auditer les signaux contractuels existants et fixer la plus petite preuve baseline → dérogation → impact |
 
 ## 7. Règle de mise à jour
 
