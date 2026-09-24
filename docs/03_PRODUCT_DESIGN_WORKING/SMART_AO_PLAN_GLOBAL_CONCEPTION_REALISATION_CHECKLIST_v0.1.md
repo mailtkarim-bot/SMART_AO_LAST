@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** exécuter la migration `20260924_0093` et les tests PostgreSQL de l'acte de revue humaine.
+**Prochaine étape unique :** exposer la lecture Patron de l'acte de revue humaine dans C07, sans mutation ni conclusion juridique.
 
 ## 1. Rôle de ce document
 
@@ -514,6 +514,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 24/09/2026 | Décision propriétaire locale T2 | représentation `source → baseline → dérogation → impact → revue humaine` approuvée ; limites juridiques, externes et NO-GO public maintenus | cadrer l'acte de revue humaine de la preuve contractuelle, avec décision explicite et sans moteur juridique automatique |
 | 24/09/2026 | Contrat d'acte de revue humaine T2 | `ContractProofReview` ajouté : relecteur, décision fermée, révision et justification obligatoires ; 2 tests domaine verts ; aucune conclusion juridique ni mutation de la preuve | persister l'acte de revue humaine tenant-scoped, append-only et idempotent |
 | 24/09/2026 | Persistance de l'acte de revue humaine T2 | migration `20260924_0093`, modèle tenant-scoped append-only et handler dispatcher ajoutés ; Ruff/imports verts ; validation PostgreSQL dédiée encore à exécuter | exécuter la migration `20260924_0093` et les tests PostgreSQL de l'acte de revue humaine |
+| 24/09/2026 | Validation PostgreSQL de l'acte de revue humaine | migration `20260924_0093` validée par upgrade → downgrade → upgrade sur PostgreSQL éphémère ; contrats domaine et preuve T2 **8/8 tests verts** ; aucune base persistante touchée | exposer la lecture Patron de l'acte de revue humaine dans C07, sans mutation ni conclusion juridique |
 
 ## 7. Règle de mise à jour
 
