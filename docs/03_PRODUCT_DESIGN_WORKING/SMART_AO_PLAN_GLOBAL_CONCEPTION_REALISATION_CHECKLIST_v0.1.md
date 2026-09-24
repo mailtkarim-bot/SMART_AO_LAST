@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** ajouter les tests PostgreSQL de rejeu, révision et projection du dernier état de revue.
+**Prochaine étape unique :** rejouer la suite backend/frontend complète après fermeture des tests de cycle de revue.
 
 ## 1. Rôle de ce document
 
@@ -520,6 +520,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 24/09/2026 | Suite backend complète après revue humaine | PostgreSQL éphémère : **1 738 tests verts**, 1 avertissement Starlette/httpx externe ; conteneur supprimé après exécution, aucune base persistante touchée | préparer la tranche suivante de revue contractuelle locale, sans ouverture publique |
 | 24/09/2026 | Paquet T3 cycle de vie de revue contractuelle | `T3_CONTRACT_REVIEW_LIFECYCLE_PACKET.md` produit avec périmètre, critères d'acceptation, refus et limites ; NO-GO public maintenu | implémenter le cycle de vie append-only de la revue contractuelle, avec projection du dernier état confirmé |
 | 24/09/2026 | T3 cycle append-only et projection | historique conservé via `list_for_case`, projection `latest_for_case` ajoutée par preuve/révision, route Patron `/contract-proof-reviews/latest` exposée en lecture seule ; Ruff, compilation et 8 tests domaine verts | ajouter les tests PostgreSQL de rejeu, révision et projection du dernier état de revue |
+| 24/09/2026 | Tests PostgreSQL du cycle de revue | table `contract_proof_reviews` vérifiée sur PostgreSQL éphémère (tenant, unicité preuve/révision, décisions fermées) ; projection déterministe historique → dernier état ; **2/2 tests verts** | rejouer la suite backend/frontend complète après fermeture des tests de cycle de revue |
 
 ## 7. Règle de mise à jour
 
