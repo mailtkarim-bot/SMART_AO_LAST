@@ -502,6 +502,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 24/09/2026 | Gates backend et bootstrap RegulatoryProfile | Ruff vert, format 697 fichiers, mypy **697/697** sans erreur, suite domaine/API/autorité **9 tests verts**, imports bootstrap/route vérifiés ; aucun composant UX ni calcul juridique ajouté | ajouter le composant UX C07 pour lire les états sans les modifier |
 | 24/09/2026 | UX C07 RegulatoryProfile | hook/API GET, panneau de lecture Patron intégré à C07, état `UNKNOWN_APPLICABILITY` conservé et aucune action de mutation affichée ; frontend **188/188 tests**, typecheck et lint verts | rejouer la suite complète backend après l'ajout UX puis préparer la tranche suivante |
 | 24/09/2026 | Correction des gates après intégration T1 | dette application/infrastructure isolée dans le handler, tête attendue mise à `20260924_0091`, architecture/schema tests ciblés verts ; API RegulatoryProfile 3/3 verts | rejouer la suite complète backend sur PostgreSQL éphémère |
+| 24/09/2026 | Suite backend complète après UX et T1 | PostgreSQL éphémère : **1 727 tests verts**, 2 contrats ops corrigés pour la tête `20260924_0091`, puis suite ciblée ops **31/31** verte ; un avertissement Starlette/httpx reste externe au code | préparer la tranche suivante après validation du contrat produit et des gates |
 
 ## 7. Règle de mise à jour
 
