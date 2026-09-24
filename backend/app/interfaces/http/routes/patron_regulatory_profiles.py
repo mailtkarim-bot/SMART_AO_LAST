@@ -6,11 +6,9 @@ from fastapi.responses import JSONResponse
 
 from app.interfaces.http.dependencies.auth import resolve_bearer_context as _resolve_context
 from app.interfaces.http.routes.consultations import ConsultationSecurityRuntime
-from app.modules.case.application.regulatory_profile import (
-    RegulatoryProfileReadService,
-    RegulatoryProfileService,
-)
+from app.modules.case.application.regulatory_profile import RegulatoryProfileService
 from app.modules.case.application.regulatory_profile_commands import RecordRegulatoryProfileCommand
+from app.modules.case.application.regulatory_profile_handler import RegulatoryProfileReadService
 from app.modules.case.public.regulatory_profile_contracts import (
     RecordRegulatoryProfileRequest,
     RecordRegulatoryProfileResponse,

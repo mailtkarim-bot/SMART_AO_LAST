@@ -35,6 +35,7 @@ En tant que système, je veux conserver un profil d'applicabilité réglementair
 - route Patron contrôlée `POST /api/v1/patron/cases/{case_id}/regulatory-profiles` : contrat fermé, réponse `201`, refus tenant neutre `404`, **2 tests API directs**.
 - lecture Patron `GET /api/v1/patron/cases/{case_id}/regulatory-profiles` : projection fermée, version triée et état `UNKNOWN_APPLICABILITY` conservé, **1 test API direct**.
 - UX C07 : `RegulatoryProfilesPanel` et son hook lisent la projection sans action de mutation ; test frontend dédié inclus dans les **188 tests verts**.
+- frontière applicative : le service reste sans modèle ORM direct ; lecture et écriture infrastructurelles sont isolées dans le handler/adaptateur, et la tête Alembic `20260924_0091` est vérifiée par le contrat d'architecture.
 
 ## Limites
 

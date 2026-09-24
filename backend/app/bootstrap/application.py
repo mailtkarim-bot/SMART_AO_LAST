@@ -106,9 +106,9 @@ from app.interfaces.http.routes.preparation_transmission import (
 from app.interfaces.http.routes.shared_resources import build_shared_resource_router
 from app.modules.case.application.handlers import CreateCaseHandler
 from app.modules.case.application.link_dce_version_handler import LinkCaseDceVersionHandler
-from app.modules.case.application.regulatory_profile import (
+from app.modules.case.application.regulatory_profile import RegulatoryProfileService
+from app.modules.case.application.regulatory_profile_handler import (
     RegulatoryProfileReadService,
-    RegulatoryProfileService,
     regulatory_profile_handlers,
 )
 from app.modules.case.infrastructure.models.case import CaseRecord

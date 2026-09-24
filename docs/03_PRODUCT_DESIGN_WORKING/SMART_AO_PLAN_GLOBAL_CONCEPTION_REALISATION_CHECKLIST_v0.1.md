@@ -501,6 +501,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 24/09/2026 | T1 lecture Patron RegulatoryProfile | `GET /api/v1/patron/cases/{case_id}/regulatory-profiles` renvoie les versions et conserve `UNKNOWN_APPLICABILITY` ; filtrage tenant porté par le service ; suite API ciblée 3/3, Ruff et mypy verts | rejouer les gates backend ciblées et vérifier l'intégration du bootstrap avant d'ajouter le composant UX C07 |
 | 24/09/2026 | Gates backend et bootstrap RegulatoryProfile | Ruff vert, format 697 fichiers, mypy **697/697** sans erreur, suite domaine/API/autorité **9 tests verts**, imports bootstrap/route vérifiés ; aucun composant UX ni calcul juridique ajouté | ajouter le composant UX C07 pour lire les états sans les modifier |
 | 24/09/2026 | UX C07 RegulatoryProfile | hook/API GET, panneau de lecture Patron intégré à C07, état `UNKNOWN_APPLICABILITY` conservé et aucune action de mutation affichée ; frontend **188/188 tests**, typecheck et lint verts | rejouer la suite complète backend après l'ajout UX puis préparer la tranche suivante |
+| 24/09/2026 | Correction des gates après intégration T1 | dette application/infrastructure isolée dans le handler, tête attendue mise à `20260924_0091`, architecture/schema tests ciblés verts ; API RegulatoryProfile 3/3 verts | rejouer la suite complète backend sur PostgreSQL éphémère |
 
 ## 7. Règle de mise à jour
 

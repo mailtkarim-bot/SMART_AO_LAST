@@ -3,11 +3,9 @@ from uuid import uuid4
 
 import pytest
 import sqlalchemy as sa
-from app.modules.case.application.regulatory_profile import (
-    RegulatoryProfileService,
-    regulatory_profile_handlers,
-)
+from app.modules.case.application.regulatory_profile import RegulatoryProfileService
 from app.modules.case.application.regulatory_profile_commands import RecordRegulatoryProfileCommand
+from app.modules.case.application.regulatory_profile_handler import regulatory_profile_handlers
 from app.modules.case.infrastructure.models.case import CaseRecord
 from app.modules.case.infrastructure.models.regulatory_profile import RegulatoryProfileRecord
 from app.platform.events.dispatcher import CommandDispatcher, CommandExecutionError
