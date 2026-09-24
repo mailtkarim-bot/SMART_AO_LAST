@@ -50,3 +50,12 @@ class ContractProofReviewReadService:
             raise PermissionError(decision.code)
         with self._session_factory() as session:
             return tuple(session.scalars(sa.select(ContractProofReviewRecord).join(ContractBaselineDeviationImpactRecord, sa.and_(ContractBaselineDeviationImpactRecord.id == ContractProofReviewRecord.proof_id, ContractBaselineDeviationImpactRecord.tenant_id == ContractProofReviewRecord.tenant_id)).where(ContractProofReviewRecord.tenant_id == actor.tenant_id, ContractBaselineDeviationImpactRecord.case_id == case_id).order_by(ContractProofReviewRecord.created_at.desc())).all())
+
+    def latest_for_case(self, *, actor, case_id, now):
+        rows = self.list_for_case(actor=actor, case_id=case_id, now=now)
+        latest = {}
+        for row in rows:
+            key = (row.proof_id, row.reviewed_revision)
+            if key not in latest:
+                latest[key] = row
+        return tuple(latest.values())

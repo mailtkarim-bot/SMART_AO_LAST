@@ -23,4 +23,13 @@ def build_patron_contract_proof_review_router(*, service: ContractProofReviewRea
         except PermissionError as error:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="FORBIDDEN") from error
         return ContractProofReviewPageResponse(case_id=case_id, items=[ContractProofReviewResponse(review_id=row.id, proof_id=row.proof_id, reviewer_id=row.reviewer_id, reviewed_revision=row.reviewed_revision, decision=row.decision, rationale=row.rationale) for row in rows])
+
+    @router.get("/cases/{case_id}/contract-proof-reviews/latest", response_model=ContractProofReviewPageResponse)
+    def list_latest_reviews(case_id: UUID, authorization: str | None = Header(default=None)):
+        actor = resolve_bearer_context(authorization=authorization, context_resolver=security_runtime.context_resolver)
+        try:
+            rows = service.latest_for_case(actor=actor, case_id=case_id, now=datetime.now(tz=UTC))
+        except PermissionError as error:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="FORBIDDEN") from error
+        return ContractProofReviewPageResponse(case_id=case_id, items=[ContractProofReviewResponse(review_id=row.id, proof_id=row.proof_id, reviewer_id=row.reviewer_id, reviewed_revision=row.reviewed_revision, decision=row.decision, rationale=row.rationale) for row in rows])
     return router
