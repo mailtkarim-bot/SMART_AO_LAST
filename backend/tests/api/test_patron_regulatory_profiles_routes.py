@@ -75,7 +75,7 @@ def _endpoint(service: FakeService):
     router = build_patron_regulatory_profile_router(
         service=service,  # type: ignore[arg-type]
         read_service=FakeReadService(),  # type: ignore[arg-type]
-        security_runtime=SimpleNamespace(context_resolver=Resolver(_actor())),
+        security_runtime=SimpleNamespace(context_resolver=Resolver(_actor())),  # type: ignore[arg-type]
     )
     return router.routes[1].endpoint
 
@@ -84,7 +84,7 @@ def _read_endpoint(read_service: FakeReadService):
     router = build_patron_regulatory_profile_router(
         service=FakeService(),  # type: ignore[arg-type]
         read_service=read_service,  # type: ignore[arg-type]
-        security_runtime=SimpleNamespace(context_resolver=Resolver(_actor())),
+        security_runtime=SimpleNamespace(context_resolver=Resolver(_actor())),  # type: ignore[arg-type]
     )
     return router.routes[0].endpoint
 
