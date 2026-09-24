@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** ajouter la preuve PostgreSQL de la révision 2, du refus de révision manquante et de l'idempotence.
+**Prochaine étape unique :** rejouer les gates complètes après preuve PostgreSQL de la révision contrôlée.
 
 ## 1. Rôle de ce document
 
@@ -524,6 +524,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 24/09/2026 | Rejeu complet après cycle de revue | backend PostgreSQL éphémère **1 740 tests verts**, 1 avertissement Starlette/httpx externe ; frontend **188/188**, typecheck, lint et build verts ; conteneur supprimé, NO-GO public maintenu | préparer la prochaine tranche contractuelle locale après revue des résultats complets, sans ouverture publique |
 | 24/09/2026 | Paquet T4 révision contrôlée | `T4_CONTRACT_PROOF_REVISION_PACKET.md` produit avec contrat, refus, projection et preuves attendues ; aucun changement produit public | implémenter la révision contrôlée d'une preuve contractuelle, sans mutation de l'historique |
 | 24/09/2026 | T4 révision contrôlée append-only | handler exige la révision précédente pour `n > 1`, crée une nouvelle identité sans mutation, et conserve la contrainte tenant/Affaire/observation ; 3 tests de contrat de commande verts | ajouter la preuve PostgreSQL de la révision 2, du refus de révision manquante et de l'idempotence |
+| 24/09/2026 | Preuve PostgreSQL de révision contrôlée | deux révisions append-only et une revue de révision 2 insérées ; contrainte de rejeu/unicité vérifiée ; projection déterministe ; **3/3 tests PostgreSQL verts** | rejouer les gates complètes après preuve PostgreSQL de la révision contrôlée |
 
 ## 7. Règle de mise à jour
 
