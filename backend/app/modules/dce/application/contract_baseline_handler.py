@@ -1,3 +1,4 @@
+# ruff: noqa: E501
 from __future__ import annotations
 
 from uuid import UUID
@@ -89,3 +90,25 @@ class RecordContractBaselineImpactHandler(CommandHandler):
 
 def contract_baseline_handlers() -> dict[str, RecordContractBaselineImpactHandler]:
     return {RecordContractBaselineImpactCommand.command_type: RecordContractBaselineImpactHandler()}
+
+
+class ContractBaselineImpactReadService:
+    def __init__(self, *, session_factory, policy) -> None:
+        self._session_factory = session_factory
+        self._policy = policy
+
+    def list_for_case(self, *, actor, case_id, now):
+        from app.platform.security.authorization import AuthorizationRequest, AuthorizationResource
+        from app.platform.security.capabilities import Capability
+        from app.platform.security.context import ActorKind, DataClassification
+        if actor.actor_kind is not ActorKind.PATRON_ADMIN or actor.membership_id is None:
+            raise PermissionError("PATRON_REQUIRED")
+        decision = self._policy.authorize(context=actor, request=AuthorizationRequest(
+            action=Capability.CASE_DCE_READ,
+            resource=AuthorizationResource(resource_type="CONTRACT_BASELINE_IMPACT", resource_id=case_id, tenant_id=actor.tenant_id, classification=DataClassification.INTERNAL_OPERATIONAL, case_id=case_id),
+            evaluated_at=now,
+        ))
+        if not decision.allowed:
+            raise PermissionError(decision.code)
+        with self._session_factory() as session:
+            return tuple(session.scalars(sa.select(ContractBaselineDeviationImpactRecord).where(ContractBaselineDeviationImpactRecord.tenant_id == actor.tenant_id, ContractBaselineDeviationImpactRecord.case_id == case_id).order_by(ContractBaselineDeviationImpactRecord.proof_revision.desc())).all())

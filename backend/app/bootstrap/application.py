@@ -65,6 +65,9 @@ from app.interfaces.http.routes.patron_assignment_management import (
 from app.interfaces.http.routes.patron_boamp_opportunities import (
     build_patron_boamp_opportunity_router,
 )
+from app.interfaces.http.routes.patron_contract_baseline_impacts import (
+    build_patron_contract_baseline_impact_router,
+)
 from app.interfaces.http.routes.patron_dce_contract_risks import (
     build_patron_dce_contract_risk_router,
 )
@@ -114,7 +117,10 @@ from app.modules.case.application.regulatory_profile_handler import (
 from app.modules.case.infrastructure.models.case import CaseRecord
 from app.modules.case.infrastructure.repositories import SqlAlchemyCaseRepository
 from app.modules.case.infrastructure.resolution_reader import SqlAlchemyCaseResolutionReader
-from app.modules.dce.application.contract_baseline_handler import contract_baseline_handlers
+from app.modules.dce.application.contract_baseline_handler import (
+    ContractBaselineImpactReadService,
+    contract_baseline_handlers,
+)
 from app.modules.dce.application.contract_risk_read import PatronDceContractRiskReadService
 from app.modules.dce.application.handlers import (
     ClaimDceStagedObjectUploadHandler,
@@ -965,6 +971,9 @@ def create_app(
             session_factory=runtime.session_factory,
             policy=security_policy,
         )
+        contract_baseline_impact_read_service = ContractBaselineImpactReadService(
+            session_factory=runtime.session_factory, policy=security_policy
+        )
         patron_action_transition_service = PatronActionTransitionService(
             session_factory=runtime.session_factory,
             dispatcher=runtime.dispatcher,
@@ -1168,6 +1177,10 @@ def create_app(
                 security_runtime=security_runtime,
             )
         )
+        app.include_router(build_patron_contract_baseline_impact_router(
+            service=contract_baseline_impact_read_service,
+            security_runtime=security_runtime,
+        ))
         if knowledge_service is not None:
             app.include_router(
                 build_knowledge_router(

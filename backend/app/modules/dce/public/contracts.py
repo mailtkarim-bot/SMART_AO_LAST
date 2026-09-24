@@ -594,3 +594,22 @@ class DceContractRiskSignalPageResponse(BaseModel):
 
     case_id: UUID
     items: list[DceContractRiskSignalResponse]
+
+
+class ContractBaselineImpactResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    proof_id: UUID
+    case_id: UUID
+    baseline_observation_id: UUID
+    proof_revision: int
+    baseline_source_refs: list[str]
+    baseline_statement: str
+    deviation_statement: str | None
+    impact_statement: str | None
+    status: Literal["SOURCE_SIGNAL_ONLY", "HUMAN_REVIEW_REQUIRED", "CONFIRMED", "UNKNOWN"]
+
+
+class ContractBaselineImpactPageResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    case_id: UUID
+    items: list[ContractBaselineImpactResponse]
