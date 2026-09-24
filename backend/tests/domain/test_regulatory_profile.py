@@ -2,7 +2,6 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
-
 from app.modules.case.domain.regulatory_profile import (
     RegulatoryApplicabilityStatus,
     RegulatoryProfile,
