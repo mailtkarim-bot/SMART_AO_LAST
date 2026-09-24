@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** attendre la décision propriétaire locale sur la preuve baseline → dérogation → impact, sans ouverture publique.
+**Prochaine étape unique :** cadrer l'acte de revue humaine de la preuve contractuelle, avec décision explicite et sans moteur juridique automatique.
 
 ## 1. Rôle de ce document
 
@@ -511,6 +511,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 24/09/2026 | T2 composant UX C07 | types/API, hook de lecture et panneau C07 ajoutés ; baseline, dérogation, impact, sources et statut affichés sans action de mutation ; frontend **188/188 tests**, typecheck vert, lint sans erreur avec 1 avertissement de dépendance Hook | rejouer les gates backend/frontend après l'intégration UX C07 de la preuve contractuelle |
 | 24/09/2026 | Gates backend/frontend après UX C07 | backend ciblé **34/34 tests verts** après réalignement de la tête `20260924_0092` ; frontend **188/188**, typecheck et lint verts sans erreur ni avertissement ; aucune ouverture publique | préparer la revue propriétaire locale de la preuve baseline → dérogation → impact, sans ouverture publique |
 | 24/09/2026 | Paquet de revue propriétaire T2 | `T2_OWNER_REVIEW_BASELINE_DEROGATION_IMPACT.md` produit avec preuve, invariants, limites et décision locale demandée ; NO-GO public maintenu | attendre la décision propriétaire locale sur la preuve baseline → dérogation → impact, sans ouverture publique |
+| 24/09/2026 | Décision propriétaire locale T2 | représentation `source → baseline → dérogation → impact → revue humaine` approuvée ; limites juridiques, externes et NO-GO public maintenus | cadrer l'acte de revue humaine de la preuve contractuelle, avec décision explicite et sans moteur juridique automatique |
 
 ## 7. Règle de mise à jour
 
