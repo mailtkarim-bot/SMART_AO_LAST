@@ -31,7 +31,8 @@ En tant que système, je veux conserver un profil d'applicabilité réglementair
 - couverture ciblée : **91 %**.
 - migration `20260924_0091` rejouée sur PostgreSQL Docker éphémère : **1 test de structure passé** ; tête Alembic et downgrade du fixture vérifiés par le harness DB.
 - contrat pur + migration : **5 tests passés** dans le rejeu combiné.
+- commande/service d'écriture : rejeu identique retourne le reçu précédent, une Affaire d'un autre tenant est refusée `CASE_NOT_FOUND_OR_FORBIDDEN`, et la preuve PostgreSQL combinée passe **2 tests**.
 
 ## Limites
 
-Cette tranche persiste la structure tenant-scoped mais ne contient pas encore de commande/service/API d'écriture, de registre de règles vivantes ou de calcul juridique. Elle ne modifie aucune porte P0–P7. La prochaine tranche ajoute l'écriture applicative avec idempotence et refus tenant.
+Cette tranche persiste et écrit la structure tenant-scoped via `CommandDispatcher`, sans endpoint HTTP, registre de règles vivantes ou calcul juridique. Elle ne modifie aucune porte P0–P7. La prochaine tranche pourra exposer une route contrôlée si l'impact UX et l'autorisation Patron sont approuvés.

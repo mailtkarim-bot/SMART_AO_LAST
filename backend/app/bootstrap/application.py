@@ -103,6 +103,7 @@ from app.interfaces.http.routes.preparation_transmission import (
 from app.interfaces.http.routes.shared_resources import build_shared_resource_router
 from app.modules.case.application.handlers import CreateCaseHandler
 from app.modules.case.application.link_dce_version_handler import LinkCaseDceVersionHandler
+from app.modules.case.application.regulatory_profile import regulatory_profile_handlers
 from app.modules.case.infrastructure.models.case import CaseRecord
 from app.modules.case.infrastructure.repositories import SqlAlchemyCaseRepository
 from app.modules.case.infrastructure.resolution_reader import SqlAlchemyCaseResolutionReader
@@ -419,6 +420,7 @@ class AppRuntime:
                 consultation_reader_factory=SqlAlchemyConsultationRepository,
             ),
             "LinkCaseDceVersion": LinkCaseDceVersionHandler(),
+            **regulatory_profile_handlers(),
             "ExpireDceStagedObject": ExpireDceStagedObjectHandler(),
             "PrepareDceStaging": PrepareDceStagingHandler(),
             "RecordDceStagedObjectQuarantine": RecordDceStagedObjectQuarantineHandler(),
