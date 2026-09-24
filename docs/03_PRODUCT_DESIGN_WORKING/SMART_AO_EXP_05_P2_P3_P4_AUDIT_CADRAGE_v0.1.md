@@ -3,7 +3,7 @@
 **Statut :** AUDIT EXÉCUTÉ · COUVERTURE PARTIELLE ASSUMÉE · AUCUN GO IMPLICITE  
 **Date :** 15 septembre 2026  
 **Autorité :** cahier produit/métier `OWNER_CONSOLIDATED v0.4` et catalogue `OWNER_CONSOLIDATED v0.3`  
-**Références :** [`SMART_AO_EXP_05_REPONSE_PRIX_AUDIT_CADRAGE_v0.1.md`](SMART_AO_EXP_05_REPONSE_PRIX_AUDIT_CADRAGE_v0.1.md), [`SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v1.0.md`](../00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v1.0.md)
+**Références :** [`SMART_AO_EXP_05_REPONSE_PRIX_AUDIT_CADRAGE_v0.1.md`](SMART_AO_EXP_05_REPONSE_PRIX_AUDIT_CADRAGE_v0.1.md), [`SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v2.0.md`](../00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v2.0.md)
 
 ## 1. Objet de l’audit
 

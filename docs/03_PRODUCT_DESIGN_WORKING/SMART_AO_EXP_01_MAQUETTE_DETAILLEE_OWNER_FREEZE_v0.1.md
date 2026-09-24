@@ -312,7 +312,7 @@ La maquette est promouvable vers une implémentation de tranche lorsque les crit
 - [Prototype basse fidélité EXP-01 archivé](../_ARCHIVE/explorations_visuelles/SMART_AO_EXP_01_Prototype_Basse_Fidelite_WORK_PROPOSAL_v0.1.md)
 - [Parcours et contrats de pages](../_ARCHIVE/work_reviews/SMART_AO_Experience_Utilisateur_Parcours_Pages_WORK_PROPOSAL_v0.1.md)
 - [Évaluation technique EXP-01](SMART_AO_EXP_01_Evaluation_Technique_WORK_PROPOSAL_v0.1.md)
-- [Cahier Produit/Métier OWNER v0.4](../00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v1.0.md)
+- [Cahier Produit/Métier OWNER v0.4](../00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v2.0.md)
 - [Catalogue Écrans/Parcours OWNER v0.3](../00_REFERENCE_ACTIVE/SMART_AO_Catalogue_Ecrans_Parcours_Produit_OWNER_CONSOLIDATED_v0.3.md)
 - `web/src/app/App.tsx`
 - `web/src/features/auth/MfaPanel.tsx`

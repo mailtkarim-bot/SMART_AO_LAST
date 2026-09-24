@@ -71,5 +71,5 @@ La liaison des preuves aux actes ciblés est maintenant matérialisée dans le c
 - `backend/tests/application/test_g01_g09_business_fixtures.py`
 - `docs/03_PRODUCT_DESIGN_WORKING/SMART_AO_PHASE9_G01_G09_ACTES_METIER_PREUVE_v0.1.md`
 - `backend/app/platform/quality/recipe_catalog.py`
-- `docs/00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v1.0.md`
+- `docs/00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v2.0.md`
 - `docs/00_REFERENCE_ACTIVE/SMART_AO_Catalogue_Ecrans_Parcours_Produit_OWNER_CONSOLIDATED_v0.3.md`

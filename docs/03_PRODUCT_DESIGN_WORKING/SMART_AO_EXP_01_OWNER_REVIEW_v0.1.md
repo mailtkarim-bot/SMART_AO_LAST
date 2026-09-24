@@ -92,6 +92,6 @@ Résultats du 14 septembre 2026 : **141/141 tests front**, **31/31 tests backend
 - [Preuve contexte et rôles](SMART_AO_EXP_01_CONTEXTE_ROLES_PREUVE_VERTICALE_v0.1.md)
 - [Parcours et contrats de pages](../_ARCHIVE/work_reviews/SMART_AO_Experience_Utilisateur_Parcours_Pages_WORK_PROPOSAL_v0.1.md)
 - [Plan global de conception et réalisation](SMART_AO_PLAN_GLOBAL_CONCEPTION_REALISATION_CHECKLIST_v0.1.md)
-- [Cahier Produit/Métier OWNER v0.4](../00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v1.0.md)
+- [Cahier Produit/Métier OWNER v0.4](../00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v2.0.md)
 - [Catalogue Écrans/Parcours OWNER v0.3](../00_REFERENCE_ACTIVE/SMART_AO_Catalogue_Ecrans_Parcours_Produit_OWNER_CONSOLIDATED_v0.3.md)
 - [OWNER EXPERIENCE FREEZE EXP-01](SMART_AO_EXP_01_OWNER_EXPERIENCE_FREEZE_v0.1.md)

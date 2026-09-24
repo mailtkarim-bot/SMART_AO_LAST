@@ -48,7 +48,7 @@ Toute nouvelle expérience doit respecter ce vocabulaire, ces rôles, ces états
 
 ## Références
 
-- `docs/00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v1.0.md`
+- `docs/00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v2.0.md`
 - `docs/00_REFERENCE_ACTIVE/SMART_AO_Catalogue_Ecrans_Parcours_Produit_OWNER_CONSOLIDATED_v0.3.md`
 - `docs/03_PRODUCT_DESIGN_WORKING/SMART_AO_G01_G09_OWNER_EXPERIENCE_FREEZE_v0.1.md`
 - `docs/03_PRODUCT_DESIGN_WORKING/SMART_AO_PHASE9_G01_G09_OWNER_REVIEW_PACKET_v0.1.md`

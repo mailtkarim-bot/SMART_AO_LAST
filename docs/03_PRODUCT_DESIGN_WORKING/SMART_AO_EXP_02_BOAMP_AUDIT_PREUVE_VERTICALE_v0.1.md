@@ -2,7 +2,7 @@
 
 **Statut :** AUDITÉ · PREUVE NOMINALE PROUVÉE  
 **Date :** 14 septembre 2026  
-**Autorité produit/métier :** `SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v1.0.md`
+**Autorité produit/métier :** `SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v2.0.md`
 **Référence UX :** `SMART_AO_Catalogue_Ecrans_Parcours_Produit_OWNER_CONSOLIDATED_v0.3.md`
 
 ## 1. Décision de tranche

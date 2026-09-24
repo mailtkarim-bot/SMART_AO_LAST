@@ -3,7 +3,7 @@
 
 **Statut :** PREUVE VERTICALE P5 EXÉCUTÉE · CANDIDATURE SEULE ET RÉCEPTION INCONNUE AJOUTÉES · REMISE EXTERNE NON EFFECTUÉE  
 **Date :** 15 septembre 2026  
-**Autorité produit/métier :** `docs/00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v1.0.md`
+**Autorité produit/métier :** `docs/00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v2.0.md`
 **Tranche suivante :** cadrer la copie de sauvegarde et le redépôt, puis fermer les critères de rôles, d'audit et de gel d'EXP-06.
 
 ## 1. But de la tranche

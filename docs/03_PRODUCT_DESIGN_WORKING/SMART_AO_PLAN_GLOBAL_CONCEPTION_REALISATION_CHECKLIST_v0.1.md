@@ -2,10 +2,10 @@
 ## CHECKLIST PILOTÉE v0.1
 
 **Créé le :** 14 septembre 2026  
-**Dernière mise à jour :** 21 septembre 2026
+**Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
-**Tranche active :** PHASE 11 — Qualification de production
-**Prochaine étape unique :** traiter les écarts de recette locale bornée et maintenir le NO-GO public.
+**Tranche active :** T0 — réouverture produit v2 candidate, audit d'existant
+**Prochaine étape unique :** présenter l'audit v2 au propriétaire et statuer explicitement sur la promotion du Product Freeze v2.0 ; maintenir le NO-GO public.
 
 ## 1. Rôle de ce document
 
@@ -268,13 +268,23 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 
 ### PHASE 10 — Product Freeze et cahier technique d'exécution
 
-- [x] Consolider les décisions d'expérience validées dans le Product Freeze v1.0 `docs/00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v1.0.md`.
+- [x] Consolider les décisions d'expérience validées dans le Product Freeze v1.0 `docs/00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v2.0.md`.
 - [x] Approuver et promouvoir le Product Freeze v1.0 comme nouvelle autorité produit/métier ; v0.4 archivé dans `_ARCHIVE/produit_metier/`.
-- [x] Écrire le cahier technique d'exécution : architecture cible, modules, données, API, événements et sécurité dans `docs/02_FUTURE_TECHNICAL/SMART_AO_CAHIER_TECHNIQUE_EXECUTION_v1.0.md`.
-- [x] Cartographier chaque exigence gelée vers code, test, migration, observabilité et procédure d'exploitation dans `docs/02_FUTURE_TECHNICAL/SMART_AO_PRODUCT_FREEZE_TRACEABILITY_MATRIX_v1.0.md`.
+- [x] Écrire le cahier technique d'exécution : architecture cible, modules, données, API, événements et sécurité dans `docs/02_FUTURE_TECHNICAL/SMART_AO_CAHIER_TECHNIQUE_EXECUTION_v2.1.md`.
+- [x] Cartographier les exigences v1 vers code, test, migration, observabilité et procédure d'exploitation ; la traçabilité v2 est dans `docs/03_PRODUCT_DESIGN_WORKING/realignment_v2_audit/MASTER_V2_TRACEABILITY_MATRIX.md`.
 - [x] Interdire toute divergence silencieuse entre le Product Freeze v1.0 et l'implémentation ; contrat documentaire dans `backend/tests/ops/test_product_freeze_authority_contract.py`.
 
 **Sortie de phase :** une vérité produit v1.0 et une vérité technique exécutable remplacent les documents de transition.
+
+### T0 — Réouverture produit v2 candidate (24 septembre 2026)
+
+- [x] Recevoir les six documents de réalignement, les vérifier en lecture seule puis les promouvoir sous les emplacements actifs prévus.
+- [x] Comparer les exigences PF2-01 à PF2-16 aux modèles, services, routes, migrations, tests et surfaces existants ; neuf livrables d'audit sous `docs/03_PRODUCT_DESIGN_WORKING/realignment_v2_audit/`.
+- [x] Corriger dans le cahier technique **candidat** l'omission de REC-41 à REC-45 exigées par le Product Freeze v2 candidat.
+- [x] Soumettre le paquet d'audit et les arbitrages PF2-01 à PF2-16 au propriétaire ; promotion explicite du Product Freeze v2.0 reçue le 24 septembre 2026.
+- [>] Lancer T1 par la première capacité v2 caractérisée, après mise à jour des références UX nécessaires et maintien des validations externes comme gates.
+
+**État :** `READY_WITH_BLOCKERS` pour l'implémentation ; aucun nouveau comportement v2 n'est encore codé, aucune règle juridique/assurantielle/HSE n'est déclarée validée. Le GO conditionnel local et le NO-GO public restent en vigueur.
 
 ### PHASE 11 — Qualification de production
 
@@ -431,8 +441,8 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 20/09/2026 | OWNER EXPERIENCE FREEZE et UX Freeze global | gel G01–G09 validé, règles communes consolidées pour C00–C16, 104 surfaces, PUX et freezes EXP/N déjà existants ; limites `PARTIAL`, recette lecteur d’écran et Product Freeze restent explicites ; preuves dans `SMART_AO_G01_G09_OWNER_EXPERIENCE_FREEZE_v0.1.md` et `SMART_AO_UX_FREEZE_GLOBAL_v0.1.md` | consolider les décisions d’expérience validées dans le Product Freeze v1.0 |
 | 20/09/2026 | Product Freeze v1.0 promu | cahier v0.4, catalogue UX, freezes d’expérience, G01–G09 validés et contraintes de confidentialité/IA/accessibilité consolidés ; v0.4 archivé, v1.0 devient l’autorité active | écrire le cahier technique d’exécution |
 | 20/09/2026 | Promotion de l’autorité produit/métier | approbation explicite reçue : « Je promeus le Product Freeze v1.0 et j’archive le v0.4 » ; index, README et références actives réalignés ; dépôt publié sur SMART_AO_LAST | écrire le cahier technique d’exécution |
-| 20/09/2026 | Cahier technique d’exécution v1.0 candidat | modular monolith FastAPI/React/PostgreSQL, commandes idempotentes, sécurité, données, événements, IA/RAG, exploitation et tests consolidés sans rewrite Rust ; document `SMART_AO_CAHIER_TECHNIQUE_EXECUTION_v1.0.md` | cartographier chaque exigence gelée vers code, test, migration, observabilité et procédure d’exploitation |
-| 20/09/2026 | Matrice de traçabilité Product Freeze | exigences v1.0 reliées à code, tests, migrations, exploitation et gaps explicites dans `SMART_AO_PRODUCT_FREEZE_TRACEABILITY_MATRIX_v1.0.md` ; portes P2/P3/P4 et production restent `PARTIAL` | interdire toute divergence silencieuse entre le Product Freeze v1.0 et l’implémentation |
+| 20/09/2026 | Cahier technique d’exécution v1.0 candidat | modular monolith FastAPI/React/PostgreSQL, commandes idempotentes, sécurité, données, événements, IA/RAG, exploitation et tests consolidés sans rewrite Rust ; document `SMART_AO_CAHIER_TECHNIQUE_EXECUTION_v2.1.md` | cartographier chaque exigence gelée vers code, test, migration, observabilité et procédure d’exploitation |
+| 20/09/2026 | Matrice de traçabilité Product Freeze | exigences v1.0 reliées à code, tests, migrations, exploitation et gaps explicites dans la matrice archivée ; la matrice v2 T0 est dans `realignment_v2_audit/MASTER_V2_TRACEABILITY_MATRIX.md` | interdire toute divergence silencieuse entre le Product Freeze actif et l’implémentation |
 | 20/09/2026 | Contrat anti-divergence Product Freeze | tests d’architecture vérifiant l’unicité du v1.0 actif, l’archivage du v0.4 et la présence de la matrice de traçabilité ; 2 tests passent | exécuter les suites de qualification de production |
 | 20/09/2026 | Qualification backend complète | PostgreSQL Docker : 1 717 tests passés, 2 skips PIL, 10 avertissements Starlette/httpx ou alias HTTP non fonctionnels ; la tête de suite reste verte | vérifier la sécurité de production, les secrets, les dépendances, les uploads hostiles, l’audit et la restauration |
 | 20/09/2026 | Audit sécurité production | `pip-audit .`, Bandit, detect-secrets, audit pnpm officiel, frontières tenant/MFA/finance, uploads hostiles et contrat Product Freeze vérifiés ; restauration et rotation de secrets restent à exécuter en préproduction ; preuve `SMART_AO_PHASE11_PRODUCTION_SECURITY_AUDIT_v0.1.md` | exécuter la restauration réelle d’une sauvegarde PostgreSQL et la rotation opérationnelle des secrets |
@@ -477,6 +487,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 22/09/2026 | Réduction des avertissements API | constantes `HTTP_422_UNPROCESSABLE_ENTITY` remplacées par `HTTP_422_UNPROCESSABLE_CONTENT` ; Ruff, format et mypy verts ; suite API **540/540** verte ; seul avertissement restant issu de Starlette/httpx, hors code projet | poursuivre les corrections et preuves locales sans fermer artificiellement les limites externes |
 | 22/09/2026 | Simulation locale après génération dynamique des secrets | stack éphémère reconstruite avec secrets aléatoires, smoke HTTPS/DB/schema/ClamAV vert, charge bornée 100/concurrence 10 en 1 170 ms (85,47 req/s), redémarrages, panne/récupération ClamAV, backup/restauration 127 tables et rotation JWT : **PASS** ; mesure locale non extrapolée au VPS | poursuivre les corrections et preuves locales sans fermer artificiellement les limites externes |
 | 22/09/2026 | Réalignement documentaire du README | quatre liens historiques supprimés remplacés par documentation active, index de références, Product Freeze v1.0, cahier technique et plan global ; vérification automatique : 6 liens locaux, 0 manquant | poursuivre les corrections et preuves locales sans fermer artificiellement les limites externes |
+| 24/09/2026 | Promotion Product Freeze v2 et réalignement documentaire | six documents déplacés depuis `_Update`, v1.0 et l'ancienne matrice archivés, index/README/cahier technique/test d'autorité réalignés ; audit T0 et REC-41–45 intégrés ; 2/2 tests d'autorité ciblés verts, aucune migration ni capacité v2 codée | lancer T1 par la première capacité v2 caractérisée ; maintenir le NO-GO public |
 
 ## 7. Règle de mise à jour
 

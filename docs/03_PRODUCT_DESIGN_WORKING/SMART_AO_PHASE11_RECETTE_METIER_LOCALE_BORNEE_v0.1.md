@@ -2,7 +2,7 @@
 
 **Date :** 22 septembre 2026  
 **Statut :** QUALIFIÉE LOCALEMENT — GO CONDITIONNEL LOCAL  
-**Autorité produit/métier :** `docs/00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v1.0.md`
+**Autorité produit/métier :** `docs/00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v2.0.md`
 
 ## Périmètre
 

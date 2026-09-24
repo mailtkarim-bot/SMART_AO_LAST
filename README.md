@@ -26,8 +26,8 @@ Le dépôt se démarre localement avec Docker Compose ou les services de dévelo
 
 - [Documentation active](docs/README_DOCUMENTATION.md)
 - [Index des références actives](docs/00_REFERENCE_ACTIVE/00_INDEX_REFERENCE_ACTIVE.md)
-- [Product Freeze v1.0](docs/00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v1.0.md)
-- [Cahier technique d’exécution](docs/02_FUTURE_TECHNICAL/SMART_AO_CAHIER_TECHNIQUE_EXECUTION_v1.0.md)
+- [Product Freeze v2.0](docs/00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v2.0.md)
+- [Cahier technique d’exécution](docs/02_FUTURE_TECHNICAL/SMART_AO_CAHIER_TECHNIQUE_EXECUTION_v2.1.md)
 - [Plan global de conception et réalisation](docs/03_PRODUCT_DESIGN_WORKING/SMART_AO_PLAN_GLOBAL_CONCEPTION_REALISATION_CHECKLIST_v0.1.md)
 - [Checklist durable](todo.md)
 

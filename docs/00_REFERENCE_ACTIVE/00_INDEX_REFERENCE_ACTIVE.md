@@ -1,17 +1,17 @@
 # SMART AO — Index des références actives
 
-**Date : 21 septembre 2026**
+**Date : 24 septembre 2026**
 **Statut : INDEX DE PRÉCÉDENCE DOCUMENTAIRE**
 
 Cet index indique quel document fait foi pour chaque type de décision. Il ne crée aucune règle produit supplémentaire.
 
 ## 1 — Autorité produit et métier
 
-[`SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v1.0.md`](SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v1.0.md)
+[`SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v2.0.md`](SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v2.0.md)
 
 Répond à : **« Quel SMART AO voulons-nous construire, pour qui, avec quelles règles, autorités et limites ? »**
 
-En cas de contradiction produit ou métier, le Product Freeze v1.0 prévaut. Le cahier v0.4 est archivé dans `../_ARCHIVE/produit_metier/`.
+En cas de contradiction produit ou métier, le Product Freeze v2.0 prévaut. Le v1.0 est archivé dans `../_ARCHIVE/produit_metier/`.
 
 ## 2 — Autorité de couverture UX et des parcours
 
@@ -46,6 +46,12 @@ Le référentiel des dépendances de travail est [`DEPENDENCIES_WORKING/SMART_AO
 Répond à : **« Quel est l’état technique réel, quelles migrations sont engagées et quelles preuves existent ? »**
 
 Ces références ne redéfinissent pas le produit. Le code et les tests restent les premières preuves de l’état effectivement implémenté.
+
+## 6 — Réalignement v2 promu
+
+- [`SMART_AO_CAHIER_DIRECTEUR_METIER_MASTER_v2.0.md`](SMART_AO_CAHIER_DIRECTEUR_METIER_MASTER_v2.0.md) — profondeur métier active ; le Product Freeze v2.0 décide ce qui devient contrat produit.
+- [`../02_FUTURE_TECHNICAL/SMART_AO_CAHIER_TECHNIQUE_EXECUTION_v2.1.md`](../02_FUTURE_TECHNICAL/SMART_AO_CAHIER_TECHNIQUE_EXECUTION_v2.1.md) — référence technique dérivée.
+- [`../03_PRODUCT_DESIGN_WORKING/realignment_v2/SMART_AO_AUDIT_MASTER_V2_VS_PRODUCT_FREEZE_V1_2026-09-24.md`](../03_PRODUCT_DESIGN_WORKING/realignment_v2/SMART_AO_AUDIT_MASTER_V2_VS_PRODUCT_FREEZE_V1_2026-09-24.md) — preuve de promotion et écarts T0.
 
 ## Règle de changement
 

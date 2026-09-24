@@ -3,7 +3,7 @@
 
 **Statut :** PREUVE POSTGRESQL ACQUISE · RAPPROCHEMENT PARTIEL ASSUMÉ
 **Date :** 19 septembre 2026
-**Autorité produit/métier :** `docs/00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v1.0.md`
+**Autorité produit/métier :** `docs/00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v2.0.md`
 
 ## But
 
