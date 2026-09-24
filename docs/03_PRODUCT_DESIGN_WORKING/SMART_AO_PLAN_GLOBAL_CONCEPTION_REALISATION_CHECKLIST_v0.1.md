@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** cadrer l'acte de revue humaine de la preuve contractuelle, avec décision explicite et sans moteur juridique automatique.
+**Prochaine étape unique :** persister l'acte de revue humaine tenant-scoped, append-only et idempotent.
 
 ## 1. Rôle de ce document
 
@@ -512,6 +512,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 24/09/2026 | Gates backend/frontend après UX C07 | backend ciblé **34/34 tests verts** après réalignement de la tête `20260924_0092` ; frontend **188/188**, typecheck et lint verts sans erreur ni avertissement ; aucune ouverture publique | préparer la revue propriétaire locale de la preuve baseline → dérogation → impact, sans ouverture publique |
 | 24/09/2026 | Paquet de revue propriétaire T2 | `T2_OWNER_REVIEW_BASELINE_DEROGATION_IMPACT.md` produit avec preuve, invariants, limites et décision locale demandée ; NO-GO public maintenu | attendre la décision propriétaire locale sur la preuve baseline → dérogation → impact, sans ouverture publique |
 | 24/09/2026 | Décision propriétaire locale T2 | représentation `source → baseline → dérogation → impact → revue humaine` approuvée ; limites juridiques, externes et NO-GO public maintenus | cadrer l'acte de revue humaine de la preuve contractuelle, avec décision explicite et sans moteur juridique automatique |
+| 24/09/2026 | Contrat d'acte de revue humaine T2 | `ContractProofReview` ajouté : relecteur, décision fermée, révision et justification obligatoires ; 2 tests domaine verts ; aucune conclusion juridique ni mutation de la preuve | persister l'acte de revue humaine tenant-scoped, append-only et idempotent |
 
 ## 7. Règle de mise à jour
 
