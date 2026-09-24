@@ -44,6 +44,19 @@ class RecordContractBaselineImpactHandler(CommandHandler):
             command.deviation_statement is None or command.impact_statement is None
         ):
             raise CommandExecutionError("CONFIRMED_CHAIN_INCOMPLETE")
+        if command.proof_revision > 1:
+            previous = session.scalar(
+                sa.select(ContractBaselineDeviationImpactRecord.id).where(
+                    ContractBaselineDeviationImpactRecord.tenant_id == tenant_id,
+                    ContractBaselineDeviationImpactRecord.case_id == command.case_id,
+                    ContractBaselineDeviationImpactRecord.baseline_observation_id
+                    == command.baseline_observation_id,
+                    ContractBaselineDeviationImpactRecord.proof_revision
+                    == command.proof_revision - 1,
+                )
+            )
+            if previous is None:
+                raise CommandExecutionError("PREVIOUS_CONTRACT_PROOF_REVISION_REQUIRED")
         existing = session.scalar(
             sa.select(ContractBaselineDeviationImpactRecord).where(
                 ContractBaselineDeviationImpactRecord.tenant_id == tenant_id,
@@ -101,14 +114,33 @@ class ContractBaselineImpactReadService:
         from app.platform.security.authorization import AuthorizationRequest, AuthorizationResource
         from app.platform.security.capabilities import Capability
         from app.platform.security.context import ActorKind, DataClassification
+
         if actor.actor_kind is not ActorKind.PATRON_ADMIN or actor.membership_id is None:
             raise PermissionError("PATRON_REQUIRED")
-        decision = self._policy.authorize(context=actor, request=AuthorizationRequest(
-            action=Capability.CASE_DCE_READ,
-            resource=AuthorizationResource(resource_type="CONTRACT_BASELINE_IMPACT", resource_id=case_id, tenant_id=actor.tenant_id, classification=DataClassification.INTERNAL_OPERATIONAL, case_id=case_id),
-            evaluated_at=now,
-        ))
+        decision = self._policy.authorize(
+            context=actor,
+            request=AuthorizationRequest(
+                action=Capability.CASE_DCE_READ,
+                resource=AuthorizationResource(
+                    resource_type="CONTRACT_BASELINE_IMPACT",
+                    resource_id=case_id,
+                    tenant_id=actor.tenant_id,
+                    classification=DataClassification.INTERNAL_OPERATIONAL,
+                    case_id=case_id,
+                ),
+                evaluated_at=now,
+            ),
+        )
         if not decision.allowed:
             raise PermissionError(decision.code)
         with self._session_factory() as session:
-            return tuple(session.scalars(sa.select(ContractBaselineDeviationImpactRecord).where(ContractBaselineDeviationImpactRecord.tenant_id == actor.tenant_id, ContractBaselineDeviationImpactRecord.case_id == case_id).order_by(ContractBaselineDeviationImpactRecord.proof_revision.desc())).all())
+            return tuple(
+                session.scalars(
+                    sa.select(ContractBaselineDeviationImpactRecord)
+                    .where(
+                        ContractBaselineDeviationImpactRecord.tenant_id == actor.tenant_id,
+                        ContractBaselineDeviationImpactRecord.case_id == case_id,
+                    )
+                    .order_by(ContractBaselineDeviationImpactRecord.proof_revision.desc())
+                ).all()
+            )
