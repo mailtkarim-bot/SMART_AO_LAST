@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** rejouer les gates backend/frontend après intégration de la revue humaine dans C07.
+**Prochaine étape unique :** préparer la tranche suivante de revue contractuelle locale, sans ouverture publique.
 
 ## 1. Rôle de ce document
 
@@ -516,6 +516,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 24/09/2026 | Persistance de l'acte de revue humaine T2 | migration `20260924_0093`, modèle tenant-scoped append-only et handler dispatcher ajoutés ; Ruff/imports verts ; validation PostgreSQL dédiée encore à exécuter | exécuter la migration `20260924_0093` et les tests PostgreSQL de l'acte de revue humaine |
 | 24/09/2026 | Validation PostgreSQL de l'acte de revue humaine | migration `20260924_0093` validée par upgrade → downgrade → upgrade sur PostgreSQL éphémère ; contrats domaine et preuve T2 **8/8 tests verts** ; aucune base persistante touchée | exposer la lecture Patron de l'acte de revue humaine dans C07, sans mutation ni conclusion juridique |
 | 24/09/2026 | Revue humaine intégrée à C07 | types/API, hook de lecture et projection de décision/rationale ajoutés ; frontend **188/188 tests**, typecheck et lint verts ; aucune mutation UX | rejouer les gates backend/frontend après intégration de la revue humaine dans C07 |
+| 24/09/2026 | Gates finales après revue humaine C07 | backend ciblé **42/42 tests verts** après réalignement de la tête `20260924_0093` ; frontend **188/188**, typecheck et lint verts ; NO-GO public maintenu | préparer la tranche suivante de revue contractuelle locale, sans ouverture publique |
 
 ## 7. Règle de mise à jour
 
