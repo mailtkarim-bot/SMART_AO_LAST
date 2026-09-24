@@ -437,6 +437,8 @@ export type ContractBaselineImpact = {
   status: ContractBaselineImpactStatus;
 };
 export type ContractBaselineImpactPage = { case_id: string; items: ContractBaselineImpact[] };
+export type ContractProofReview = { review_id: string; proof_id: string; reviewer_id: string; reviewed_revision: number; decision: "ACCEPTED" | "REJECTED" | "NEEDS_CLARIFICATION"; rationale: string };
+export type ContractProofReviewPage = { case_id: string; items: ContractProofReview[] };
 
 export type RegisterStructuredRiskInput = {
   risk_id: string;

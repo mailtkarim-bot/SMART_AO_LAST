@@ -21,6 +21,7 @@ import { useDceContractRiskSignals } from "../features/decision/useDceContractRi
 import { useDecisionCrossChecks } from "../features/decision/useDecisionCrossChecks";
 import { useRegulatoryProfiles } from "../features/decision/useRegulatoryProfiles";
 import { useContractBaselineImpacts } from "../features/decision/useContractBaselineImpacts";
+import { useContractProofReviews } from "../features/decision/useContractProofReviews";
 import { usePatronCockpit } from "../features/cockpit/usePatronCockpit";
 import { BoampOpportunityPanel } from "../features/opportunities/BoampOpportunityPanel";
 import { useBoampOpportunities } from "../features/opportunities/useBoampOpportunities";
@@ -273,6 +274,7 @@ function App() {
     setMessage,
     isPatron ? selectedCaseId : "",
   );
+  const contractProofReviews = useContractProofReviews(api, setMessage, isPatron ? selectedCaseId : "");
   const {
     assignments,
     selectedAssignmentId,
@@ -1060,6 +1062,7 @@ function App() {
           <ContractBaselineImpactsPanel
             caseId={selectedCaseId}
             items={contractBaselineImpacts.items}
+            reviews={contractProofReviews.reviews}
             loading={contractBaselineImpacts.loading}
             onRefresh={() => void contractBaselineImpacts.refresh()}
           />

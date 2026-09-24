@@ -1,8 +1,10 @@
 import type { ContractBaselineImpact } from "../../shared/types";
+import type { ContractProofReview } from "../../shared/types";
 
-export function ContractBaselineImpactsPanel({ caseId, items, loading, onRefresh }: { caseId: string; items: ContractBaselineImpact[]; loading: boolean; onRefresh: () => void }) {
+export function ContractBaselineImpactsPanel({ caseId, items, reviews, loading, onRefresh }: { caseId: string; items: ContractBaselineImpact[]; reviews: ContractProofReview[]; loading: boolean; onRefresh: () => void }) {
   return <section className="section-block decision-section" id="contract-baseline-impacts-section">
     <div className="section-heading"><div><span className="section-kicker">PREUVE CONTRACTUELLE</span><h2>Baseline → dérogation → impact</h2></div><button className="secondary-button" type="button" onClick={onRefresh} disabled={!caseId || loading}>{loading ? "Chargement…" : "Actualiser"}</button></div>
     {!caseId ? <div className="empty-card"><strong>Aucune affaire sélectionnée</strong><p>Sélectionnez une affaire pour lire la preuve.</p></div> : items.length === 0 && !loading ? <div className="empty-card"><strong>Aucune preuve enregistrée</strong><p>Les signaux contractuels restent à qualifier.</p></div> : <div className="decision-grid">{items.map((item) => <article className="detail-panel" key={item.proof_id}><div className="panel-heading"><div><h3>Preuve v{item.proof_revision}</h3><p>{item.baseline_source_refs.join(" · ")}</p></div><span className={`state-badge state-${item.status.toLowerCase()}`}>{item.status}</span></div><dl className="decision-facts"><div><dt>Baseline</dt><dd>{item.baseline_statement}</dd></div><div><dt>Dérogation</dt><dd>{item.deviation_statement ?? "Non renseignée"}</dd></div><div><dt>Impact</dt><dd>{item.impact_statement ?? "Non renseigné"}</dd></div></dl><p className="panel-empty">Lecture seule : aucune conclusion juridique n'est déduite.</p></article>)}</div>}
+    {reviews.length > 0 && <div className="decision-grid">{reviews.map((review) => <article className="detail-panel" key={review.review_id}><div className="panel-heading"><h3>Revue v{review.reviewed_revision}</h3><span className="state-badge">{review.decision}</span></div><p>{review.rationale}</p><p className="panel-empty">Acte humain conservé en lecture seule.</p></article>)}</div>}
   </section>;
 }

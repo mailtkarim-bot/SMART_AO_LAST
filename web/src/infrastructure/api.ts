@@ -77,6 +77,7 @@ import type {
   DceContractRiskSignalPage,
   RegulatoryProfilePage,
   ContractBaselineImpactPage,
+  ContractProofReviewPage,
   RegisterStructuredRiskInput,
   StructuredRiskRegistrationResponse,
   DecisionCctpPricingCrossingResponse,
@@ -514,6 +515,10 @@ export function createApiClient(
     listContractBaselineImpacts: (caseId: string) =>
       request<ContractBaselineImpactPage>(
         `/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-baseline-impacts`,
+      ),
+    listContractProofReviews: (caseId: string) =>
+      request<ContractProofReviewPage>(
+        `/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-proof-reviews`,
       ),
     registerStructuredRisk: (caseId: string, input: RegisterStructuredRiskInput) =>
       request<StructuredRiskRegistrationResponse>(
