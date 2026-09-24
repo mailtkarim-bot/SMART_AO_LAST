@@ -33,3 +33,20 @@ class RecordContractProofReviewHandler(CommandHandler):
 
 def contract_review_handlers() -> dict[str, RecordContractProofReviewHandler]:
     return {RecordContractProofReviewCommand.command_type: RecordContractProofReviewHandler()}
+
+
+class ContractProofReviewReadService:
+    def __init__(self, *, session_factory, policy) -> None:
+        self._session_factory, self._policy = session_factory, policy
+
+    def list_for_case(self, *, actor, case_id, now):
+        from app.platform.security.authorization import AuthorizationRequest, AuthorizationResource
+        from app.platform.security.capabilities import Capability
+        from app.platform.security.context import ActorKind, DataClassification
+        if actor.actor_kind is not ActorKind.PATRON_ADMIN or actor.membership_id is None:
+            raise PermissionError("PATRON_REQUIRED")
+        decision = self._policy.authorize(context=actor, request=AuthorizationRequest(action=Capability.CASE_DCE_READ, resource=AuthorizationResource(resource_type="CONTRACT_PROOF_REVIEW", resource_id=case_id, tenant_id=actor.tenant_id, classification=DataClassification.INTERNAL_OPERATIONAL, case_id=case_id), evaluated_at=now))
+        if not decision.allowed:
+            raise PermissionError(decision.code)
+        with self._session_factory() as session:
+            return tuple(session.scalars(sa.select(ContractProofReviewRecord).join(ContractBaselineDeviationImpactRecord, sa.and_(ContractBaselineDeviationImpactRecord.id == ContractProofReviewRecord.proof_id, ContractBaselineDeviationImpactRecord.tenant_id == ContractProofReviewRecord.tenant_id)).where(ContractProofReviewRecord.tenant_id == actor.tenant_id, ContractBaselineDeviationImpactRecord.case_id == case_id).order_by(ContractProofReviewRecord.created_at.desc())).all())

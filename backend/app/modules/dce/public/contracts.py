@@ -613,3 +613,17 @@ class ContractBaselineImpactPageResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
     case_id: UUID
     items: list[ContractBaselineImpactResponse]
+
+class ContractProofReviewResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    review_id: UUID
+    proof_id: UUID
+    reviewer_id: UUID
+    reviewed_revision: int
+    decision: Literal["ACCEPTED", "REJECTED", "NEEDS_CLARIFICATION"]
+    rationale: str
+
+class ContractProofReviewPageResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    case_id: UUID
+    items: list[ContractProofReviewResponse]

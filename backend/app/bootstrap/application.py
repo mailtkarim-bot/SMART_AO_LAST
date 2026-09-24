@@ -68,6 +68,9 @@ from app.interfaces.http.routes.patron_boamp_opportunities import (
 from app.interfaces.http.routes.patron_contract_baseline_impacts import (
     build_patron_contract_baseline_impact_router,
 )
+from app.interfaces.http.routes.patron_contract_proof_reviews import (
+    build_patron_contract_proof_review_router,
+)
 from app.interfaces.http.routes.patron_dce_contract_risks import (
     build_patron_dce_contract_risk_router,
 )
@@ -121,7 +124,10 @@ from app.modules.dce.application.contract_baseline_handler import (
     ContractBaselineImpactReadService,
     contract_baseline_handlers,
 )
-from app.modules.dce.application.contract_review_handler import contract_review_handlers
+from app.modules.dce.application.contract_review_handler import (
+    ContractProofReviewReadService,
+    contract_review_handlers,
+)
 from app.modules.dce.application.contract_risk_read import PatronDceContractRiskReadService
 from app.modules.dce.application.handlers import (
     ClaimDceStagedObjectUploadHandler,
@@ -976,6 +982,9 @@ def create_app(
         contract_baseline_impact_read_service = ContractBaselineImpactReadService(
             session_factory=runtime.session_factory, policy=security_policy
         )
+        contract_proof_review_read_service = ContractProofReviewReadService(
+            session_factory=runtime.session_factory, policy=security_policy
+        )
         patron_action_transition_service = PatronActionTransitionService(
             session_factory=runtime.session_factory,
             dispatcher=runtime.dispatcher,
@@ -1182,6 +1191,9 @@ def create_app(
         app.include_router(build_patron_contract_baseline_impact_router(
             service=contract_baseline_impact_read_service,
             security_runtime=security_runtime,
+        ))
+        app.include_router(build_patron_contract_proof_review_router(
+            service=contract_proof_review_read_service, security_runtime=security_runtime
         ))
         if knowledge_service is not None:
             app.include_router(
