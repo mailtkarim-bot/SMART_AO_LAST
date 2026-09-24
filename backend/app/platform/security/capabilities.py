@@ -23,6 +23,7 @@ class Capability(StrEnum):
     OPPORTUNITY_OBSERVATION_QUALIFY = "opportunity.observation.qualify"
     DCE_REQUIREMENT_CONFIRM = "dce.requirement.confirm"
     REGULATORY_PROFILE_WRITE = "regulatory.profile.write"
+    REGULATORY_PROFILE_READ = "regulatory.profile.read"
     ASSIGNMENT_ACKNOWLEDGE = "assignment.acknowledge"
     ASSIGNMENT_CLARIFY = "assignment.clarify"
     ASSIGNMENT_HISTORY_READ = "assignment.history.read"
@@ -80,6 +81,7 @@ _PATRON_ADMIN_CAPABILITIES = frozenset(
         Capability.OPPORTUNITY_OBSERVATION_QUALIFY,
         Capability.DCE_REQUIREMENT_CONFIRM,
         Capability.REGULATORY_PROFILE_WRITE,
+        Capability.REGULATORY_PROFILE_READ,
         Capability.ASSIGNMENT_MANAGE,
         Capability.DOCUMENT_ADMIN_READ,
         Capability.PREPARATION_TRANSMIT,

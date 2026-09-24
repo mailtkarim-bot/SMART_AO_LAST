@@ -45,6 +45,14 @@ class FakeService:
         )
 
 
+class FakeReadService:
+    def __init__(self, rows=()):
+        self.rows = rows
+
+    def list_for_case(self, *, actor, case_id, now):
+        return self.rows
+
+
 def _actor() -> ActorContext:
     actor_id = uuid4()
     return ActorContext(
@@ -65,7 +73,17 @@ def _actor() -> ActorContext:
 
 def _endpoint(service: FakeService):
     router = build_patron_regulatory_profile_router(
-        service=service,
+        service=service,  # type: ignore[arg-type]
+        read_service=FakeReadService(),  # type: ignore[arg-type]
+        security_runtime=SimpleNamespace(context_resolver=Resolver(_actor())),
+    )
+    return router.routes[1].endpoint
+
+
+def _read_endpoint(read_service: FakeReadService):
+    router = build_patron_regulatory_profile_router(
+        service=FakeService(),  # type: ignore[arg-type]
+        read_service=read_service,  # type: ignore[arg-type]
         security_runtime=SimpleNamespace(context_resolver=Resolver(_actor())),
     )
     return router.routes[0].endpoint
@@ -113,3 +131,24 @@ def test_profile_route_keeps_foreign_case_refusal_neutral() -> None:
 
     assert raised.value.status_code == 404
     assert raised.value.detail == "CASE_NOT_FOUND_OR_FORBIDDEN"
+
+
+def test_patron_reads_profiles_without_collapsing_unknown_status() -> None:
+    case_id = uuid4()
+    row = SimpleNamespace(
+        id=uuid4(),
+        case_id=case_id,
+        profile_version=2,
+        status="UNKNOWN_APPLICABILITY",
+        facts_json={"market_kind": "PUBLIC"},
+        source_refs_json=["manual:review"],
+        effective_from=None,
+        effective_until=None,
+    )
+    response = _read_endpoint(FakeReadService((row,)))(
+        case_id=case_id,
+        authorization="Bearer session-token",
+    )
+
+    assert response.items[0].status == "UNKNOWN_APPLICABILITY"
+    assert response.items[0].profile_version == 2

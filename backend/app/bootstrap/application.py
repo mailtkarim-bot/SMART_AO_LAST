@@ -107,6 +107,7 @@ from app.interfaces.http.routes.shared_resources import build_shared_resource_ro
 from app.modules.case.application.handlers import CreateCaseHandler
 from app.modules.case.application.link_dce_version_handler import LinkCaseDceVersionHandler
 from app.modules.case.application.regulatory_profile import (
+    RegulatoryProfileReadService,
     RegulatoryProfileService,
     regulatory_profile_handlers,
 )
@@ -958,6 +959,10 @@ def create_app(
             dispatcher=runtime.dispatcher,
             policy=security_policy,
         )
+        regulatory_profile_read_service = RegulatoryProfileReadService(
+            session_factory=runtime.session_factory,
+            policy=security_policy,
+        )
         patron_action_transition_service = PatronActionTransitionService(
             session_factory=runtime.session_factory,
             dispatcher=runtime.dispatcher,
@@ -1157,6 +1162,7 @@ def create_app(
         app.include_router(
             build_patron_regulatory_profile_router(
                 service=regulatory_profile_service,
+                read_service=regulatory_profile_read_service,
                 security_runtime=security_runtime,
             )
         )

@@ -30,3 +30,23 @@ class RecordRegulatoryProfileResponse(BaseModel):
     version: int
     event_ids: list[UUID]
     replayed: bool
+
+
+class RegulatoryProfileProjection(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    profile_id: UUID
+    case_id: UUID
+    profile_version: int
+    status: Literal["ACTIVE", "FUTURE", "EXPIRED", "UNKNOWN_APPLICABILITY", "REVIEW_REQUIRED"]
+    facts: dict[str, object]
+    source_refs: list[str]
+    effective_from: datetime | None
+    effective_until: datetime | None
+
+
+class RegulatoryProfilePageResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    case_id: UUID
+    items: list[RegulatoryProfileProjection]

@@ -6,11 +6,16 @@ from fastapi.responses import JSONResponse
 
 from app.interfaces.http.dependencies.auth import resolve_bearer_context as _resolve_context
 from app.interfaces.http.routes.consultations import ConsultationSecurityRuntime
-from app.modules.case.application.regulatory_profile import RegulatoryProfileService
+from app.modules.case.application.regulatory_profile import (
+    RegulatoryProfileReadService,
+    RegulatoryProfileService,
+)
 from app.modules.case.application.regulatory_profile_commands import RecordRegulatoryProfileCommand
 from app.modules.case.public.regulatory_profile_contracts import (
     RecordRegulatoryProfileRequest,
     RecordRegulatoryProfileResponse,
+    RegulatoryProfilePageResponse,
+    RegulatoryProfileProjection,
 )
 from app.platform.events.dispatcher import (
     CommandExecutionError,
@@ -22,9 +27,49 @@ from app.platform.events.dispatcher import (
 def build_patron_regulatory_profile_router(
     *,
     service: RegulatoryProfileService,
+    read_service: RegulatoryProfileReadService,
     security_runtime: ConsultationSecurityRuntime,
 ) -> APIRouter:
     router = APIRouter(prefix="/api/v1/patron", tags=["patron-regulatory-profiles"])
+
+    @router.get(
+        "/cases/{case_id}/regulatory-profiles",
+        response_model=RegulatoryProfilePageResponse,
+    )
+    def list_regulatory_profiles(
+        case_id: UUID,
+        authorization: str | None = Header(default=None),
+    ) -> RegulatoryProfilePageResponse:
+        actor = _resolve_context(
+            authorization=authorization,
+            context_resolver=security_runtime.context_resolver,
+        )
+        try:
+            rows = read_service.list_for_case(
+                actor=actor,
+                case_id=case_id,
+                now=datetime.now(tz=UTC),
+            )
+        except PermissionError as error:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="FORBIDDEN"
+            ) from error
+        return RegulatoryProfilePageResponse(
+            case_id=case_id,
+            items=[
+                RegulatoryProfileProjection(
+                    profile_id=row.id,
+                    case_id=row.case_id,
+                    profile_version=row.profile_version,
+                    status=row.status,
+                    facts=row.facts_json,
+                    source_refs=row.source_refs_json,
+                    effective_from=row.effective_from,
+                    effective_until=row.effective_until,
+                )
+                for row in rows
+            ],
+        )
 
     @router.post(
         "/cases/{case_id}/regulatory-profiles",

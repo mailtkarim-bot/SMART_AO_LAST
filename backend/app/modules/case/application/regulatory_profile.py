@@ -4,7 +4,7 @@ from datetime import datetime
 from uuid import UUID
 
 import sqlalchemy as sa
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, sessionmaker
 
 from app.modules.case.application.regulatory_profile_commands import RecordRegulatoryProfileCommand
 from app.modules.case.infrastructure.models.case import CaseRecord
@@ -71,6 +71,45 @@ class RegulatoryProfileService:
                 correlation_id=actor.correlation_id,
             ),
         )
+
+
+class RegulatoryProfileReadService:
+    """Read Patron-owned profiles without evaluating their legal meaning."""
+
+    def __init__(self, *, session_factory: sessionmaker[Session], policy: AuthorizationPolicyPort):
+        self._session_factory = session_factory
+        self._policy = policy
+
+    def list_for_case(self, *, actor: ActorContext, case_id: UUID, now: datetime):
+        if actor.actor_kind is not ActorKind.PATRON_ADMIN or actor.membership_id is None:
+            raise PermissionError("PATRON_REQUIRED")
+        decision = self._policy.authorize(
+            context=actor,
+            request=AuthorizationRequest(
+                action=Capability.REGULATORY_PROFILE_READ,
+                resource=AuthorizationResource(
+                    resource_type="REGULATORY_PROFILE",
+                    resource_id=case_id,
+                    tenant_id=actor.tenant_id,
+                    classification=DataClassification.INTERNAL_OPERATIONAL,
+                    case_id=case_id,
+                ),
+                evaluated_at=now,
+            ),
+        )
+        if not decision.allowed:
+            raise PermissionError(decision.code)
+        with self._session_factory() as session:
+            return tuple(
+                session.scalars(
+                    sa.select(RegulatoryProfileRecord)
+                    .where(
+                        RegulatoryProfileRecord.tenant_id == actor.tenant_id,
+                        RegulatoryProfileRecord.case_id == case_id,
+                    )
+                    .order_by(RegulatoryProfileRecord.profile_version.desc())
+                ).all()
+            )
 
 
 class RecordRegulatoryProfileHandler(CommandHandler):
