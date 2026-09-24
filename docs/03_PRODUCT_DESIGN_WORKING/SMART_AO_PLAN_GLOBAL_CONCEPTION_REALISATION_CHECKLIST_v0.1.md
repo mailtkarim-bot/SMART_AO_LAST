@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** rejouer les gates backend/frontend après l'intégration UX C07 de la preuve contractuelle.
+**Prochaine étape unique :** préparer la revue propriétaire locale de la preuve baseline → dérogation → impact, sans ouverture publique.
 
 ## 1. Rôle de ce document
 
@@ -509,6 +509,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 24/09/2026 | T2 persistance baseline → dérogation → impact | migration additive `20260924_0092`, table tenant-scoped append-only, unicité fonctionnelle par Affaire/observation/révision, handler via dispatcher avec rejeu idempotent et refus `CASE_NOT_FOUND_OR_FORBIDDEN` ; upgrade → downgrade → upgrade Alembic validé sur PostgreSQL éphémère | ajouter l'exposition Patron contrôlée de la preuve baseline → dérogation → impact après contrat UX et test API |
 | 24/09/2026 | T2 exposition Patron contrôlée | contrat fermé `ContractBaselineImpactPageResponse`, route GET tenant-scoped en lecture seule, états et ancres conservés ; test API direct et domaine **6/6 verts** ; aucune mutation depuis l'UX | préparer le composant UX C07 de consultation de la preuve baseline → dérogation → impact |
 | 24/09/2026 | T2 composant UX C07 | types/API, hook de lecture et panneau C07 ajoutés ; baseline, dérogation, impact, sources et statut affichés sans action de mutation ; frontend **188/188 tests**, typecheck vert, lint sans erreur avec 1 avertissement de dépendance Hook | rejouer les gates backend/frontend après l'intégration UX C07 de la preuve contractuelle |
+| 24/09/2026 | Gates backend/frontend après UX C07 | backend ciblé **34/34 tests verts** après réalignement de la tête `20260924_0092` ; frontend **188/188**, typecheck et lint verts sans erreur ni avertissement ; aucune ouverture publique | préparer la revue propriétaire locale de la preuve baseline → dérogation → impact, sans ouverture publique |
 
 ## 7. Règle de mise à jour
 

@@ -17,6 +17,10 @@ export function useContractBaselineImpacts(api: ApiClient, setMessage: SetMessag
     catch (error) { setItems([]); setMessage({ tone: "error", text: error instanceof Error ? error.message : "Impossible de charger la preuve contractuelle." }); }
     finally { setLoading(false); }
   }
-  useEffect(() => { void refresh(); }, [caseId]);
+  useEffect(() => {
+    void refresh();
+    // The selected case is the resource key for this read model.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [caseId]);
   return { items, loading, refresh };
 }
