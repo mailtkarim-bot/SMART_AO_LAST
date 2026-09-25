@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** ajouter les tests d'intégration du hash `MATCH/MISMATCH/UNAVAILABLE` et les relier à T16.
+**Prochaine étape unique :** rejouer les gates complètes après intégration de la vérification de hash.
 
 ## 1. Rôle de ce document
 
@@ -574,6 +574,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 25/09/2026 | Gates complètes après hash preuve locale | backend complet **1 769 tests verts**, 2 assertions ops réalignées sur `20260925_0098` ; frontend **190/190**, typecheck, lint et build verts après rejeu d'un test flaky ; NO-GO public maintenu | préparer la tranche suivante après clôture des gates T16, sans ouverture publique |
 | 25/09/2026 | Paquet T17 vérification hash export | `T17_EXPORT_PROOF_VERIFICATION_PACKET.md` produit avec recalcul local, états `MATCH/MISMATCH/UNAVAILABLE`, append-only et limites externes | implémenter la vérification locale du hash d'export, sans réception externe présumée |
 | 25/09/2026 | Vérification locale hash T17 | fonction déterministe SHA-256 ajoutée ; `MATCH`, `MISMATCH` et `UNAVAILABLE` fermés ; **3/3 tests domaine verts** ; aucune réception externe présumée | ajouter les tests d'intégration du hash `MATCH/MISMATCH/UNAVAILABLE` et les relier à T16 |
+| 25/09/2026 | Intégration hash T16/T17 | tests d'intégration `MATCH/MISMATCH/UNAVAILABLE` ajoutés : preuve READY seulement pour MATCH, refus pour MISMATCH, UNKNOWN conservé pour UNAVAILABLE ; **3/3 tests verts** | rejouer les gates complètes après intégration de la vérification de hash |
 
 ## 7. Règle de mise à jour
 
