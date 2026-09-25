@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** préparer la tranche suivante après clôture des gates T19, sans ouverture publique.
+**Prochaine étape unique :** recueillir la revue propriétaire locale de la vérification d’export, sans ouverture publique.
 
 ## 1. Rôle de ce document
 
@@ -583,6 +583,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 25/09/2026 | Paquet T19 vérification export UX | `T19_EXPORT_VERIFICATION_UX_PACKET.md` produit avec états difficiles, hash calculé conditionnel et absence de réception externe présumée | implémenter l'affichage C07 de la vérification locale d'export, en lecture seule |
 | 25/09/2026 | C07 vérification export T19 | panneau `ExportProofVerificationPanel` ajouté avec `MATCH/MISMATCH/UNAVAILABLE`, hash conditionnel et lecture seule ; frontend ciblé **191 tests verts**, typecheck/lint verts | rejouer les gates frontend/backend après intégration de la vérification dans C07 |
 | 25/09/2026 | Gates complètes après vérification C07 | backend PostgreSQL éphémère **1 781 tests verts**, 1 avertissement Starlette/httpx externe ; frontend **191/191**, typecheck, lint et build verts ; NO-GO public maintenu | préparer la tranche suivante après clôture des gates T19, sans ouverture publique |
+| 25/09/2026 | Paquet T20 revue propriétaire vérification | `T20_OWNER_REVIEW_EXPORT_VERIFICATION_PACKET.md` produit avec distinction intégrité locale/réception externe et décision attendue ; NO-GO public maintenu | recueillir la revue propriétaire locale de la vérification d’export, sans ouverture publique |
 
 ## 7. Règle de mise à jour
 
