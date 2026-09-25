@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** implémenter la chronologie C07 des preuves et revues, sans fusion silencieuse.
+**Prochaine étape unique :** ajouter les tests API/frontend de la chronologie C07, sans mutation.
 
 ## 1. Rôle de ce document
 
@@ -531,6 +531,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 25/09/2026 | Tests de projection `SUPERSEDED` | contrat de commande `SUPERSEDED` et séparation révision ancienne/nouvelle ajoutés ; tests domaine verts ; tests DB nécessitent la variable PostgreSQL éphémère dédiée avant clôture | rejouer les tests `SUPERSEDED` avec PostgreSQL explicitement ciblé, puis fermer T5 |
 | 25/09/2026 | Clôture T5 `SUPERSEDED` | PostgreSQL explicitement ciblé : projection, révision et nouvelle revue **8/8 tests verts** ; migration `0094` déjà validée upgrade/downgrade/upgrade ; historique append-only et NO-GO public maintenus | préparer la tranche suivante après clôture T5, sans ouverture publique |
 | 25/09/2026 | Paquet T6 chronologie C07 | `T6_CONTRACT_PROOF_TIMELINE_PACKET.md` produit avec ordre déterministe, états historiques, sources et preuves attendues ; NO-GO public maintenu | implémenter la chronologie C07 des preuves et revues, sans fusion silencieuse |
+| 25/09/2026 | Projection backend chronologie C07 | service `timeline_for_case` et route Patron `/contract-proof-timeline` ajoutés en lecture seule ; ordre révision/date déterministe, états historiques conservés ; Ruff et compilation verts | ajouter les tests API/frontend de la chronologie C07, sans mutation |
 
 ## 7. Règle de mise à jour
 
