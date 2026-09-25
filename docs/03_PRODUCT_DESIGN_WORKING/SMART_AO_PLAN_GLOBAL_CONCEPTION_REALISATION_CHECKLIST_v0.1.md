@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** ajouter les tests de projection `SUPERSEDED` et de nouvelle revue après rectificatif.
+**Prochaine étape unique :** rejouer les tests `SUPERSEDED` avec PostgreSQL explicitement ciblé, puis fermer T5.
 
 ## 1. Rôle de ce document
 
@@ -528,6 +528,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 25/09/2026 | Gates complètes après révision contrôlée | backend PostgreSQL éphémère **1 744 tests verts**, 1 avertissement Starlette/httpx externe ; frontend **188/188**, typecheck, lint et build verts ; conteneur supprimé, NO-GO public maintenu | préparer la prochaine tranche contractuelle locale, sans ouverture publique |
 | 25/09/2026 | Paquet T5 invalidation après rectificatif | `T5_CONTRACT_PROOF_INVALIDATION_PACKET.md` produit avec supersession, nouvel acte de revue, projection C07 et refus tenant ; aucun changement public | implémenter l'invalidation contrôlée après rectificatif, sans suppression de l'historique |
 | 25/09/2026 | Migration T5 `SUPERSEDED` validée | `20260925_0094` validée sur PostgreSQL éphémère : upgrade, contrainte `SUPERSEDED`, downgrade et upgrade à nouveau ; base supprimée après preuve | ajouter les tests de projection `SUPERSEDED` et de nouvelle revue après rectificatif |
+| 25/09/2026 | Tests de projection `SUPERSEDED` | contrat de commande `SUPERSEDED` et séparation révision ancienne/nouvelle ajoutés ; tests domaine verts ; tests DB nécessitent la variable PostgreSQL éphémère dédiée avant clôture | rejouer les tests `SUPERSEDED` avec PostgreSQL explicitement ciblé, puis fermer T5 |
 
 ## 7. Règle de mise à jour
 
