@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** implémenter le contrat d'intégrité de la preuve locale `READY`, sans réception externe présumée.
+**Prochaine étape unique :** ajouter les tests PostgreSQL du hash local et du refus `READY` sans preuve.
 
 ## 1. Rôle de ce document
 
@@ -569,6 +569,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 25/09/2026 | Tests C07 audit export T15 | frontend **190/190 tests verts**, typecheck, lint et build verts ; backend ciblé API/tenant PostgreSQL **3/3 tests verts** ; lecture seule conservée | rejouer les gates complètes après validation UX/API de l'audit export |
 | 25/09/2026 | Gates complètes après audit export UX | backend PostgreSQL éphémère **1 767 tests verts**, 1 avertissement Starlette/httpx externe ; frontend **190/190**, typecheck, lint et build verts ; NO-GO public maintenu | préparer la tranche suivante après clôture des gates T15, sans ouverture publique |
 | 25/09/2026 | Paquet T16 intégrité preuve locale | `T16_EXPORT_LOCAL_PROOF_INTEGRITY_PACKET.md` produit avec hash/référence locale, cohérence `READY` et refus des preuves absentes ; NO-GO public maintenu | implémenter le contrat d'intégrité de la preuve locale `READY`, sans réception externe présumée |
+| 25/09/2026 | Contrat hash preuve locale T16 | migration `20260925_0098`, hash SHA-256 ajouté aux transitions, `READY` exige référence + hash de 64 caractères ; aucune réception externe présumée | ajouter les tests PostgreSQL du hash local et du refus `READY` sans preuve |
 
 ## 7. Règle de mise à jour
 
