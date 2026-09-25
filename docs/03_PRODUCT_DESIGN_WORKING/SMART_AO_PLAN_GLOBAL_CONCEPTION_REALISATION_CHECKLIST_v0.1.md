@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** persister l'acte propriétaire de validation de la vérification d'export, sans modifier les résultats techniques.
+**Prochaine étape unique :** ajouter les tests PostgreSQL de l'acte propriétaire et de son indépendance technique.
 
 ## 1. Rôle de ce document
 
@@ -586,6 +586,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 25/09/2026 | Paquet T20 revue propriétaire vérification | `T20_OWNER_REVIEW_EXPORT_VERIFICATION_PACKET.md` produit avec distinction intégrité locale/réception externe et décision attendue ; NO-GO public maintenu | recueillir la revue propriétaire locale de la vérification d’export, sans ouverture publique |
 | 25/09/2026 | Validation propriétaire vérification export | approbation explicite reçue : `MATCH/MISMATCH/UNAVAILABLE` gardent leur sens local, aucune réception externe, C07 lecture seule, NO-GO public maintenu | persister l'acte propriétaire de validation de la vérification d'export, sans modifier les résultats techniques |
 | 25/09/2026 | Paquet T21 acte propriétaire | `T21_EXPORT_VERIFICATION_OWNER_ACT_PACKET.md` produit ; acte séparé des résultats techniques, append-only et tenant-scoped | persister l'acte propriétaire de validation de la vérification d'export, sans modifier les résultats techniques |
+| 25/09/2026 | Persistance T21 acte propriétaire | migration `20260925_0100`, table tenant-scoped append-only, owner/approved/rationale liés à l'export ; résultats techniques inchangés | ajouter les tests PostgreSQL de l'acte propriétaire et de son indépendance technique |
 
 ## 7. Règle de mise à jour
 
