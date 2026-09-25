@@ -57,6 +57,31 @@ def test_latest_projection_keeps_one_act_per_proof_revision() -> None:
     assert {item.reviewed_revision for item in projected} == {1, 2}
 
 
+def test_timeline_projection_orders_revision_before_pagination() -> None:
+    proof_id = uuid4()
+    rows = tuple(
+        SimpleNamespace(
+            proof_id=proof_id,
+            reviewed_revision=revision,
+            decision="SUPERSEDED" if revision == 1 else "NEEDS_CLARIFICATION",
+            rationale="r",
+            id=uuid4(),
+            created_at=revision,
+        )
+        for revision in (2, 1)
+    )
+
+    class Reader(ContractProofReviewReadService):
+        def __init__(self):
+            pass
+
+        def list_for_case(self, *, actor, case_id, now):
+            return rows
+
+    timeline = Reader().timeline_for_case(actor=None, case_id=uuid4(), now=None, limit=1, offset=0)
+    assert timeline[0]["revision"] == 1
+
+
 def test_postgres_keeps_revision_2_append_only_and_rejects_duplicate_review(
     database_engine: sa.Engine,
 ) -> None:
