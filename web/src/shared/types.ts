@@ -424,7 +424,7 @@ export type RegulatoryProfilePage = {
   items: RegulatoryProfileProjection[];
 };
 
-export type ContractBaselineImpactStatus = "SOURCE_SIGNAL_ONLY" | "HUMAN_REVIEW_REQUIRED" | "CONFIRMED" | "UNKNOWN";
+export type ContractBaselineImpactStatus = "SOURCE_SIGNAL_ONLY" | "HUMAN_REVIEW_REQUIRED" | "CONFIRMED" | "UNKNOWN" | "SUPERSEDED";
 export type ContractBaselineImpact = {
   proof_id: string;
   case_id: string;
