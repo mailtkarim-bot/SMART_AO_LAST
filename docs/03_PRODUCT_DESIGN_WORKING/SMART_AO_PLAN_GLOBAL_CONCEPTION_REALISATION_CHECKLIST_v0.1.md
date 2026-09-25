@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** ajouter les tests PostgreSQL de la demande d'export, de l'idempotence et des états fermés.
+**Prochaine étape unique :** rejouer les gates complètes après validation de l'export local.
 
 ## 1. Rôle de ce document
 
@@ -550,6 +550,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 25/09/2026 | Gates complètes après lecture reçus T10 | backend PostgreSQL éphémère **1 754 tests verts**, 1 avertissement Starlette/httpx externe ; frontend **189/189**, typecheck, lint et build verts ; NO-GO public maintenu | préparer la tranche suivante après clôture des gates T10, sans ouverture publique |
 | 25/09/2026 | Paquet T11 export local des reçus | `T11_QUERY_RECEIPT_EXPORT_PACKET.md` produit avec états fermés, idempotence, tenant et absence de réception externe présumée | implémenter la demande d'export local des reçus, sans présumer de réception externe |
 | 25/09/2026 | Demande d'export T11 | migration `20260925_0096`, modèle tenant-scoped append-only et commande `RequestContractQueryExport` ajoutés ; état initial `REQUESTED`, refus tenant et rejeu idempotent via dispatcher ; Ruff vert | ajouter les tests PostgreSQL de la demande d'export, de l'idempotence et des états fermés |
+| 25/09/2026 | Tests export local T11 | schéma tenant/états fermés et contrat de commande validés sur PostgreSQL éphémère ; **3/3 tests verts** ; aucune réception externe présumée | rejouer les gates complètes après validation de l'export local |
 
 ## 7. Règle de mise à jour
 
