@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** préparer la tranche suivante après clôture des gates T17, sans ouverture publique.
+**Prochaine étape unique :** ajouter la persistance tenant-scoped de l'acte de vérification d'export.
 
 ## 1. Rôle de ce document
 
@@ -576,6 +576,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 25/09/2026 | Vérification locale hash T17 | fonction déterministe SHA-256 ajoutée ; `MATCH`, `MISMATCH` et `UNAVAILABLE` fermés ; **3/3 tests domaine verts** ; aucune réception externe présumée | ajouter les tests d'intégration du hash `MATCH/MISMATCH/UNAVAILABLE` et les relier à T16 |
 | 25/09/2026 | Intégration hash T16/T17 | tests d'intégration `MATCH/MISMATCH/UNAVAILABLE` ajoutés : preuve READY seulement pour MATCH, refus pour MISMATCH, UNKNOWN conservé pour UNAVAILABLE ; **3/3 tests verts** | rejouer les gates complètes après intégration de la vérification de hash |
 | 25/09/2026 | Gates complètes après vérification hash | backend PostgreSQL éphémère **1 777 tests verts**, 1 avertissement Starlette/httpx externe ; frontend **190/190**, typecheck, lint et build verts ; NO-GO public maintenu | préparer la tranche suivante après clôture des gates T17, sans ouverture publique |
+| 25/09/2026 | T18 acte de vérification export | contrat domaine `ExportProofVerificationRecord` ajouté avec cohérence `MATCH/UNAVAILABLE` ; **3 tests domaine verts** ; paquet `T18_EXPORT_VERIFICATION_RECORD_PACKET.md` produit | ajouter la persistance tenant-scoped de l'acte de vérification d'export |
 
 ## 7. Règle de mise à jour
 
