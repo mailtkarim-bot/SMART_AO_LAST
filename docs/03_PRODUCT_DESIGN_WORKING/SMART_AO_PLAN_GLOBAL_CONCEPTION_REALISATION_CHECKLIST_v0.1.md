@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** ajouter les tests PostgreSQL de persistance des vérifications `MATCH/MISMATCH/UNAVAILABLE`.
+**Prochaine étape unique :** rejouer les gates complètes après validation de la persistance de vérification.
 
 ## 1. Rôle de ce document
 
@@ -578,6 +578,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 25/09/2026 | Gates complètes après vérification hash | backend PostgreSQL éphémère **1 777 tests verts**, 1 avertissement Starlette/httpx externe ; frontend **190/190**, typecheck, lint et build verts ; NO-GO public maintenu | préparer la tranche suivante après clôture des gates T17, sans ouverture publique |
 | 25/09/2026 | T18 acte de vérification export | contrat domaine `ExportProofVerificationRecord` ajouté avec cohérence `MATCH/UNAVAILABLE` ; **3 tests domaine verts** ; paquet `T18_EXPORT_VERIFICATION_RECORD_PACKET.md` produit | ajouter la persistance tenant-scoped de l'acte de vérification d'export |
 | 25/09/2026 | Persistance T18 vérification export | migration `20260925_0099`, table tenant-scoped append-only et états `MATCH/MISMATCH/UNAVAILABLE` ajoutés ; aucun contenu exporté réexposé | ajouter les tests PostgreSQL de persistance des vérifications `MATCH/MISMATCH/UNAVAILABLE` |
+| 25/09/2026 | Tests persistance T18 | schéma tenant-scoped, états fermés et vérification locale `MATCH/MISMATCH/UNAVAILABLE` validés ; **7/7 tests verts** sur PostgreSQL éphémère | rejouer les gates complètes après validation de la persistance de vérification |
 
 ## 7. Règle de mise à jour
 
