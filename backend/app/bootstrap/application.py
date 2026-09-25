@@ -71,6 +71,9 @@ from app.interfaces.http.routes.patron_contract_baseline_impacts import (
 from app.interfaces.http.routes.patron_contract_proof_reviews import (
     build_patron_contract_proof_review_router,
 )
+from app.interfaces.http.routes.patron_contract_query_receipts import (
+    build_patron_contract_query_receipt_router,
+)
 from app.interfaces.http.routes.patron_dce_contract_risks import (
     build_patron_dce_contract_risk_router,
 )
@@ -125,6 +128,7 @@ from app.modules.dce.application.contract_baseline_handler import (
     contract_baseline_handlers,
 )
 from app.modules.dce.application.contract_query_receipt_handler import (
+    ContractQueryReceiptReadService,
     contract_query_receipt_handlers,
 )
 from app.modules.dce.application.contract_review_handler import (
@@ -986,6 +990,9 @@ def create_app(
         contract_baseline_impact_read_service = ContractBaselineImpactReadService(
             session_factory=runtime.session_factory, policy=security_policy
         )
+        contract_query_receipt_read_service = ContractQueryReceiptReadService(
+            session_factory=runtime.session_factory, policy=security_policy
+        )
         contract_proof_review_read_service = ContractProofReviewReadService(
             session_factory=runtime.session_factory, policy=security_policy
         )
@@ -1195,6 +1202,9 @@ def create_app(
         app.include_router(build_patron_contract_baseline_impact_router(
             service=contract_baseline_impact_read_service,
             security_runtime=security_runtime,
+        ))
+        app.include_router(build_patron_contract_query_receipt_router(
+            service=contract_query_receipt_read_service, security_runtime=security_runtime
         ))
         app.include_router(build_patron_contract_proof_review_router(
             service=contract_proof_review_read_service, security_runtime=security_runtime

@@ -643,3 +643,19 @@ class ContractProofTimelineResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
     case_id: UUID
     items: list[ContractProofTimelineEventResponse]
+
+class ContractQueryReceiptResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    receipt_id: UUID
+    case_id: UUID
+    filters: dict[str, object]
+    order_key: str
+    limit_value: int
+    offset_value: int
+    actor_id: UUID
+    created_at: datetime
+
+class ContractQueryReceiptPageResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    case_id: UUID
+    items: list[ContractQueryReceiptResponse]
