@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** préparer la tranche suivante après clôture des gates T16, sans ouverture publique.
+**Prochaine étape unique :** implémenter la vérification locale du hash d'export, sans réception externe présumée.
 
 ## 1. Rôle de ce document
 
@@ -572,6 +572,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 25/09/2026 | Contrat hash preuve locale T16 | migration `20260925_0098`, hash SHA-256 ajouté aux transitions, `READY` exige référence + hash de 64 caractères ; aucune réception externe présumée | ajouter les tests PostgreSQL du hash local et du refus `READY` sans preuve |
 | 25/09/2026 | Tests hash preuve locale T16 | colonne PostgreSQL et contrat `READY` avec hash 64 caractères vérifiés ; absence/hash court explicitement distingués ; **4/4 tests verts** | rejouer les gates complètes après validation du hash de preuve locale |
 | 25/09/2026 | Gates complètes après hash preuve locale | backend complet **1 769 tests verts**, 2 assertions ops réalignées sur `20260925_0098` ; frontend **190/190**, typecheck, lint et build verts après rejeu d'un test flaky ; NO-GO public maintenu | préparer la tranche suivante après clôture des gates T16, sans ouverture publique |
+| 25/09/2026 | Paquet T17 vérification hash export | `T17_EXPORT_PROOF_VERIFICATION_PACKET.md` produit avec recalcul local, états `MATCH/MISMATCH/UNAVAILABLE`, append-only et limites externes | implémenter la vérification locale du hash d'export, sans réception externe présumée |
 
 ## 7. Règle de mise à jour
 
