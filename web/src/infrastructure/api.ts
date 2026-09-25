@@ -78,6 +78,7 @@ import type {
   RegulatoryProfilePage,
   ContractBaselineImpactPage,
   ContractProofReviewPage,
+  ContractQueryExportAudit,
   RegisterStructuredRiskInput,
   StructuredRiskRegistrationResponse,
   DecisionCctpPricingCrossingResponse,
@@ -520,6 +521,8 @@ export function createApiClient(
       request<ContractProofReviewPage>(
         `/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-proof-reviews`,
       ),
+    getContractQueryExportAudit: (caseId: string, exportId: string) =>
+      request<ContractQueryExportAudit>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-query-exports/${encodeURIComponent(exportId)}/audit`),
     registerStructuredRisk: (caseId: string, input: RegisterStructuredRiskInput) =>
       request<StructuredRiskRegistrationResponse>(
         `/api/v1/patron/cases/${encodeURIComponent(caseId)}/risks`,

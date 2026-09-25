@@ -439,6 +439,7 @@ export type ContractBaselineImpact = {
 export type ContractBaselineImpactPage = { case_id: string; items: ContractBaselineImpact[] };
 export type ContractProofReview = { review_id: string; proof_id: string; reviewer_id: string; reviewed_revision: number; decision: "ACCEPTED" | "REJECTED" | "NEEDS_CLARIFICATION"; rationale: string };
 export type ContractProofReviewPage = { case_id: string; items: ContractProofReview[] };
+export type ContractQueryExportAudit = { export: { export_id: string; case_id: string; filters: Record<string, unknown>; status: "REQUESTED" | "READY" | "UNKNOWN" | "REFUSED"; actor_id: string; created_at: string }; transitions: { transition_id: string; from_status: string; to_status: string; local_proof_ref: string | null; created_at: string }[] };
 
 export type RegisterStructuredRiskInput = {
   risk_id: string;
