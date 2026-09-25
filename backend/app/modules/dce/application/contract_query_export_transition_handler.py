@@ -36,3 +36,18 @@ class TransitionContractQueryExportHandler(CommandHandler):
 
 def contract_query_export_transition_handlers() -> dict[str, TransitionContractQueryExportHandler]:
     return {TransitionContractQueryExportCommand.command_type: TransitionContractQueryExportHandler()}
+
+class ContractQueryExportAuditReadService:
+    def __init__(self, *, session_factory, policy) -> None:
+        self._session_factory, self._policy = session_factory, policy
+
+    def get_for_case(self, *, actor, case_id, export_id):
+        from app.platform.security.context import ActorKind
+        if actor.actor_kind is not ActorKind.PATRON_ADMIN or actor.membership_id is None:
+            raise PermissionError("PATRON_REQUIRED")
+        with self._session_factory() as session:
+            export = session.scalar(sa.select(ContractQueryExportRecord).where(ContractQueryExportRecord.tenant_id == actor.tenant_id, ContractQueryExportRecord.case_id == case_id, ContractQueryExportRecord.id == export_id))
+            if export is None:
+                return None
+            transitions = tuple(session.scalars(sa.select(ContractQueryExportTransitionRecord).where(ContractQueryExportTransitionRecord.tenant_id == actor.tenant_id, ContractQueryExportTransitionRecord.export_id == export_id).order_by(ContractQueryExportTransitionRecord.created_at.asc())).all())
+            return export, transitions

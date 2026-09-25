@@ -673,3 +673,16 @@ class ContractQueryExportPageResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
     case_id: UUID
     items: list[ContractQueryExportResponse]
+
+class ContractQueryExportTransitionResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    transition_id: UUID
+    from_status: str
+    to_status: str
+    local_proof_ref: str | None
+    created_at: datetime
+
+class ContractQueryExportAuditResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    export: ContractQueryExportResponse
+    transitions: list[ContractQueryExportTransitionResponse]

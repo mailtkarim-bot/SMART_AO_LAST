@@ -71,6 +71,9 @@ from app.interfaces.http.routes.patron_contract_baseline_impacts import (
 from app.interfaces.http.routes.patron_contract_proof_reviews import (
     build_patron_contract_proof_review_router,
 )
+from app.interfaces.http.routes.patron_contract_query_export_audit import (
+    build_patron_contract_query_export_audit_router,
+)
 from app.interfaces.http.routes.patron_contract_query_exports import (
     build_patron_contract_query_export_router,
 )
@@ -135,6 +138,7 @@ from app.modules.dce.application.contract_query_export_handler import (
     contract_query_export_handlers,
 )
 from app.modules.dce.application.contract_query_export_transition_handler import (
+    ContractQueryExportAuditReadService,
     contract_query_export_transition_handlers,
 )
 from app.modules.dce.application.contract_query_receipt_handler import (
@@ -1008,6 +1012,9 @@ def create_app(
         contract_query_export_read_service = ContractQueryExportReadService(
             session_factory=runtime.session_factory, policy=security_policy
         )
+        contract_query_export_audit_read_service = ContractQueryExportAuditReadService(
+            session_factory=runtime.session_factory, policy=security_policy
+        )
         contract_proof_review_read_service = ContractProofReviewReadService(
             session_factory=runtime.session_factory, policy=security_policy
         )
@@ -1223,6 +1230,9 @@ def create_app(
         ))
         app.include_router(build_patron_contract_query_export_router(
             service=contract_query_export_read_service, security_runtime=security_runtime
+        ))
+        app.include_router(build_patron_contract_query_export_audit_router(
+            service=contract_query_export_audit_read_service, security_runtime=security_runtime
         ))
         app.include_router(build_patron_contract_proof_review_router(
             service=contract_proof_review_read_service, security_runtime=security_runtime
