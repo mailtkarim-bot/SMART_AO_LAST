@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** ajouter le test frontend C07 de l'audit export puis rejouer les gates.
+**Prochaine étape unique :** rejouer les gates complètes après validation UX/API de l'audit export.
 
 ## 1. Rôle de ce document
 
@@ -566,6 +566,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 25/09/2026 | Gates complètes après audit export | backend PostgreSQL éphémère **1 767 tests verts**, 1 avertissement Starlette/httpx externe ; frontend **189/189**, typecheck, lint et build verts ; NO-GO public maintenu | préparer la tranche suivante après clôture des gates T14, sans ouverture publique |
 | 25/09/2026 | Paquet T15 audit export UX | `T15_EXPORT_AUDIT_UX_PACKET.md` produit avec demande/transitions/état séparés, états difficiles et absence de mutation ; NO-GO public maintenu | implémenter l'intégration C07 de l'audit export, en lecture seule |
 | 25/09/2026 | Intégration C07 audit export T15 | types/API et composant de lecture `ContractQueryExportAuditPanel` ajoutés ; filtres, transitions, état et absence de réception externe affichés sans mutation ; typecheck/lint verts | ajouter le test frontend C07 de l'audit export puis rejouer les gates |
+| 25/09/2026 | Tests C07 audit export T15 | frontend **190/190 tests verts**, typecheck, lint et build verts ; backend ciblé API/tenant PostgreSQL **3/3 tests verts** ; lecture seule conservée | rejouer les gates complètes après validation UX/API de l'audit export |
 
 ## 7. Règle de mise à jour
 
