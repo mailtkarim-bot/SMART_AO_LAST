@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** rejouer les gates complètes après validation de l'acte propriétaire.
+**Prochaine étape unique :** préparer la tranche suivante après clôture des gates T21, sans ouverture publique.
 
 ## 1. Rôle de ce document
 
@@ -588,6 +588,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 25/09/2026 | Paquet T21 acte propriétaire | `T21_EXPORT_VERIFICATION_OWNER_ACT_PACKET.md` produit ; acte séparé des résultats techniques, append-only et tenant-scoped | persister l'acte propriétaire de validation de la vérification d'export, sans modifier les résultats techniques |
 | 25/09/2026 | Persistance T21 acte propriétaire | migration `20260925_0100`, table tenant-scoped append-only, owner/approved/rationale liés à l'export ; résultats techniques inchangés | ajouter les tests PostgreSQL de l'acte propriétaire et de son indépendance technique |
 | 25/09/2026 | Tests acte propriétaire T21 | tenant/export, justification et indépendance vis-à-vis de `export_proof_verifications` vérifiés ; **3/3 tests verts** sur PostgreSQL éphémère | rejouer les gates complètes après validation de l'acte propriétaire |
+| 25/09/2026 | Gates complètes après acte propriétaire | backend complet **1 782 tests verts**, 2 assertions ops réalignées sur `20260925_0100`, gate ops **33/33** verte ; frontend **191/191**, typecheck, lint et build verts ; NO-GO public maintenu | préparer la tranche suivante après clôture des gates T21, sans ouverture publique |
 
 ## 7. Règle de mise à jour
 
