@@ -596,6 +596,7 @@ class DceContractRiskSignalPageResponse(BaseModel):
     items: list[DceContractRiskSignalResponse]
 
 
+# ruff: noqa: E501
 class ContractBaselineImpactResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
     proof_id: UUID
@@ -606,7 +607,7 @@ class ContractBaselineImpactResponse(BaseModel):
     baseline_statement: str
     deviation_statement: str | None
     impact_statement: str | None
-    status: Literal["SOURCE_SIGNAL_ONLY", "HUMAN_REVIEW_REQUIRED", "CONFIRMED", "UNKNOWN"]
+    status: Literal["SOURCE_SIGNAL_ONLY", "HUMAN_REVIEW_REQUIRED", "CONFIRMED", "UNKNOWN", "SUPERSEDED"]
 
 
 class ContractBaselineImpactPageResponse(BaseModel):

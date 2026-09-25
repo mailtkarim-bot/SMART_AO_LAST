@@ -1,4 +1,5 @@
 """Tenant-scoped append-only contract baseline/deviation/impact proof."""
+# ruff: noqa: E501
 
 from __future__ import annotations
 
@@ -29,7 +30,7 @@ class ContractBaselineDeviationImpactRecord(TenantScopedRecord, Base):
         ),
         sa.CheckConstraint("proof_revision > 0", name="contract_proof_revision_positive"),
         sa.CheckConstraint(
-            "status IN ('SOURCE_SIGNAL_ONLY', 'HUMAN_REVIEW_REQUIRED', 'CONFIRMED', 'UNKNOWN')",
+            "status IN ('SOURCE_SIGNAL_ONLY', 'HUMAN_REVIEW_REQUIRED', 'CONFIRMED', 'UNKNOWN', 'SUPERSEDED')",
             name="contract_assessment_status_closed",
         ),
         sa.CheckConstraint(

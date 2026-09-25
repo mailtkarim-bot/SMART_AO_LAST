@@ -2,4 +2,4 @@
 
 # Bump this value whenever a migration becomes the supported runtime head.
 # Tests compare it with Alembic's actual script graph to prevent silent drift.
-EXPECTED_ALEMBIC_HEAD = "20260924_0093"
+EXPECTED_ALEMBIC_HEAD = "20260925_0094"

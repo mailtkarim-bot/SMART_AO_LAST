@@ -1,3 +1,4 @@
+# ruff: noqa: E501
 from typing import Literal
 from uuid import UUID
 
@@ -16,4 +17,4 @@ class RecordContractBaselineImpactCommand(ApplicationCommand):
     baseline_statement: str = Field(min_length=1)
     deviation_statement: str | None = None
     impact_statement: str | None = None
-    status: Literal["SOURCE_SIGNAL_ONLY", "HUMAN_REVIEW_REQUIRED", "CONFIRMED", "UNKNOWN"]
+    status: Literal["SOURCE_SIGNAL_ONLY", "HUMAN_REVIEW_REQUIRED", "CONFIRMED", "UNKNOWN", "SUPERSEDED"]
