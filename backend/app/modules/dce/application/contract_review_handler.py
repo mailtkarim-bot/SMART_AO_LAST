@@ -60,11 +60,15 @@ class ContractProofReviewReadService:
                 latest[key] = row
         return tuple(latest.values())
 
-    def timeline_for_case(self, *, actor, case_id, now):
+    def timeline_for_case(self, *, actor, case_id, now, revision=None, status=None, source_ref=None, limit=50, offset=0):
         rows = self.list_for_case(actor=actor, case_id=case_id, now=now)
+        if revision is not None:
+            rows = tuple(row for row in rows if row.reviewed_revision == revision)
+        if status is not None:
+            rows = tuple(row for row in rows if row.decision == status)
         return tuple(
             {"event_type": "REVIEW", "event_id": row.id, "proof_id": row.proof_id,
              "revision": row.reviewed_revision, "status": row.decision,
              "rationale": row.rationale, "created_at": row.created_at}
-            for row in sorted(rows, key=lambda item: (item.reviewed_revision, item.created_at))
+            for row in sorted(rows, key=lambda item: (item.reviewed_revision, item.created_at))[offset : offset + limit]
         )

@@ -2,7 +2,7 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Header, HTTPException, status
+from fastapi import APIRouter, Header, HTTPException, Query, status
 
 from app.interfaces.http.dependencies.auth import resolve_bearer_context
 from app.interfaces.http.routes.consultations import ConsultationSecurityRuntime
@@ -36,10 +36,10 @@ def build_patron_contract_proof_review_router(*, service: ContractProofReviewRea
         return ContractProofReviewPageResponse(case_id=case_id, items=[ContractProofReviewResponse(review_id=row.id, proof_id=row.proof_id, reviewer_id=row.reviewer_id, reviewed_revision=row.reviewed_revision, decision=row.decision, rationale=row.rationale) for row in rows])
 
     @router.get("/cases/{case_id}/contract-proof-timeline", response_model=ContractProofTimelineResponse)
-    def timeline(case_id: UUID, authorization: str | None = Header(default=None)):
+    def timeline(case_id: UUID, revision: int | None = Query(default=None, ge=1), review_status: str | None = Query(default=None), limit: int = Query(default=50, ge=1, le=100), offset: int = Query(default=0, ge=0), authorization: str | None = Header(default=None)):
         actor = resolve_bearer_context(authorization=authorization, context_resolver=security_runtime.context_resolver)
         try:
-            rows = service.timeline_for_case(actor=actor, case_id=case_id, now=datetime.now(tz=UTC))
+            rows = service.timeline_for_case(actor=actor, case_id=case_id, now=datetime.now(tz=UTC), revision=revision, status=review_status, limit=limit, offset=offset)
         except PermissionError as error:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="FORBIDDEN") from error
         return ContractProofTimelineResponse(case_id=case_id, items=[ContractProofTimelineEventResponse(**row) for row in rows])
