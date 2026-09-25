@@ -28,9 +28,9 @@ class TransitionContractQueryExportHandler(CommandHandler):
         export = session.scalar(sa.select(ContractQueryExportRecord).where(ContractQueryExportRecord.tenant_id == tenant_id, ContractQueryExportRecord.id == command.export_id))
         if export is None or export.status != command.from_status:
             raise CommandExecutionError("CONTRACT_QUERY_EXPORT_NOT_FOUND_OR_STALE")
-        if command.to_status == "READY" and not command.local_proof_ref:
+        if command.to_status == "READY" and (not command.local_proof_ref or not command.local_proof_sha256 or len(command.local_proof_sha256) != 64):
             raise CommandExecutionError("LOCAL_EXPORT_PROOF_REQUIRED")
-        session.add(ContractQueryExportTransitionRecord(id=command.transition_id, tenant_id=tenant_id, export_id=command.export_id, from_status=command.from_status, to_status=command.to_status, local_proof_ref=command.local_proof_ref, actor_id=UUID(str(context.actor_id))))
+        session.add(ContractQueryExportTransitionRecord(id=command.transition_id, tenant_id=tenant_id, export_id=command.export_id, from_status=command.from_status, to_status=command.to_status, local_proof_ref=command.local_proof_ref, local_proof_sha256=command.local_proof_sha256, actor_id=UUID(str(context.actor_id))))
         export.status = command.to_status
         return HandlerOutcome(result_code="CONTRACT_QUERY_EXPORT_TRANSITIONED", aggregate_refs=({"aggregate_type": "CONTRACT_QUERY_EXPORT", "aggregate_id": str(command.export_id), "aggregate_revision": 1},), events=(PendingDomainEvent(aggregate_type="CONTRACT_QUERY_EXPORT", aggregate_id=command.export_id, aggregate_revision=1, event_type="CONTRACT_QUERY_EXPORT_TRANSITIONED", payload={"from_status": command.from_status, "to_status": command.to_status}),))
 

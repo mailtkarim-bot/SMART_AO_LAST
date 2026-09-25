@@ -11,3 +11,4 @@ class TransitionContractQueryExportCommand(ApplicationCommand):
     from_status: Literal["REQUESTED", "READY", "UNKNOWN", "REFUSED"]
     to_status: Literal["REQUESTED", "READY", "UNKNOWN", "REFUSED"]
     local_proof_ref: str | None = None
+    local_proof_sha256: str | None = None
