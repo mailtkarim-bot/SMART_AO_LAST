@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** préparer la tranche suivante après clôture des gates T18, sans ouverture publique.
+**Prochaine étape unique :** implémenter l'affichage C07 de la vérification locale d'export, en lecture seule.
 
 ## 1. Rôle de ce document
 
@@ -580,6 +580,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 25/09/2026 | Persistance T18 vérification export | migration `20260925_0099`, table tenant-scoped append-only et états `MATCH/MISMATCH/UNAVAILABLE` ajoutés ; aucun contenu exporté réexposé | ajouter les tests PostgreSQL de persistance des vérifications `MATCH/MISMATCH/UNAVAILABLE` |
 | 25/09/2026 | Tests persistance T18 | schéma tenant-scoped, états fermés et vérification locale `MATCH/MISMATCH/UNAVAILABLE` validés ; **7/7 tests verts** sur PostgreSQL éphémère | rejouer les gates complètes après validation de la persistance de vérification |
 | 25/09/2026 | Gates complètes après persistance vérification | backend complet **1 779 tests verts**, 2 assertions ops réalignées sur `20260925_0099`, gate ops **33/33** verte ; frontend **190/190**, typecheck, lint et build verts ; NO-GO public maintenu | préparer la tranche suivante après clôture des gates T18, sans ouverture publique |
+| 25/09/2026 | Paquet T19 vérification export UX | `T19_EXPORT_VERIFICATION_UX_PACKET.md` produit avec états difficiles, hash calculé conditionnel et absence de réception externe présumée | implémenter l'affichage C07 de la vérification locale d'export, en lecture seule |
 
 ## 7. Règle de mise à jour
 
