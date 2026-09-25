@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** rejouer les gates complètes après consultation filtrée de la chronologie.
+**Prochaine étape unique :** préparer la tranche suivante après clôture des gates de consultation filtrée, sans ouverture publique.
 
 ## 1. Rôle de ce document
 
@@ -539,6 +539,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 25/09/2026 | Paquet T8 consultation filtrée | `T8_CONTRACT_TIMELINE_QUERY_PACKET.md` produit avec filtres, pagination, invariants tenant et preuves attendues ; aucun élargissement public | implémenter la consultation filtrée tenant-scoped de la chronologie contractuelle |
 | 25/09/2026 | Consultation filtrée chronologie T8 | service et route Patron acceptent révision, état, limite et offset bornés, avec filtrage avant pagination ; lecture seule et tenant-scoped conservés ; Ruff/compilation à rejouer | ajouter les tests PostgreSQL/API des filtres et de la pagination de chronologie |
 | 25/09/2026 | Tests filtres/pagination chronologie T8 | API filtrée et projection ordre/pagination : **6 tests ciblés verts** ; états historiques et lecture seule conservés | rejouer les gates complètes après consultation filtrée de la chronologie |
+| 25/09/2026 | Gates complètes après consultation filtrée | backend PostgreSQL éphémère **1 749 tests verts**, 1 avertissement Starlette/httpx externe ; frontend **189/189**, typecheck, lint et build verts ; conteneur supprimé, NO-GO public maintenu | préparer la tranche suivante après clôture des gates de consultation filtrée, sans ouverture publique |
 
 ## 7. Règle de mise à jour
 
