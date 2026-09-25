@@ -32,3 +32,17 @@ class RequestContractQueryExportHandler(CommandHandler):
 
 def contract_query_export_handlers() -> dict[str, RequestContractQueryExportHandler]:
     return {RequestContractQueryExportCommand.command_type: RequestContractQueryExportHandler()}
+
+class ContractQueryExportReadService:
+    def __init__(self, *, session_factory, policy) -> None:
+        self._session_factory = session_factory
+        self._policy = policy
+
+    def list_for_case(self, *, actor, case_id, limit=50, offset=0):
+        from app.platform.security.context import ActorKind
+        if actor.actor_kind is not ActorKind.PATRON_ADMIN or actor.membership_id is None:
+            raise PermissionError("PATRON_REQUIRED")
+        if not 1 <= limit <= 100 or offset < 0:
+            raise ValueError("INVALID_PAGINATION")
+        with self._session_factory() as session:
+            return tuple(session.scalars(sa.select(ContractQueryExportRecord).where(ContractQueryExportRecord.tenant_id == actor.tenant_id, ContractQueryExportRecord.case_id == case_id).order_by(ContractQueryExportRecord.created_at.desc()).limit(limit).offset(offset)).all())

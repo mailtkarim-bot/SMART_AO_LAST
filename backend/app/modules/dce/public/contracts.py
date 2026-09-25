@@ -659,3 +659,17 @@ class ContractQueryReceiptPageResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
     case_id: UUID
     items: list[ContractQueryReceiptResponse]
+
+class ContractQueryExportResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    export_id: UUID
+    case_id: UUID
+    filters: dict[str, object]
+    status: Literal["REQUESTED", "READY", "UNKNOWN", "REFUSED"]
+    actor_id: UUID
+    created_at: datetime
+
+class ContractQueryExportPageResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    case_id: UUID
+    items: list[ContractQueryExportResponse]
