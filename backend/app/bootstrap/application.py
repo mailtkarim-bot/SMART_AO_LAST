@@ -127,6 +127,7 @@ from app.modules.dce.application.contract_baseline_handler import (
     ContractBaselineImpactReadService,
     contract_baseline_handlers,
 )
+from app.modules.dce.application.contract_query_export_handler import contract_query_export_handlers
 from app.modules.dce.application.contract_query_receipt_handler import (
     ContractQueryReceiptReadService,
     contract_query_receipt_handlers,
@@ -452,6 +453,7 @@ class AppRuntime:
             **contract_baseline_handlers(),
             **contract_review_handlers(),
             **contract_query_receipt_handlers(),
+            **contract_query_export_handlers(),
             "ExpireDceStagedObject": ExpireDceStagedObjectHandler(),
             "PrepareDceStaging": PrepareDceStagingHandler(),
             "RecordDceStagedObjectQuarantine": RecordDceStagedObjectQuarantineHandler(),
