@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** préparer la tranche suivante après clôture des gates du reçu de consultation, sans ouverture publique.
+**Prochaine étape unique :** implémenter la lecture Patron tenant-scoped des reçus de consultation.
 
 ## 1. Rôle de ce document
 
@@ -544,6 +544,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 25/09/2026 | Persistance T9 du reçu de consultation | modèle tenant-scoped et migration `20260925_0095` ajoutés ; limites `limit/offset` contraintes ; PostgreSQL ciblé **6/6 tests verts** avec historique de revue conservé | ajouter la commande idempotente et le refus tenant du reçu de consultation |
 | 25/09/2026 | Tests commande/reçu T9 | idempotence d'identité, tenant/Affaire et bornes `limit` vérifiés sur PostgreSQL éphémère ; **4/4 tests verts** | rejouer les gates complètes après validation du reçu de consultation |
 | 25/09/2026 | Gates complètes après reçu de consultation | backend complet **1 751 tests verts**, 2 assertions ops réalignées sur `20260925_0095`, gate ops **33/33** verte ; frontend **189/189**, typecheck, lint et build verts ; NO-GO public maintenu | préparer la tranche suivante après clôture des gates du reçu de consultation, sans ouverture publique |
+| 25/09/2026 | Paquet T10 lecture reçus | `T10_QUERY_RECEIPT_READ_PACKET.md` produit avec projection Patron, tenant, pagination et limites ; aucun élargissement public | implémenter la lecture Patron tenant-scoped des reçus de consultation |
 
 ## 7. Règle de mise à jour
 
