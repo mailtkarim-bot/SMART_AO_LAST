@@ -59,3 +59,12 @@ class ContractProofReviewReadService:
             if key not in latest:
                 latest[key] = row
         return tuple(latest.values())
+
+    def timeline_for_case(self, *, actor, case_id, now):
+        rows = self.list_for_case(actor=actor, case_id=case_id, now=now)
+        return tuple(
+            {"event_type": "REVIEW", "event_id": row.id, "proof_id": row.proof_id,
+             "revision": row.reviewed_revision, "status": row.decision,
+             "rationale": row.rationale, "created_at": row.created_at}
+            for row in sorted(rows, key=lambda item: (item.reviewed_revision, item.created_at))
+        )

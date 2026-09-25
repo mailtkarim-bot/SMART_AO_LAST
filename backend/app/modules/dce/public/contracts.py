@@ -628,3 +628,18 @@ class ContractProofReviewPageResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
     case_id: UUID
     items: list[ContractProofReviewResponse]
+
+class ContractProofTimelineEventResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    event_type: Literal["REVIEW"]
+    event_id: UUID
+    proof_id: UUID
+    revision: int
+    status: str
+    rationale: str
+    created_at: datetime
+
+class ContractProofTimelineResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    case_id: UUID
+    items: list[ContractProofTimelineEventResponse]
