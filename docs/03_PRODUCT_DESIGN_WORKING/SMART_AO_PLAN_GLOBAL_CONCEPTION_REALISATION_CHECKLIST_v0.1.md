@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** préparer la tranche suivante après clôture des gates T12, sans ouverture publique.
+**Prochaine étape unique :** implémenter les transitions append-only de l'export local, sans réception externe présumée.
 
 ## 1. Rôle de ce document
 
@@ -556,6 +556,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 25/09/2026 | Lecture Patron T12 de l'état d'export | service et route GET tenant-scoped ajoutés, ordre décroissant et pagination bornée ; états conservés sans transition implicite ; Ruff/compilation verts | ajouter les tests API/PostgreSQL de l'état d'export, tenant et pagination |
 | 25/09/2026 | Tests état d'export T12 | projection API `UNKNOWN`, filtres et pagination conservés ; contrainte PostgreSQL des états fermés vérifiée ; **3/3 tests verts** | rejouer les gates complètes après validation de la lecture d'état d'export |
 | 25/09/2026 | Gates complètes après lecture état d'export | backend PostgreSQL éphémère **1 759 tests verts**, 1 avertissement Starlette/httpx externe ; frontend **189/189**, typecheck, lint et build verts ; NO-GO public maintenu | préparer la tranche suivante après clôture des gates T12, sans ouverture publique |
+| 25/09/2026 | Paquet T13 transitions export | `T13_QUERY_EXPORT_TRANSITIONS_PACKET.md` produit avec états fermés, preuve locale READY, UNKNOWN conservé et refus tenant/ordre | implémenter les transitions append-only de l'export local, sans réception externe présumée |
 
 ## 7. Règle de mise à jour
 
