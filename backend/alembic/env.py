@@ -20,6 +20,7 @@ from app.modules.dce.infrastructure.models import (  # noqa: F401
     dce_requirements,
     dce_staging,
     dce_version,
+    export_proof_verification,
 )
 from app.modules.decision.infrastructure.models import (  # noqa: F401
     decision,
