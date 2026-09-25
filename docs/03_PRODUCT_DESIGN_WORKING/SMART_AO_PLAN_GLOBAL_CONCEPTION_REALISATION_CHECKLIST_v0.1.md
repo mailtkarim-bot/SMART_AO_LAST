@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** rejouer les gates complètes après validation de la vue d'audit export.
+**Prochaine étape unique :** préparer la tranche suivante après clôture des gates T14, sans ouverture publique.
 
 ## 1. Rôle de ce document
 
@@ -563,6 +563,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 25/09/2026 | Paquet T14 audit export consolidé | `T14_QUERY_EXPORT_AUDIT_PACKET.md` produit avec demande, transitions, état courant, preuve locale et invariants tenant ; aucun élargissement public | implémenter la vue d'audit consolidée de l'export local, sans fusion d'événements |
 | 25/09/2026 | Vue d'audit export T14 | service et route Patron GET ajoutés ; demande et transitions restent séparées, état courant non fusionné, preuve locale optionnelle ; Ruff/compilation verts | ajouter les tests API/PostgreSQL de la vue d'audit export, sans fusion d'événements |
 | 25/09/2026 | Tests audit export T14 | demande et transition séparées, état `UNKNOWN` conservé et tables tenant-scoped vérifiés ; **2/2 tests verts** | rejouer les gates complètes après validation de la vue d'audit export |
+| 25/09/2026 | Gates complètes après audit export | backend PostgreSQL éphémère **1 767 tests verts**, 1 avertissement Starlette/httpx externe ; frontend **189/189**, typecheck, lint et build verts ; NO-GO public maintenu | préparer la tranche suivante après clôture des gates T14, sans ouverture publique |
 
 ## 7. Règle de mise à jour
 
