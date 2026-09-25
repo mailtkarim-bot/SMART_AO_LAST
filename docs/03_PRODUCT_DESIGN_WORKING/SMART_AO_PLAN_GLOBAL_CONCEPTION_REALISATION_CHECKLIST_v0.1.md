@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** préparer la tranche suivante après clôture des gates T10, sans ouverture publique.
+**Prochaine étape unique :** implémenter la demande d'export local des reçus, sans présumer de réception externe.
 
 ## 1. Rôle de ce document
 
@@ -548,6 +548,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 25/09/2026 | Lecture Patron T10 des reçus | service et route GET tenant-scoped ajoutés, ordre décroissant et pagination bornée ; lecture seule, sans contenu de preuve ; Ruff/compilation verts | ajouter les tests API/PostgreSQL de lecture des reçus, tenant et pagination |
 | 25/09/2026 | Tests lecture reçus T10 | projection API des filtres/pagination et contrats de bornes : **3/3 tests ciblés verts** ; tenant et lecture seule conservés | rejouer les gates complètes après lecture Patron des reçus |
 | 25/09/2026 | Gates complètes après lecture reçus T10 | backend PostgreSQL éphémère **1 754 tests verts**, 1 avertissement Starlette/httpx externe ; frontend **189/189**, typecheck, lint et build verts ; NO-GO public maintenu | préparer la tranche suivante après clôture des gates T10, sans ouverture publique |
+| 25/09/2026 | Paquet T11 export local des reçus | `T11_QUERY_RECEIPT_EXPORT_PACKET.md` produit avec états fermés, idempotence, tenant et absence de réception externe présumée | implémenter la demande d'export local des reçus, sans présumer de réception externe |
 
 ## 7. Règle de mise à jour
 
