@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** recueillir la revue propriétaire locale de la chronologie C07, sans ouverture publique.
+**Prochaine étape unique :** préparer la tranche suivante de consultation contractuelle locale, sans ouverture publique.
 
 ## 1. Rôle de ce document
 
@@ -535,6 +535,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 25/09/2026 | Tests API/frontend chronologie C07 | API timeline Patron **1/1 vert**, C07 **189 tests verts**, typecheck et lint verts ; `SUPERSEDED` reste visible et aucune action de mutation n'est exposée | rejouer les gates complètes après la chronologie C07 |
 | 25/09/2026 | Gates complètes après chronologie C07 | suite backend complète : **1 745 tests verts**, 2 assertions ops obsolètes corrigées pour `20260925_0094`, puis gate ops **33/33** verte ; frontend **189/189**, typecheck, lint et build verts ; avertissement Starlette/httpx externe | préparer la tranche suivante après clôture des gates C07, sans ouverture publique |
 | 25/09/2026 | Paquet T7 revue propriétaire chronologie C07 | `T7_OWNER_REVIEW_TIMELINE_PACKET.md` produit avec preuves, limites et décision locale demandée ; NO-GO public maintenu | recueillir la revue propriétaire locale de la chronologie C07, sans ouverture publique |
+| 25/09/2026 | Validation propriétaire chronologie C07 | approbation explicite reçue : conservation de `SUPERSEDED`, `REJECTED`, `NEEDS_CLARIFICATION`, lecture seule, aucune conclusion juridique et NO-GO public maintenu | préparer la tranche suivante de consultation contractuelle locale, sans ouverture publique |
 
 ## 7. Règle de mise à jour
 
