@@ -134,6 +134,9 @@ from app.modules.dce.application.contract_query_export_handler import (
     ContractQueryExportReadService,
     contract_query_export_handlers,
 )
+from app.modules.dce.application.contract_query_export_transition_handler import (
+    contract_query_export_transition_handlers,
+)
 from app.modules.dce.application.contract_query_receipt_handler import (
     ContractQueryReceiptReadService,
     contract_query_receipt_handlers,
@@ -460,6 +463,7 @@ class AppRuntime:
             **contract_review_handlers(),
             **contract_query_receipt_handlers(),
             **contract_query_export_handlers(),
+            **contract_query_export_transition_handlers(),
             "ExpireDceStagedObject": ExpireDceStagedObjectHandler(),
             "PrepareDceStaging": PrepareDceStagingHandler(),
             "RecordDceStagedObjectQuarantine": RecordDceStagedObjectQuarantineHandler(),

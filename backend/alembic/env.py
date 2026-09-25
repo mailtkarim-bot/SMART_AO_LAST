@@ -9,6 +9,7 @@ from app.modules.dce.infrastructure.models import (  # noqa: F401
     consultation,
     contract_baseline,
     contract_query_export,
+    contract_query_export_transition,
     contract_query_receipt,
     contract_review,
     dce_classification,
