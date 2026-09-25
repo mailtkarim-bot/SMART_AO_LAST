@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** implémenter le reçu append-only de consultation contractuelle, sans mutation des preuves.
+**Prochaine étape unique :** ajouter la commande idempotente et le refus tenant du reçu de consultation.
 
 ## 1. Rôle de ce document
 
@@ -541,6 +541,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 25/09/2026 | Tests filtres/pagination chronologie T8 | API filtrée et projection ordre/pagination : **6 tests ciblés verts** ; états historiques et lecture seule conservés | rejouer les gates complètes après consultation filtrée de la chronologie |
 | 25/09/2026 | Gates complètes après consultation filtrée | backend PostgreSQL éphémère **1 749 tests verts**, 1 avertissement Starlette/httpx externe ; frontend **189/189**, typecheck, lint et build verts ; conteneur supprimé, NO-GO public maintenu | préparer la tranche suivante après clôture des gates de consultation filtrée, sans ouverture publique |
 | 25/09/2026 | Paquet T9 reçu de consultation | `T9_CONTRACT_QUERY_RECEIPT_PACKET.md` produit avec contrat append-only, filtres normalisés, idempotence et refus tenant ; aucun changement public | implémenter le reçu append-only de consultation contractuelle, sans mutation des preuves |
+| 25/09/2026 | Persistance T9 du reçu de consultation | modèle tenant-scoped et migration `20260925_0095` ajoutés ; limites `limit/offset` contraintes ; PostgreSQL ciblé **6/6 tests verts** avec historique de revue conservé | ajouter la commande idempotente et le refus tenant du reçu de consultation |
 
 ## 7. Règle de mise à jour
 
