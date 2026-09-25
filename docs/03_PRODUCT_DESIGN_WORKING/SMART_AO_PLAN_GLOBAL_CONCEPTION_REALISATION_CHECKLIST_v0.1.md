@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** préparer la tranche suivante après clôture des gates T13, sans ouverture publique.
+**Prochaine étape unique :** implémenter la vue d'audit consolidée de l'export local, sans fusion d'événements.
 
 ## 1. Rôle de ce document
 
@@ -560,6 +560,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 25/09/2026 | Transitions export T13 | migration `20260925_0097`, modèle append-only et commande de transition ajoutés ; `READY` exige une preuve locale, `UNKNOWN` reste inconnu, état précédent contrôlé ; Ruff vert | ajouter les tests PostgreSQL des transitions d'export, de l'ordre et de la preuve READY |
 | 25/09/2026 | Tests transitions export T13 | états fermés, ordre et référence locale `READY` vérifiés sur PostgreSQL éphémère ; **6/6 tests verts** ; aucune réception externe présumée | rejouer les gates complètes après validation des transitions d'export |
 | 25/09/2026 | Gates complètes après transitions export | backend complet **1 763 tests verts**, 2 assertions ops réalignées sur `20260925_0097`, gate ops **33/33** verte ; frontend **189/189**, typecheck, lint et build verts ; NO-GO public maintenu | préparer la tranche suivante après clôture des gates T13, sans ouverture publique |
+| 25/09/2026 | Paquet T14 audit export consolidé | `T14_QUERY_EXPORT_AUDIT_PACKET.md` produit avec demande, transitions, état courant, preuve locale et invariants tenant ; aucun élargissement public | implémenter la vue d'audit consolidée de l'export local, sans fusion d'événements |
 
 ## 7. Règle de mise à jour
 
