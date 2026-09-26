@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** recueillir la revue propriétaire locale de la consultation consolidée, sans ouverture publique.
+**Prochaine étape unique :** préparer l'audit consolidé export/reprise et la visibilité des inconnus, sans ouverture publique.
 
 ## 1. Rôle de ce document
 
@@ -632,6 +632,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 26/09/2026 | Diagnostic gates T32 | suite backend : **1 802 tests passés**, 1 échec architecture dû à `consolidated_export_resumption_read.py` ; renommage en handler effectué ; architecture/ops ciblées **35/35**, frontend **191/191**, typecheck/lint/build verts ; suite backend corrigée à rejouer | relancer la suite backend complète après correction de la frontière architecture T32, puis confirmer les gates frontend |
 | 26/09/2026 | Clôture gates T32 après correction | backend complet **1 803 tests verts** sur PostgreSQL éphémère, 1 avertissement Starlette/httpx externe ; frontend **191/191**, typecheck, lint et build verts ; conteneur supprimé, NO-GO public maintenu | préparer la tranche suivante après clôture définitive de T32, sans ouverture publique |
 | 26/09/2026 | Paquet T33 revue consultation consolidée | `T33_OWNER_REVIEW_CONSOLIDATED_QUERY_PACKET.md` produit avec décision locale, filtres combinés, séparation des événements et limites | recueillir la revue propriétaire locale de la consultation consolidée, sans ouverture publique |
+| 26/09/2026 | Validation propriétaire consultation consolidée | approbation explicite reçue : événements séparés, filtres/pagination stables, tenant avant projection, lecture seule et NO-GO public maintenu | préparer l'audit consolidé export/reprise et la visibilité des inconnus, sans ouverture publique |
 
 ## 7. Règle de mise à jour
 
