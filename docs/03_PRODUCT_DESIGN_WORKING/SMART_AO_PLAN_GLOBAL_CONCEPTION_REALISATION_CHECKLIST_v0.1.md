@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** ajouter les tests API/PostgreSQL de la chronologie propriétaire/vérification.
+**Prochaine étape unique :** rejouer les gates complètes après validation de la chronologie propriétaire/vérification.
 
 ## 1. Rôle de ce document
 
@@ -595,6 +595,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 25/09/2026 | Gates complètes après lecture acte propriétaire | backend complet **1 785 tests verts** après correction de la frontière architecture application/handler ; frontend **191/191**, typecheck, lint et build verts ; NO-GO public maintenu | préparer la tranche suivante après clôture des gates T22, sans ouverture publique |
 | 25/09/2026 | Paquet T23 chronologie propriétaire/vérification | `T23_OWNER_VERIFICATION_TIMELINE_PACKET.md` produit avec séparation hash/transitions/acte propriétaire, ordre et tenant ; NO-GO public maintenu | implémenter la chronologie C07 de validation propriétaire et de vérification, sans fusion d'actes |
 | 25/09/2026 | Chronologie C07 propriétaire/vérification T23 | service et route GET ajoutés, événements `VERIFICATION`, `TRANSITION`, `OWNER_ACT` séparés et triés par date ; Ruff/compilation verts | ajouter les tests API/PostgreSQL de la chronologie propriétaire/vérification |
+| 25/09/2026 | Tests chronologie T23 | ordre/séparation API et tables source tenant-scoped vérifiés ; **2/2 tests verts** sur PostgreSQL éphémère | rejouer les gates complètes après validation de la chronologie propriétaire/vérification |
 
 ## 7. Règle de mise à jour
 
