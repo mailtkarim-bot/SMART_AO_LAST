@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** rejouer les gates complètes après validation de la chronologie propriétaire/vérification.
+**Prochaine étape unique :** relancer la suite backend complète après correction de la frontière architecture T23, puis confirmer les gates frontend.
 
 ## 1. Rôle de ce document
 
@@ -596,6 +596,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 25/09/2026 | Paquet T23 chronologie propriétaire/vérification | `T23_OWNER_VERIFICATION_TIMELINE_PACKET.md` produit avec séparation hash/transitions/acte propriétaire, ordre et tenant ; NO-GO public maintenu | implémenter la chronologie C07 de validation propriétaire et de vérification, sans fusion d'actes |
 | 25/09/2026 | Chronologie C07 propriétaire/vérification T23 | service et route GET ajoutés, événements `VERIFICATION`, `TRANSITION`, `OWNER_ACT` séparés et triés par date ; Ruff/compilation verts | ajouter les tests API/PostgreSQL de la chronologie propriétaire/vérification |
 | 25/09/2026 | Tests chronologie T23 | ordre/séparation API et tables source tenant-scoped vérifiés ; **2/2 tests verts** sur PostgreSQL éphémère | rejouer les gates complètes après validation de la chronologie propriétaire/vérification |
+| 26/09/2026 | Diagnostic/reprise gates T23 | première reprise : **1 787 tests passés**, 1 échec architecture dû au lecteur `export_verification_timeline_read.py` important directement l’infrastructure ; renommage en handler effectué ; architecture/ops ciblées **35/35**, PostgreSQL timeline **1/1**, frontend **191/191**, typecheck/lint/build verts ; suite backend complète après correction encore à rejouer | relancer la suite backend complète après correction de la frontière architecture T23, puis confirmer les gates frontend |
 
 ## 7. Règle de mise à jour
 
