@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** recueillir la revue propriétaire locale de la chronologie de reprise humaine, sans ouverture publique.
+**Prochaine étape unique :** préparer la consultation filtrée de la chronologie de reprise humaine, sans ouverture publique.
 
 ## 1. Rôle de ce document
 
@@ -619,6 +619,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 26/09/2026 | Tests chronologie T28 | séparation/ordre API et tables tenant-scoped PostgreSQL vérifiés ; **2/2 tests verts** | rejouer les gates complètes après validation de la chronologie T28 |
 | 26/09/2026 | Gates complètes T28 | backend complet **1 799 tests verts** sur PostgreSQL éphémère, 1 avertissement Starlette/httpx externe ; frontend **191/191**, typecheck, lint et build verts ; conteneur supprimé, aucun déploiement public | préparer la tranche suivante après clôture définitive de T28, sans ouverture publique |
 | 26/09/2026 | Paquet T29 revue chronologie reprise | `T29_OWNER_REVIEW_RESUMPTION_TIMELINE_PACKET.md` produit avec décision locale, séparation technique/humaine et états difficiles ; NO-GO public maintenu | recueillir la revue propriétaire locale de la chronologie de reprise humaine, sans ouverture publique |
+| 26/09/2026 | Validation propriétaire chronologie reprise | approbation explicite reçue : événements séparés, états de reprise visibles, lecture seule, tenant scope, aucune réception externe et NO-GO public maintenu | préparer la consultation filtrée de la chronologie de reprise humaine, sans ouverture publique |
 
 ## 7. Règle de mise à jour
 
