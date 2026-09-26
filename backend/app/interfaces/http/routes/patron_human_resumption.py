@@ -5,7 +5,7 @@ from fastapi import APIRouter, Header, HTTPException, status
 
 from app.interfaces.http.dependencies.auth import resolve_bearer_context
 from app.interfaces.http.routes.consultations import ConsultationSecurityRuntime
-from app.modules.dce.application.human_resumption_handler_read import HumanResumptionReadService
+from app.modules.dce.application.human_resumption_read_handler import HumanResumptionReadService
 from app.modules.dce.public.contracts import HumanResumptionResponse
 
 

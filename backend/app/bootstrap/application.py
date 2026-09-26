@@ -187,7 +187,7 @@ from app.modules.dce.application.handlers import (
     RejectDceStagedObjectUploadHandler,
 )
 from app.modules.dce.application.human_resumption_handler import human_resumption_handlers
-from app.modules.dce.application.human_resumption_handler_read import HumanResumptionReadService
+from app.modules.dce.application.human_resumption_read_handler import HumanResumptionReadService
 from app.modules.dce.application.impact import CaseDceImpactService
 from app.modules.dce.application.queries import ConsultationProjection
 from app.modules.dce.application.requirement_confirmation import (
