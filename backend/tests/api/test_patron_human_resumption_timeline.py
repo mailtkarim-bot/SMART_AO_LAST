@@ -9,7 +9,7 @@ class Resolver:
     def resolve(self, *, access_token: str): return _actor()
 
 class Service:
-    def get_for_export(self, *, actor, export_id):
+    def get_for_export(self, *, actor, export_id, state=None, limit=50, offset=0):
         now = datetime.now(tz=UTC)
         return tuple({"event_type": kind, "event_id": uuid4(), "status": status, "created_at": now + timedelta(seconds=index)} for index, (kind, status) in enumerate((("TRANSITION", "UNKNOWN"), ("HUMAN_RESUMPTION", "FOLLOW_UP_REQUIRED"))))
 
