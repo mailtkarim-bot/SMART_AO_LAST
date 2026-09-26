@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** rejouer les gates complètes après validation de la reprise humaine.
+**Prochaine étape unique :** préparer la tranche suivante après clôture des gates T26, sans ouverture publique.
 
 ## 1. Rôle de ce document
 
@@ -608,6 +608,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 26/09/2026 | Implémentation T26 reprise humaine | contrat `HumanResumptionAct` ajouté avec états fermés et justification obligatoire ; **2 tests domaine verts** ; actes techniques inchangés | persister tenant-scoped l'acte de reprise humaine locale, append-only et idempotent |
 | 26/09/2026 | Persistance T26 reprise humaine | migration `20260926_0101`, table tenant-scoped append-only et commande `RecordHumanResumption` liées à l'export ; refus tenant et rejeu idempotent via dispatcher | ajouter les tests PostgreSQL de l'acte de reprise humaine et de son idempotence |
 | 26/09/2026 | Tests reprise humaine T26 | schéma tenant/états fermés et commande export/état/rationale vérifiés ; **3/3 tests verts** sur PostgreSQL éphémère | rejouer les gates complètes après validation de la reprise humaine |
+| 26/09/2026 | Gates complètes après reprise humaine | backend complet **1 793 tests verts**, 2 assertions ops réalignées sur `20260926_0101`, gate ops **33/33** verte ; frontend **191/191**, typecheck, lint et build verts ; NO-GO public maintenu | préparer la tranche suivante après clôture des gates T26, sans ouverture publique |
 
 ## 7. Règle de mise à jour
 
