@@ -725,3 +725,15 @@ class HumanResumptionResponse(BaseModel):
     state: Literal["ACKNOWLEDGED", "FOLLOW_UP_REQUIRED", "BLOCKED"]
     rationale: str
     created_at: datetime
+
+class HumanResumptionTimelineEventResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    event_type: Literal["TRANSITION", "HUMAN_RESUMPTION"]
+    event_id: UUID
+    status: str
+    created_at: datetime
+
+class HumanResumptionTimelineResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    export_id: UUID
+    items: list[HumanResumptionTimelineEventResponse]

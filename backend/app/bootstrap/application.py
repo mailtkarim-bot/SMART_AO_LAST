@@ -107,6 +107,9 @@ from app.interfaces.http.routes.patron_financial_reports import (
     build_patron_financial_report_router,
 )
 from app.interfaces.http.routes.patron_human_resumption import build_patron_human_resumption_router
+from app.interfaces.http.routes.patron_human_resumption_timeline import (
+    build_patron_human_resumption_timeline_router,
+)
 from app.interfaces.http.routes.patron_opportunity_watch_profiles import (
     build_patron_opportunity_watch_profile_router,
 )
@@ -188,6 +191,9 @@ from app.modules.dce.application.handlers import (
 )
 from app.modules.dce.application.human_resumption_handler import human_resumption_handlers
 from app.modules.dce.application.human_resumption_read_handler import HumanResumptionReadService
+from app.modules.dce.application.human_resumption_timeline_handler import (
+    HumanResumptionTimelineReadService,
+)
 from app.modules.dce.application.impact import CaseDceImpactService
 from app.modules.dce.application.queries import ConsultationProjection
 from app.modules.dce.application.requirement_confirmation import (
@@ -1042,6 +1048,7 @@ def create_app(
         export_verification_timeline_handler_service = ExportVerificationTimelineReadService(session_factory=runtime.session_factory)
         export_operational_handoff_handler_service = ExportOperationalHandoffReadService(session_factory=runtime.session_factory)
         human_resumption_read_service = HumanResumptionReadService(session_factory=runtime.session_factory)
+        human_resumption_timeline_read_service = HumanResumptionTimelineReadService(session_factory=runtime.session_factory)
         contract_proof_review_read_service = ContractProofReviewReadService(
             session_factory=runtime.session_factory, policy=security_policy
         )
@@ -1265,6 +1272,7 @@ def create_app(
         app.include_router(build_patron_export_verification_timeline_router(service=export_verification_timeline_handler_service, security_runtime=security_runtime))
         app.include_router(build_patron_export_operational_handoff_router(service=export_operational_handoff_handler_service, security_runtime=security_runtime))
         app.include_router(build_patron_human_resumption_router(service=human_resumption_read_service, security_runtime=security_runtime))
+        app.include_router(build_patron_human_resumption_timeline_router(service=human_resumption_timeline_read_service, security_runtime=security_runtime))
         app.include_router(build_patron_contract_proof_review_router(
             service=contract_proof_review_read_service, security_runtime=security_runtime
         ))
