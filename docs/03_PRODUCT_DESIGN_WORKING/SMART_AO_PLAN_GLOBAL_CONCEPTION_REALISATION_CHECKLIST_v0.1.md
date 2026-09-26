@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** recueillir la revue propriétaire locale de la consultation filtrée de reprise, sans ouverture publique.
+**Prochaine étape unique :** préparer la consultation consolidée export/reprise avec filtres combinés, sans ouverture publique.
 
 ## 1. Rôle de ce document
 
@@ -625,6 +625,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 26/09/2026 | Gate T30 diagnostic | suite backend : **1 800 tests passés**, 1 échec dû au faux service T28 qui n’acceptait pas `state/limit/offset` ; correction du test effectuée ; frontend **191/191**, typecheck/lint/build verts ; validation DB T30 à rejouer avec PostgreSQL explicite | rejouer les gates complètes après correction du contrat de test T28, puis confirmer T30 |
 | 26/09/2026 | Clôture gates T30 après correction | backend complet **1 801 tests verts** sur PostgreSQL éphémère, 1 avertissement Starlette/httpx externe ; frontend **191/191**, typecheck, lint et build verts ; NO-GO public maintenu | préparer la tranche suivante après clôture définitive de T30, sans ouverture publique |
 | 26/09/2026 | Paquet T31 revue consultation reprise | `T31_OWNER_REVIEW_RESUMPTION_QUERY_PACKET.md` produit avec filtres, pagination, états difficiles et décision locale attendue | recueillir la revue propriétaire locale de la consultation filtrée de reprise, sans ouverture publique |
+| 26/09/2026 | Validation propriétaire consultation reprise | approbation explicite reçue : états filtrables, pagination stable, filtrage tenant/export avant projection, actes séparés, lecture seule et NO-GO public maintenu | préparer la consultation consolidée export/reprise avec filtres combinés, sans ouverture publique |
 
 ## 7. Règle de mise à jour
 
