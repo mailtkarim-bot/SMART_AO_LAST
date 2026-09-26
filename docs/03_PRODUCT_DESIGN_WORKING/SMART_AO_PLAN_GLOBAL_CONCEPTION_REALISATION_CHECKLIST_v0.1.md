@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** recueillir la revue propriétaire locale de l'audit des inconnus consolidés, sans ouverture publique.
+**Prochaine étape unique :** préparer la provenance détaillée des inconnus consolidés, sans ouverture publique.
 
 ## 1. Rôle de ce document
 
@@ -637,6 +637,8 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 26/09/2026 | Tests audit consolidé T34 | inconnus et bloqueurs séparés ; sources transition/reprise tenant-scoped vérifiées ; tests ciblés à exécuter sur PostgreSQL explicite | retenter le push GitHub puis rejouer les gates ciblées T34 |
 | 26/09/2026 | Gates ciblées T34 | API/DB inconnus, architecture, schéma et contrats ops : **38/38 tests verts** sur PostgreSQL éphémère ; synchronisation GitHub confirmée ; NO-GO public maintenu | préparer la tranche suivante après clôture des gates ciblées T34, sans ouverture publique |
 | 26/09/2026 | Paquet T35 revue audit inconnus | `T35_OWNER_REVIEW_UNKNOWN_AUDIT_PACKET.md` produit avec décision locale, distinctions d'états, sources et limites | recueillir la revue propriétaire locale de l'audit des inconnus consolidés, sans ouverture publique |
+| 26/09/2026 | Validation propriétaire audit inconnus | approbation explicite reçue : états distincts, blocages humains, événements sources conservés, aucune action automatique, lecture seule et NO-GO public maintenu | préparer la provenance détaillée des inconnus consolidés, sans ouverture publique |
+| 26/09/2026 | Paquet T36 provenance inconnus | `T36_UNKNOWN_AUDIT_PROVENANCE_PACKET.md` produit avec source d'événement, acteur, date, état et justification obligatoires | préparer la provenance détaillée des inconnus consolidés, sans ouverture publique |
 
 ## 7. Règle de mise à jour
 
