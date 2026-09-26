@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** ajouter les tests API/PostgreSQL de la consultation consolidée export/reprise.
+**Prochaine étape unique :** rejouer les gates complètes après validation de la consultation consolidée T32.
 
 ## 1. Rôle de ce document
 
@@ -628,6 +628,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 26/09/2026 | Validation propriétaire consultation reprise | approbation explicite reçue : états filtrables, pagination stable, filtrage tenant/export avant projection, actes séparés, lecture seule et NO-GO public maintenu | préparer la consultation consolidée export/reprise avec filtres combinés, sans ouverture publique |
 
 | 26/09/2026 | Consultation consolidée T32 | service et route GET ajoutés, filtres export/reprise combinés, événements séparés, pagination serveur et tenant scope ; Ruff/compilation verts | ajouter les tests API/PostgreSQL de la consultation consolidée export/reprise |
+| 26/09/2026 | Tests consultation consolidée T32 | filtres combinés et pagination API vérifiés, événement humain séparé, tables sources tenant-scoped vérifiées ; **2/2 tests verts** | rejouer les gates complètes après validation de la consultation consolidée T32 |
 
 ## 7. Règle de mise à jour
 
