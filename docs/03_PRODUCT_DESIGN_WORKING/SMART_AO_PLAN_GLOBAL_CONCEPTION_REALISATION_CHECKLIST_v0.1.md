@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** relancer la suite backend complète après correction de la frontière architecture T27, puis confirmer les gates frontend.
+**Prochaine étape unique :** préparer la tranche suivante après clôture définitive de T27, sans ouverture publique.
 
 ## 1. Rôle de ce document
 
@@ -613,6 +613,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 26/09/2026 | Lecture C07 reprise humaine T27 | service et route Patron tenant-scoped ajoutés, absence d'acte en 404, projection fermée état/acteur/rationale ; Ruff/compilation verts | ajouter les tests API/PostgreSQL de lecture de la reprise humaine |
 | 26/09/2026 | Tests lecture reprise humaine T27 | projection API read-only et schéma PostgreSQL état/acteur/rationale vérifiés ; **2/2 tests verts** | rejouer les gates complètes après validation de la lecture de la reprise humaine |
 | 26/09/2026 | Diagnostic gates T27 | suite backend : **1 796 tests passés**, 1 échec architecture dû à `human_resumption_handler_read.py` ; renommage en handler effectué ; architecture/ops ciblées **35/35**, frontend **191/191**, typecheck/lint/build verts ; suite backend corrigée à rejouer | relancer la suite backend complète après correction de la frontière architecture T27, puis confirmer les gates frontend |
+| 26/09/2026 | Clôture gates T27 après correction | backend complet **1 797 tests verts** sur PostgreSQL éphémère, 1 avertissement Starlette/httpx externe ; frontend **191/191**, typecheck, lint et build verts ; conteneur supprimé, NO-GO public maintenu | préparer la tranche suivante après clôture définitive de T27, sans ouverture publique |
 
 ## 7. Règle de mise à jour
 
