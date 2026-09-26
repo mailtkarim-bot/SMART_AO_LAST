@@ -716,3 +716,12 @@ class ExportOperationalHandoffResponse(BaseModel):
     transition_count: int
     last_transition_at: datetime | None
     read_only: bool = True
+
+class HumanResumptionResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    act_id: UUID
+    export_id: UUID
+    actor_id: UUID
+    state: Literal["ACKNOWLEDGED", "FOLLOW_UP_REQUIRED", "BLOCKED"]
+    rationale: str
+    created_at: datetime
