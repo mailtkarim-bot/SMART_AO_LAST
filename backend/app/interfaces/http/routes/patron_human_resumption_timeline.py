@@ -1,7 +1,7 @@
 # ruff: noqa: E501, E701
 from uuid import UUID
 
-from fastapi import APIRouter, Header, HTTPException, status
+from fastapi import APIRouter, Header, HTTPException, Query, status
 
 from app.interfaces.http.dependencies.auth import resolve_bearer_context
 from app.interfaces.http.routes.consultations import ConsultationSecurityRuntime
@@ -17,9 +17,9 @@ from app.modules.dce.public.contracts import (
 def build_patron_human_resumption_timeline_router(*, service: HumanResumptionTimelineReadService, security_runtime: ConsultationSecurityRuntime) -> APIRouter:
     router = APIRouter(prefix="/api/v1/patron", tags=["patron-human-resumption-timeline"])
     @router.get("/contract-query-exports/{export_id}/human-resumption-timeline", response_model=HumanResumptionTimelineResponse)
-    def timeline(export_id: UUID, authorization: str | None = Header(default=None)):
+    def timeline(export_id: UUID, state: str | None = Query(default=None), limit: int = Query(default=50, ge=1, le=100), offset: int = Query(default=0, ge=0), authorization: str | None = Header(default=None)):
         actor = resolve_bearer_context(authorization=authorization, context_resolver=security_runtime.context_resolver)
-        try: rows = service.get_for_export(actor=actor, export_id=export_id)
+        try: rows = service.get_for_export(actor=actor, export_id=export_id, state=state, limit=limit, offset=offset)
         except PermissionError as error: raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="FORBIDDEN") from error
         return HumanResumptionTimelineResponse(export_id=export_id, items=[HumanResumptionTimelineEventResponse(**row) for row in rows])
     return router
