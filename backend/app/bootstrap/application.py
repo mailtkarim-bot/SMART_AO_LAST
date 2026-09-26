@@ -154,7 +154,7 @@ from app.modules.dce.application.contract_review_handler import (
     contract_review_handlers,
 )
 from app.modules.dce.application.contract_risk_read import PatronDceContractRiskReadService
-from app.modules.dce.application.export_verification_owner_act_read import (
+from app.modules.dce.application.export_verification_owner_act_handler import (
     ExportVerificationOwnerActReadService,
 )
 from app.modules.dce.application.handlers import (
@@ -1022,7 +1022,7 @@ def create_app(
         contract_query_export_audit_read_service = ContractQueryExportAuditReadService(
             session_factory=runtime.session_factory, policy=security_policy
         )
-        export_verification_owner_act_read_service = ExportVerificationOwnerActReadService(session_factory=runtime.session_factory)
+        export_verification_owner_act_handler_service = ExportVerificationOwnerActReadService(session_factory=runtime.session_factory)
         contract_proof_review_read_service = ContractProofReviewReadService(
             session_factory=runtime.session_factory, policy=security_policy
         )
@@ -1242,7 +1242,7 @@ def create_app(
         app.include_router(build_patron_contract_query_export_audit_router(
             service=contract_query_export_audit_read_service, security_runtime=security_runtime
         ))
-        app.include_router(build_patron_export_verification_owner_act_router(service=export_verification_owner_act_read_service, security_runtime=security_runtime))
+        app.include_router(build_patron_export_verification_owner_act_router(service=export_verification_owner_act_handler_service, security_runtime=security_runtime))
         app.include_router(build_patron_contract_proof_review_router(
             service=contract_proof_review_read_service, security_runtime=security_runtime
         ))
