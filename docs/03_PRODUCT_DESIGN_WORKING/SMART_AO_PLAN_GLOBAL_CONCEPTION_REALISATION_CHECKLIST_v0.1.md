@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** relancer la suite backend complète après correction de la frontière architecture T24, puis confirmer les gates frontend.
+**Prochaine étape unique :** préparer la tranche suivante après clôture définitive de T24, sans ouverture publique.
 
 ## 1. Rôle de ce document
 
@@ -602,6 +602,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 26/09/2026 | Relève opérationnelle export T24 | service et route GET Patron ajoutés, statut courant, filtres, nombre de transitions et dernière transition exposés en lecture seule ; Ruff/compilation verts | ajouter les tests API/PostgreSQL de la relève opérationnelle locale |
 | 26/09/2026 | Tests relève opérationnelle T24 | projection API `UNKNOWN`, read-only et transition courante vérifiés ; schéma tenant/Affaire PostgreSQL vérifié ; **2/2 tests verts** | rejouer les gates complètes après validation de la relève opérationnelle locale |
 | 26/09/2026 | Diagnostic gates T24 | suite backend : **1 789 tests passés**, 1 échec architecture dû à `export_operational_handoff_read.py` ; renommage en handler effectué ; architecture/ops ciblées **35/35**, frontend **191/191**, typecheck/lint/build verts ; suite backend complète corrigée à rejouer | relancer la suite backend complète après correction de la frontière architecture T24, puis confirmer les gates frontend |
+| 26/09/2026 | Clôture gates T24 après correction | backend complet **1 790 tests verts** sur PostgreSQL éphémère, 1 avertissement Starlette/httpx externe ; frontend **191/191**, typecheck, lint et build verts ; conteneur supprimé, NO-GO public maintenu | préparer la tranche suivante après clôture définitive de T24, sans ouverture publique |
 
 ## 7. Règle de mise à jour
 
