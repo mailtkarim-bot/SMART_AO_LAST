@@ -185,6 +185,7 @@ from app.modules.dce.application.handlers import (
     RegisterDceVersionHandler,
     RejectDceStagedObjectUploadHandler,
 )
+from app.modules.dce.application.human_resumption_handler import human_resumption_handlers
 from app.modules.dce.application.impact import CaseDceImpactService
 from app.modules.dce.application.queries import ConsultationProjection
 from app.modules.dce.application.requirement_confirmation import (
@@ -487,6 +488,7 @@ class AppRuntime:
             **contract_query_receipt_handlers(),
             **contract_query_export_handlers(),
             **contract_query_export_transition_handlers(),
+            **human_resumption_handlers(),
             "ExpireDceStagedObject": ExpireDceStagedObjectHandler(),
             "PrepareDceStaging": PrepareDceStagingHandler(),
             "RecordDceStagedObjectQuarantine": RecordDceStagedObjectQuarantineHandler(),

@@ -22,6 +22,7 @@ from app.modules.dce.infrastructure.models import (  # noqa: F401
     dce_version,
     export_proof_verification,
     export_verification_owner_act,
+    human_resumption_act,
 )
 from app.modules.decision.infrastructure.models import (  # noqa: F401
     decision,
