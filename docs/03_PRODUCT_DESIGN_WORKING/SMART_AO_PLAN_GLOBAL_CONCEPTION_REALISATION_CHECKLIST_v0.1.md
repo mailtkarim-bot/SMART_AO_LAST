@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** ajouter les tests API/PostgreSQL de la chronologie de reprise humaine et d'export.
+**Prochaine étape unique :** rejouer les gates complètes après validation de la chronologie T28.
 
 ## 1. Rôle de ce document
 
@@ -616,6 +616,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 26/09/2026 | Clôture gates T27 après correction | backend complet **1 797 tests verts** sur PostgreSQL éphémère, 1 avertissement Starlette/httpx externe ; frontend **191/191**, typecheck, lint et build verts ; conteneur supprimé, NO-GO public maintenu | préparer la tranche suivante après clôture définitive de T27, sans ouverture publique |
 | 26/09/2026 | Paquet T28 chronologie reprise humaine | `T28_HUMAN_RESUMPTION_TIMELINE_PACKET.md` produit avec acte humain/événements techniques séparés, états et tenant scope ; NO-GO public maintenu | implémenter la chronologie C07 de reprise humaine et d'export, sans fusion d'actes |
 | 26/09/2026 | Chronologie C07 reprise/export T28 | service et route GET ajoutés, événements `TRANSITION` et `HUMAN_RESUMPTION` séparés et triés par date, tenant-scoped ; Ruff/compilation verts | ajouter les tests API/PostgreSQL de la chronologie de reprise humaine et d'export |
+| 26/09/2026 | Tests chronologie T28 | séparation/ordre API et tables tenant-scoped PostgreSQL vérifiés ; **2/2 tests verts** | rejouer les gates complètes après validation de la chronologie T28 |
 
 ## 7. Règle de mise à jour
 
