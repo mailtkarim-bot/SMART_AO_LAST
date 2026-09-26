@@ -94,6 +94,9 @@ from app.interfaces.http.routes.patron_enterprise_library import (
 from app.interfaces.http.routes.patron_enterprise_registry import (
     build_patron_enterprise_registry_router,
 )
+from app.interfaces.http.routes.patron_export_operational_handoff import (
+    build_patron_export_operational_handoff_router,
+)
 from app.interfaces.http.routes.patron_export_verification_owner_acts import (
     build_patron_export_verification_owner_act_router,
 )
@@ -157,6 +160,9 @@ from app.modules.dce.application.contract_review_handler import (
     contract_review_handlers,
 )
 from app.modules.dce.application.contract_risk_read import PatronDceContractRiskReadService
+from app.modules.dce.application.export_operational_handoff_read import (
+    ExportOperationalHandoffReadService,
+)
 from app.modules.dce.application.export_verification_owner_act_handler import (
     ExportVerificationOwnerActReadService,
 )
@@ -1030,6 +1036,7 @@ def create_app(
         )
         export_verification_owner_act_handler_service = ExportVerificationOwnerActReadService(session_factory=runtime.session_factory)
         export_verification_timeline_handler_service = ExportVerificationTimelineReadService(session_factory=runtime.session_factory)
+        export_operational_handoff_read_service = ExportOperationalHandoffReadService(session_factory=runtime.session_factory)
         contract_proof_review_read_service = ContractProofReviewReadService(
             session_factory=runtime.session_factory, policy=security_policy
         )
@@ -1251,6 +1258,7 @@ def create_app(
         ))
         app.include_router(build_patron_export_verification_owner_act_router(service=export_verification_owner_act_handler_service, security_runtime=security_runtime))
         app.include_router(build_patron_export_verification_timeline_router(service=export_verification_timeline_handler_service, security_runtime=security_runtime))
+        app.include_router(build_patron_export_operational_handoff_router(service=export_operational_handoff_read_service, security_runtime=security_runtime))
         app.include_router(build_patron_contract_proof_review_router(
             service=contract_proof_review_read_service, security_runtime=security_runtime
         ))

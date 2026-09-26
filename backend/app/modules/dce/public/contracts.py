@@ -707,3 +707,12 @@ class ExportVerificationTimelineResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
     export_id: UUID
     items: list[ExportVerificationTimelineEventResponse]
+
+class ExportOperationalHandoffResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    export_id: UUID
+    current_status: str
+    filters: dict[str, object]
+    transition_count: int
+    last_transition_at: datetime | None
+    read_only: bool = True
