@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** préparer la tranche suivante après clôture des gates T22, sans ouverture publique.
+**Prochaine étape unique :** implémenter la chronologie C07 de validation propriétaire et de vérification, sans fusion d'actes.
 
 ## 1. Rôle de ce document
 
@@ -593,6 +593,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 25/09/2026 | Lecture C07 acte propriétaire T22 | service et route Patron tenant-scoped ajoutés, absence d'acte en 404, projection fermée owner/approved/rationale ; Ruff/compilation verts | ajouter les tests API/PostgreSQL de lecture de l'acte propriétaire |
 | 25/09/2026 | Tests lecture acte propriétaire T22 | projection API fermée et schéma PostgreSQL owner/export/approved/rationale vérifiés ; **2/2 tests verts** | rejouer les gates complètes après validation de la lecture de l'acte propriétaire |
 | 25/09/2026 | Gates complètes après lecture acte propriétaire | backend complet **1 785 tests verts** après correction de la frontière architecture application/handler ; frontend **191/191**, typecheck, lint et build verts ; NO-GO public maintenu | préparer la tranche suivante après clôture des gates T22, sans ouverture publique |
+| 25/09/2026 | Paquet T23 chronologie propriétaire/vérification | `T23_OWNER_VERIFICATION_TIMELINE_PACKET.md` produit avec séparation hash/transitions/acte propriétaire, ordre et tenant ; NO-GO public maintenu | implémenter la chronologie C07 de validation propriétaire et de vérification, sans fusion d'actes |
 
 ## 7. Règle de mise à jour
 
