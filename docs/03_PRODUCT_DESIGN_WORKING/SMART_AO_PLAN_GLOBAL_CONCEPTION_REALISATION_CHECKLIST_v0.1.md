@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** ajouter les tests API/PostgreSQL des filtres de reprise humaine.
+**Prochaine étape unique :** rejouer les gates complètes après validation de la consultation filtrée T30.
 
 ## 1. Rôle de ce document
 
@@ -621,7 +621,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 26/09/2026 | Paquet T29 revue chronologie reprise | `T29_OWNER_REVIEW_RESUMPTION_TIMELINE_PACKET.md` produit avec décision locale, séparation technique/humaine et états difficiles ; NO-GO public maintenu | recueillir la revue propriétaire locale de la chronologie de reprise humaine, sans ouverture publique |
 | 26/09/2026 | Validation propriétaire chronologie reprise | approbation explicite reçue : événements séparés, états de reprise visibles, lecture seule, tenant scope, aucune réception externe et NO-GO public maintenu | préparer la consultation filtrée de la chronologie de reprise humaine, sans ouverture publique |
 
-| 26/09/2026 | Consultation filtrée T30 | service/route acceptent état, limite et offset bornés, filtrage avant pagination, lecture seule ; tests à ajouter | ajouter les tests API/PostgreSQL des filtres de reprise humaine |
+| 26/09/2026 | Consultation filtrée T30 | service/route acceptent état, limite et offset bornés, filtrage avant pagination, lecture seule ; tests API/PostgreSQL **2/2 verts** | rejouer les gates complètes après validation de la consultation filtrée T30 |
 
 ## 7. Règle de mise à jour
 
