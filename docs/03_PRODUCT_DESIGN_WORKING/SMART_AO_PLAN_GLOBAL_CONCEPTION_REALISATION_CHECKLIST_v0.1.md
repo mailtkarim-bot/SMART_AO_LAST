@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** ajouter les tests API/PostgreSQL de lecture de l'acte propriétaire.
+**Prochaine étape unique :** rejouer les gates complètes après validation de la lecture de l'acte propriétaire.
 
 ## 1. Rôle de ce document
 
@@ -591,6 +591,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 25/09/2026 | Gates complètes après acte propriétaire | backend complet **1 782 tests verts**, 2 assertions ops réalignées sur `20260925_0100`, gate ops **33/33** verte ; frontend **191/191**, typecheck, lint et build verts ; NO-GO public maintenu | préparer la tranche suivante après clôture des gates T21, sans ouverture publique |
 | 25/09/2026 | Paquet T22 lecture acte propriétaire | `T22_OWNER_ACT_READ_PACKET.md` produit avec owner/approbation/justification séparés, tenant scope et lecture seule | implémenter la lecture C07 tenant-scoped de l'acte propriétaire |
 | 25/09/2026 | Lecture C07 acte propriétaire T22 | service et route Patron tenant-scoped ajoutés, absence d'acte en 404, projection fermée owner/approved/rationale ; Ruff/compilation verts | ajouter les tests API/PostgreSQL de lecture de l'acte propriétaire |
+| 25/09/2026 | Tests lecture acte propriétaire T22 | projection API fermée et schéma PostgreSQL owner/export/approved/rationale vérifiés ; **2/2 tests verts** | rejouer les gates complètes après validation de la lecture de l'acte propriétaire |
 
 ## 7. Règle de mise à jour
 
