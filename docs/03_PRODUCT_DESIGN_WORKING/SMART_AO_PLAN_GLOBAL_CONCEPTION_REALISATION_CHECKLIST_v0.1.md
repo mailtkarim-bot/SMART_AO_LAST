@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** implémenter la lecture C07 tenant-scoped de la reprise humaine.
+**Prochaine étape unique :** ajouter les tests API/PostgreSQL de lecture de la reprise humaine.
 
 ## 1. Rôle de ce document
 
@@ -610,6 +610,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 26/09/2026 | Tests reprise humaine T26 | schéma tenant/états fermés et commande export/état/rationale vérifiés ; **3/3 tests verts** sur PostgreSQL éphémère | rejouer les gates complètes après validation de la reprise humaine |
 | 26/09/2026 | Gates complètes après reprise humaine | backend complet **1 793 tests verts**, 2 assertions ops réalignées sur `20260926_0101`, gate ops **33/33** verte ; frontend **191/191**, typecheck, lint et build verts ; NO-GO public maintenu | préparer la tranche suivante après clôture des gates T26, sans ouverture publique |
 | 26/09/2026 | Paquet T27 lecture reprise humaine | `T27_HUMAN_RESUMPTION_READ_PACKET.md` produit avec états, justification, acteur, tenant scope et lecture seule | implémenter la lecture C07 tenant-scoped de la reprise humaine |
+| 26/09/2026 | Lecture C07 reprise humaine T27 | service et route Patron tenant-scoped ajoutés, absence d'acte en 404, projection fermée état/acteur/rationale ; Ruff/compilation verts | ajouter les tests API/PostgreSQL de lecture de la reprise humaine |
 
 ## 7. Règle de mise à jour
 
