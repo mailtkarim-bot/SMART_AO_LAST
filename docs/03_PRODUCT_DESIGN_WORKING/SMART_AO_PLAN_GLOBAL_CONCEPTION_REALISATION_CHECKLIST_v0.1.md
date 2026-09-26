@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** implémenter la relève opérationnelle locale de l'export, sans mutation des actes.
+**Prochaine étape unique :** ajouter les tests API/PostgreSQL de la relève opérationnelle locale.
 
 ## 1. Rôle de ce document
 
@@ -599,6 +599,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 26/09/2026 | Diagnostic/reprise gates T23 | première reprise : **1 787 tests passés**, 1 échec architecture dû au lecteur `export_verification_timeline_read.py` important directement l’infrastructure ; renommage en handler effectué ; architecture/ops ciblées **35/35**, PostgreSQL timeline **1/1**, frontend **191/191**, typecheck/lint/build verts ; suite backend complète après correction encore à rejouer | relancer la suite backend complète après correction de la frontière architecture T23, puis confirmer les gates frontend |
 | 26/09/2026 | Clôture gates T23 après correction | backend complet **1 788 tests verts** sur PostgreSQL éphémère, 1 avertissement Starlette/httpx externe ; frontend **191/191**, typecheck, lint et build verts ; conteneur supprimé, NO-GO public maintenu | préparer la tranche suivante après clôture définitive de T23, sans ouverture publique |
 | 26/09/2026 | Paquet T24 relève opérationnelle export | `T24_EXPORT_OPERATIONAL_HANDOFF_PACKET.md` produit avec chronologie complète, inconnus, hashes, rôle Patron et lecture seule ; NO-GO public maintenu | implémenter la relève opérationnelle locale de l'export, sans mutation des actes |
+| 26/09/2026 | Relève opérationnelle export T24 | service et route GET Patron ajoutés, statut courant, filtres, nombre de transitions et dernière transition exposés en lecture seule ; Ruff/compilation verts | ajouter les tests API/PostgreSQL de la relève opérationnelle locale |
 
 ## 7. Règle de mise à jour
 
