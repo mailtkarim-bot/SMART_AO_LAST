@@ -146,7 +146,7 @@ from app.modules.case.application.regulatory_profile_handler import (
 from app.modules.case.infrastructure.models.case import CaseRecord
 from app.modules.case.infrastructure.repositories import SqlAlchemyCaseRepository
 from app.modules.case.infrastructure.resolution_reader import SqlAlchemyCaseResolutionReader
-from app.modules.dce.application.consolidated_export_resumption_read import (
+from app.modules.dce.application.consolidated_export_resumption_handler import (
     ConsolidatedExportResumptionReadService,
 )
 from app.modules.dce.application.contract_baseline_handler import (
@@ -1055,7 +1055,7 @@ def create_app(
         export_operational_handoff_handler_service = ExportOperationalHandoffReadService(session_factory=runtime.session_factory)
         human_resumption_read_service = HumanResumptionReadService(session_factory=runtime.session_factory)
         human_resumption_timeline_read_service = HumanResumptionTimelineReadService(session_factory=runtime.session_factory)
-        consolidated_export_resumption_read_service = ConsolidatedExportResumptionReadService(session_factory=runtime.session_factory)
+        consolidated_export_resumption_handler_service = ConsolidatedExportResumptionReadService(session_factory=runtime.session_factory)
         contract_proof_review_read_service = ContractProofReviewReadService(
             session_factory=runtime.session_factory, policy=security_policy
         )
@@ -1280,7 +1280,7 @@ def create_app(
         app.include_router(build_patron_export_operational_handoff_router(service=export_operational_handoff_handler_service, security_runtime=security_runtime))
         app.include_router(build_patron_human_resumption_router(service=human_resumption_read_service, security_runtime=security_runtime))
         app.include_router(build_patron_human_resumption_timeline_router(service=human_resumption_timeline_read_service, security_runtime=security_runtime))
-        app.include_router(build_patron_consolidated_export_resumption_router(service=consolidated_export_resumption_read_service, security_runtime=security_runtime))
+        app.include_router(build_patron_consolidated_export_resumption_router(service=consolidated_export_resumption_handler_service, security_runtime=security_runtime))
         app.include_router(build_patron_contract_proof_review_router(
             service=contract_proof_review_read_service, security_runtime=security_runtime
         ))

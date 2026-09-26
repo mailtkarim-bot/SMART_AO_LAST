@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** rejouer les gates complètes après validation de la consultation consolidée T32.
+**Prochaine étape unique :** relancer la suite backend complète après correction de la frontière architecture T32, puis confirmer les gates frontend.
 
 ## 1. Rôle de ce document
 
@@ -629,6 +629,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 
 | 26/09/2026 | Consultation consolidée T32 | service et route GET ajoutés, filtres export/reprise combinés, événements séparés, pagination serveur et tenant scope ; Ruff/compilation verts | ajouter les tests API/PostgreSQL de la consultation consolidée export/reprise |
 | 26/09/2026 | Tests consultation consolidée T32 | filtres combinés et pagination API vérifiés, événement humain séparé, tables sources tenant-scoped vérifiées ; **2/2 tests verts** | rejouer les gates complètes après validation de la consultation consolidée T32 |
+| 26/09/2026 | Diagnostic gates T32 | suite backend : **1 802 tests passés**, 1 échec architecture dû à `consolidated_export_resumption_read.py` ; renommage en handler effectué ; architecture/ops ciblées **35/35**, frontend **191/191**, typecheck/lint/build verts ; suite backend corrigée à rejouer | relancer la suite backend complète après correction de la frontière architecture T32, puis confirmer les gates frontend |
 
 ## 7. Règle de mise à jour
 
