@@ -686,3 +686,12 @@ class ContractQueryExportAuditResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
     export: ContractQueryExportResponse
     transitions: list[ContractQueryExportTransitionResponse]
+
+class ExportVerificationOwnerActResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    act_id: UUID
+    export_id: UUID
+    owner_id: UUID
+    approved: bool
+    rationale: str
+    created_at: datetime
