@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** retenter le push GitHub puis rejouer les gates ciblées T34.
+**Prochaine étape unique :** préparer la tranche suivante après clôture des gates ciblées T34, sans ouverture publique.
 
 ## 1. Rôle de ce document
 
@@ -635,6 +635,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 26/09/2026 | Validation propriétaire consultation consolidée | approbation explicite reçue : événements séparés, filtres/pagination stables, tenant avant projection, lecture seule et NO-GO public maintenu | préparer l'audit consolidé export/reprise et la visibilité des inconnus, sans ouverture publique |
 | 26/09/2026 | Audit consolidé inconnus T34 | contrat `ConsolidatedUnknownAudit` ajouté ; `UNKNOWN/UNAVAILABLE/MISMATCH` et `BLOCKED/FOLLOW_UP_REQUIRED` restent distincts ; test domaine vert | ajouter les tests API/PostgreSQL de l'audit consolidé des inconnus |
 | 26/09/2026 | Tests audit consolidé T34 | inconnus et bloqueurs séparés ; sources transition/reprise tenant-scoped vérifiées ; tests ciblés à exécuter sur PostgreSQL explicite | retenter le push GitHub puis rejouer les gates ciblées T34 |
+| 26/09/2026 | Gates ciblées T34 | API/DB inconnus, architecture, schéma et contrats ops : **38/38 tests verts** sur PostgreSQL éphémère ; synchronisation GitHub confirmée ; NO-GO public maintenu | préparer la tranche suivante après clôture des gates ciblées T34, sans ouverture publique |
 
 ## 7. Règle de mise à jour
 
