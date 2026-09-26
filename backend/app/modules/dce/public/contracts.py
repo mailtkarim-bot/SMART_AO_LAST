@@ -695,3 +695,15 @@ class ExportVerificationOwnerActResponse(BaseModel):
     approved: bool
     rationale: str
     created_at: datetime
+
+class ExportVerificationTimelineEventResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    event_type: Literal["VERIFICATION", "TRANSITION", "OWNER_ACT"]
+    event_id: UUID
+    status: str
+    created_at: datetime
+
+class ExportVerificationTimelineResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    export_id: UUID
+    items: list[ExportVerificationTimelineEventResponse]

@@ -97,6 +97,9 @@ from app.interfaces.http.routes.patron_enterprise_registry import (
 from app.interfaces.http.routes.patron_export_verification_owner_acts import (
     build_patron_export_verification_owner_act_router,
 )
+from app.interfaces.http.routes.patron_export_verification_timeline import (
+    build_patron_export_verification_timeline_router,
+)
 from app.interfaces.http.routes.patron_financial_reports import (
     build_patron_financial_report_router,
 )
@@ -156,6 +159,9 @@ from app.modules.dce.application.contract_review_handler import (
 from app.modules.dce.application.contract_risk_read import PatronDceContractRiskReadService
 from app.modules.dce.application.export_verification_owner_act_handler import (
     ExportVerificationOwnerActReadService,
+)
+from app.modules.dce.application.export_verification_timeline_read import (
+    ExportVerificationTimelineReadService,
 )
 from app.modules.dce.application.handlers import (
     ClaimDceStagedObjectUploadHandler,
@@ -1023,6 +1029,7 @@ def create_app(
             session_factory=runtime.session_factory, policy=security_policy
         )
         export_verification_owner_act_handler_service = ExportVerificationOwnerActReadService(session_factory=runtime.session_factory)
+        export_verification_timeline_read_service = ExportVerificationTimelineReadService(session_factory=runtime.session_factory)
         contract_proof_review_read_service = ContractProofReviewReadService(
             session_factory=runtime.session_factory, policy=security_policy
         )
@@ -1243,6 +1250,7 @@ def create_app(
             service=contract_query_export_audit_read_service, security_runtime=security_runtime
         ))
         app.include_router(build_patron_export_verification_owner_act_router(service=export_verification_owner_act_handler_service, security_runtime=security_runtime))
+        app.include_router(build_patron_export_verification_timeline_router(service=export_verification_timeline_read_service, security_runtime=security_runtime))
         app.include_router(build_patron_contract_proof_review_router(
             service=contract_proof_review_read_service, security_runtime=security_runtime
         ))
