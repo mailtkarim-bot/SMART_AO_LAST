@@ -658,6 +658,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 27/09/2026 | Gates ciblées T40 | audit domaine/API/DB, architecture, schéma et ops : **39/39 tests verts** sur PostgreSQL éphémère ; NO-GO public maintenu | préparer la tranche suivante après clôture des gates ciblées T40, sans ouverture publique |
 | 27/09/2026 | Lecture audit final T40 | service et route GET Patron ajoutés, provenance ordonnée et comptage préparés en lecture seule ; Ruff/compilation verts ; frontière architecture réalignée en handler | ajouter les tests API/PostgreSQL de l'audit final des inconnus |
 | 27/09/2026 | Tests lecture audit final T40 | projection API provenance/état et schéma PostgreSQL tenant-scoped vérifiés ; **3/3 tests verts** | rejouer les gates ciblées après validation de la lecture audit final T40 |
+| 27/09/2026 | Clôture audit final T40 | gate ciblée après correction architecture et PostgreSQL explicite : **38/38 tests verts** ; audit, provenance, architecture, schéma et ops validés ; NO-GO public maintenu | préparer la tranche suivante après clôture définitive de T40, sans ouverture publique |
 | 27/09/2026 | Paquet T41 revue audit final inconnus | `T41_OWNER_REVIEW_FINAL_UNKNOWN_AUDIT_PACKET.md` produit avec comptage, provenance, états distincts et décision locale attendue | recueillir la revue propriétaire finale de l'audit des inconnus, sans ouverture publique |
 
 ## 7. Règle de mise à jour
