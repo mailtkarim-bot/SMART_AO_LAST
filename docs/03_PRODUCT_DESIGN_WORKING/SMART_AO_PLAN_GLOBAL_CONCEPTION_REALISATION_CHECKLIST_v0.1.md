@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** rejouer les gates ciblées après validation de l'audit final T40.
+**Prochaine étape unique :** préparer la tranche suivante après clôture des gates ciblées T40, sans ouverture publique.
 
 ## 1. Rôle de ce document
 
@@ -655,6 +655,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 27/09/2026 | Paquet T40 audit final inconnus | `T40_FINAL_UNKNOWN_AUDIT_PACKET.md` produit avec comptage, détail, provenance et limites ; NO-GO public maintenu | préparer l'audit consolidé final des inconnus, sans ouverture publique |
 | 27/09/2026 | Implémentation audit final T40 | `FinalUnknownAudit` ajouté : comptage des états difficiles et conservation de la provenance ; **1 test domaine vert** ; aucune mutation | ajouter les tests API/PostgreSQL de l'audit final des inconnus |
 | 27/09/2026 | Tests audit final T40 | comptage/provenance API et sources tenant-scoped PostgreSQL vérifiés ; **2/2 tests verts** | rejouer les gates ciblées après validation de l'audit final T40 |
+| 27/09/2026 | Gates ciblées T40 | audit domaine/API/DB, architecture, schéma et ops : **39/39 tests verts** sur PostgreSQL éphémère ; NO-GO public maintenu | préparer la tranche suivante après clôture des gates ciblées T40, sans ouverture publique |
 
 ## 7. Règle de mise à jour
 
