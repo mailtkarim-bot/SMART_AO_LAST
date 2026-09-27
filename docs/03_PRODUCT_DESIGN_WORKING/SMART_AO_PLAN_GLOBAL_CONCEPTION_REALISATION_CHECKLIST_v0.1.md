@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** préparer l'audit consolidé final des inconnus, sans ouverture publique.
+**Prochaine étape unique :** ajouter les tests API/PostgreSQL de l'audit final des inconnus.
 
 ## 1. Rôle de ce document
 
@@ -653,6 +653,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 27/09/2026 | Paquet T39 revue lecture provenance | `T39_OWNER_REVIEW_PROVENANCE_READ_PACKET.md` produit avec décision locale, sources, acteurs, dates, états et justifications | recueillir la revue propriétaire locale de la lecture de provenance, sans ouverture publique |
 | 27/09/2026 | Validation propriétaire lecture provenance | approbation explicite reçue : provenance séparée et complète, tenant/export, lecture seule, aucune action automatique, aucune conclusion juridique et NO-GO public maintenu | préparer l'audit consolidé final des inconnus, sans ouverture publique |
 | 27/09/2026 | Paquet T40 audit final inconnus | `T40_FINAL_UNKNOWN_AUDIT_PACKET.md` produit avec comptage, détail, provenance et limites ; NO-GO public maintenu | préparer l'audit consolidé final des inconnus, sans ouverture publique |
+| 27/09/2026 | Implémentation audit final T40 | `FinalUnknownAudit` ajouté : comptage des états difficiles et conservation de la provenance ; **1 test domaine vert** ; aucune mutation | ajouter les tests API/PostgreSQL de l'audit final des inconnus |
 
 ## 7. Règle de mise à jour
 

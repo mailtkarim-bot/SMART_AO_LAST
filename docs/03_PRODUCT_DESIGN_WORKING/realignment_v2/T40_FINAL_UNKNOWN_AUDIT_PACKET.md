@@ -21,3 +21,5 @@ la prochaine revue globale, sans transformer cet audit en décision automatique.
 Projection d’audit, tests de comptage/tenant/provenance, C07, puis gates
 complètes backend/frontend.
 
+Implémentation initiale : `FinalUnknownAudit` compte uniquement les états
+difficiles et conserve chaque entrée avec sa provenance.
