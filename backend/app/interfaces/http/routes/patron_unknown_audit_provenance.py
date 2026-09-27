@@ -5,7 +5,7 @@ from fastapi import APIRouter, Header, HTTPException, status
 
 from app.interfaces.http.dependencies.auth import resolve_bearer_context
 from app.interfaces.http.routes.consultations import ConsultationSecurityRuntime
-from app.modules.dce.application.unknown_audit_provenance_read import (
+from app.modules.dce.application.unknown_audit_provenance_handler import (
     UnknownAuditProvenanceReadService,
 )
 from app.modules.dce.public.contracts import UnknownAuditProvenanceResponse
