@@ -737,3 +737,14 @@ class HumanResumptionTimelineResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
     export_id: UUID
     items: list[HumanResumptionTimelineEventResponse]
+
+class UnknownAuditProvenanceResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    provenance_id: UUID
+    export_id: UUID
+    source_type: Literal["TRANSITION", "HUMAN_RESUMPTION", "VERIFICATION"]
+    source_event_id: UUID
+    actor_id: UUID
+    status: str
+    occurred_at: datetime
+    rationale: str | None

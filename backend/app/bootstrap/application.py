@@ -128,6 +128,9 @@ from app.interfaces.http.routes.patron_submission_evidence import (
 from app.interfaces.http.routes.patron_submission_signature import (
     build_patron_submission_signature_router,
 )
+from app.interfaces.http.routes.patron_unknown_audit_provenance import (
+    build_patron_unknown_audit_provenance_router,
+)
 from app.interfaces.http.routes.preparation import (
     build_preparation_review_router,
     build_preparation_router,
@@ -204,6 +207,9 @@ from app.modules.dce.application.impact import CaseDceImpactService
 from app.modules.dce.application.queries import ConsultationProjection
 from app.modules.dce.application.requirement_confirmation import (
     DceRequirementConfirmationService,
+)
+from app.modules.dce.application.unknown_audit_provenance_read import (
+    UnknownAuditProvenanceReadService,
 )
 from app.modules.dce.application.upload import DceUploadService
 from app.modules.dce.infrastructure.case_assigned_reader import SqlAlchemyAssignedCaseReader
@@ -1055,6 +1061,7 @@ def create_app(
         export_operational_handoff_handler_service = ExportOperationalHandoffReadService(session_factory=runtime.session_factory)
         human_resumption_read_service = HumanResumptionReadService(session_factory=runtime.session_factory)
         human_resumption_timeline_read_service = HumanResumptionTimelineReadService(session_factory=runtime.session_factory)
+        unknown_audit_provenance_read_service = UnknownAuditProvenanceReadService(session_factory=runtime.session_factory)
         consolidated_export_resumption_handler_service = ConsolidatedExportResumptionReadService(session_factory=runtime.session_factory)
         contract_proof_review_read_service = ContractProofReviewReadService(
             session_factory=runtime.session_factory, policy=security_policy
@@ -1280,6 +1287,7 @@ def create_app(
         app.include_router(build_patron_export_operational_handoff_router(service=export_operational_handoff_handler_service, security_runtime=security_runtime))
         app.include_router(build_patron_human_resumption_router(service=human_resumption_read_service, security_runtime=security_runtime))
         app.include_router(build_patron_human_resumption_timeline_router(service=human_resumption_timeline_read_service, security_runtime=security_runtime))
+        app.include_router(build_patron_unknown_audit_provenance_router(service=unknown_audit_provenance_read_service, security_runtime=security_runtime))
         app.include_router(build_patron_consolidated_export_resumption_router(service=consolidated_export_resumption_handler_service, security_runtime=security_runtime))
         app.include_router(build_patron_contract_proof_review_router(
             service=contract_proof_review_read_service, security_runtime=security_runtime
