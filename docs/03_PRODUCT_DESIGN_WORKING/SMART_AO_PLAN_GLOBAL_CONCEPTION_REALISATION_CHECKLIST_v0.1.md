@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** recueillir la revue propriétaire locale de la provenance des inconnus, sans ouverture publique.
+**Prochaine étape unique :** préparer la lecture C07 tenant-scoped de la provenance des inconnus.
 
 ## 1. Rôle de ce document
 
@@ -644,6 +644,8 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 26/09/2026 | Tests provenance T36 | schéma tenant/export, sources fermées et séparation des événements vérifiés ; **3/3 tests verts** sur PostgreSQL éphémère | rejouer les gates ciblées après validation de la provenance des inconnus |
 | 27/09/2026 | Gates ciblées T36 | provenance domaine/API/DB, architecture, schéma et ops : **39/39 tests verts** sur PostgreSQL éphémère après réalignement `20260926_0102` ; NO-GO public maintenu | préparer la tranche suivante après clôture des gates ciblées T36, sans ouverture publique |
 | 27/09/2026 | Paquet T37 revue provenance inconnus | `T37_OWNER_REVIEW_UNKNOWN_PROVENANCE_PACKET.md` produit avec sources, acteurs, dates, justifications et décision locale attendue | recueillir la revue propriétaire locale de la provenance des inconnus, sans ouverture publique |
+| 27/09/2026 | Validation propriétaire provenance inconnus | approbation explicite reçue : sources distinctes, provenance conservée, tenant scope, lecture seule, aucune action automatique, NO-GO public maintenu | préparer la lecture C07 tenant-scoped de la provenance des inconnus |
+| 27/09/2026 | Paquet T38 lecture provenance inconnus | `T38_UNKNOWN_PROVENANCE_READ_PACKET.md` produit avec projection source/événement/acteur/date/état/justification et limites | préparer la lecture C07 tenant-scoped de la provenance des inconnus |
 
 ## 7. Règle de mise à jour
 
