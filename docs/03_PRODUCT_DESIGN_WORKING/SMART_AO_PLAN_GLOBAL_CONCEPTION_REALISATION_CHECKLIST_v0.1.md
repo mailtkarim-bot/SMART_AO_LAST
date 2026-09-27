@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** ajouter les tests API/PostgreSQL de la chronologie paiement/post-réception.
+**Prochaine étape unique :** rejouer les gates ciblées après validation de la chronologie paiement/post-réception.
 
 ## 1. Rôle de ce document
 
@@ -691,6 +691,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 27/09/2026 | Validation propriétaire lecture paiement | approbation explicite reçue : sources/états visibles, cash/coûts prudents, FINANCIAL_PRIVATE respecté, aucun paiement/calcul juridique, NO-GO public maintenu | préparer la chronologie C07 du cycle paiement/post-réception, sans certitude de cash |
 | 27/09/2026 | Paquet T51 chronologie paiement | `T51_PAYMENT_CYCLE_TIMELINE_PACKET.md` produit avec ordre déterministe, sources séparées, états prudents et lecture seule | préparer la chronologie C07 du cycle paiement/post-réception, sans certitude de cash |
 | 27/09/2026 | Chronologie paiement T51 | route GET Patron ajoutée, cycles triés par création, états/hypothèses cash conservés en lecture seule ; Ruff/compilation verts | ajouter les tests API/PostgreSQL de la chronologie paiement/post-réception |
+| 27/09/2026 | Tests chronologie paiement T51 | projection API UNKNOWN/hypothèse cash et schéma PostgreSQL tenant/Affaire vérifiés ; **2/2 tests verts** | rejouer les gates ciblées après validation de la chronologie paiement/post-réception |
 
 ## 7. Règle de mise à jour
 
