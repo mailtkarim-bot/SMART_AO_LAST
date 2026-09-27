@@ -419,7 +419,10 @@ from app.modules.pricing.application.import_handler import pricing_import_handle
 from app.modules.pricing.application.import_preview import PricingImportPreviewService
 from app.modules.pricing.application.import_read import PricingImportReadService
 from app.modules.pricing.application.import_service import PricingImportService
-from app.modules.pricing.application.payment_cycle_handler import PaymentCycleReadService
+from app.modules.pricing.application.payment_cycle_handler import (
+    PaymentCycleReadService,
+    payment_cycle_handlers,
+)
 from app.modules.pricing.application.scenario_handler import pricing_scenario_handlers
 from app.modules.pricing.application.service import PricingScenarioService
 from app.modules.pricing.application.transition_handler import pricing_scenario_transition_handlers
@@ -518,6 +521,7 @@ class AppRuntime:
             **contract_query_export_handlers(),
             **contract_query_export_transition_handlers(),
             **human_resumption_handlers(),
+            **payment_cycle_handlers(),
             "ExpireDceStagedObject": ExpireDceStagedObjectHandler(),
             "PrepareDceStaging": PrepareDceStagingHandler(),
             "RecordDceStagedObjectQuarantine": RecordDceStagedObjectQuarantineHandler(),
