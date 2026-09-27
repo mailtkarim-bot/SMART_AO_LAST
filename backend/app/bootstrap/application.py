@@ -120,6 +120,9 @@ from app.interfaces.http.routes.patron_opportunity_watch_profiles import (
     build_patron_opportunity_watch_profile_router,
 )
 from app.interfaces.http.routes.patron_payment_cycle import build_patron_payment_cycle_router
+from app.interfaces.http.routes.patron_payment_cycle_timeline import (
+    build_patron_payment_cycle_timeline_router,
+)
 from app.interfaces.http.routes.patron_pricing import build_patron_pricing_router
 from app.interfaces.http.routes.patron_pricing_import import build_patron_pricing_import_router
 from app.interfaces.http.routes.patron_regulatory_profiles import (
@@ -1298,6 +1301,7 @@ def create_app(
         app.include_router(build_patron_unknown_audit_provenance_router(service=unknown_audit_provenance_handler_service, security_runtime=security_runtime))
         app.include_router(build_patron_final_unknown_audit_router(service=final_unknown_audit_handler_service, security_runtime=security_runtime))
         app.include_router(build_patron_payment_cycle_router(service=payment_cycle_handler_service, security_runtime=security_runtime))
+        app.include_router(build_patron_payment_cycle_timeline_router(service=payment_cycle_handler_service, security_runtime=security_runtime))
         app.include_router(build_patron_consolidated_export_resumption_router(service=consolidated_export_resumption_handler_service, security_runtime=security_runtime))
         app.include_router(build_patron_contract_proof_review_router(
             service=contract_proof_review_read_service, security_runtime=security_runtime
