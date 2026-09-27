@@ -20,3 +20,5 @@ fermer artificiellement et sans remplacer la revue humaine.
 
 Projection de synthèse, tests de comptage/tenant, C07 et gates complètes.
 
+Implémentation initiale : `UnknownAuditClosureSummary` compte les états et les
+sources, tout en conservant les entrées ouvertes sans les clôturer.
