@@ -15,3 +15,5 @@ transformer une hypothèse de cash en certitude.
 - aucune action de paiement ou clôture automatique ;
 - lecture Patron seule.
 
+Implémentation initiale : `PaymentUnknownAudit` conserve les états prudents et
+leurs entrées sourcées, en excluant tout succès implicite.

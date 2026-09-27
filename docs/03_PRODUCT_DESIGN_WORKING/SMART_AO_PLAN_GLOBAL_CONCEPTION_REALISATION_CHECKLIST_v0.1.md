@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** préparer l'audit des inconnus paiement/post-réception, sans certitude de cash.
+**Prochaine étape unique :** ajouter les tests API/PostgreSQL de l'audit des inconnus paiement.
 
 ## 1. Rôle de ce document
 
@@ -696,6 +696,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 27/09/2026 | Paquet T52 revue timeline paiement | `T52_OWNER_REVIEW_PAYMENT_TIMELINE_PACKET.md` produit avec états, sources, hypothèses cash, confidentialité et décision locale attendue | recueillir la revue propriétaire locale de la chronologie paiement/post-réception, sans ouverture publique |
 | 27/09/2026 | Validation propriétaire timeline paiement | approbation explicite reçue : cycles ordonnés/sourcés, états distincts, cash prudent, FINANCIAL_PRIVATE protégé, lecture seule, aucun paiement/calcul juridique, NO-GO public maintenu | préparer l'audit des inconnus paiement/post-réception, sans certitude de cash |
 | 27/09/2026 | Paquet T53 inconnus paiement | `T53_PAYMENT_UNKNOWN_AUDIT_PACKET.md` produit avec compteurs d'états, provenance et confidentialité financière | préparer l'audit des inconnus paiement/post-réception, sans certitude de cash |
+| 27/09/2026 | Implémentation audit inconnus paiement T53 | `PaymentUnknownAudit` ajouté avec états prudents et entrées sourcées ; **1 test domaine vert** ; aucun succès implicite | ajouter les tests API/PostgreSQL de l'audit des inconnus paiement |
 
 ## 7. Règle de mise à jour
 
