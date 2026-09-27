@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** rejouer les gates ciblées après validation de la provenance des inconnus.
+**Prochaine étape unique :** préparer la tranche suivante après clôture des gates ciblées T36, sans ouverture publique.
 
 ## 1. Rôle de ce document
 
@@ -642,6 +642,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 26/09/2026 | Contrat provenance T36 | `UnknownAuditProvenance` ajouté avec sources fermées, événement, acteur, date, état et justification ; **2 tests domaine verts** ; aucune action automatique | ajouter la persistance tenant-scoped de la provenance des inconnus consolidés |
 | 26/09/2026 | Persistance T36 provenance inconnus | migration `20260926_0102`, table tenant-scoped append-only, sources fermées et export lié ; aucun recalcul automatique | ajouter les tests PostgreSQL de provenance et de séparation des sources |
 | 26/09/2026 | Tests provenance T36 | schéma tenant/export, sources fermées et séparation des événements vérifiés ; **3/3 tests verts** sur PostgreSQL éphémère | rejouer les gates ciblées après validation de la provenance des inconnus |
+| 27/09/2026 | Gates ciblées T36 | provenance domaine/API/DB, architecture, schéma et ops : **39/39 tests verts** sur PostgreSQL éphémère après réalignement `20260926_0102` ; NO-GO public maintenu | préparer la tranche suivante après clôture des gates ciblées T36, sans ouverture publique |
 
 ## 7. Règle de mise à jour
 
