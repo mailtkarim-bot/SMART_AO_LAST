@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** préparer le prochain cycle métier local après clôture des inconnus.
+**Prochaine étape unique :** cadrer le cycle métier paiement et coût post-réception, sans certitude de cash.
 
 ## 1. Rôle de ce document
 
@@ -675,6 +675,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 27/09/2026 | Paquet T45 clôture inconnus | `T45_OWNER_REVIEW_CLOSURE_PACKET.md` produit avec preuves T34–T44, cohérence code/docs et décision de clôture locale attendue | recueillir la revue propriétaire de clôture du cycle des inconnus, sans ouverture publique |
 | 27/09/2026 | Validation propriétaire clôture inconnus | approbation explicite reçue : cycle clôturé documentairement/opérationnellement, aucun inconnu fermé artificiellement, gates cohérentes, conception locale et NO-GO public maintenus | préparer le prochain cycle métier local après clôture des inconnus |
 | 27/09/2026 | Paquet T46 prochain cycle métier | `T46_NEXT_METIER_CYCLE_PACKET.md` produit avec règles de sélection, autorités actives, historique et décisions attendues | préparer le prochain cycle métier local après clôture des inconnus |
+| 27/09/2026 | Paquet T47 paiement/post-réception | `T47_PAYMENT_POST_RECEPTION_CYCLE_PACKET.md` produit avec circuit contractuel, données financières privées, hypothèses prudentes et revue humaine | cadrer le cycle métier paiement et coût post-réception, sans certitude de cash |
 
 ## 7. Règle de mise à jour
 
