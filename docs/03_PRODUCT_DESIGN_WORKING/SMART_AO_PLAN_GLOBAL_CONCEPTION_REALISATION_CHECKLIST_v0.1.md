@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** rejouer les gates ciblées après validation de la revue de clôture T44.
+**Prochaine étape unique :** préparer la tranche suivante après clôture des gates ciblées T44, sans ouverture publique.
 
 ## 1. Rôle de ce document
 
@@ -670,6 +670,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 27/09/2026 | Paquet T44 clôture inconnus | `T44_UNKNOWN_AUDIT_CLOSURE_REVIEW_PACKET.md` produit avec preuves reliées, documentation active et gates locales attendues | préparer la revue de clôture documentaire et opérationnelle du cycle des inconnus |
 | 27/09/2026 | Contrat T44 clôture inconnus | `UnknownAuditClosureReview` ajouté : preuves, documentation synchronisée, justification obligatoire et `public_go` interdit ; tests à compléter | ajouter les tests de revue de clôture documentaire et opérationnelle |
 | 27/09/2026 | Tests revue clôture T44 | contrat de preuve/public_go et source de provenance PostgreSQL vérifiés ; **2/2 tests verts** | rejouer les gates ciblées après validation de la revue de clôture T44 |
+| 27/09/2026 | Gates ciblées T44 | contrat domaine/API/DB, architecture, schéma et ops : **40/40 tests verts** sur PostgreSQL éphémère ; NO-GO public maintenu | préparer la tranche suivante après clôture des gates ciblées T44, sans ouverture publique |
 
 ## 7. Règle de mise à jour
 
