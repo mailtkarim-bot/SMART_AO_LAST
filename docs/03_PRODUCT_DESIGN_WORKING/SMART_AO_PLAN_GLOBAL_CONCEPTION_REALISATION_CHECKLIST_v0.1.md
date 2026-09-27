@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** ajouter les tests API/PostgreSQL de la synthèse de clôture des inconnus.
+**Prochaine étape unique :** rejouer les gates ciblées après validation de la synthèse T42.
 
 ## 1. Rôle de ce document
 
@@ -663,6 +663,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 27/09/2026 | Validation propriétaire audit final inconnus | approbation explicite reçue : états distincts, provenance conservée, comptage tenant-scoped, lecture Patron, aucune action automatique, NO-GO public maintenu | préparer la synthèse de clôture locale des inconnus, sans fermeture automatique |
 | 27/09/2026 | Paquet T42 synthèse clôture inconnus | `T42_UNKNOWN_AUDIT_CLOSURE_PACKET.md` produit avec compteurs, entrées ouvertes, provenance et refus de clôture automatique | préparer la synthèse de clôture locale des inconnus, sans fermeture automatique |
 | 27/09/2026 | Implémentation synthèse T42 | `UnknownAuditClosureSummary` ajouté avec compteurs d'état/source et entrées ouvertes conservées ; **1 test domaine vert** ; aucune fermeture automatique | ajouter les tests API/PostgreSQL de la synthèse de clôture des inconnus |
+| 27/09/2026 | Tests synthèse T42 | comptage d'états/sources et conservation des inconnus vérifiés ; source tenant-scoped PostgreSQL vérifiée ; **2/2 tests verts** | rejouer les gates ciblées après validation de la synthèse T42 |
 
 ## 7. Règle de mise à jour
 
