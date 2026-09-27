@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** recueillir la revue propriétaire locale de la synthèse finale des inconnus, sans ouverture publique.
+**Prochaine étape unique :** préparer la revue de clôture documentaire et opérationnelle du cycle des inconnus.
 
 ## 1. Rôle de ce document
 
@@ -666,6 +666,8 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 27/09/2026 | Tests synthèse T42 | comptage d'états/sources et conservation des inconnus vérifiés ; source tenant-scoped PostgreSQL vérifiée ; **2/2 tests verts** | rejouer les gates ciblées après validation de la synthèse T42 |
 | 27/09/2026 | Gates ciblées T42 | synthèse domaine/API/DB, architecture, schéma et ops : **37/37 tests verts** sur PostgreSQL éphémère ; NO-GO public maintenu | recueillir la revue propriétaire locale de la synthèse finale des inconnus, sans ouverture publique |
 | 27/09/2026 | Paquet T43 revue synthèse inconnus | `T43_FINAL_AUDIT_OWNER_REVIEW_PACKET.md` produit avec compteurs, entrées ouvertes et décision propriétaire attendue | recueillir la revue propriétaire locale de la synthèse finale des inconnus, sans ouverture publique |
+| 27/09/2026 | Validation propriétaire T43 | approbation reçue ; synthèse des inconnus, compteurs, sources, lecture Patron et NO-GO public maintenus | préparer la revue de clôture documentaire et opérationnelle du cycle des inconnus |
+| 27/09/2026 | Paquet T44 clôture inconnus | `T44_UNKNOWN_AUDIT_CLOSURE_REVIEW_PACKET.md` produit avec preuves reliées, documentation active et gates locales attendues | préparer la revue de clôture documentaire et opérationnelle du cycle des inconnus |
 
 ## 7. Règle de mise à jour
 
