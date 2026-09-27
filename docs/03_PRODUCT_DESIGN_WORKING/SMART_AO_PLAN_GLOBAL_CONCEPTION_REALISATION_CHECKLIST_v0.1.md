@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** ajouter les tests API/PostgreSQL de lecture du cycle paiement/post-réception.
+**Prochaine étape unique :** rejouer les gates ciblées après validation de la lecture paiement/post-réception.
 
 ## 1. Rôle de ce document
 
@@ -684,6 +684,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 27/09/2026 | Validation propriétaire paiement/post-réception | approbation explicite reçue : sources/événements visibles, états distincts, cash/coûts prudents, FINANCIAL_PRIVATE tenant-scoped, aucun paiement/cash certain, NO-GO public maintenu | préparer la lecture C07 tenant-scoped du cycle paiement/post-réception |
 | 27/09/2026 | Paquet T49 lecture cycle paiement | `T49_PAYMENT_CYCLE_READ_PACKET.md` produit avec classification financière, états, hypothèses et lecture seule | préparer la lecture C07 tenant-scoped du cycle paiement/post-réception |
 | 27/09/2026 | Lecture C07 cycle paiement T49 | service et route GET Patron ajoutés, FINANCIAL_PRIVATE côté serveur, états/hypothèses projetés en lecture seule ; Ruff/compilation verts | ajouter les tests API/PostgreSQL de lecture du cycle paiement/post-réception |
+| 27/09/2026 | Tests lecture cycle paiement T49 | projection API états/hypothèses et schéma PostgreSQL tenant/Affaire vérifiés ; **2/2 tests verts** | rejouer les gates ciblées après validation de la lecture paiement/post-réception |
 
 ## 7. Règle de mise à jour
 
