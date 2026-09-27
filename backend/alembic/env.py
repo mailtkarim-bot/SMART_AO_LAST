@@ -23,6 +23,7 @@ from app.modules.dce.infrastructure.models import (  # noqa: F401
     export_proof_verification,
     export_verification_owner_act,
     human_resumption_act,
+    payment_post_reception_cycle,
     unknown_audit_provenance,
 )
 from app.modules.decision.infrastructure.models import (  # noqa: F401
