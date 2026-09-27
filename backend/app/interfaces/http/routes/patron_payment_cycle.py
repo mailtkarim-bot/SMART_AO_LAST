@@ -6,7 +6,7 @@ from fastapi import APIRouter, Header, HTTPException, status
 from app.interfaces.http.dependencies.auth import resolve_bearer_context
 from app.interfaces.http.routes.consultations import ConsultationSecurityRuntime
 from app.modules.dce.public.contracts import PaymentCycleResponse
-from app.modules.pricing.application.payment_cycle_read import PaymentCycleReadService
+from app.modules.pricing.application.payment_cycle_handler import PaymentCycleReadService
 
 
 def build_patron_payment_cycle_router(*, service: PaymentCycleReadService, security_runtime: ConsultationSecurityRuntime) -> APIRouter:

@@ -416,7 +416,7 @@ from app.modules.pricing.application.import_handler import pricing_import_handle
 from app.modules.pricing.application.import_preview import PricingImportPreviewService
 from app.modules.pricing.application.import_read import PricingImportReadService
 from app.modules.pricing.application.import_service import PricingImportService
-from app.modules.pricing.application.payment_cycle_read import PaymentCycleReadService
+from app.modules.pricing.application.payment_cycle_handler import PaymentCycleReadService
 from app.modules.pricing.application.scenario_handler import pricing_scenario_handlers
 from app.modules.pricing.application.service import PricingScenarioService
 from app.modules.pricing.application.transition_handler import pricing_scenario_transition_handlers
@@ -1069,7 +1069,7 @@ def create_app(
         human_resumption_timeline_read_service = HumanResumptionTimelineReadService(session_factory=runtime.session_factory)
         unknown_audit_provenance_handler_service = UnknownAuditProvenanceReadService(session_factory=runtime.session_factory)
         final_unknown_audit_handler_service = FinalUnknownAuditReadService(session_factory=runtime.session_factory)
-        payment_cycle_read_service = PaymentCycleReadService(session_factory=runtime.session_factory)
+        payment_cycle_handler_service = PaymentCycleReadService(session_factory=runtime.session_factory)
         consolidated_export_resumption_handler_service = ConsolidatedExportResumptionReadService(session_factory=runtime.session_factory)
         contract_proof_review_read_service = ContractProofReviewReadService(
             session_factory=runtime.session_factory, policy=security_policy
@@ -1297,7 +1297,7 @@ def create_app(
         app.include_router(build_patron_human_resumption_timeline_router(service=human_resumption_timeline_read_service, security_runtime=security_runtime))
         app.include_router(build_patron_unknown_audit_provenance_router(service=unknown_audit_provenance_handler_service, security_runtime=security_runtime))
         app.include_router(build_patron_final_unknown_audit_router(service=final_unknown_audit_handler_service, security_runtime=security_runtime))
-        app.include_router(build_patron_payment_cycle_router(service=payment_cycle_read_service, security_runtime=security_runtime))
+        app.include_router(build_patron_payment_cycle_router(service=payment_cycle_handler_service, security_runtime=security_runtime))
         app.include_router(build_patron_consolidated_export_resumption_router(service=consolidated_export_resumption_handler_service, security_runtime=security_runtime))
         app.include_router(build_patron_contract_proof_review_router(
             service=contract_proof_review_read_service, security_runtime=security_runtime
