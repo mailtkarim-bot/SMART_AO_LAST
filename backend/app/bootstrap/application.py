@@ -185,7 +185,7 @@ from app.modules.dce.application.export_verification_owner_act_handler import (
 from app.modules.dce.application.export_verification_timeline_handler import (
     ExportVerificationTimelineReadService,
 )
-from app.modules.dce.application.final_unknown_audit_read import FinalUnknownAuditReadService
+from app.modules.dce.application.final_unknown_audit_handler import FinalUnknownAuditReadService
 from app.modules.dce.application.handlers import (
     ClaimDceStagedObjectUploadHandler,
     CreateConsultationHandler,
@@ -1066,7 +1066,7 @@ def create_app(
         human_resumption_read_service = HumanResumptionReadService(session_factory=runtime.session_factory)
         human_resumption_timeline_read_service = HumanResumptionTimelineReadService(session_factory=runtime.session_factory)
         unknown_audit_provenance_handler_service = UnknownAuditProvenanceReadService(session_factory=runtime.session_factory)
-        final_unknown_audit_read_service = FinalUnknownAuditReadService(session_factory=runtime.session_factory)
+        final_unknown_audit_handler_service = FinalUnknownAuditReadService(session_factory=runtime.session_factory)
         consolidated_export_resumption_handler_service = ConsolidatedExportResumptionReadService(session_factory=runtime.session_factory)
         contract_proof_review_read_service = ContractProofReviewReadService(
             session_factory=runtime.session_factory, policy=security_policy
@@ -1293,7 +1293,7 @@ def create_app(
         app.include_router(build_patron_human_resumption_router(service=human_resumption_read_service, security_runtime=security_runtime))
         app.include_router(build_patron_human_resumption_timeline_router(service=human_resumption_timeline_read_service, security_runtime=security_runtime))
         app.include_router(build_patron_unknown_audit_provenance_router(service=unknown_audit_provenance_handler_service, security_runtime=security_runtime))
-        app.include_router(build_patron_final_unknown_audit_router(service=final_unknown_audit_read_service, security_runtime=security_runtime))
+        app.include_router(build_patron_final_unknown_audit_router(service=final_unknown_audit_handler_service, security_runtime=security_runtime))
         app.include_router(build_patron_consolidated_export_resumption_router(service=consolidated_export_resumption_handler_service, security_runtime=security_runtime))
         app.include_router(build_patron_contract_proof_review_router(
             service=contract_proof_review_read_service, security_runtime=security_runtime
