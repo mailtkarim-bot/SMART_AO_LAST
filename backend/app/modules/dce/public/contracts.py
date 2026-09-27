@@ -748,3 +748,13 @@ class UnknownAuditProvenanceResponse(BaseModel):
     status: str
     occurred_at: datetime
     rationale: str | None
+
+class PaymentCycleResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    cycle_id: UUID
+    case_id: UUID
+    source_refs: list[str]
+    trigger_event: str
+    status: Literal["SOURCE_SIGNAL_ONLY", "REVIEW_REQUIRED", "UNKNOWN"]
+    cash_assumption: str | None
+    post_reception_cost_note: str | None
