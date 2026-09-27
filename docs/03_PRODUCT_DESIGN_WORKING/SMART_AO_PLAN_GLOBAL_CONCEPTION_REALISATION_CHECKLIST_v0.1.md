@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** recueillir la revue propriétaire finale de l'audit des inconnus, sans ouverture publique.
+**Prochaine étape unique :** préparer la synthèse de clôture locale des inconnus, sans fermeture automatique.
 
 ## 1. Rôle de ce document
 
@@ -660,6 +660,8 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 27/09/2026 | Tests lecture audit final T40 | projection API provenance/état et schéma PostgreSQL tenant-scoped vérifiés ; **3/3 tests verts** | rejouer les gates ciblées après validation de la lecture audit final T40 |
 | 27/09/2026 | Clôture audit final T40 | gate ciblée après correction architecture et PostgreSQL explicite : **38/38 tests verts** ; audit, provenance, architecture, schéma et ops validés ; NO-GO public maintenu | préparer la tranche suivante après clôture définitive de T40, sans ouverture publique |
 | 27/09/2026 | Paquet T41 revue audit final inconnus | `T41_OWNER_REVIEW_FINAL_UNKNOWN_AUDIT_PACKET.md` produit avec comptage, provenance, états distincts et décision locale attendue | recueillir la revue propriétaire finale de l'audit des inconnus, sans ouverture publique |
+| 27/09/2026 | Validation propriétaire audit final inconnus | approbation explicite reçue : états distincts, provenance conservée, comptage tenant-scoped, lecture Patron, aucune action automatique, NO-GO public maintenu | préparer la synthèse de clôture locale des inconnus, sans fermeture automatique |
+| 27/09/2026 | Paquet T42 synthèse clôture inconnus | `T42_UNKNOWN_AUDIT_CLOSURE_PACKET.md` produit avec compteurs, entrées ouvertes, provenance et refus de clôture automatique | préparer la synthèse de clôture locale des inconnus, sans fermeture automatique |
 
 ## 7. Règle de mise à jour
 
