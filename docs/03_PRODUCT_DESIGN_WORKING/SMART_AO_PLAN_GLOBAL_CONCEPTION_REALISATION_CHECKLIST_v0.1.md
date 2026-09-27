@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** cadrer le cycle métier paiement et coût post-réception, sans certitude de cash.
+**Prochaine étape unique :** ajouter la persistance tenant-scoped du cycle paiement/post-réception.
 
 ## 1. Rôle de ce document
 
@@ -676,6 +676,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 27/09/2026 | Validation propriétaire clôture inconnus | approbation explicite reçue : cycle clôturé documentairement/opérationnellement, aucun inconnu fermé artificiellement, gates cohérentes, conception locale et NO-GO public maintenus | préparer le prochain cycle métier local après clôture des inconnus |
 | 27/09/2026 | Paquet T46 prochain cycle métier | `T46_NEXT_METIER_CYCLE_PACKET.md` produit avec règles de sélection, autorités actives, historique et décisions attendues | préparer le prochain cycle métier local après clôture des inconnus |
 | 27/09/2026 | Paquet T47 paiement/post-réception | `T47_PAYMENT_POST_RECEPTION_CYCLE_PACKET.md` produit avec circuit contractuel, données financières privées, hypothèses prudentes et revue humaine | cadrer le cycle métier paiement et coût post-réception, sans certitude de cash |
+| 27/09/2026 | Contrat domaine T47 paiement/post-réception | `PaymentPostReceptionCycle` ajouté : source, déclencheur, états `SOURCE_SIGNAL_ONLY/REVIEW_REQUIRED/UNKNOWN`, hypothèses cash et coûts prudents ; **2 tests domaine verts** | ajouter la persistance tenant-scoped du cycle paiement/post-réception |
 
 ## 7. Règle de mise à jour
 

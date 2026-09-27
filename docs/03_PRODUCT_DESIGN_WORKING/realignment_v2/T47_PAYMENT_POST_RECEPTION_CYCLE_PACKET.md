@@ -29,3 +29,6 @@ une clause en encaissement certain.
 Contrat domaine, migration additive si nécessaire, tests PostgreSQL de tenant/
 confidentialité/idempotence, projection Patron C07 et gates complètes.
 
+Contrat initial implémenté : `PaymentPostReceptionCycle` exige une source et
+un événement déclencheur, conserve les hypothèses prudentes de cash et les
+coûts post-réception sans produire de certitude.
