@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** rejouer les gates ciblées après validation de la synthèse T42.
+**Prochaine étape unique :** recueillir la revue propriétaire locale de la synthèse finale des inconnus, sans ouverture publique.
 
 ## 1. Rôle de ce document
 
@@ -664,6 +664,8 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 27/09/2026 | Paquet T42 synthèse clôture inconnus | `T42_UNKNOWN_AUDIT_CLOSURE_PACKET.md` produit avec compteurs, entrées ouvertes, provenance et refus de clôture automatique | préparer la synthèse de clôture locale des inconnus, sans fermeture automatique |
 | 27/09/2026 | Implémentation synthèse T42 | `UnknownAuditClosureSummary` ajouté avec compteurs d'état/source et entrées ouvertes conservées ; **1 test domaine vert** ; aucune fermeture automatique | ajouter les tests API/PostgreSQL de la synthèse de clôture des inconnus |
 | 27/09/2026 | Tests synthèse T42 | comptage d'états/sources et conservation des inconnus vérifiés ; source tenant-scoped PostgreSQL vérifiée ; **2/2 tests verts** | rejouer les gates ciblées après validation de la synthèse T42 |
+| 27/09/2026 | Gates ciblées T42 | synthèse domaine/API/DB, architecture, schéma et ops : **37/37 tests verts** sur PostgreSQL éphémère ; NO-GO public maintenu | recueillir la revue propriétaire locale de la synthèse finale des inconnus, sans ouverture publique |
+| 27/09/2026 | Paquet T43 revue synthèse inconnus | `T43_FINAL_AUDIT_OWNER_REVIEW_PACKET.md` produit avec compteurs, entrées ouvertes et décision propriétaire attendue | recueillir la revue propriétaire locale de la synthèse finale des inconnus, sans ouverture publique |
 
 ## 7. Règle de mise à jour
 
