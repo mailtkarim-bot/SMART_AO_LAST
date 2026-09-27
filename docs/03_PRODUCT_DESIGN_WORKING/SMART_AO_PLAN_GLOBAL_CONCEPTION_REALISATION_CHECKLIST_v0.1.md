@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** préparer la tranche suivante après clôture des gates ciblées T44, sans ouverture publique.
+**Prochaine étape unique :** recueillir la revue propriétaire de clôture du cycle des inconnus, sans ouverture publique.
 
 ## 1. Rôle de ce document
 
@@ -672,6 +672,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 27/09/2026 | Tests revue clôture T44 | contrat de preuve/public_go et source de provenance PostgreSQL vérifiés ; **2/2 tests verts** | rejouer les gates ciblées après validation de la revue de clôture T44 |
 | 27/09/2026 | Gates ciblées T44 | contrat domaine/API/DB, architecture, schéma et ops : **40/40 tests verts** sur PostgreSQL éphémère ; NO-GO public maintenu | préparer la tranche suivante après clôture des gates ciblées T44, sans ouverture publique |
 | 27/09/2026 | Continuous loop full backend/frontend | orchestrateur `scripts/smartao_continuous_loop.sh --full-backend` : backend **1 825 tests verts**, frontend **191/191**, typecheck, lint et build verts ; exécution interrompue après le passage backend/frontend terminé, aucun code de production modifié | préparer la tranche suivante après clôture des gates ciblées T44, sans ouverture publique |
+| 27/09/2026 | Paquet T45 clôture inconnus | `T45_OWNER_REVIEW_CLOSURE_PACKET.md` produit avec preuves T34–T44, cohérence code/docs et décision de clôture locale attendue | recueillir la revue propriétaire de clôture du cycle des inconnus, sans ouverture publique |
 
 ## 7. Règle de mise à jour
 
