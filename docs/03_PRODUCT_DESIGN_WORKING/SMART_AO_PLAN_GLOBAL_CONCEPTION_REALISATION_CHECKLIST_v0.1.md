@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** recueillir la revue propriétaire locale du cycle paiement/post-réception, sans ouverture publique.
+**Prochaine étape unique :** préparer la lecture C07 tenant-scoped du cycle paiement/post-réception.
 
 ## 1. Rôle de ce document
 
@@ -681,6 +681,8 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 27/09/2026 | Tests paiement/post-réception T47 | migration correctement importée via le module pricing, schéma tenant/Affaire/états fermés et contrat domaine vérifiés ; **4/4 tests verts** | rejouer les gates ciblées après validation du cycle paiement/post-réception |
 | 27/09/2026 | Gates ciblées T47 | cycle domaine/DB, architecture, schéma et ops : **40/40 tests verts** sur PostgreSQL éphémère après réalignement `20260927_0103` ; NO-GO public maintenu | préparer la tranche suivante après clôture des gates ciblées T47, sans ouverture publique |
 | 27/09/2026 | Paquet T48 revue paiement/post-réception | `T48_OWNER_REVIEW_PAYMENT_CYCLE_PACKET.md` produit avec sources, états prudents, confidentialité financière et décision locale attendue | recueillir la revue propriétaire locale du cycle paiement/post-réception, sans ouverture publique |
+| 27/09/2026 | Validation propriétaire paiement/post-réception | approbation explicite reçue : sources/événements visibles, états distincts, cash/coûts prudents, FINANCIAL_PRIVATE tenant-scoped, aucun paiement/cash certain, NO-GO public maintenu | préparer la lecture C07 tenant-scoped du cycle paiement/post-réception |
+| 27/09/2026 | Paquet T49 lecture cycle paiement | `T49_PAYMENT_CYCLE_READ_PACKET.md` produit avec classification financière, états, hypothèses et lecture seule | préparer la lecture C07 tenant-scoped du cycle paiement/post-réception |
 
 ## 7. Règle de mise à jour
 
