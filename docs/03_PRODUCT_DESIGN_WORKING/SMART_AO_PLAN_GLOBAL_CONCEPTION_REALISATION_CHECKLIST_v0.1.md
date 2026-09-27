@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** préparer la tranche suivante après clôture des gates ciblées T51, sans ouverture publique.
+**Prochaine étape unique :** recueillir la revue propriétaire locale de la chronologie paiement/post-réception, sans ouverture publique.
 
 ## 1. Rôle de ce document
 
@@ -693,6 +693,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 27/09/2026 | Chronologie paiement T51 | route GET Patron ajoutée, cycles triés par création, états/hypothèses cash conservés en lecture seule ; Ruff/compilation verts | ajouter les tests API/PostgreSQL de la chronologie paiement/post-réception |
 | 27/09/2026 | Tests chronologie paiement T51 | projection API UNKNOWN/hypothèse cash et schéma PostgreSQL tenant/Affaire vérifiés ; **2/2 tests verts** | rejouer les gates ciblées après validation de la chronologie paiement/post-réception |
 | 27/09/2026 | Clôture gates ciblées T51 | cycle paiement/timeline, architecture, schéma et ops : **42/42 tests verts** sur PostgreSQL éphémère ; FINANCIAL_PRIVATE et NO-GO public maintenus | préparer la tranche suivante après clôture des gates ciblées T51, sans ouverture publique |
+| 27/09/2026 | Paquet T52 revue timeline paiement | `T52_OWNER_REVIEW_PAYMENT_TIMELINE_PACKET.md` produit avec états, sources, hypothèses cash, confidentialité et décision locale attendue | recueillir la revue propriétaire locale de la chronologie paiement/post-réception, sans ouverture publique |
 
 ## 7. Règle de mise à jour
 
