@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** relancer les gates ciblées après correction de la frontière architecture T38.
+**Prochaine étape unique :** préparer la tranche suivante après clôture des gates ciblées T38, sans ouverture publique.
 
 ## 1. Rôle de ce document
 
@@ -649,6 +649,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 27/09/2026 | Lecture C07 provenance T38 | service et route Patron tenant-scoped ajoutés, ordre par occurrence, sources/acteur/état/justification projetés en lecture seule ; Ruff/compilation verts | ajouter les tests API/PostgreSQL de lecture de la provenance des inconnus |
 | 27/09/2026 | Tests lecture provenance T38 | projection API source/état/rationale et schéma PostgreSQL vérifiés ; **2/2 tests verts** | rejouer les gates ciblées après validation de la lecture provenance T38 |
 | 27/09/2026 | Diagnostic gates T38 | 1 échec architecture dû à `unknown_audit_provenance_read.py` ; renommage en handler effectué ; architecture/ops ciblées **37/37** après correction, DB à rejouer avec PostgreSQL explicite | relancer les gates ciblées après correction de la frontière architecture T38 |
+| 27/09/2026 | Clôture gates ciblées T38 | domaine/API/DB provenance, architecture, schéma et ops : **41/41 tests verts** sur PostgreSQL éphémère ; NO-GO public maintenu | préparer la tranche suivante après clôture des gates ciblées T38, sans ouverture publique |
 
 ## 7. Règle de mise à jour
 
