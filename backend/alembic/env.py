@@ -23,7 +23,6 @@ from app.modules.dce.infrastructure.models import (  # noqa: F401
     export_proof_verification,
     export_verification_owner_act,
     human_resumption_act,
-    payment_post_reception_cycle,
     unknown_audit_provenance,
 )
 from app.modules.decision.infrastructure.models import (  # noqa: F401
@@ -40,6 +39,7 @@ from app.modules.optimization.infrastructure import models as optimization_model
 from app.modules.patron_action.infrastructure.models import patron_action  # noqa: F401
 from app.modules.preparation.infrastructure.models import preparation  # noqa: F401
 from app.modules.pricing.infrastructure.models import financial  # noqa: F401
+from app.modules.pricing.infrastructure.models import payment_post_reception_cycle  # noqa: F401
 from app.modules.submission.infrastructure.models import submission  # noqa: F401
 from app.platform.persistence import models  # noqa: F401
 from app.platform.persistence.alembic_runtime import resolve_database_url

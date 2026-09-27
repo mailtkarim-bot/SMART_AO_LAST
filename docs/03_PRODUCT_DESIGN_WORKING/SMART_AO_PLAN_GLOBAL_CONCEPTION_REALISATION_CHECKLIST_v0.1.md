@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** ajouter les tests PostgreSQL du cycle paiement/post-réception.
+**Prochaine étape unique :** rejouer les gates ciblées après validation du cycle paiement/post-réception.
 
 ## 1. Rôle de ce document
 
@@ -678,6 +678,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 27/09/2026 | Paquet T47 paiement/post-réception | `T47_PAYMENT_POST_RECEPTION_CYCLE_PACKET.md` produit avec circuit contractuel, données financières privées, hypothèses prudentes et revue humaine | cadrer le cycle métier paiement et coût post-réception, sans certitude de cash |
 | 27/09/2026 | Contrat domaine T47 paiement/post-réception | `PaymentPostReceptionCycle` ajouté : source, déclencheur, états `SOURCE_SIGNAL_ONLY/REVIEW_REQUIRED/UNKNOWN`, hypothèses cash et coûts prudents ; **2 tests domaine verts** | ajouter la persistance tenant-scoped du cycle paiement/post-réception |
 | 27/09/2026 | Persistance T47 paiement/post-réception | migration `20260927_0103`, table tenant-scoped append-only, états fermés et données cash/coût prudentes ; aucune certitude de paiement | ajouter les tests PostgreSQL du cycle paiement/post-réception |
+| 27/09/2026 | Tests paiement/post-réception T47 | migration correctement importée via le module pricing, schéma tenant/Affaire/états fermés et contrat domaine vérifiés ; **4/4 tests verts** | rejouer les gates ciblées après validation du cycle paiement/post-réception |
 
 ## 7. Règle de mise à jour
 
