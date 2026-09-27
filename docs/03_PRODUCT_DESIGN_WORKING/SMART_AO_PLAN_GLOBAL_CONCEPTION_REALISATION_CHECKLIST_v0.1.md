@@ -5,7 +5,7 @@
 **Dernière mise à jour :** 24 septembre 2026
 **Statut global :** EN COURS  
 **Tranche active :** T2 — contrat applicable, baseline et dérogations
-**Prochaine étape unique :** préparer la tranche suivante après clôture des gates ciblées T49, sans ouverture publique.
+**Prochaine étape unique :** recueillir la revue propriétaire locale de la lecture paiement/post-réception, sans ouverture publique.
 
 ## 1. Rôle de ce document
 
@@ -687,6 +687,7 @@ Si la session s'arrête avant la fin de cette liste, la première case non termi
 | 27/09/2026 | Tests lecture cycle paiement T49 | projection API états/hypothèses et schéma PostgreSQL tenant/Affaire vérifiés ; **2/2 tests verts** | rejouer les gates ciblées après validation de la lecture paiement/post-réception |
 | 27/09/2026 | Diagnostic gates T49 | 1 échec architecture dû à `payment_cycle_read.py` ; renommage en handler effectué ; architecture/ops ciblées **40/40** après correction, DB à rejouer avec PostgreSQL explicite | relancer les gates ciblées après correction de la frontière architecture T49 |
 | 27/09/2026 | Clôture gates ciblées T49 | cycle domaine/API/DB paiement, architecture, schéma et ops : **42/42 tests verts** sur PostgreSQL éphémère après correction ; NO-GO public maintenu | préparer la tranche suivante après clôture des gates ciblées T49, sans ouverture publique |
+| 27/09/2026 | Paquet T50 revue lecture paiement | `T50_OWNER_REVIEW_PAYMENT_READ_PACKET.md` produit avec confidentialité financière, états prudents et décision locale attendue | recueillir la revue propriétaire locale de la lecture paiement/post-réception, sans ouverture publique |
 
 ## 7. Règle de mise à jour
 
