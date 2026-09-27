@@ -15,3 +15,5 @@ provenance lisible, d’une revue propriétaire et de gates locales cohérentes.
 - lecture Patron et tenant scope conservés ;
 - aucune ouverture publique ni conclusion juridique.
 
+Contrat initial : `UnknownAuditClosureReview` exige des preuves, une
+documentation synchronisée, une justification et refuse tout `public_go`.
