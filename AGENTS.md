@@ -11,3 +11,7 @@ Write active project deliverables under `docs/`, never under `rapports/`.
 Use `docs/03_PRODUCT_DESIGN_WORKING/SMART_AO_PLAN_GLOBAL_CONCEPTION_REALISATION_CHECKLIST_v0.1.md` as the operational roadmap. After every significant completed task, update its checkboxes, single active slice, evidence log, and next step; then synchronize the Basic Memory note `SMART AO - Plan global de conception et réalisation`. End every user-facing final response with `Prochaine étape : ...`, copied from the active slice.
 
 For independent implementation work, use one managed Codex worktree per subject. Do not run concurrent changes in the same checkout. Before integrating a worktree, run the relevant tests and review its diff. Start worktrees from a committed base: untracked files in another checkout are not included.
+
+## Tool activation contract
+
+For every non-trivial task, inspect the available ECC skills and activate the smallest relevant set before editing. Use Context7 for current library/API documentation, Basic Memory for durable project context, and Serena for semantic navigation when available. Use Jev/TypeSafe or Manus only when the task is bounded or benefits from independent investigation. The final report must name each tool/skill actually used and state why relevant available tools were not used. After code changes, run the relevant ECC verification workflow before claiming completion.
