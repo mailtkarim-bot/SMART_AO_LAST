@@ -120,8 +120,30 @@ from app.interfaces.http.routes.patron_opportunity_watch_profiles import (
     build_patron_opportunity_watch_profile_router,
 )
 from app.interfaces.http.routes.patron_payment_cycle import build_patron_payment_cycle_router
+from app.interfaces.http.routes.patron_payment_collection_rejection_review import build_patron_payment_collection_rejection_review_router
+from app.interfaces.http.routes.patron_payment_cycle_review_read import (
+    build_patron_payment_cycle_review_read_router,
+)
+from app.interfaces.http.routes.patron_payment_cycle_review_write import (
+    build_patron_payment_cycle_review_router,
+)
 from app.interfaces.http.routes.patron_payment_cycle_timeline import (
     build_patron_payment_cycle_timeline_router,
+)
+from app.interfaces.http.routes.patron_payment_cycle_write import (
+    build_patron_payment_cycle_write_router,
+)
+from app.interfaces.http.routes.patron_payment_cycle_qualification_write import (
+    build_patron_payment_cycle_qualification_write_router,
+)
+from app.interfaces.http.routes.patron_payment_unknown_audit import (
+    build_patron_payment_unknown_audit_router,
+)
+from app.interfaces.http.routes.patron_payment_unknown_audit_owner_act_read import (
+    build_patron_payment_unknown_audit_owner_act_read_router,
+)
+from app.interfaces.http.routes.patron_payment_unknown_audit_owner_act_write import (
+    build_patron_payment_unknown_audit_owner_act_router,
 )
 from app.interfaces.http.routes.patron_pricing import build_patron_pricing_router
 from app.interfaces.http.routes.patron_pricing_import import build_patron_pricing_import_router
@@ -419,9 +441,28 @@ from app.modules.pricing.application.import_handler import pricing_import_handle
 from app.modules.pricing.application.import_preview import PricingImportPreviewService
 from app.modules.pricing.application.import_read import PricingImportReadService
 from app.modules.pricing.application.import_service import PricingImportService
+from app.modules.pricing.application.payment_collection_rejection_review_handler import (
+    payment_collection_rejection_review_handlers,
+)
+from app.modules.pricing.application.payment_collection_rejection_review_read_handler import (
+    PaymentCollectionRejectionReviewReadService,
+)
 from app.modules.pricing.application.payment_cycle_handler import (
     PaymentCycleReadService,
+    PaymentCycleWriteService,
     payment_cycle_handlers,
+)
+from app.modules.pricing.application.payment_cycle_review_handler import (
+    payment_cycle_review_handlers,
+)
+from app.modules.pricing.application.payment_cycle_review_read_handler import (
+    PaymentCycleReviewReadService,
+)
+from app.modules.pricing.application.payment_unknown_audit_owner_act_handler import (
+    payment_unknown_audit_owner_act_handlers,
+)
+from app.modules.pricing.application.payment_unknown_audit_owner_act_read_handler import (
+    PaymentUnknownAuditOwnerActReadService,
 )
 from app.modules.pricing.application.scenario_handler import pricing_scenario_handlers
 from app.modules.pricing.application.service import PricingScenarioService
@@ -522,6 +563,9 @@ class AppRuntime:
             **contract_query_export_transition_handlers(),
             **human_resumption_handlers(),
             **payment_cycle_handlers(),
+            **payment_cycle_review_handlers(),
+            **payment_collection_rejection_review_handlers(),
+            **payment_unknown_audit_owner_act_handlers(),
             "ExpireDceStagedObject": ExpireDceStagedObjectHandler(),
             "PrepareDceStaging": PrepareDceStagingHandler(),
             "RecordDceStagedObjectQuarantine": RecordDceStagedObjectQuarantineHandler(),
@@ -1077,6 +1121,8 @@ def create_app(
         unknown_audit_provenance_handler_service = UnknownAuditProvenanceReadService(session_factory=runtime.session_factory)
         final_unknown_audit_handler_service = FinalUnknownAuditReadService(session_factory=runtime.session_factory)
         payment_cycle_handler_service = PaymentCycleReadService(session_factory=runtime.session_factory)
+        payment_cycle_write_service = PaymentCycleWriteService(dispatcher=runtime.dispatcher, policy=security_policy)
+        payment_cycle_review_read_service = PaymentCycleReviewReadService(session_factory=runtime.session_factory)
         consolidated_export_resumption_handler_service = ConsolidatedExportResumptionReadService(session_factory=runtime.session_factory)
         contract_proof_review_read_service = ContractProofReviewReadService(
             session_factory=runtime.session_factory, policy=security_policy
@@ -1305,7 +1351,15 @@ def create_app(
         app.include_router(build_patron_unknown_audit_provenance_router(service=unknown_audit_provenance_handler_service, security_runtime=security_runtime))
         app.include_router(build_patron_final_unknown_audit_router(service=final_unknown_audit_handler_service, security_runtime=security_runtime))
         app.include_router(build_patron_payment_cycle_router(service=payment_cycle_handler_service, security_runtime=security_runtime))
+        app.include_router(build_patron_payment_collection_rejection_review_router(dispatcher=runtime.dispatcher, service=PaymentCollectionRejectionReviewReadService(session_factory=runtime.session_factory), security_runtime=security_runtime))
+        app.include_router(build_patron_payment_unknown_audit_router(service=payment_cycle_handler_service, security_runtime=security_runtime))
+        app.include_router(build_patron_payment_unknown_audit_owner_act_router(dispatcher=runtime.dispatcher, security_runtime=security_runtime))
+        app.include_router(build_patron_payment_unknown_audit_owner_act_read_router(service=PaymentUnknownAuditOwnerActReadService(session_factory=runtime.session_factory), security_runtime=security_runtime))
         app.include_router(build_patron_payment_cycle_timeline_router(service=payment_cycle_handler_service, security_runtime=security_runtime))
+        app.include_router(build_patron_payment_cycle_review_router(dispatcher=runtime.dispatcher, security_runtime=security_runtime))
+        app.include_router(build_patron_payment_cycle_write_router(service=payment_cycle_write_service, security_runtime=security_runtime))
+        app.include_router(build_patron_payment_cycle_qualification_write_router(service=payment_cycle_write_service, security_runtime=security_runtime))
+        app.include_router(build_patron_payment_cycle_review_read_router(service=payment_cycle_review_read_service, security_runtime=security_runtime))
         app.include_router(build_patron_consolidated_export_resumption_router(service=consolidated_export_resumption_handler_service, security_runtime=security_runtime))
         app.include_router(build_patron_contract_proof_review_router(
             service=contract_proof_review_read_service, security_runtime=security_runtime
