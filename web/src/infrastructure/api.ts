@@ -79,6 +79,11 @@ import type {
   ContractBaselineImpactPage,
   ContractProofReviewPage,
   ContractQueryExportAudit,
+  PaymentCycle,
+  PaymentCycleReview,
+  PaymentUnknownAudit,
+  PaymentUnknownAuditOwnerAct,
+  PaymentCollectionRejectionReview,
   RegisterStructuredRiskInput,
   StructuredRiskRegistrationResponse,
   DecisionCctpPricingCrossingResponse,
@@ -523,6 +528,16 @@ export function createApiClient(
       ),
     getContractQueryExportAudit: (caseId: string, exportId: string) =>
       request<ContractQueryExportAudit>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-query-exports/${encodeURIComponent(exportId)}/audit`),
+    listPaymentCycles: (caseId: string) => request<PaymentCycle[]>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/payment-post-reception-cycles`),
+    recordPaymentCycle: (caseId: string, input: Record<string, unknown>) => request(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/payment-post-reception-cycles`, { method: "POST", body: JSON.stringify(input) }),
+    qualifyPaymentCycle: (caseId: string, cycleId: string, input: Record<string, unknown>) => request(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/payment-cycles/${encodeURIComponent(cycleId)}/cash-assumptions`, { method: "POST", body: JSON.stringify(input) }),
+    recordPaymentCycleReview: (cycleId: string, input: Record<string, unknown>) => request(`/api/v1/patron/payment-cycles/${encodeURIComponent(cycleId)}/reviews`, { method: "POST", body: JSON.stringify(input) }),
+    listPaymentCycleReviews: (cycleId: string) => request<PaymentCycleReview[]>(`/api/v1/patron/payment-cycles/${encodeURIComponent(cycleId)}/reviews`),
+    getPaymentUnknownAudit: (caseId: string) => request<PaymentUnknownAudit>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/payment-post-reception-unknown-audit`),
+    getPaymentUnknownAuditOwnerAct: (caseId: string) => request<PaymentUnknownAuditOwnerAct | null>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/payment-post-reception-unknown-audit-owner-act`),
+    recordPaymentUnknownAuditOwnerAct: (caseId: string, input: Record<string, unknown>) => request(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/payment-post-reception-unknown-audit-owner-acts`, { method: "POST", body: JSON.stringify(input) }),
+    getPaymentCollectionRejectionReview: (caseId: string) => request<PaymentCollectionRejectionReview | null>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/payment-collection-rejection-review`),
+    recordPaymentCollectionRejectionReview: (caseId: string, input: Record<string, unknown>) => request(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/payment-collection-rejection-reviews`, { method: "POST", body: JSON.stringify(input) }),
     registerStructuredRisk: (caseId: string, input: RegisterStructuredRiskInput) =>
       request<StructuredRiskRegistrationResponse>(
         `/api/v1/patron/cases/${encodeURIComponent(caseId)}/risks`,

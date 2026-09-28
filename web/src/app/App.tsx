@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { PricingPanel } from "../features/pricing/PricingPanel";
+import { PaymentCyclePanel } from "../features/decision/PaymentCyclePanel";
+import { usePaymentCycles } from "../features/pricing/usePaymentCycles";
+import { usePaymentCycleReviews } from "../features/pricing/usePaymentCycleReviews";
+import { usePaymentUnknownAudit } from "../features/pricing/usePaymentUnknownAudit";
+import { usePaymentUnknownAuditOwnerAct } from "../features/pricing/usePaymentUnknownAuditOwnerAct";
+import { usePaymentCollectionRejectionReview } from "../features/pricing/usePaymentCollectionRejectionReview";
 import { usePricingImport } from "../features/pricing/usePricingImport";
 import { SubmissionPanel } from "../features/submission/SubmissionPanel";
 import { useSubmissionActions } from "../features/submission/useSubmissionActions";
@@ -275,6 +281,11 @@ function App() {
     isPatron ? selectedCaseId : "",
   );
   const contractProofReviews = useContractProofReviews(api, setMessage, isPatron ? selectedCaseId : "");
+  const paymentCycles = usePaymentCycles(api, setMessage, isPatron ? selectedCaseId : "");
+  const paymentCycleReviews = usePaymentCycleReviews(api, paymentCycles.cycles.map((cycle) => cycle.cycle_id));
+  const paymentUnknownAudit = usePaymentUnknownAudit(api, isPatron ? selectedCaseId : "");
+  const paymentUnknownAuditOwnerAct = usePaymentUnknownAuditOwnerAct(api, isPatron ? selectedCaseId : "");
+  const paymentCollectionRejectionReview = usePaymentCollectionRejectionReview(api, isPatron ? selectedCaseId : "");
   const {
     assignments,
     selectedAssignmentId,
@@ -1067,6 +1078,8 @@ function App() {
             onRefresh={() => void contractBaselineImpacts.refresh()}
           />
         )}
+
+        {isPatron && !paymentCycles.loading && <PaymentCyclePanel cycles={paymentCycles.cycles} reviews={paymentCycleReviews.reviews} unknownAudit={paymentUnknownAudit.audit} ownerAct={paymentUnknownAuditOwnerAct.act} rejectionReview={paymentCollectionRejectionReview.review} onRejectionReview={async (input) => { await api.recordPaymentCollectionRejectionReview(selectedCaseId, input); paymentCollectionRejectionReview.refresh(); }} onOwnerAct={async (input) => { await api.recordPaymentUnknownAuditOwnerAct(selectedCaseId, input); paymentUnknownAuditOwnerAct.refresh(); }} onCreate={async (input) => { await api.recordPaymentCycle(selectedCaseId, input); await paymentCycles.refresh(); paymentUnknownAudit.refresh(); }} onReview={async (cycleId, input) => { await api.recordPaymentCycleReview(cycleId, input); paymentCycleReviews.refresh(); paymentUnknownAudit.refresh(); }} onQualify={async (cycleId, input) => { await api.qualifyPaymentCycle(selectedCaseId, cycleId, input); await paymentCycles.refresh(); }} />}
 
         {isPatron && (
           <DecisionRiskRequirementsPanel

@@ -441,6 +441,11 @@ export type ContractProofReview = { review_id: string; proof_id: string; reviewe
 export type ContractProofReviewPage = { case_id: string; items: ContractProofReview[] };
 export type ContractQueryExportAudit = { export: { export_id: string; case_id: string; filters: Record<string, unknown>; status: "REQUESTED" | "READY" | "UNKNOWN" | "REFUSED"; actor_id: string; created_at: string }; transitions: { transition_id: string; from_status: string; to_status: string; local_proof_ref: string | null; created_at: string }[] };
 export type ExportProofVerification = { status: "MATCH" | "MISMATCH" | "UNAVAILABLE"; calculated_sha256: string | null };
+export type PaymentCycle = { cycle_id: string; case_id: string; source_refs: string[]; trigger_event: string; status: "SOURCE_SIGNAL_ONLY" | "REVIEW_REQUIRED" | "UNKNOWN"; cash_assumption: string | null; post_reception_cost_note: string | null };
+export type PaymentCycleReview = { review_id: string; cycle_id: string; reviewer_id: string; decision: "ACCEPTED_FOR_PLANNING" | "REVIEW_REQUIRED" | "REJECTED"; rationale: string; created_at: string };
+export type PaymentUnknownAudit = { status_counts: Record<string, number>; entries: Array<{ cycle_id: string; status: "SOURCE_SIGNAL_ONLY" | "REVIEW_REQUIRED" | "UNKNOWN"; source_refs: string[]; trigger_event: string }>; rejected_count?: number };
+export type PaymentUnknownAuditOwnerAct = { owner_act_id: string; case_id: string; owner_id: string; approved: boolean; rationale: string; created_at: string };
+export type PaymentCollectionRejectionReview = { review_id: string; case_id: string; reviewer_id: string; rejected_count: number; decision: "ACKNOWLEDGED" | "FOLLOW_UP_REQUIRED"; rationale: string; created_at: string };
 
 export type RegisterStructuredRiskInput = {
   risk_id: string;
