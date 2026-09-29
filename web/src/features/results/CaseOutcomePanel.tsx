@@ -2,10 +2,12 @@ import type { FormEvent, ReactNode } from "react";
 import { useEffect, useState } from "react";
 import type {
   CaseExecutionResults,
+  CaseRex,
   RecordCaseOutcomeInput,
   RecordCaseOrderInput,
   RecordCaseP6ControlInput,
   RecordCaseP7ResultInput,
+  RecordCaseRexInput,
 } from "../../shared/types";
 import type { CaseExecutionResultsStatus } from "./useCaseExecutionResults";
 
@@ -29,21 +31,25 @@ export function CaseOutcomePanel({
   canManage,
   status,
   data,
+  rex = [],
   onRefresh,
   onRecordOutcome,
   onRecordOrder,
   onRecordP6,
   onRecordP7,
+  onRecordRex,
 }: {
   caseId: string;
   canManage: boolean;
   status: CaseExecutionResultsStatus;
   data: CaseExecutionResults | null;
+  rex?: CaseRex[];
   onRefresh: () => void | Promise<void>;
   onRecordOutcome?: (input: RecordCaseOutcomeInput) => Promise<void>;
   onRecordOrder?: (input: RecordCaseOrderInput) => Promise<void>;
   onRecordP6?: (orderId: string, input: RecordCaseP6ControlInput) => Promise<void>;
   onRecordP7?: (p6Id: string, input: RecordCaseP7ResultInput) => Promise<void>;
+  onRecordRex?: (p7ResultId: string, input: RecordCaseRexInput) => Promise<void>;
 }) {
   const [lotReference, setLotReference] = useState("");
   const [outcome, setOutcome] = useState<RecordCaseOutcomeInput["outcome"]>("UNKNOWN");
@@ -126,7 +132,7 @@ export function CaseOutcomePanel({
 
   if (!caseId) return <section className="section-block decision-section" aria-label="Résultats et passation C12"><p>UNKNOWN · aucune Affaire sélectionnée.</p></section>;
   return <section className="section-block decision-section" aria-label="Résultats et passation C12">
-    <div className="section-heading"><div><span className="section-kicker">C12 · RÉSULTAT ET PASSATION</span><h2>Résultat par lot · P6 · P7</h2></div></div>
+    <div className="section-heading"><div><span className="section-kicker">C12 · C13 · RÉSULTAT, PASSATION ET CAPITALISATION</span><h2>Résultat par lot · P6 · P7 · REX</h2></div></div>
     <p>{statusText(status, data)}</p>
     {pendingOtherCase && <p role="status">Une écriture de résultat reste non confirmée pour une autre Affaire. Revenez à cette Affaire pour rejouer la même intention ; ses détails restent masqués ici.</p>}
     {!pendingOtherCase && data?.case_id === caseId && <>
@@ -185,6 +191,7 @@ export function CaseOutcomePanel({
                 {canManage && isCurrent && onRecordP7 && <P7Form p6Id={item.p6.p6_control_id} caseId={caseId} disabled={stepControlsDisabled(p7Key)} buttonDisabled={stepButtonDisabled(p7Key)} pending={!!pending[p7Key]} failure={failedKey === p7Key ? failure : null} submitting={submitting === p7Key} onSubmit={(input) => submitIntent(p7Key, () => input, (value) => onRecordP7(item.p6!.p6_control_id, value))} />}
               </>
               : item.p6?.decision === "REJECTED" ? <p>P7 indisponible · décision P6 rejetée.</p> : <p>UNKNOWN · P7 attend une décision P6 approuvée.</p>}
+          {item.p7 && <RexSection caseId={caseId} p7ResultId={item.p7.p7_result_id} lotReference={item.lot_reference} rex={rex.filter((entry) => entry.p7_result_id === item.p7!.p7_result_id)} canManage={canManage && isCurrent && !!onRecordRex} disabled={stepControlsDisabled(`rex:${item.p7.p7_result_id}`)} buttonDisabled={stepButtonDisabled(`rex:${item.p7.p7_result_id}`)} pending={!!pending[`rex:${item.p7.p7_result_id}`]} failure={failedKey === `rex:${item.p7.p7_result_id}` ? failure : null} submitting={submitting === `rex:${item.p7.p7_result_id}`} onSubmit={onRecordRex ? ((input) => submitIntent(`rex:${item.p7!.p7_result_id}`, () => input, (value) => onRecordRex(item.p7!.p7_result_id, value))) : undefined} />}
         </article>;
       })}</div>}
     </>}
@@ -242,5 +249,44 @@ function P7Form({ p6Id, caseId, disabled, buttonDisabled, pending, failure, subm
     {result === "COMPLETED" && <label>Référence de preuve d’exécution<input aria-label="Référence de preuve d’exécution" required value={sourceLocator} disabled={disabled || submitting} onChange={(event) => setSourceLocator(event.target.value)} /></label>}
     {(result === "UNKNOWN" || result === "INTERRUPTED") && <label>Motif du résultat P7<textarea aria-label="Motif du résultat P7" required maxLength={1000} value={reason} disabled={disabled || submitting} onChange={(event) => setReason(event.target.value)} /></label>}
     <label>Réserves P7, une par ligne<textarea aria-label="Réserves P7" maxLength={32000} value={reservations} disabled={disabled || submitting} onChange={(event) => setReservations(event.target.value)} /></label>
+  </CommandFields>;
+}
+
+function RexSection({ caseId, p7ResultId, lotReference, rex, canManage, disabled, buttonDisabled, pending, failure, submitting, onSubmit }: {
+  caseId: string; p7ResultId: string; lotReference: string; rex: CaseRex[]; canManage: boolean; disabled: boolean; buttonDisabled: boolean; pending: boolean; failure: WriteFailure | null; submitting: boolean;
+  onSubmit?: (input: RecordCaseRexInput) => Promise<void>;
+}) {
+  return <div aria-label={`Enseignements REX du lot ${lotReference}`}>
+    <h4>Enseignements REX · lot {lotReference}</h4>
+    <p>Aucun réemploi automatique : chaque enseignement reste à revoir avant réemploi, sans conclusion juridique.</p>
+    {rex.length === 0 && <p>UNKNOWN · aucun enseignement n’est enregistré pour ce résultat P7.</p>}
+    {rex.map((entry) => <div key={entry.rex_id} className="panel-empty">
+      <p>Enseignement REX · motif {entry.motif} · portée {entry.scope} · {entry.validation === "PENDING" ? "PENDING · revue avant réemploi requise" : "APPROVED · revue Patron enregistrée"}</p>
+      <p>Observation : {entry.observation}</p>
+      <p>Conséquence : {entry.consequence}</p>
+      <p>Suivi : {entry.follow_up}</p>
+      <p>Source déclarée : {entry.source_locator ?? "UNKNOWN · aucune référence"}</p>
+    </div>)}
+    {canManage && onSubmit && <RexForm caseId={caseId} p7ResultId={p7ResultId} disabled={disabled} buttonDisabled={buttonDisabled} pending={pending} failure={failure} submitting={submitting} onSubmit={onSubmit} />}
+  </div>;
+}
+
+function RexForm({ caseId, p7ResultId, disabled, buttonDisabled, pending, failure, submitting, onSubmit }: {
+  caseId: string; p7ResultId: string; disabled: boolean; buttonDisabled: boolean; pending: boolean; failure: WriteFailure | null; submitting: boolean;
+  onSubmit: (input: RecordCaseRexInput) => Promise<void>;
+}) {
+  const [motif, setMotif] = useState<RecordCaseRexInput["motif"]>("UNKNOWN");
+  const [scope, setScope] = useState<RecordCaseRexInput["scope"]>("CASE_ONLY");
+  const [observation, setObservation] = useState("");
+  const [consequence, setConsequence] = useState("");
+  const [followUp, setFollowUp] = useState("");
+  const [sourceLocator, setSourceLocator] = useState("");
+  return <CommandFields pending={pending} failure={failure} submitting={submitting} buttonDisabled={buttonDisabled} button="Enregistrer l’enseignement REX" retryButton="Réessayer l’enseignement REX" onSubmit={(event) => { event.preventDefault(); void onSubmit({ ...ids(), rex_id: crypto.randomUUID(), p7_result_id: p7ResultId, case_id: caseId, motif, scope, validation: "PENDING", observation: observation.trim(), consequence: consequence.trim(), follow_up: followUp.trim(), source_locator: sourceLocator.trim() || null }); }}>
+    <label>Motif de l’enseignement<select aria-label="Motif de l’enseignement" value={motif} disabled={disabled || submitting} onChange={(event) => setMotif(event.target.value as RecordCaseRexInput["motif"])}><option value="KNOWN">Motif connu (KNOWN)</option><option value="UNKNOWN">Motif inconnu (UNKNOWN)</option></select></label>
+    <label>Portée de réemploi<select aria-label="Portée de réemploi" value={scope} disabled={disabled || submitting} onChange={(event) => setScope(event.target.value as RecordCaseRexInput["scope"])}><option value="CASE_ONLY">Cette Affaire seulement</option><option value="LOT_PATTERN">Modèle de lot</option><option value="ENTERPRISE_PATTERN">Modèle entreprise</option></select></label>
+    <label>Observation de l’enseignement<textarea aria-label="Observation de l’enseignement" required maxLength={2000} value={observation} disabled={disabled || submitting} onChange={(event) => setObservation(event.target.value)} /></label>
+    <label>Conséquence de l’enseignement<textarea aria-label="Conséquence de l’enseignement" required maxLength={2000} value={consequence} disabled={disabled || submitting} onChange={(event) => setConsequence(event.target.value)} /></label>
+    <label>Suivi de l’enseignement<textarea aria-label="Suivi de l’enseignement" required maxLength={2000} value={followUp} disabled={disabled || submitting} onChange={(event) => setFollowUp(event.target.value)} /></label>
+    <label>Référence de preuve de l’enseignement<input aria-label="Référence de preuve de l’enseignement" maxLength={500} value={sourceLocator} disabled={disabled || submitting} onChange={(event) => setSourceLocator(event.target.value)} /></label>
   </CommandFields>;
 }

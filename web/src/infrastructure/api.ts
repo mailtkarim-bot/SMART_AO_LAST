@@ -62,7 +62,9 @@ import type {
   CaseDceReading,
   CaseExecutionCommandReceipt,
   CaseExecutionResults,
+  CaseRexList,
   RecordCaseOutcomeInput,
+  RecordCaseRexInput,
   RecordCaseOrderInput,
   RecordCaseP6ControlInput,
   RecordCaseP7ResultInput,
@@ -368,6 +370,10 @@ export function createApiClient(
     listAssignedCases: () => request<AssignedCase[]>("/api/v1/cases/assigned"),
     listCaseExecutionResults: (caseId: string) =>
       request<CaseExecutionResults>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/execution-results`),
+    listCaseRex: (caseId: string) =>
+      request<CaseRexList>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/rex`),
+    recordCaseRex: (p7ResultId: string, input: RecordCaseRexInput) =>
+      request<CaseExecutionCommandReceipt>(`/api/v1/patron/case-p7/${encodeURIComponent(p7ResultId)}/rex`, { method: "POST", body: JSON.stringify(input) }),
     recordCaseOutcome: (input: RecordCaseOutcomeInput) =>
       request<CaseExecutionCommandReceipt>("/api/v1/patron/case-outcomes", { method: "POST", body: JSON.stringify(input) }),
     recordCaseOrder: (input: RecordCaseOrderInput) =>

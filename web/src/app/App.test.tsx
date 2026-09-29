@@ -250,7 +250,7 @@ describe("App readiness integration", () => {
 
     await renderApp();
     fireEvent.click(screen.getByRole("button", { name: /Résultat et passation/ }));
-    await screen.findByRole("heading", { name: "Résultat par lot · P6 · P7" });
+    await screen.findByRole("heading", { name: "Résultat par lot · P6 · P7 · REX" });
     fireEvent.change(screen.getByLabelText("Lot concerné"), { target: { value: "01" } });
     fireEvent.change(screen.getByLabelText("Résultat déclaré du lot"), { target: { value: "WON" } });
     fireEvent.change(screen.getByLabelText("Référence de preuve du résultat"), { target: { value: "notification://lot-01" } });

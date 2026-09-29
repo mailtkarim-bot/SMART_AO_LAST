@@ -4,6 +4,7 @@ import { PaymentCyclePanel } from "../features/decision/PaymentCyclePanel";
 import { PostReceptionObligationsPanel } from "../features/decision/PostReceptionObligationsPanel";
 import { CaseOutcomePanel } from "../features/results/CaseOutcomePanel";
 import { useCaseExecutionResults } from "../features/results/useCaseExecutionResults";
+import { useCaseRex } from "../features/results/useCaseRex";
 import { ContractExecutionEvidencePanel } from "../features/decision/ContractExecutionEvidencePanel";
 import { ContractExecutionEvidenceRequalificationPanel } from "../features/decision/ContractExecutionEvidenceRequalificationPanel";
 import { ContractInstrumentVersionsPanel } from "../features/decision/ContractInstrumentVersionsPanel";
@@ -300,6 +301,10 @@ function App() {
   const contractExecutionEvidence = useContractExecutionEvidence(api, isPatron ? selectedCaseId : "");
   const contractInstrumentVersions = useContractInstrumentVersions(api, isPatron ? selectedCaseId : "");
   const caseExecutionResults = useCaseExecutionResults(
+    api,
+    businessReady && currentActor?.actor_kind === "PATRON_ADMIN" ? selectedCaseId : "",
+  );
+  const caseRex = useCaseRex(
     api,
     businessReady && currentActor?.actor_kind === "PATRON_ADMIN" ? selectedCaseId : "",
   );
@@ -1194,11 +1199,13 @@ function App() {
             canManage={currentActor.actor_kind === "PATRON_ADMIN"}
             status={caseExecutionResults.status}
             data={caseExecutionResults.data}
-            onRefresh={caseExecutionResults.refresh}
+            rex={caseRex.rex ?? []}
+            onRefresh={async () => { await caseExecutionResults.refresh(); await caseRex.refresh(); }}
             onRecordOutcome={async (input) => { await api.recordCaseOutcome(input); }}
             onRecordOrder={async (input) => { await api.recordCaseOrder(input); }}
             onRecordP6={async (orderId, input) => { await api.recordCaseP6Control(orderId, input); }}
             onRecordP7={async (p6Id, input) => { await api.recordCaseP7Result(p6Id, input); }}
+            onRecordRex={async (p7ResultId, input) => { await api.recordCaseRex(p7ResultId, input); }}
           />
         </div>}
 

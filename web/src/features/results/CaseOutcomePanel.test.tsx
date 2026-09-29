@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
-import type { CaseExecutionResults, RecordCaseOutcomeInput, RecordCaseOrderInput, RecordCaseP6ControlInput, RecordCaseP7ResultInput } from "../../shared/types";
+import type { CaseExecutionResults, RecordCaseOutcomeInput, RecordCaseOrderInput, RecordCaseP6ControlInput, RecordCaseP7ResultInput, RecordCaseRexInput } from "../../shared/types";
 import { CaseOutcomePanel } from "./CaseOutcomePanel";
 
 const empty: CaseExecutionResults = { case_id: "case-1", lot_references: ["01"], results: [] };
@@ -171,4 +171,44 @@ test("isole une commande non confirmée lors d'un changement d'Affaire puis perm
   fireEvent.click(screen.getByRole("button", { name: "Réessayer le résultat par lot" }));
   await waitFor(() => expect(intents).toHaveLength(2));
   expect(intents[1]).toEqual(intents[0]);
+});
+
+const baseChain = {
+  outcome_id: "out-1", lot_reference: "01", outcome: "WON" as const, source_locator: "notification://lot-01", reservations: [], unknown_reason: null, recorded_at: "2026-09-29T12:00:00Z", actor_id: "patron-1", transmission: null,
+  order: { order_id: "ord-1", outcome_id: "out-1", decision: "ACCEPTED" as const, source_locator: "notification://lot-01", reservations: [], rationale: "Commande rapprochée", recorded_at: "2026-09-29T12:01:00Z", actor_id: "patron-1" },
+  p6: { p6_control_id: "p6-1", order_id: "ord-1", decision: "APPROVED" as const, reservations: [], rationale: "Clarifications clôturées", recorded_at: "2026-09-29T12:02:00Z", actor_id: "patron-1" },
+  p7: { p7_result_id: "p7-1", p6_control_id: "p6-1", result: "UNKNOWN" as const, source_locator: null, reason: "Retour de chantier en attente", reservations: [], actor_id: "patron-1", recorded_at: "2026-09-29T12:03:00Z" },
+};
+
+test("affiche l’enseignement REX lié à son P7 avec revue avant réemploi visible", () => {
+  const rex = [{ rex_id: "rex-1", p7_result_id: "p7-1", lot_reference: "01", motif: "UNKNOWN" as const, scope: "CASE_ONLY" as const, validation: "PENDING" as const, observation: "Délai de DOE sous-estimé", consequence: "Marge érodée sur le lot", follow_up: "Modèle de délai à revoir", source_locator: null, created_at: "2026-09-29T12:04:00Z" }];
+  render(<CaseOutcomePanel caseId="case-1" canManage status="READY" data={{ ...empty, results: [baseChain] }} rex={rex} onRefresh={vi.fn()} />);
+  expect(screen.getByText(/Enseignement REX · motif UNKNOWN/i)).toBeInTheDocument();
+  expect(screen.getByText(/PENDING · revue avant réemploi requise/i)).toBeInTheDocument();
+  expect(screen.getByText(/Délai de DOE sous-estimé/)).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /enregistrer l’enseignement rex/i })).not.toBeInTheDocument();
+});
+
+test("enregistre un enseignement REX à portée explicite, validation en attente par défaut", async () => {
+  const rexInputs: Array<{ p7ResultId: string; input: RecordCaseRexInput }> = [];
+  const onRecordRex = vi.fn(async (p7ResultId: string, input: RecordCaseRexInput) => { rexInputs.push({ p7ResultId, input }); });
+  render(<CaseOutcomePanel caseId="case-1" canManage status="READY" data={{ ...empty, results: [baseChain] }} rex={[]} onRefresh={vi.fn()} onRecordRex={onRecordRex} />);
+  fireEvent.change(screen.getByLabelText("Motif de l’enseignement"), { target: { value: "KNOWN" } });
+  fireEvent.change(screen.getByLabelText("Portée de réemploi"), { target: { value: "LOT_PATTERN" } });
+  fireEvent.change(screen.getByLabelText("Observation de l’enseignement"), { target: { value: "Prix unitaire gagnant visible" } });
+  fireEvent.change(screen.getByLabelText("Conséquence de l’enseignement"), { target: { value: "Calibration marge à ajuster" } });
+  fireEvent.change(screen.getByLabelText("Suivi de l’enseignement"), { target: { value: "Revue avant prochain lot" } });
+  fireEvent.click(screen.getByRole("button", { name: "Enregistrer l’enseignement REX" }));
+  await waitFor(() => expect(rexInputs).toHaveLength(1));
+  expect(rexInputs[0].p7ResultId).toBe("p7-1");
+  expect(rexInputs[0].input).toMatchObject({ case_id: "case-1", p7_result_id: "p7-1", motif: "KNOWN", scope: "LOT_PATTERN", validation: "PENDING", observation: "Prix unitaire gagnant visible", consequence: "Calibration marge à ajuster", follow_up: "Revue avant prochain lot", source_locator: null });
+  expect(rexInputs[0].input.command_id).toBeDefined();
+  expect(rexInputs[0].input.idempotency_key).toBeDefined();
+});
+
+test("n’affiche la section REX que lorsqu’un P7 existe pour le lot", () => {
+  const withoutP7 = { ...baseChain, p7: null };
+  render(<CaseOutcomePanel caseId="case-1" canManage status="READY" data={{ ...empty, results: [withoutP7] }} rex={[]} onRefresh={vi.fn()} onRecordRex={vi.fn()} />);
+  expect(screen.queryByLabelText("Motif de l’enseignement")).not.toBeInTheDocument();
+  expect(screen.queryByText(/Enseignement REX/)).not.toBeInTheDocument();
 });
