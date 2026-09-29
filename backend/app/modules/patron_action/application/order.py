@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
@@ -19,6 +20,7 @@ from app.modules.patron_action.infrastructure.models import (
     CaseExportRequestRecord,
     CaseOrderRecord,
     CaseOutcomeRecord,
+    CaseOutcomeTransmissionRecord,
     CaseP6ControlRecord,
     CaseP7ResultRecord,
     CaseRetentionRecord,
@@ -39,6 +41,22 @@ from app.platform.security.capabilities import Capability
 from app.platform.security.context import ActorContext, ActorKind, DataClassification
 
 
+@dataclass(frozen=True, slots=True)
+class CaseExecutionResultProjection:
+    outcome: CaseOutcomeRecord
+    transmission: CaseOutcomeTransmissionRecord | None
+    order: CaseOrderRecord | None
+    p6: CaseP6ControlRecord | None
+    p7: CaseP7ResultRecord | None
+
+
+@dataclass(frozen=True, slots=True)
+class CaseExecutionResultsProjection:
+    case_id: UUID
+    lot_references: tuple[str, ...]
+    results: tuple[CaseExecutionResultProjection, ...]
+
+
 class CaseOrderService:
     def __init__(
         self,
@@ -54,6 +72,130 @@ class CaseOrderService:
     def record_order(self, *, actor: ActorContext, command: RecordCaseOrderCommand, now: datetime):
         self._authorize(actor=actor, case_id=command.case_id, now=now)
         return self._dispatch(actor=actor, command=command, now=now)
+
+    def list_execution_results(
+        self, *, actor: ActorContext, case_id: UUID, now: datetime
+    ) -> CaseExecutionResultsProjection:
+        if actor.actor_kind is not ActorKind.PATRON_ADMIN or actor.membership_id is None:
+            raise PermissionError("PATRON_REQUIRED")
+        decision = self._policy.authorize(
+            context=actor,
+            request=AuthorizationRequest(
+                action=Capability.PATRON_ACTION_READ,
+                resource=AuthorizationResource(
+                    resource_type="CASE_ORDER",
+                    resource_id=case_id,
+                    tenant_id=actor.tenant_id,
+                    classification=DataClassification.INTERNAL_OPERATIONAL,
+                    case_id=case_id,
+                ),
+                evaluated_at=now,
+            ),
+        )
+        if not decision.allowed:
+            raise PermissionError(decision.code)
+        with self._session_factory() as session:
+            case = session.scalar(
+                sa.select(CaseRecord).where(
+                    CaseRecord.tenant_id == actor.tenant_id,
+                    CaseRecord.id == case_id,
+                )
+            )
+            if case is None:
+                raise PermissionError("CASE_NOT_FOUND_OR_FORBIDDEN")
+            scope = case.scope_json if isinstance(case.scope_json, dict) else {}
+            lot_references = tuple(
+                dict.fromkeys(
+                    str(reference).strip()
+                    for reference in scope.get("lot_numbers", [])
+                    if str(reference).strip()
+                )
+            )
+            outcomes = tuple(
+                session.scalars(
+                    sa.select(CaseOutcomeRecord)
+                    .where(
+                        CaseOutcomeRecord.tenant_id == actor.tenant_id,
+                        CaseOutcomeRecord.case_id == case_id,
+                    )
+                    .order_by(CaseOutcomeRecord.created_at, CaseOutcomeRecord.id)
+                ).all()
+            )
+            if not outcomes:
+                return CaseExecutionResultsProjection(case_id, lot_references, ())
+
+            outcome_ids = [outcome.id for outcome in outcomes]
+            transmissions = session.scalars(
+                sa.select(CaseOutcomeTransmissionRecord)
+                .where(
+                    CaseOutcomeTransmissionRecord.tenant_id == actor.tenant_id,
+                    CaseOutcomeTransmissionRecord.case_id == case_id,
+                    CaseOutcomeTransmissionRecord.outcome_id.in_(outcome_ids),
+                )
+                .order_by(
+                    CaseOutcomeTransmissionRecord.created_at,
+                    CaseOutcomeTransmissionRecord.id,
+                )
+            ).all()
+            orders = session.scalars(
+                sa.select(CaseOrderRecord)
+                .where(
+                    CaseOrderRecord.tenant_id == actor.tenant_id,
+                    CaseOrderRecord.case_id == case_id,
+                    CaseOrderRecord.outcome_id.in_(outcome_ids),
+                )
+                .order_by(CaseOrderRecord.created_at, CaseOrderRecord.id)
+            ).all()
+            order_ids = [order.id for order in orders]
+            controls = (
+                session.scalars(
+                    sa.select(CaseP6ControlRecord)
+                    .where(
+                        CaseP6ControlRecord.tenant_id == actor.tenant_id,
+                        CaseP6ControlRecord.case_id == case_id,
+                        CaseP6ControlRecord.order_id.in_(order_ids),
+                    )
+                    .order_by(CaseP6ControlRecord.created_at, CaseP6ControlRecord.id)
+                ).all()
+                if order_ids
+                else ()
+            )
+            control_ids = [control.id for control in controls]
+            p7_results = (
+                session.scalars(
+                    sa.select(CaseP7ResultRecord)
+                    .where(
+                        CaseP7ResultRecord.tenant_id == actor.tenant_id,
+                        CaseP7ResultRecord.case_id == case_id,
+                        CaseP7ResultRecord.p6_control_id.in_(control_ids),
+                    )
+                    .order_by(CaseP7ResultRecord.created_at, CaseP7ResultRecord.id)
+                ).all()
+                if control_ids
+                else ()
+            )
+            transmission_by_outcome = {item.outcome_id: item for item in transmissions}
+            order_by_outcome = {item.outcome_id: item for item in orders}
+            p6_by_order = {item.order_id: item for item in controls}
+            p7_by_p6 = {item.p6_control_id: item for item in p7_results}
+            results = []
+            for outcome in outcomes:
+                order = order_by_outcome.get(outcome.id)
+                p6 = p6_by_order.get(order.id) if order is not None else None
+                results.append(
+                    CaseExecutionResultProjection(
+                        outcome=outcome,
+                        transmission=transmission_by_outcome.get(outcome.id),
+                        order=order,
+                        p6=p6,
+                        p7=p7_by_p6.get(p6.id) if p6 is not None else None,
+                    )
+                )
+            return CaseExecutionResultsProjection(
+                case_id=case_id,
+                lot_references=lot_references,
+                results=tuple(results),
+            )
 
     def record_p6(self, *, actor: ActorContext, command: RecordCaseP6ControlCommand, now: datetime):
         self._authorize(actor=actor, case_id=command.case_id, now=now)

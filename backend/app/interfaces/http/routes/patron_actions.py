@@ -26,6 +26,12 @@ from app.modules.patron_action.application.transition_commands import Transition
 from app.modules.patron_action.application.transition_service import PatronActionTransitionService
 from app.modules.patron_action.application.transmission_commands import TransmitWonOutcomeCommand
 from app.modules.patron_action.public.contracts import (
+    CaseExecutionOrderResponse,
+    CaseExecutionOutcomeResponse,
+    CaseExecutionP6Response,
+    CaseExecutionP7Response,
+    CaseExecutionResultsResponse,
+    CaseExecutionTransmissionResponse,
     CreatePatronActionRequest,
     PatronActionCommandResponse,
     PatronActionProjectionResponse,
@@ -122,6 +128,99 @@ def build_patron_action_router(
                 for row in rows
             ],
         }
+
+    @router.get(
+        "/cases/{case_id}/execution-results",
+        response_model=CaseExecutionResultsResponse,
+    )
+    def list_case_execution_results(
+        case_id: UUID, authorization: str | None = Header(default=None)
+    ):
+        if order_service is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="UNAVAILABLE"
+            )
+        actor = _resolve_context(
+            authorization=authorization, context_resolver=security_runtime.context_resolver
+        )
+        try:
+            projection = order_service.list_execution_results(
+                actor=actor, case_id=case_id, now=datetime.now(tz=UTC)
+            )
+        except PermissionError as error:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="FORBIDDEN"
+            ) from error
+        return CaseExecutionResultsResponse(
+            case_id=projection.case_id,
+            lot_references=list(projection.lot_references),
+            results=[
+                CaseExecutionOutcomeResponse(
+                    outcome_id=item.outcome.id,
+                    lot_reference=item.outcome.lot_reference,
+                    outcome=item.outcome.outcome,
+                    source_locator=item.outcome.source_locator,
+                    reservations=item.outcome.reservations_json,
+                    unknown_reason=item.outcome.unknown_reason,
+                    actor_id=item.outcome.actor_id,
+                    recorded_at=item.outcome.created_at,
+                    transmission=(
+                        CaseExecutionTransmissionResponse(
+                            transmission_id=item.transmission.id,
+                            outcome_id=item.transmission.outcome_id,
+                            recipient=item.transmission.recipient,
+                            reservations=item.transmission.reservations_json,
+                            actor_id=item.transmission.actor_id,
+                            recorded_at=item.transmission.created_at,
+                        )
+                        if item.transmission
+                        else None
+                    ),
+                    order=(
+                        CaseExecutionOrderResponse(
+                            order_id=item.order.id,
+                            outcome_id=item.order.outcome_id,
+                            decision=item.order.decision,
+                            source_locator=item.order.source_locator,
+                            reservations=item.order.reservations_json,
+                            rationale=item.order.rationale,
+                            actor_id=item.order.actor_id,
+                            recorded_at=item.order.created_at,
+                        )
+                        if item.order
+                        else None
+                    ),
+                    p6=(
+                        CaseExecutionP6Response(
+                            p6_control_id=item.p6.id,
+                            order_id=item.p6.order_id,
+                            decision=item.p6.decision,
+                            reservations=item.p6.reservations_json,
+                            rationale=item.p6.rationale,
+                            actor_id=item.p6.actor_id,
+                            recorded_at=item.p6.created_at,
+                        )
+                        if item.p6
+                        else None
+                    ),
+                    p7=(
+                        CaseExecutionP7Response(
+                            p7_result_id=item.p7.id,
+                            p6_control_id=item.p7.p6_control_id,
+                            result=item.p7.result,
+                            source_locator=item.p7.source_locator,
+                            reason=item.p7.reason,
+                            reservations=item.p7.reservations_json,
+                            actor_id=item.p7.actor_id,
+                            recorded_at=item.p7.created_at,
+                        )
+                        if item.p7
+                        else None
+                    ),
+                )
+                for item in projection.results
+            ],
+        )
 
     @router.post("/case-outcomes", status_code=status.HTTP_201_CREATED)
     def record_case_outcome(

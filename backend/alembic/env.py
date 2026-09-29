@@ -39,9 +39,14 @@ from app.modules.optimization.infrastructure import models as optimization_model
 from app.modules.patron_action.infrastructure.models import patron_action  # noqa: F401
 from app.modules.preparation.infrastructure.models import preparation  # noqa: F401
 from app.modules.pricing.infrastructure.models import (
+    contract_execution_evidence_requalification,  # noqa: F401
+    contract_instrument_supersession,  # noqa: F401
+    contract_instrument_version,  # noqa: F401
     financial,  # noqa: F401
     payment_cycle_review,  # noqa: F401
     payment_post_reception_cycle,  # noqa: F401
+    post_reception_obligation,  # noqa: F401
+    post_reception_obligation_transition,  # noqa: F401
 )
 from app.modules.submission.infrastructure.models import submission  # noqa: F401
 from app.platform.persistence import models  # noqa: F401

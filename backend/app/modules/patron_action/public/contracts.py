@@ -96,6 +96,68 @@ class RecordCaseP7ResultRequest(BaseModel):
     reservations: list[str] = Field(default_factory=list, max_length=32)
 
 
+class CaseExecutionTransmissionResponse(BaseModel):
+    transmission_id: UUID
+    outcome_id: UUID
+    recipient: str
+    reservations: list[str]
+    actor_id: UUID
+    recorded_at: datetime
+
+
+class CaseExecutionOrderResponse(BaseModel):
+    order_id: UUID
+    outcome_id: UUID
+    decision: Literal["ACCEPTED", "REJECTED"]
+    source_locator: str
+    reservations: list[str]
+    rationale: str
+    actor_id: UUID
+    recorded_at: datetime
+
+
+class CaseExecutionP6Response(BaseModel):
+    p6_control_id: UUID
+    order_id: UUID
+    decision: Literal["APPROVED", "REJECTED"]
+    reservations: list[str]
+    rationale: str
+    actor_id: UUID
+    recorded_at: datetime
+
+
+class CaseExecutionP7Response(BaseModel):
+    p7_result_id: UUID
+    p6_control_id: UUID
+    result: Literal["COMPLETED", "UNKNOWN", "INTERRUPTED"]
+    source_locator: str | None
+    reason: str | None
+    reservations: list[str]
+    actor_id: UUID
+    recorded_at: datetime
+
+
+class CaseExecutionOutcomeResponse(BaseModel):
+    outcome_id: UUID
+    lot_reference: str
+    outcome: Literal["WON", "LOST", "UNKNOWN"]
+    source_locator: str | None
+    reservations: list[str]
+    unknown_reason: str | None
+    actor_id: UUID
+    recorded_at: datetime
+    transmission: CaseExecutionTransmissionResponse | None
+    order: CaseExecutionOrderResponse | None
+    p6: CaseExecutionP6Response | None
+    p7: CaseExecutionP7Response | None
+
+
+class CaseExecutionResultsResponse(BaseModel):
+    case_id: UUID
+    lot_references: list[str]
+    results: list[CaseExecutionOutcomeResponse]
+
+
 class RecordCaseRexRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 

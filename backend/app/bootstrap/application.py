@@ -72,6 +72,9 @@ from app.interfaces.http.routes.patron_consolidated_export_resumption import (
 from app.interfaces.http.routes.patron_contract_baseline_impacts import (
     build_patron_contract_baseline_impact_router,
 )
+from app.interfaces.http.routes.patron_contract_execution_evidence import (
+    build_patron_contract_execution_evidence_router,
+)
 from app.interfaces.http.routes.patron_contract_proof_reviews import (
     build_patron_contract_proof_review_router,
 )
@@ -119,8 +122,13 @@ from app.interfaces.http.routes.patron_human_resumption_timeline import (
 from app.interfaces.http.routes.patron_opportunity_watch_profiles import (
     build_patron_opportunity_watch_profile_router,
 )
+from app.interfaces.http.routes.patron_payment_collection_rejection_review import (
+    build_patron_payment_collection_rejection_review_router,
+)
 from app.interfaces.http.routes.patron_payment_cycle import build_patron_payment_cycle_router
-from app.interfaces.http.routes.patron_payment_collection_rejection_review import build_patron_payment_collection_rejection_review_router
+from app.interfaces.http.routes.patron_payment_cycle_qualification_write import (
+    build_patron_payment_cycle_qualification_write_router,
+)
 from app.interfaces.http.routes.patron_payment_cycle_review_read import (
     build_patron_payment_cycle_review_read_router,
 )
@@ -133,9 +141,6 @@ from app.interfaces.http.routes.patron_payment_cycle_timeline import (
 from app.interfaces.http.routes.patron_payment_cycle_write import (
     build_patron_payment_cycle_write_router,
 )
-from app.interfaces.http.routes.patron_payment_cycle_qualification_write import (
-    build_patron_payment_cycle_qualification_write_router,
-)
 from app.interfaces.http.routes.patron_payment_unknown_audit import (
     build_patron_payment_unknown_audit_router,
 )
@@ -144,6 +149,9 @@ from app.interfaces.http.routes.patron_payment_unknown_audit_owner_act_read impo
 )
 from app.interfaces.http.routes.patron_payment_unknown_audit_owner_act_write import (
     build_patron_payment_unknown_audit_owner_act_router,
+)
+from app.interfaces.http.routes.patron_post_reception_obligations import (
+    build_patron_post_reception_obligations_router,
 )
 from app.interfaces.http.routes.patron_pricing import build_patron_pricing_router
 from app.interfaces.http.routes.patron_pricing_import import build_patron_pricing_import_router
@@ -434,6 +442,29 @@ from app.modules.preparation.infrastructure.document_storage import (
     GeneratedDocumentStorage,
     LocalGeneratedDocumentStorage,
 )
+from app.modules.pricing.application.contract_execution_evidence_handler import (
+    contract_execution_evidence_handlers,
+)
+from app.modules.pricing.application.contract_execution_evidence_read_handler import (
+    ContractExecutionEvidenceReadService,
+    ContractInstrumentSupersessionReadService,
+    ContractInstrumentVersionReadService,
+)
+from app.modules.pricing.application.contract_execution_evidence_requalification_handler import (
+    contract_execution_evidence_requalification_handlers,
+)
+from app.modules.pricing.application.contract_execution_evidence_requalification_read_handler import (
+    ContractExecutionEvidenceRequalificationReadService,
+)
+from app.modules.pricing.application.contract_execution_evidence_timeline_read_handler import (
+    ContractExecutionEvidenceTimelineReadService,
+)
+from app.modules.pricing.application.contract_instrument_supersession_handler import (
+    contract_instrument_supersession_handlers,
+)
+from app.modules.pricing.application.contract_instrument_version_handler import (
+    contract_instrument_version_handlers,
+)
 from app.modules.pricing.application.file_security import LibmagicClamdPricingFileSecurity
 from app.modules.pricing.application.import_creation import PricingImportCreationService
 from app.modules.pricing.application.import_creation_handler import pricing_import_creation_handlers
@@ -463,6 +494,15 @@ from app.modules.pricing.application.payment_unknown_audit_owner_act_handler imp
 )
 from app.modules.pricing.application.payment_unknown_audit_owner_act_read_handler import (
     PaymentUnknownAuditOwnerActReadService,
+)
+from app.modules.pricing.application.post_reception_obligation_handler import (
+    post_reception_obligation_handlers,
+)
+from app.modules.pricing.application.post_reception_obligation_read_handler import (
+    PostReceptionObligationReadService,
+)
+from app.modules.pricing.application.post_reception_obligation_transition_handler import (
+    post_reception_obligation_transition_handlers,
 )
 from app.modules.pricing.application.scenario_handler import pricing_scenario_handlers
 from app.modules.pricing.application.service import PricingScenarioService
@@ -563,6 +603,12 @@ class AppRuntime:
             **contract_query_export_transition_handlers(),
             **human_resumption_handlers(),
             **payment_cycle_handlers(),
+            **post_reception_obligation_handlers(),
+            **post_reception_obligation_transition_handlers(),
+            **contract_execution_evidence_handlers(),
+            **contract_instrument_version_handlers(),
+            **contract_instrument_supersession_handlers(),
+            **contract_execution_evidence_requalification_handlers(),
             **payment_cycle_review_handlers(),
             **payment_collection_rejection_review_handlers(),
             **payment_unknown_audit_owner_act_handlers(),
@@ -1351,6 +1397,8 @@ def create_app(
         app.include_router(build_patron_unknown_audit_provenance_router(service=unknown_audit_provenance_handler_service, security_runtime=security_runtime))
         app.include_router(build_patron_final_unknown_audit_router(service=final_unknown_audit_handler_service, security_runtime=security_runtime))
         app.include_router(build_patron_payment_cycle_router(service=payment_cycle_handler_service, security_runtime=security_runtime))
+        app.include_router(build_patron_post_reception_obligations_router(dispatcher=runtime.dispatcher, service=PostReceptionObligationReadService(session_factory=runtime.session_factory), security_runtime=security_runtime))
+        app.include_router(build_patron_contract_execution_evidence_router(dispatcher=runtime.dispatcher, service=ContractExecutionEvidenceReadService(session_factory=runtime.session_factory), instrument_version_service=ContractInstrumentVersionReadService(session_factory=runtime.session_factory), supersession_service=ContractInstrumentSupersessionReadService(session_factory=runtime.session_factory), requalification_service=ContractExecutionEvidenceRequalificationReadService(session_factory=runtime.session_factory), timeline_service=ContractExecutionEvidenceTimelineReadService(session_factory=runtime.session_factory), security_runtime=security_runtime))
         app.include_router(build_patron_payment_collection_rejection_review_router(dispatcher=runtime.dispatcher, service=PaymentCollectionRejectionReviewReadService(session_factory=runtime.session_factory), security_runtime=security_runtime))
         app.include_router(build_patron_payment_unknown_audit_router(service=payment_cycle_handler_service, security_runtime=security_runtime))
         app.include_router(build_patron_payment_unknown_audit_owner_act_router(dispatcher=runtime.dispatcher, security_runtime=security_runtime))

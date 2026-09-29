@@ -24,6 +24,9 @@ from app.modules.preparation.infrastructure.models import (
     TechnicalResponseDraftRecord,
 )
 from app.modules.pricing.infrastructure.models import (
+    ContractExecutionEvidenceRequalificationRecord,
+    ContractInstrumentSupersessionRecord,
+    ContractInstrumentVersionRecord,
     FinancialReportLineRecord,
     FinancialReportPublicationRecord,
     FinancialReportSnapshotRecord,
@@ -40,6 +43,15 @@ from app.modules.submission.infrastructure.models import (
 )
 
 OWNERS = {
+    ContractExecutionEvidenceRequalificationRecord: (
+        "app.modules.pricing.infrastructure.models.contract_execution_evidence_requalification"
+    ),
+    ContractInstrumentSupersessionRecord: (
+        "app.modules.pricing.infrastructure.models.contract_instrument_supersession"
+    ),
+    ContractInstrumentVersionRecord: (
+        "app.modules.pricing.infrastructure.models.contract_instrument_version"
+    ),
     **{
         model: "app.modules.pricing.infrastructure.models.financial"
         for model in (

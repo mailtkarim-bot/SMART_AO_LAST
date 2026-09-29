@@ -28,7 +28,7 @@ from app.modules.patron_action.infrastructure.models import (
 )
 from app.platform.events.dispatcher import CommandDispatcher, CommandExecutionError
 from app.platform.security.authorization import AuthorizationPolicy
-from app.platform.security.capabilities import capabilities_for
+from app.platform.security.capabilities import Capability, capabilities_for
 from app.platform.security.context import ActorKind
 
 from tests.application.test_collab_work_task import NOW, _seed
@@ -137,6 +137,30 @@ def test_won_outcome_becomes_one_order_and_one_p6_with_stable_replay(session_fac
     assert p7_first.result_code == p7_replay.result_code == "CASE_P7_RECORDED"
     assert p7_replay.replayed is True
 
+    execution = order_service.list_execution_results(actor=actor, case_id=case_id, now=NOW)
+    assert execution.case_id == case_id
+    assert execution.lot_references == ("01",)
+    assert len(execution.results) == 1
+    assert execution.results[0].outcome.id == outcome_id
+    assert execution.results[0].order.id == order_command.order_id
+    assert execution.results[0].p6.id == p6_command.p6_control_id
+    assert execution.results[0].p7.id == p7_command.p7_result_id
+    assert execution.results[0].p7.result == "UNKNOWN"
+    assert execution.results[0].p7.reason == "Le retour d'exécution n'est pas encore rapproché."
+    collaborator = replace(
+        actor,
+        actor_kind=ActorKind.COLLABORATEUR,
+        capabilities=capabilities_for(ActorKind.COLLABORATEUR),
+    )
+    with pytest.raises(PermissionError, match="PATRON_REQUIRED"):
+        order_service.list_execution_results(actor=collaborator, case_id=case_id, now=NOW)
+    actor_without_read = replace(actor, capabilities=frozenset({Capability.PATRON_ACTION_WRITE}))
+    with pytest.raises(PermissionError):
+        order_service.list_execution_results(actor=actor_without_read, case_id=case_id, now=NOW)
+    foreign_actor = replace(actor, tenant_id=uuid4())
+    with pytest.raises(PermissionError, match="CASE_NOT_FOUND_OR_FORBIDDEN"):
+        order_service.list_execution_results(actor=foreign_actor, case_id=case_id, now=NOW)
+
     rex_command = RecordCaseRexCommand(
         command_id=uuid4(),
         idempotency_key=uuid4(),
@@ -237,6 +261,12 @@ def test_order_and_p6_refuse_non_won_or_rejected_facts(session_factory):
             ),
             now=NOW,
         )
+    projection = order_service.list_execution_results(actor=actor, case_id=case_id, now=NOW)
+    assert len(projection.results) == 1
+    assert projection.results[0].outcome.outcome == "LOST"
+    assert projection.results[0].order is None
+    assert projection.results[0].p6 is None
+    assert projection.results[0].p7 is None
     won_id = uuid4()
     outcome_service.execute(
         actor=actor,
