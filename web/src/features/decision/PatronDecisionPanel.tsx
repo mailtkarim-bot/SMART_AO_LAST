@@ -1,4 +1,13 @@
 import { useState } from "react";
+import { PostReceptionObligationsAxisProjection } from "./PostReceptionObligationsAxisProjection";
+import { ContractRightsAxisProjection } from "./ContractRightsAxisProjection";
+import { ContractExecutionEvidenceTimeline } from "./ContractExecutionEvidenceTimeline";
+import type {
+  ContractExecutionEvidence,
+  ContractExecutionEvidenceTimelineEvent,
+  PostReceptionObligation,
+} from "../../shared/types";
+import type { ContractExecutionEvidenceReadStatus } from "../pricing/useContractExecutionEvidence";
 import type {
   FreezeDecisionContextRequest,
   PatronDecisionDossier,
@@ -14,6 +23,11 @@ type PatronDecisionPanelProps = {
   onFreezeContext?: (input: FreezeDecisionContextRequest) => void;
   onResolveCondition?: (conditionId: string, input: ResolveDecisionConditionRequest) => void;
   onFinalize?: (input: FinalizeGoNoGoDecisionRequest) => void;
+  postReceptionObligations?: PostReceptionObligation[];
+  postReceptionObligationsLoading?: boolean;
+  contractExecutionEvidence?: ContractExecutionEvidence[];
+  contractExecutionEvidenceTimeline?: ContractExecutionEvidenceTimelineEvent[];
+  contractExecutionEvidenceStatus?: ContractExecutionEvidenceReadStatus;
 };
 
 const emptyReferences = "[]";
@@ -26,6 +40,11 @@ export function PatronDecisionPanel({
   onFreezeContext,
   onResolveCondition,
   onFinalize,
+  postReceptionObligations = [],
+  postReceptionObligationsLoading = false,
+  contractExecutionEvidence = [],
+  contractExecutionEvidenceTimeline = [],
+  contractExecutionEvidenceStatus = "LOADING",
 }: PatronDecisionPanelProps) {
   const [contextId, setContextId] = useState("");
   const [rationale, setRationale] = useState("");
@@ -116,6 +135,9 @@ export function PatronDecisionPanel({
         </div>
         <span className="count-pill">{decisionDossier?.validity ?? "À charger"}</span>
       </div>
+      <PostReceptionObligationsAxisProjection obligations={postReceptionObligations} loading={postReceptionObligationsLoading} />
+      <ContractRightsAxisProjection obligations={postReceptionObligations} obligationsLoading={postReceptionObligationsLoading} acts={contractExecutionEvidence} actsStatus={contractExecutionEvidenceStatus} />
+      <ContractExecutionEvidenceTimeline events={contractExecutionEvidenceTimeline} status={contractExecutionEvidenceStatus} />
       {!decisionDossier ? (
         <div className="empty-card">
           <strong>Aucun dossier de décision disponible</strong>

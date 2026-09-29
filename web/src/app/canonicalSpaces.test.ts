@@ -22,5 +22,6 @@ describe("canonical product spaces", () => {
     }
     expect(getCanonicalSpace("C14")?.status).toBe("PARTIAL");
     expect(getCanonicalSpace("C09")?.status).toBe("BACKLOG");
+    expect(getCanonicalSpace("C12")).toMatchObject({ status: "PARTIAL", navKey: "results" });
   });
 });

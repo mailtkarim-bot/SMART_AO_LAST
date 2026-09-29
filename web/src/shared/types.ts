@@ -446,6 +446,123 @@ export type PaymentCycleReview = { review_id: string; cycle_id: string; reviewer
 export type PaymentUnknownAudit = { status_counts: Record<string, number>; entries: Array<{ cycle_id: string; status: "SOURCE_SIGNAL_ONLY" | "REVIEW_REQUIRED" | "UNKNOWN"; source_refs: string[]; trigger_event: string }>; rejected_count?: number };
 export type PaymentUnknownAuditOwnerAct = { owner_act_id: string; case_id: string; owner_id: string; approved: boolean; rationale: string; created_at: string };
 export type PaymentCollectionRejectionReview = { review_id: string; case_id: string; reviewer_id: string; rejected_count: number; decision: "ACKNOWLEDGED" | "FOLLOW_UP_REQUIRED"; rationale: string; created_at: string };
+export type CaseOutcomeValue = "WON" | "LOST" | "UNKNOWN";
+export type CaseExecutionResults = {
+  case_id: string;
+  lot_references: string[];
+  results: Array<{
+    outcome_id: string; lot_reference: string; outcome: CaseOutcomeValue;
+    source_locator: string | null; reservations: string[]; unknown_reason: string | null;
+    actor_id: string; recorded_at: string;
+    transmission: { transmission_id: string; outcome_id: string; recipient: string; reservations: string[]; actor_id: string; recorded_at: string } | null;
+    order: { order_id: string; outcome_id: string; decision: "ACCEPTED" | "REJECTED"; source_locator: string; reservations: string[]; rationale: string; actor_id: string; recorded_at: string } | null;
+    p6: { p6_control_id: string; order_id: string; decision: "APPROVED" | "REJECTED"; reservations: string[]; rationale: string; actor_id: string; recorded_at: string } | null;
+    p7: { p7_result_id: string; p6_control_id: string; result: "COMPLETED" | "UNKNOWN" | "INTERRUPTED"; source_locator: string | null; reason: string | null; reservations: string[]; actor_id: string; recorded_at: string } | null;
+  }>;
+};
+export type RecordCaseOutcomeInput = { command_id: string; idempotency_key: string; correlation_id: string; outcome_id: string; case_id: string; lot_reference: string; outcome: CaseOutcomeValue; source_locator: string | null; reservations: string[]; unknown_reason: string | null };
+export type RecordCaseOrderInput = { command_id: string; idempotency_key: string; correlation_id: string; order_id: string; outcome_id: string; case_id: string; decision: "ACCEPTED" | "REJECTED"; rationale: string };
+export type RecordCaseP6ControlInput = { command_id: string; idempotency_key: string; correlation_id: string; p6_control_id: string; order_id: string; case_id: string; decision: "APPROVED" | "REJECTED"; reservations: string[]; rationale: string };
+export type RecordCaseP7ResultInput = { command_id: string; idempotency_key: string; correlation_id: string; p7_result_id: string; p6_control_id: string; case_id: string; result: "COMPLETED" | "UNKNOWN" | "INTERRUPTED"; source_locator: string | null; reason: string | null; reservations: string[] };
+export type CaseExecutionCommandReceipt = { status: "SUCCEEDED"; result_code: string; aggregate_refs: Array<{ aggregate_type: string; aggregate_id: string; aggregate_revision: number }>; event_ids: string[]; replayed?: boolean };
+export type PostReceptionObligation = {
+  obligation_id: string; case_id: string; obligation_type: "OPR" | "TESTS" | "COMMISSIONING" | "TRAINING" | "DOE_DIUO" | "RESERVES_LIFTING" | "GPA" | "INITIAL_MAINTENANCE" | "SPARE_STOCK" | "ON_CALL" | "ADMIN_CLOSURE" | "GUARANTEE_RELEASE";
+  origin_reception_act_id: string | null; origin_reception_summary: string | null;
+  origin_reception_outcome: ContractReceptionOutcome | "UNKNOWN";
+  summary: string; source_refs: string[]; due_date: string | null; resource_note: string | null; cost_estimate_note: string | null; fulfillment_proof_refs: string[]; sanction_ref: string | null;
+  status: "REVIEW_REQUIRED" | "IN_PROGRESS" | "FOLLOW_UP_REQUIRED" | "UNKNOWN" | "COMPLETED"; revision: number;
+  latest_transition_id: string | null; latest_transition_actor_id: string | null; latest_transition_at: string | null; latest_transition_rationale: string | null; completion_proof_refs: string[];
+  actor_id: string; created_at: string;
+};
+
+export type ContractExecutionActKind = "WORK_RECEPTION" | "RIGHTS_PRESERVATION" | "CONTRACT_EXIT";
+export type ContractReceptionOutcome = "WITH_RESERVATIONS" | "UNDER_RESERVATIONS" | "WITHOUT_RESERVATIONS";
+export type ContractInstrumentKind = "SIGNED_CONTRACT" | "AMENDMENT";
+export type ContractInstrumentVersion = {
+  contract_instrument_version_id: string; case_id: string; instrument_kind: ContractInstrumentKind;
+  version_reference: string; source_refs: string[]; evidence_refs: string[]; actor_id: string; recorded_at: string;
+};
+export type ContractInstrumentSupersession = {
+  supersession_id: string; case_id: string;
+  replacing_contract_instrument_version_id: string; replacing_instrument_kind: ContractInstrumentKind; replacing_version_reference: string;
+  replaced_contract_instrument_version_id: string; replaced_instrument_kind: ContractInstrumentKind; replaced_version_reference: string;
+  rationale: string; actor_id: string; recorded_at: string;
+};
+export type ContractExecutionEvidence = {
+  act_id: string; case_id: string; act_kind: ContractExecutionActKind; summary: string;
+  reception_outcome: ContractReceptionOutcome | "UNKNOWN";
+  source_refs: string[]; evidence_refs: string[]; declared_event_date: string | null;
+  case_dce_version_id_at_recording: string | null;
+  version_relation: "MATCHES_CASE_CURRENT" | "REVIEW_REQUIRED" | "UNKNOWN";
+  contract_instrument_version_relation: "DECLARED" | "REVIEW_REQUIRED" | "UNKNOWN";
+  contract_instrument_version_id: string | null;
+  contract_instrument_version: Omit<ContractInstrumentVersion, "case_id" | "actor_id" | "recorded_at"> | null;
+  actor_id: string; recorded_at: string;
+};
+export type ContractExecutionEvidenceRequalification = {
+  requalification_id: string; case_id: string; act_id: string; act_kind: ContractExecutionActKind;
+  act_summary: string; supersession_id: string; review_revision: number;
+  decision: "RETAINED_AS_DECLARED" | "RELINKED_TO_DECLARED_VERSION" | "NEEDS_CLARIFICATION";
+  resulting_contract_instrument_version_id: string | null;
+  resulting_instrument_kind: ContractInstrumentKind | null; resulting_version_reference: string | null;
+  rationale: string; actor_id: string; recorded_at: string;
+};
+export type ContractExecutionEvidenceTimelineInstrumentVersion = {
+  contract_instrument_version_id: string; instrument_kind: ContractInstrumentKind;
+  version_reference: string; source_refs: string[]; evidence_refs: string[];
+};
+export type ContractExecutionEvidenceTimelineEvent =
+  | {
+      event_type: "EXECUTION_EVIDENCE"; event_id: string; case_id: string; revision: 1;
+      status: "RECORDED"; status_origin: "HUMAN_ACT"; actor_id: string; recorded_at: string;
+      act: {
+        act_id: string; act_kind: ContractExecutionActKind; reception_outcome: ContractReceptionOutcome | "UNKNOWN"; summary: string; declared_event_date: string | null;
+        source_refs: string[]; evidence_refs: string[]; case_dce_version_id_at_recording: string | null;
+        current_dce_relation: "MATCHES_CASE_CURRENT" | "REVIEW_REQUIRED" | "UNKNOWN";
+        contract_instrument_version_id: string | null;
+        current_instrument_relation: "DECLARED" | "REVIEW_REQUIRED" | "UNKNOWN";
+        contract_instrument_version: ContractExecutionEvidenceTimelineInstrumentVersion | null;
+      };
+    }
+  | {
+      event_type: "INSTRUMENT_SUPERSESSION"; event_id: string; case_id: string; revision: 1;
+      status: "SUPERSEDED"; status_origin: "PATRON_DECLARATION"; actor_id: string; recorded_at: string;
+      supersession_id: string; rationale: string;
+      replacing: ContractExecutionEvidenceTimelineInstrumentVersion;
+      replaced: ContractExecutionEvidenceTimelineInstrumentVersion;
+    }
+  | {
+      event_type: "EVIDENCE_REQUALIFICATION"; event_id: string; case_id: string; revision: number;
+      status: "RETAINED_AS_DECLARED" | "RELINKED_TO_DECLARED_VERSION" | "NEEDS_CLARIFICATION";
+      status_origin: "PATRON_DECISION"; actor_id: string; recorded_at: string;
+      requalification_id: string; act_id: string; supersession_id: string;
+      act_kind: ContractExecutionActKind; act_summary: string; act_source_refs: string[]; act_evidence_refs: string[];
+      resulting_contract_instrument_version_id: string | null;
+      resulting_instrument_kind: ContractInstrumentKind | null; resulting_version_reference: string | null;
+      rationale: string;
+    };
+export type RecordContractExecutionEvidenceInput = {
+  command_id: string; idempotency_key: string; act_id: string; act_kind: ContractExecutionActKind;
+  reception_outcome: ContractReceptionOutcome | null;
+  summary: string; source_refs: string[]; evidence_refs: string[]; declared_event_date: string | null;
+  contract_instrument_version_id: string | null;
+};
+export type RecordContractExecutionEvidenceRequalificationInput = {
+  command_id: string; idempotency_key: string; requalification_id: string; act_id: string;
+  supersession_id: string; expected_revision: number;
+  decision: "RETAINED_AS_DECLARED" | "RELINKED_TO_DECLARED_VERSION" | "NEEDS_CLARIFICATION";
+  resulting_contract_instrument_version_id: string | null; rationale: string;
+};
+export type RecordContractInstrumentVersionInput = {
+  command_id: string; idempotency_key: string; contract_instrument_version_id: string;
+  instrument_kind: ContractInstrumentKind; version_reference: string;
+  source_refs: string[]; evidence_refs: string[];
+};
+export type DeclareContractInstrumentSupersessionInput = {
+  command_id: string; idempotency_key: string; supersession_id: string;
+  replacing_contract_instrument_version_id: string; replaced_contract_instrument_version_id: string;
+  rationale: string;
+};
 
 export type RegisterStructuredRiskInput = {
   risk_id: string;

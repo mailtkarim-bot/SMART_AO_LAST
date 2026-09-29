@@ -10,6 +10,7 @@ export const NAV_KEYS = [
   "library",
   "decision",
   "submission",
+  "results",
 ] as const;
 
 export type NavKey = (typeof NAV_KEYS)[number];

@@ -1,11 +1,20 @@
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { PricingPanel } from "../features/pricing/PricingPanel";
 import { PaymentCyclePanel } from "../features/decision/PaymentCyclePanel";
+import { PostReceptionObligationsPanel } from "../features/decision/PostReceptionObligationsPanel";
+import { CaseOutcomePanel } from "../features/results/CaseOutcomePanel";
+import { useCaseExecutionResults } from "../features/results/useCaseExecutionResults";
+import { ContractExecutionEvidencePanel } from "../features/decision/ContractExecutionEvidencePanel";
+import { ContractExecutionEvidenceRequalificationPanel } from "../features/decision/ContractExecutionEvidenceRequalificationPanel";
+import { ContractInstrumentVersionsPanel } from "../features/decision/ContractInstrumentVersionsPanel";
 import { usePaymentCycles } from "../features/pricing/usePaymentCycles";
 import { usePaymentCycleReviews } from "../features/pricing/usePaymentCycleReviews";
 import { usePaymentUnknownAudit } from "../features/pricing/usePaymentUnknownAudit";
 import { usePaymentUnknownAuditOwnerAct } from "../features/pricing/usePaymentUnknownAuditOwnerAct";
 import { usePaymentCollectionRejectionReview } from "../features/pricing/usePaymentCollectionRejectionReview";
+import { usePostReceptionObligations } from "../features/pricing/usePostReceptionObligations";
+import { useContractExecutionEvidence } from "../features/pricing/useContractExecutionEvidence";
+import { useContractInstrumentVersions } from "../features/pricing/useContractInstrumentVersions";
 import { usePricingImport } from "../features/pricing/usePricingImport";
 import { SubmissionPanel } from "../features/submission/SubmissionPanel";
 import { useSubmissionActions } from "../features/submission/useSubmissionActions";
@@ -147,10 +156,12 @@ function App() {
     refreshActor,
     logout,
   } = useAuthentication(baseUrl);
-  const isPatron =
+  const businessReady = isAuthenticated && contextConfirmed;
+  const isPatron = businessReady && (
     currentActor?.actor_kind === "PATRON_ADMIN" ||
-    currentActor?.actor_kind === "PATRON_DELEGATE";
-  const isCollaborator = currentActor?.actor_kind === "COLLABORATEUR";
+    currentActor?.actor_kind === "PATRON_DELEGATE"
+  );
+  const isCollaborator = businessReady && currentActor?.actor_kind === "COLLABORATEUR";
   const roleLabel = currentActor?.actor_kind === "PATRON_ADMIN"
     ? "Propriétaire et Patron administrateur"
     : currentActor?.actor_kind === "PATRON_DELEGATE"
@@ -160,7 +171,6 @@ function App() {
         : currentActor?.operational_profile === "EXPERT"
           ? "Expert"
           : "Collaborateur";
-  const businessReady = isAuthenticated && contextConfirmed;
   const {
     backendReadiness,
     backendReadinessState,
@@ -286,6 +296,13 @@ function App() {
   const paymentUnknownAudit = usePaymentUnknownAudit(api, isPatron ? selectedCaseId : "");
   const paymentUnknownAuditOwnerAct = usePaymentUnknownAuditOwnerAct(api, isPatron ? selectedCaseId : "");
   const paymentCollectionRejectionReview = usePaymentCollectionRejectionReview(api, isPatron ? selectedCaseId : "");
+  const postReceptionObligations = usePostReceptionObligations(api, isPatron ? selectedCaseId : "");
+  const contractExecutionEvidence = useContractExecutionEvidence(api, isPatron ? selectedCaseId : "");
+  const contractInstrumentVersions = useContractInstrumentVersions(api, isPatron ? selectedCaseId : "");
+  const caseExecutionResults = useCaseExecutionResults(
+    api,
+    businessReady && currentActor?.actor_kind === "PATRON_ADMIN" ? selectedCaseId : "",
+  );
   const {
     assignments,
     selectedAssignmentId,
@@ -795,6 +812,7 @@ function App() {
           {isPatron && <button className={`nav-item ${activeNav === "library" ? "active" : ""}`} onClick={() => navigateTo("library-section", "library")}><span className="nav-icon">▤</span>Bibliothèque</button>}
           {isPatron && <button className={`nav-item ${activeNav === "decision" ? "active" : ""}`} onClick={() => navigateTo("decision-section", "decision")}><span className="nav-icon">◇</span>Décision</button>}
           {isPatron && <button className={`nav-item ${activeNav === "submission" ? "active" : ""}`} onClick={() => navigateTo("submission-section", "submission")}><span className="nav-icon">↗</span>Dépôt</button>}
+          {currentActor?.actor_kind === "PATRON_ADMIN" && <button className={`nav-item ${activeNav === "results" ? "active" : ""}`} onClick={() => navigateTo("results-section", "results")}><span className="nav-icon">✓</span>Résultat et passation</button>}
         </nav>
         <div className="sidebar-bottom">
           <button className="nav-item" onClick={openConnection}><span className="nav-icon" aria-hidden="true">⚙</span>{isAuthenticated ? "Session" : "Connexion"}</button>
@@ -1015,6 +1033,10 @@ function App() {
         {isPatron && (
           <PatronDecisionPanel
             decisionDossier={decisionDossier}
+            postReceptionObligations={postReceptionObligations.items}
+            contractExecutionEvidence={contractExecutionEvidence.items}
+            contractExecutionEvidenceTimeline={contractExecutionEvidence.timeline}
+            contractExecutionEvidenceStatus={contractExecutionEvidence.status}
             formatDate={formatDate}
             canManage={currentActor?.actor_kind === "PATRON_ADMIN"}
             onCreateDecision={() => void createDecision()}
@@ -1080,6 +1102,10 @@ function App() {
         )}
 
         {isPatron && !paymentCycles.loading && <PaymentCyclePanel cycles={paymentCycles.cycles} reviews={paymentCycleReviews.reviews} unknownAudit={paymentUnknownAudit.audit} ownerAct={paymentUnknownAuditOwnerAct.act} rejectionReview={paymentCollectionRejectionReview.review} onRejectionReview={async (input) => { await api.recordPaymentCollectionRejectionReview(selectedCaseId, input); paymentCollectionRejectionReview.refresh(); }} onOwnerAct={async (input) => { await api.recordPaymentUnknownAuditOwnerAct(selectedCaseId, input); paymentUnknownAuditOwnerAct.refresh(); }} onCreate={async (input) => { await api.recordPaymentCycle(selectedCaseId, input); await paymentCycles.refresh(); paymentUnknownAudit.refresh(); }} onReview={async (cycleId, input) => { await api.recordPaymentCycleReview(cycleId, input); paymentCycleReviews.refresh(); paymentUnknownAudit.refresh(); }} onQualify={async (cycleId, input) => { await api.qualifyPaymentCycle(selectedCaseId, cycleId, input); await paymentCycles.refresh(); }} />}
+        {isPatron && <PostReceptionObligationsPanel caseId={selectedCaseId} obligations={postReceptionObligations.items} receptionActs={contractExecutionEvidence.items} onCreate={async (input) => { await api.recordPostReceptionObligation(selectedCaseId, input); postReceptionObligations.refresh(); }} onTransition={async (obligationId, input) => { try { await api.transitionPostReceptionObligation(selectedCaseId, obligationId, input); } finally { postReceptionObligations.refresh(); } }} />}
+        {isPatron && <ContractInstrumentVersionsPanel caseId={selectedCaseId} versions={contractInstrumentVersions.items} supersessions={contractInstrumentVersions.supersessions} status={contractInstrumentVersions.status} canManage={currentActor?.actor_kind === "PATRON_ADMIN"} onCreate={async (caseId, input) => { await api.recordContractInstrumentVersion(caseId, input); if (caseId === selectedCaseId) contractInstrumentVersions.refresh(); }} onDeclareSupersession={async (caseId, input) => { await api.declareContractInstrumentSupersession(caseId, input); if (caseId === selectedCaseId) { contractInstrumentVersions.refresh(); contractExecutionEvidence.refresh(); } }} />}
+        {isPatron && <ContractExecutionEvidencePanel caseId={selectedCaseId} canManage={currentActor?.actor_kind === "PATRON_ADMIN"} instrumentVersions={contractInstrumentVersions.items} onCreate={async (caseId, input) => { await api.recordContractExecutionEvidence(caseId, input); if (caseId === selectedCaseId) contractExecutionEvidence.refresh(); }} />}
+        {isPatron && <ContractExecutionEvidenceRequalificationPanel caseId={selectedCaseId} acts={contractExecutionEvidence.items} versions={contractInstrumentVersions.items} supersessions={contractInstrumentVersions.supersessions} requalifications={contractExecutionEvidence.requalifications} status={contractExecutionEvidence.status} canManage={currentActor?.actor_kind === "PATRON_ADMIN"} onRecord={async (caseId, input) => { await api.recordContractExecutionEvidenceRequalification(caseId, input); if (caseId === selectedCaseId) contractExecutionEvidence.refresh(); }} />}
 
         {isPatron && (
           <DecisionRiskRequirementsPanel
@@ -1161,6 +1187,20 @@ function App() {
             categoryLabel={categoryLabel}
           />
         )}
+
+        {currentActor?.actor_kind === "PATRON_ADMIN" && <div id="results-section">
+          <CaseOutcomePanel
+            caseId={selectedCaseId}
+            canManage={currentActor.actor_kind === "PATRON_ADMIN"}
+            status={caseExecutionResults.status}
+            data={caseExecutionResults.data}
+            onRefresh={caseExecutionResults.refresh}
+            onRecordOutcome={async (input) => { await api.recordCaseOutcome(input); }}
+            onRecordOrder={async (input) => { await api.recordCaseOrder(input); }}
+            onRecordP6={async (orderId, input) => { await api.recordCaseP6Control(orderId, input); }}
+            onRecordP7={async (p6Id, input) => { await api.recordCaseP7Result(p6Id, input); }}
+          />
+        </div>}
 
         <footer className="footer"><span>SMART_AO V8</span><span>Architecture sécurisée · Tenant-scoped · Auditée</span><span>API {baseUrl}</span></footer>
       </main>

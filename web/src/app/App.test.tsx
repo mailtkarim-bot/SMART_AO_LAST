@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import App from "./App";
-import type { AssignedCase } from "../shared/types";
+import type { AssignedCase, CaseExecutionResults } from "../shared/types";
 
 const { authMfaRef, authProfileRef, authRoleRef, authSessionExpiredRef, authSessionRef, overridesRef } = vi.hoisted(() => ({
   authMfaRef: { current: true },
@@ -168,6 +168,110 @@ describe("App readiness integration", () => {
     fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.queryByRole("dialog", { name: "Connexion au backend" })).toBeNull();
     await waitFor(() => expect(document.activeElement).toBe(sessionButton));
+  });
+
+  it("expose C12 résultat/passation dans la navigation Patron", async () => {
+    await renderApp();
+    expect(screen.getByRole("button", { name: /Résultat et passation/ })).toBeVisible();
+  });
+
+  it("attend MFA et confirmation du contexte avant de lire les résultats C12", async () => {
+    window.location.hash = "case=case-1&section=results";
+    authMfaRef.current = false;
+    const listCaseExecutionResults = vi.fn(async () => ({
+      case_id: "case-1",
+      lot_references: ["01"],
+      results: [],
+    } satisfies CaseExecutionResults));
+    overridesRef.current = { ...baseOverrides(), listCaseExecutionResults };
+
+    let view: ReturnType<typeof render> | undefined;
+    await act(async () => {
+      view = render(<App />);
+      await new Promise((resolve) => setTimeout(resolve, 80));
+    });
+    expect(screen.getByRole("heading", { name: "Validez votre second facteur" })).toBeVisible();
+    expect(listCaseExecutionResults).not.toHaveBeenCalled();
+
+    authMfaRef.current = true;
+    await act(async () => {
+      view!.rerender(<App />);
+      await new Promise((resolve) => setTimeout(resolve, 80));
+    });
+    expect(screen.getByRole("heading", { name: "Confirmez votre contexte" })).toBeVisible();
+    expect(listCaseExecutionResults).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Confirmer et continuer" }));
+    await waitFor(() => expect(listCaseExecutionResults).toHaveBeenCalledWith("case-1"));
+    window.location.hash = "";
+  });
+
+  it("exécute le parcours C12 résultat par lot → commande → P6 → P7 depuis l’application", async () => {
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", { configurable: true, value: vi.fn() });
+    const now = "2026-09-29T12:00:00Z";
+    let data: CaseExecutionResults = { case_id: "case-1", lot_references: ["01"], results: [] };
+    const receipt = { status: "SUCCEEDED", result_code: "RECORDED", aggregate_refs: [], event_ids: [], replayed: false };
+    overridesRef.current = {
+      ...baseOverrides(),
+      listCaseExecutionResults: vi.fn(async () => data),
+      recordCaseOutcome: vi.fn(async (input: Record<string, unknown>) => {
+        data = { ...data, results: [{
+          outcome_id: String(input.outcome_id), lot_reference: String(input.lot_reference), outcome: "WON",
+          source_locator: String(input.source_locator), reservations: [], unknown_reason: null,
+          actor_id: "patron-1", recorded_at: now, transmission: null, order: null, p6: null, p7: null,
+        }] };
+        return receipt;
+      }),
+      recordCaseOrder: vi.fn(async (input: Record<string, unknown>) => {
+        data = { ...data, results: data.results.map((item) => ({
+          ...item,
+          order: { order_id: String(input.order_id), outcome_id: String(input.outcome_id), decision: "ACCEPTED",
+            source_locator: item.source_locator ?? "", reservations: [], rationale: String(input.rationale), actor_id: "patron-1", recorded_at: now },
+        })) };
+        return receipt;
+      }),
+      recordCaseP6Control: vi.fn(async (_orderId: string, input: Record<string, unknown>) => {
+        data = { ...data, results: data.results.map((item) => ({
+          ...item,
+          p6: { p6_control_id: String(input.p6_control_id), order_id: String(input.order_id), decision: "APPROVED",
+            reservations: [], rationale: String(input.rationale), actor_id: "patron-1", recorded_at: now },
+        })) };
+        return receipt;
+      }),
+      recordCaseP7Result: vi.fn(async (_p6Id: string, input: Record<string, unknown>) => {
+        data = { ...data, results: data.results.map((item) => ({
+          ...item,
+          p7: { p7_result_id: String(input.p7_result_id), p6_control_id: String(input.p6_control_id), result: "UNKNOWN",
+            source_locator: null, reason: String(input.reason), reservations: [], actor_id: "patron-1", recorded_at: now },
+        })) };
+        return receipt;
+      }),
+    };
+
+    await renderApp();
+    fireEvent.click(screen.getByRole("button", { name: /Résultat et passation/ }));
+    await screen.findByRole("heading", { name: "Résultat par lot · P6 · P7" });
+    fireEvent.change(screen.getByLabelText("Lot concerné"), { target: { value: "01" } });
+    fireEvent.change(screen.getByLabelText("Résultat déclaré du lot"), { target: { value: "WON" } });
+    fireEvent.change(screen.getByLabelText("Référence de preuve du résultat"), { target: { value: "notification://lot-01" } });
+    fireEvent.click(screen.getByRole("button", { name: "Enregistrer le résultat par lot" }));
+    await screen.findByText(/Attribution déclarée \(WON\)/);
+
+    fireEvent.change(screen.getByLabelText("Décision Patron sur la commande"), { target: { value: "ACCEPTED" } });
+    fireEvent.change(screen.getByLabelText("Motif de la commande"), { target: { value: "Commande rapprochée" } });
+    fireEvent.click(screen.getByRole("button", { name: "Enregistrer la décision sur la commande" }));
+    await screen.findByRole("heading", { name: "Décision sur la commande · ACCEPTED" });
+
+    fireEvent.change(screen.getByLabelText("Décision Patron P6"), { target: { value: "APPROVED" } });
+    fireEvent.change(screen.getByLabelText("Motif P6"), { target: { value: "Clarifications vérifiées" } });
+    fireEvent.click(screen.getByRole("button", { name: "Enregistrer la décision P6" }));
+    await screen.findByRole("heading", { name: "Contrôle P6 · APPROVED" });
+
+    fireEvent.change(screen.getByLabelText("Résultat P7"), { target: { value: "UNKNOWN" } });
+    fireEvent.change(screen.getByLabelText("Motif du résultat P7"), { target: { value: "Retour d’exécution en attente" } });
+    fireEvent.click(screen.getByRole("button", { name: "Enregistrer le résultat P7" }));
+    await screen.findByRole("heading", { name: "Résultat P7 · UNKNOWN" });
+    expect(screen.getByText(/P7 ne vaut pas ordre de service/)).toBeInTheDocument();
   });
 
   it("limite une session mot de passe à l’étape MFA", async () => {
@@ -353,6 +457,7 @@ describe("App error visibility", () => {
     expect(screen.queryByText("Actions à traiter")).toBeNull();
     expect(screen.queryByText("Opportunités BOAMP")).toBeNull();
     expect(screen.queryByText("Dépôt")).toBeNull();
+    expect(screen.queryByRole("button", { name: /Résultat et passation/ })).toBeNull();
     expect(screen.queryByText("Ventes")).toBeNull();
   });
 

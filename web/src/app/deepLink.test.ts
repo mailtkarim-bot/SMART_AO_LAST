@@ -10,6 +10,10 @@ describe("deepLink", () => {
     });
   });
 
+  it("supports the Patron result and handover space", () => {
+    expect(readDeepLink("#case=case-1&section=results")).toEqual({ caseId: "case-1", section: "results" });
+  });
+
   it("falls back to overview for unknown or malformed sections", () => {
     expect(readDeepLink("#case=case-1&section=admin-token")).toEqual({
       caseId: "case-1",

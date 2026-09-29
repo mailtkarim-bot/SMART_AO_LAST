@@ -60,6 +60,12 @@ import type {
   BoampQualificationInput,
   BoampQualificationReceipt,
   CaseDceReading,
+  CaseExecutionCommandReceipt,
+  CaseExecutionResults,
+  RecordCaseOutcomeInput,
+  RecordCaseOrderInput,
+  RecordCaseP6ControlInput,
+  RecordCaseP7ResultInput,
   KnowledgeSearchResponse,
   CreateDecisionRequest,
   CreateDecisionResponse,
@@ -84,6 +90,16 @@ import type {
   PaymentUnknownAudit,
   PaymentUnknownAuditOwnerAct,
   PaymentCollectionRejectionReview,
+  PostReceptionObligation,
+  ContractExecutionEvidence,
+  ContractExecutionEvidenceRequalification,
+  ContractExecutionEvidenceTimelineEvent,
+  ContractInstrumentVersion,
+  ContractInstrumentSupersession,
+  DeclareContractInstrumentSupersessionInput,
+  RecordContractExecutionEvidenceInput,
+  RecordContractExecutionEvidenceRequalificationInput,
+  RecordContractInstrumentVersionInput,
   RegisterStructuredRiskInput,
   StructuredRiskRegistrationResponse,
   DecisionCctpPricingCrossingResponse,
@@ -350,6 +366,16 @@ export function createApiClient(
     logout,
     getBackendReadiness: () => request<BackendReadiness>("/healthz/ready"),
     listAssignedCases: () => request<AssignedCase[]>("/api/v1/cases/assigned"),
+    listCaseExecutionResults: (caseId: string) =>
+      request<CaseExecutionResults>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/execution-results`),
+    recordCaseOutcome: (input: RecordCaseOutcomeInput) =>
+      request<CaseExecutionCommandReceipt>("/api/v1/patron/case-outcomes", { method: "POST", body: JSON.stringify(input) }),
+    recordCaseOrder: (input: RecordCaseOrderInput) =>
+      request<CaseExecutionCommandReceipt>("/api/v1/patron/case-orders", { method: "POST", body: JSON.stringify(input) }),
+    recordCaseP6Control: (orderId: string, input: RecordCaseP6ControlInput) =>
+      request<CaseExecutionCommandReceipt>(`/api/v1/patron/case-orders/${encodeURIComponent(orderId)}/p6`, { method: "POST", body: JSON.stringify(input) }),
+    recordCaseP7Result: (p6ControlId: string, input: RecordCaseP7ResultInput) =>
+      request<CaseExecutionCommandReceipt>(`/api/v1/patron/case-p6/${encodeURIComponent(p6ControlId)}/p7`, { method: "POST", body: JSON.stringify(input) }),
     createCase: (input: CreateCaseInput) =>
       request<CreateCaseResponse>("/api/v1/cases", {
         method: "POST",
@@ -538,6 +564,18 @@ export function createApiClient(
     recordPaymentUnknownAuditOwnerAct: (caseId: string, input: Record<string, unknown>) => request(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/payment-post-reception-unknown-audit-owner-acts`, { method: "POST", body: JSON.stringify(input) }),
     getPaymentCollectionRejectionReview: (caseId: string) => request<PaymentCollectionRejectionReview | null>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/payment-collection-rejection-review`),
     recordPaymentCollectionRejectionReview: (caseId: string, input: Record<string, unknown>) => request(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/payment-collection-rejection-reviews`, { method: "POST", body: JSON.stringify(input) }),
+    listPostReceptionObligations: (caseId: string) => request<PostReceptionObligation[]>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/post-reception-obligations`),
+    recordPostReceptionObligation: (caseId: string, input: Record<string, unknown>) => request(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/post-reception-obligations`, { method: "POST", body: JSON.stringify(input) }),
+    transitionPostReceptionObligation: (caseId: string, obligationId: string, input: Record<string, unknown>) => request(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/post-reception-obligations/${encodeURIComponent(obligationId)}/transitions`, { method: "POST", body: JSON.stringify(input) }),
+    listContractExecutionEvidence: (caseId: string) => request<ContractExecutionEvidence[]>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-execution-evidence`),
+    recordContractExecutionEvidence: (caseId: string, input: RecordContractExecutionEvidenceInput) => request(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-execution-evidence`, { method: "POST", body: JSON.stringify(input) }),
+    listContractExecutionEvidenceRequalifications: (caseId: string) => request<ContractExecutionEvidenceRequalification[]>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-execution-evidence-requalifications`),
+    recordContractExecutionEvidenceRequalification: (caseId: string, input: RecordContractExecutionEvidenceRequalificationInput) => request(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-execution-evidence-requalifications`, { method: "POST", body: JSON.stringify(input) }),
+    listContractExecutionEvidenceTimeline: (caseId: string) => request<ContractExecutionEvidenceTimelineEvent[]>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-execution-evidence-timeline`),
+    listContractInstrumentVersions: (caseId: string) => request<ContractInstrumentVersion[]>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-instrument-versions`),
+    recordContractInstrumentVersion: (caseId: string, input: RecordContractInstrumentVersionInput) => request(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-instrument-versions`, { method: "POST", body: JSON.stringify(input) }),
+    listContractInstrumentSupersessions: (caseId: string) => request<ContractInstrumentSupersession[]>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-instrument-supersessions`),
+    declareContractInstrumentSupersession: (caseId: string, input: DeclareContractInstrumentSupersessionInput) => request(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-instrument-supersessions`, { method: "POST", body: JSON.stringify(input) }),
     registerStructuredRisk: (caseId: string, input: RegisterStructuredRiskInput) =>
       request<StructuredRiskRegistrationResponse>(
         `/api/v1/patron/cases/${encodeURIComponent(caseId)}/risks`,

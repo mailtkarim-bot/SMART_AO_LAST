@@ -24,6 +24,46 @@ describe("api client response parsing", () => {
   });
 });
 
+describe("C12 result and handover transport", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("uses the Patron read and append-only result/order/P6/P7 contracts with stable identifiers", async () => {
+    const receipt = {
+      status: "SUCCEEDED", result_code: "RECORDED", aggregate_refs: [], event_ids: [], replayed: false,
+    };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ case_id: "case-1", lot_references: ["01"], results: [] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(receipt), { status: 201 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(receipt), { status: 201 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(receipt), { status: 201 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(receipt), { status: 201 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const client = createApiClient("https://app.example.test", "access-1");
+    const outcome = { command_id: "c1", idempotency_key: "i1", correlation_id: "r1", outcome_id: "o1", case_id: "case-1", lot_reference: "01", outcome: "WON" as const, source_locator: "notice://01", reservations: [], unknown_reason: null };
+    const order = { command_id: "c2", idempotency_key: "i2", correlation_id: "r2", order_id: "or1", outcome_id: "o1", case_id: "case-1", decision: "ACCEPTED" as const, rationale: "Commande contrôlée" };
+    const p6 = { command_id: "c3", idempotency_key: "i3", correlation_id: "r3", p6_control_id: "p6-1", order_id: "or1", case_id: "case-1", decision: "APPROVED" as const, reservations: [], rationale: "Clarifications revues" };
+    const p7 = { command_id: "c4", idempotency_key: "i4", correlation_id: "r4", p7_result_id: "p7-1", p6_control_id: "p6-1", case_id: "case-1", result: "UNKNOWN" as const, source_locator: null, reason: "Retour en attente", reservations: [] };
+
+    await client.listCaseExecutionResults("case-1");
+    await client.recordCaseOutcome(outcome);
+    await client.recordCaseOrder(order);
+    await client.recordCaseP6Control("or/1", p6);
+    await client.recordCaseP7Result("p6/1", p7);
+
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      "https://app.example.test/api/v1/patron/cases/case-1/execution-results",
+      "https://app.example.test/api/v1/patron/case-outcomes",
+      "https://app.example.test/api/v1/patron/case-orders",
+      "https://app.example.test/api/v1/patron/case-orders/or%2F1/p6",
+      "https://app.example.test/api/v1/patron/case-p6/p6%2F1/p7",
+    ]);
+    for (const [index, expected] of [[1, outcome], [2, order], [3, p6], [4, p7]] as const) {
+      const request = fetchMock.mock.calls[index]?.[1] as RequestInit;
+      expect(JSON.parse(String(request.body))).toEqual(expected);
+    }
+  });
+});
+
 
 describe("BOAMP transport", () => {
   afterEach(() => {
