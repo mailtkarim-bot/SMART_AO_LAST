@@ -1,3 +1,4 @@
+from app.modules.patron_action.infrastructure.models.case_interview import CaseInterviewRecord
 from app.modules.patron_action.infrastructure.models.order import CaseOrderRecord
 from app.modules.patron_action.infrastructure.models.outcome import CaseOutcomeRecord
 from app.modules.patron_action.infrastructure.models.p6 import CaseP6ControlRecord
@@ -23,6 +24,7 @@ __all__ = [
     "CaseOrderRecord",
     "CaseP6ControlRecord",
     "CaseP7ResultRecord",
+    "CaseInterviewRecord",
     "CaseRexRecord",
     "CaseDispositionRecord",
     "CaseExportRequestRecord",

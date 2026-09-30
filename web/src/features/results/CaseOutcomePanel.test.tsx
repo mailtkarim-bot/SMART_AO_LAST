@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
-import type { CaseExecutionResults, RecordCaseOutcomeInput, RecordCaseOrderInput, RecordCaseP6ControlInput, RecordCaseP7ResultInput, RecordCaseRexInput } from "../../shared/types";
+import type { CaseExecutionResults, RecordCaseOutcomeInput, RecordCaseOrderInput, RecordCaseP6ControlInput, RecordCaseP7ResultInput, RecordCaseRexInput, RecordCaseInterviewInput } from "../../shared/types";
 import { CaseOutcomePanel } from "./CaseOutcomePanel";
 
 const empty: CaseExecutionResults = { case_id: "case-1", lot_references: ["01"], results: [] };
@@ -211,4 +211,31 @@ test("n’affiche la section REX que lorsqu’un P7 existe pour le lot", () => {
   render(<CaseOutcomePanel caseId="case-1" canManage status="READY" data={{ ...empty, results: [withoutP7] }} rex={[]} onRefresh={vi.fn()} onRecordRex={vi.fn()} />);
   expect(screen.queryByLabelText("Motif de l’enseignement")).not.toBeInTheDocument();
   expect(screen.queryByText(/Enseignement REX/)).not.toBeInTheDocument();
+});
+
+const interviewFixtures = [
+  { interview_id: "ivw-1", case_id: "case-1", held_on: "2026-09-30", source_locator: "entretien://comite/2026-09-30", rationale: "Revue des enseignements du lot 01", expires_on: "2027-03-30", snapshot: { captured_at: "2026-09-30T10:00:00Z", rex: [{ rex_id: "rex-1", lot_reference: "01", motif: "UNKNOWN", scope: "CASE_ONLY", validation: "PENDING" }] }, status: "USABLE" as const, created_at: "2026-09-30T10:05:00Z" },
+  { interview_id: "ivw-2", case_id: "case-1", held_on: "2026-03-01", source_locator: "entretien://comite/2026-03", rationale: "Ancien entretien", expires_on: "2026-06-01", snapshot: { captured_at: "2026-03-01T10:00:00Z", rex: [] }, status: "EXPIRED" as const, created_at: "2026-03-01T10:05:00Z" },
+];
+
+test("affiche les entretiens avec statut d’expiration et snapshot à date", () => {
+  render(<CaseOutcomePanel caseId="case-1" canManage status="READY" data={empty} interviews={interviewFixtures} onRefresh={vi.fn()} />);
+  expect(screen.getByText(/Entretien du 2026-09-30 · réemploi sous conditions jusqu’au 2027-03-30/)).toBeInTheDocument();
+  expect(screen.getByText(/EXPIRED · réemploi à réinterroger/)).toBeInTheDocument();
+  expect(screen.getByText(/Snapshot à date : 1 enseignement\(s\) capturé\(s\)/)).toBeInTheDocument();
+});
+
+test("enregistre un entretien sourcé avec expiration explicite", async () => {
+  const interviews: RecordCaseInterviewInput[] = [];
+  const onRecordInterview = vi.fn(async (input: RecordCaseInterviewInput) => { interviews.push(input); });
+  render(<CaseOutcomePanel caseId="case-1" canManage status="READY" data={empty} interviews={[]} onRefresh={vi.fn()} onRecordInterview={onRecordInterview} />);
+  fireEvent.change(screen.getByLabelText("Date de l’entretien"), { target: { value: "2026-09-30" } });
+  fireEvent.change(screen.getByLabelText("Source de l’entretien"), { target: { value: "entretien://comite/2026-09-30" } });
+  fireEvent.change(screen.getByLabelText("Motif de l’entretien"), { target: { value: "Revue des enseignements" } });
+  fireEvent.change(screen.getByLabelText("Expiration du réemploi"), { target: { value: "2027-03-30" } });
+  fireEvent.click(screen.getByRole("button", { name: "Enregistrer l’entretien" }));
+  await waitFor(() => expect(interviews).toHaveLength(1));
+  expect(interviews[0]).toMatchObject({ case_id: "case-1", held_on: "2026-09-30", source_locator: "entretien://comite/2026-09-30", rationale: "Revue des enseignements", expires_on: "2027-03-30" });
+  expect(interviews[0].interview_id).toBeDefined();
+  expect(interviews[0].command_id).toBeDefined();
 });

@@ -8,6 +8,8 @@ from fastapi.responses import JSONResponse
 from app.interfaces.http.aggregate_refs import require_aggregate_revision
 from app.interfaces.http.dependencies.auth import resolve_bearer_context as _resolve_context
 from app.interfaces.http.routes.consultations import ConsultationSecurityRuntime
+from app.modules.patron_action.application.case_interview_commands import RecordCaseInterviewCommand
+from app.modules.patron_action.application.case_interview_handler import CaseInterviewService
 from app.modules.patron_action.application.commands import CreatePatronActionCommand
 from app.modules.patron_action.application.order import CaseOrderService
 from app.modules.patron_action.application.order_commands import (
@@ -32,12 +34,15 @@ from app.modules.patron_action.public.contracts import (
     CaseExecutionP7Response,
     CaseExecutionResultsResponse,
     CaseExecutionTransmissionResponse,
+    CaseInterviewResponse,
     CreatePatronActionRequest,
     PatronActionCommandResponse,
     PatronActionProjectionResponse,
     PatronActionQueueResponse,
     PatronActionTransitionResponse,
     RecordCaseDispositionRequest,
+    RecordCaseInterviewRequest,
+    RecordCaseInterviewResponse,
     RecordCaseOrderRequest,
     RecordCaseOutcomeRequest,
     RecordCaseP6ControlRequest,
@@ -62,6 +67,7 @@ def build_patron_action_router(
     outcome_service: CaseOutcomeService | None = None,
     security_runtime: ConsultationSecurityRuntime,
     order_service: CaseOrderService | None = None,
+    interview_service: CaseInterviewService | None = None,
 ) -> APIRouter:
     router = APIRouter(prefix="/api/v1/patron", tags=["patron-actions"])
 
@@ -462,6 +468,88 @@ def build_patron_action_router(
                     "source_locator": row.source_locator,
                     "created_at": row.created_at.isoformat(),
                 }
+                for row in rows
+            ],
+        }
+
+    @router.post(
+        "/cases/{case_id}/interviews",
+        status_code=status.HTTP_201_CREATED,
+        response_model=RecordCaseInterviewResponse,
+    )
+    def record_case_interview(
+        case_id: UUID,
+        request: RecordCaseInterviewRequest,
+        authorization: str | None = Header(default=None),
+    ):
+        if request.case_id != case_id:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="PATH_BODY_MISMATCH",
+            )
+        if interview_service is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="UNAVAILABLE"
+            )
+        actor = _resolve_context(
+            authorization=authorization, context_resolver=security_runtime.context_resolver
+        )
+        try:
+            result = interview_service.record_interview(
+                actor=actor,
+                command=RecordCaseInterviewCommand(**request.model_dump()),
+                now=datetime.now(tz=UTC),
+            )
+        except PermissionError as error:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="FORBIDDEN"
+            ) from error
+        except CommandExecutionError as error:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(error)
+            ) from error
+        return JSONResponse(
+            status_code=status.HTTP_200_OK if result.replayed else status.HTTP_201_CREATED,
+            content=RecordCaseInterviewResponse(
+                status="SUCCEEDED",
+                result_code=result.result_code,
+                aggregate_refs=list(result.aggregate_refs),
+                event_ids=list(result.event_ids),
+                replayed=result.replayed,
+            ).model_dump(mode="json"),
+        )
+
+    @router.get("/cases/{case_id}/interviews")
+    def list_case_interviews(case_id: UUID, authorization: str | None = Header(default=None)):
+        if interview_service is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="UNAVAILABLE"
+            )
+        actor = _resolve_context(
+            authorization=authorization, context_resolver=security_runtime.context_resolver
+        )
+        try:
+            rows = interview_service.list_interviews(
+                actor=actor, case_id=case_id, now=datetime.now(tz=UTC)
+            )
+        except PermissionError as error:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="FORBIDDEN"
+            ) from error
+        return {
+            "case_id": str(case_id),
+            "interviews": [
+                CaseInterviewResponse(
+                    interview_id=row.record.id,
+                    case_id=row.record.case_id,
+                    held_on=row.record.held_on,
+                    source_locator=row.record.source_locator,
+                    rationale=row.record.rationale,
+                    expires_on=row.record.expires_on,
+                    snapshot=row.record.snapshot_json,
+                    status=row.status,
+                    created_at=row.record.created_at,
+                ).model_dump(mode="json")
                 for row in rows
             ],
         }

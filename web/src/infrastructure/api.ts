@@ -63,6 +63,8 @@ import type {
   CaseExecutionCommandReceipt,
   CaseExecutionResults,
   CaseRexList,
+  CaseInterviewList,
+  RecordCaseInterviewInput,
   RecordCaseOutcomeInput,
   RecordCaseRexInput,
   RecordCaseOrderInput,
@@ -372,6 +374,10 @@ export function createApiClient(
       request<CaseExecutionResults>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/execution-results`),
     listCaseRex: (caseId: string) =>
       request<CaseRexList>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/rex`),
+    listCaseInterviews: (caseId: string) =>
+      request<CaseInterviewList>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/interviews`),
+    recordCaseInterview: (input: RecordCaseInterviewInput) =>
+      request<CaseExecutionCommandReceipt>(`/api/v1/patron/cases/${encodeURIComponent(input.case_id)}/interviews`, { method: "POST", body: JSON.stringify(input) }),
     recordCaseRex: (p7ResultId: string, input: RecordCaseRexInput) =>
       request<CaseExecutionCommandReceipt>(`/api/v1/patron/case-p7/${encodeURIComponent(p7ResultId)}/rex`, { method: "POST", body: JSON.stringify(input) }),
     recordCaseOutcome: (input: RecordCaseOutcomeInput) =>

@@ -5,6 +5,7 @@ import { PostReceptionObligationsPanel } from "../features/decision/PostReceptio
 import { CaseOutcomePanel } from "../features/results/CaseOutcomePanel";
 import { useCaseExecutionResults } from "../features/results/useCaseExecutionResults";
 import { useCaseRex } from "../features/results/useCaseRex";
+import { useCaseInterview } from "../features/results/useCaseInterviews";
 import { ContractExecutionEvidencePanel } from "../features/decision/ContractExecutionEvidencePanel";
 import { ContractExecutionEvidenceRequalificationPanel } from "../features/decision/ContractExecutionEvidenceRequalificationPanel";
 import { ContractInstrumentVersionsPanel } from "../features/decision/ContractInstrumentVersionsPanel";
@@ -305,6 +306,10 @@ function App() {
     businessReady && currentActor?.actor_kind === "PATRON_ADMIN" ? selectedCaseId : "",
   );
   const caseRex = useCaseRex(
+    api,
+    businessReady && currentActor?.actor_kind === "PATRON_ADMIN" ? selectedCaseId : "",
+  );
+  const caseInterviews = useCaseInterview(
     api,
     businessReady && currentActor?.actor_kind === "PATRON_ADMIN" ? selectedCaseId : "",
   );
@@ -1200,12 +1205,14 @@ function App() {
             status={caseExecutionResults.status}
             data={caseExecutionResults.data}
             rex={caseRex.rex ?? []}
-            onRefresh={async () => { await caseExecutionResults.refresh(); await caseRex.refresh(); }}
+            interviews={caseInterviews.interviews ?? []}
+            onRefresh={async () => { await caseExecutionResults.refresh(); await caseRex.refresh(); await caseInterviews.refresh(); }}
             onRecordOutcome={async (input) => { await api.recordCaseOutcome(input); }}
             onRecordOrder={async (input) => { await api.recordCaseOrder(input); }}
             onRecordP6={async (orderId, input) => { await api.recordCaseP6Control(orderId, input); }}
             onRecordP7={async (p6Id, input) => { await api.recordCaseP7Result(p6Id, input); }}
             onRecordRex={async (p7ResultId, input) => { await api.recordCaseRex(p7ResultId, input); }}
+            onRecordInterview={async (input) => { await api.recordCaseInterview(input); }}
           />
         </div>}
 

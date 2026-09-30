@@ -176,6 +176,40 @@ class RecordCaseRexRequest(BaseModel):
     source_locator: str | None = Field(default=None, max_length=500)
 
 
+class RecordCaseInterviewRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    command_id: UUID
+    idempotency_key: UUID
+    correlation_id: UUID | None = None
+    interview_id: UUID
+    case_id: UUID
+    held_on: date
+    source_locator: str = Field(min_length=1, max_length=500)
+    rationale: str = Field(min_length=1, max_length=2_000)
+    expires_on: date
+
+
+class RecordCaseInterviewResponse(BaseModel):
+    status: str
+    result_code: str
+    aggregate_refs: list[dict[str, object]]
+    event_ids: list[str]
+    replayed: bool
+
+
+class CaseInterviewResponse(BaseModel):
+    interview_id: UUID
+    case_id: UUID
+    held_on: date
+    source_locator: str
+    rationale: str
+    expires_on: date
+    snapshot: dict[str, object]
+    status: Literal["USABLE", "EXPIRED"]
+    created_at: datetime
+
+
 class RecordCaseDispositionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 

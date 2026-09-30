@@ -415,6 +415,10 @@ from app.modules.opportunity.infrastructure.boamp_qualification_repository impor
 from app.modules.opportunity.infrastructure.case_unknown_reader import (
     SqlAlchemyBoampCaseUnknownReader,
 )
+from app.modules.patron_action.application.case_interview_handler import (
+    CaseInterviewService,
+    case_interview_handlers,
+)
 from app.modules.patron_action.application.order import CaseOrderService, case_order_handlers
 from app.modules.patron_action.application.outcome import CaseOutcomeService, case_outcome_handlers
 from app.modules.patron_action.application.service import (
@@ -644,6 +648,7 @@ class AppRuntime:
             **patron_action_handlers(),
             **case_outcome_handlers(),
             **case_order_handlers(),
+            **case_interview_handlers(),
             **patron_action_transition_handlers(),
             **decision_risk_handlers(
                 repository_factory=lambda _session: SqlAlchemyDecisionRiskRepository(),
@@ -1139,6 +1144,11 @@ def create_app(
             session_factory=runtime.session_factory,
             policy=security_policy,
         )
+        case_interview_service = CaseInterviewService(
+            dispatcher=runtime.dispatcher,
+            session_factory=runtime.session_factory,
+            policy=security_policy,
+        )
         regulatory_profile_service = RegulatoryProfileService(
             dispatcher=runtime.dispatcher,
             policy=security_policy,
@@ -1556,6 +1566,7 @@ def create_app(
                 transition_service=patron_action_transition_service,
                 outcome_service=case_outcome_service,
                 order_service=case_order_service,
+                interview_service=case_interview_service,
                 security_runtime=security_runtime,
             )
         )
