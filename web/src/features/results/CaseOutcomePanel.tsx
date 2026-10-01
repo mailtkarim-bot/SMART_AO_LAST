@@ -2,10 +2,8 @@ import type { FormEvent, ReactNode } from "react";
 import { useEffect, useState } from "react";
 import type {
   CaseExecutionResults,
-  CaseInterview,
   CaseRex,
   RecordCaseOutcomeInput,
-  RecordCaseInterviewInput,
   RecordCaseOrderInput,
   RecordCaseP6ControlInput,
   RecordCaseP7ResultInput,
@@ -34,28 +32,24 @@ export function CaseOutcomePanel({
   status,
   data,
   rex = [],
-  interviews = [],
   onRefresh,
   onRecordOutcome,
   onRecordOrder,
   onRecordP6,
   onRecordP7,
   onRecordRex,
-  onRecordInterview,
 }: {
   caseId: string;
   canManage: boolean;
   status: CaseExecutionResultsStatus;
   data: CaseExecutionResults | null;
   rex?: CaseRex[];
-  interviews?: CaseInterview[];
   onRefresh: () => void | Promise<void>;
   onRecordOutcome?: (input: RecordCaseOutcomeInput) => Promise<void>;
   onRecordOrder?: (input: RecordCaseOrderInput) => Promise<void>;
   onRecordP6?: (orderId: string, input: RecordCaseP6ControlInput) => Promise<void>;
   onRecordP7?: (p6Id: string, input: RecordCaseP7ResultInput) => Promise<void>;
   onRecordRex?: (p7ResultId: string, input: RecordCaseRexInput) => Promise<void>;
-  onRecordInterview?: (input: RecordCaseInterviewInput) => Promise<void>;
 }) {
   const [lotReference, setLotReference] = useState("");
   const [outcome, setOutcome] = useState<RecordCaseOutcomeInput["outcome"]>("UNKNOWN");
@@ -200,7 +194,6 @@ export function CaseOutcomePanel({
           {item.p7 && <RexSection caseId={caseId} p7ResultId={item.p7.p7_result_id} lotReference={item.lot_reference} rex={rex.filter((entry) => entry.p7_result_id === item.p7!.p7_result_id)} canManage={canManage && isCurrent && !!onRecordRex} disabled={stepControlsDisabled(`rex:${item.p7.p7_result_id}`)} buttonDisabled={stepButtonDisabled(`rex:${item.p7.p7_result_id}`)} pending={!!pending[`rex:${item.p7.p7_result_id}`]} failure={failedKey === `rex:${item.p7.p7_result_id}` ? failure : null} submitting={submitting === `rex:${item.p7.p7_result_id}`} onSubmit={onRecordRex ? ((input) => submitIntent(`rex:${item.p7!.p7_result_id}`, () => input, (value) => onRecordRex(item.p7!.p7_result_id, value))) : undefined} />}
         </article>;
       })}</div>}
-      <InterviewSection caseId={caseId} interviews={interviews} canManage={canManage && isCurrent && !!onRecordInterview} disabled={outcomeControlsDisabled} buttonDisabled={outcomeButtonDisabled} pending={!!pending["interview:new"]} failure={failedKey === "interview:new" ? failure : null} submitting={submitting === "interview:new"} onSubmit={onRecordInterview ? ((input) => submitIntent("interview:new", () => input, onRecordInterview)) : undefined} />
     </>}
   </section>;
 }
@@ -296,34 +289,4 @@ function RexForm({ caseId, p7ResultId, disabled, buttonDisabled, pending, failur
     <label>Suivi de l’enseignement<textarea aria-label="Suivi de l’enseignement" required maxLength={2000} value={followUp} disabled={disabled || submitting} onChange={(event) => setFollowUp(event.target.value)} /></label>
     <label>Référence de preuve de l’enseignement<input aria-label="Référence de preuve de l’enseignement" maxLength={500} value={sourceLocator} disabled={disabled || submitting} onChange={(event) => setSourceLocator(event.target.value)} /></label>
   </CommandFields>;
-}
-
-function InterviewSection({ caseId, interviews, canManage, disabled, buttonDisabled, pending, failure, submitting, onSubmit }: {
-  caseId: string; interviews: CaseInterview[]; canManage: boolean; disabled: boolean; buttonDisabled: boolean; pending: boolean; failure: WriteFailure | null; submitting: boolean;
-  onSubmit?: (input: RecordCaseInterviewInput) => Promise<void>;
-}) {
-  const [heldOn, setHeldOn] = useState("");
-  const [sourceLocator, setSourceLocator] = useState("");
-  const [rationale, setRationale] = useState("");
-  const [expiresOn, setExpiresOn] = useState("");
-  return <div aria-label="Entretiens Patron">
-    <h4>Entretiens Patron · réemploi sous conditions</h4>
-    <p>Chaque entretien fige un snapshot des enseignements à date et une expiration ; aucun réemploi automatique, aucune conclusion juridique.</p>
-    {interviews.length === 0 && <p>UNKNOWN · aucun entretien n’est enregistré pour cette Affaire.</p>}
-    {interviews.map((entry) => <div key={entry.interview_id} className="panel-empty">
-      <p>Entretien du {entry.held_on} · {entry.status === "USABLE" ? `réemploi sous conditions jusqu’au ${entry.expires_on}` : "EXPIRED · réemploi à réinterroger"}</p>
-      <p>Motif : {entry.rationale}</p>
-      <p>Source déclarée : {entry.source_locator}</p>
-      <p>Snapshot à date : {(entry.snapshot.rex ?? []).length} enseignement(s) capturé(s)</p>
-    </div>)}
-    {canManage && onSubmit && <form aria-label="Enregistrer un entretien Patron" onSubmit={(event) => { event.preventDefault(); void onSubmit({ ...ids(), interview_id: crypto.randomUUID(), case_id: caseId, held_on: heldOn, source_locator: sourceLocator.trim(), rationale: rationale.trim(), expires_on: expiresOn }); }}>
-      <label>Date de l’entretien<input aria-label="Date de l’entretien" type="date" required value={heldOn} disabled={disabled || submitting} onChange={(event) => setHeldOn(event.target.value)} /></label>
-      <label>Source de l’entretien<input aria-label="Source de l’entretien" required maxLength={500} value={sourceLocator} disabled={disabled || submitting} onChange={(event) => setSourceLocator(event.target.value)} /></label>
-      <label>Motif de l’entretien<textarea aria-label="Motif de l’entretien" required maxLength={2000} value={rationale} disabled={disabled || submitting} onChange={(event) => setRationale(event.target.value)} /></label>
-      <label>Expiration du réemploi<input aria-label="Expiration du réemploi" type="date" required value={expiresOn} disabled={disabled || submitting} onChange={(event) => setExpiresOn(event.target.value)} /></label>
-      <button type="submit" disabled={buttonDisabled}>{submitting ? "Enregistrement…" : "Enregistrer l’entretien"}</button>
-      {failure?.kind === "UNCONFIRMED" && pending && <p role="alert">Entretien non confirmé · la relance réutilise les mêmes identifiants.</p>}
-      {failure?.kind === "REJECTED" && <p role="alert">Refus serveur confirmé · aucun entretien n’a été enregistré.</p>}
-    </form>}
-  </div>;
 }

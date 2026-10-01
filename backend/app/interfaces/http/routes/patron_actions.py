@@ -24,6 +24,12 @@ from app.modules.patron_action.application.order_commands import (
 from app.modules.patron_action.application.outcome import CaseOutcomeService
 from app.modules.patron_action.application.outcome_commands import RecordCaseOutcomeCommand
 from app.modules.patron_action.application.service import PatronActionService
+from app.modules.patron_action.application.teaching_applicability_commands import (
+    RecordCaseTeachingApplicabilityCommand,
+)
+from app.modules.patron_action.application.teaching_applicability_handler import (
+    CaseTeachingApplicabilityService,
+)
 from app.modules.patron_action.application.transition_commands import TransitionPatronActionCommand
 from app.modules.patron_action.application.transition_service import PatronActionTransitionService
 from app.modules.patron_action.application.transmission_commands import TransmitWonOutcomeCommand
@@ -35,6 +41,8 @@ from app.modules.patron_action.public.contracts import (
     CaseExecutionResultsResponse,
     CaseExecutionTransmissionResponse,
     CaseInterviewResponse,
+    CaseTeachingApplicabilityResponse,
+    CaseTeachingSourceResponse,
     CreatePatronActionRequest,
     PatronActionCommandResponse,
     PatronActionProjectionResponse,
@@ -49,6 +57,8 @@ from app.modules.patron_action.public.contracts import (
     RecordCaseP7ResultRequest,
     RecordCaseRetentionRequest,
     RecordCaseRexRequest,
+    RecordCaseTeachingApplicabilityRequest,
+    RecordCaseTeachingApplicabilityResponse,
     RequestCaseExportRequest,
     TransitionPatronActionRequest,
     TransmitWonOutcomeRequest,
@@ -68,6 +78,7 @@ def build_patron_action_router(
     security_runtime: ConsultationSecurityRuntime,
     order_service: CaseOrderService | None = None,
     interview_service: CaseInterviewService | None = None,
+    teaching_applicability_service: CaseTeachingApplicabilityService | None = None,
 ) -> APIRouter:
     router = APIRouter(prefix="/api/v1/patron", tags=["patron-actions"])
 
@@ -549,6 +560,123 @@ def build_patron_action_router(
                     snapshot=row.record.snapshot_json,
                     status=row.status,
                     created_at=row.record.created_at,
+                ).model_dump(mode="json")
+                for row in rows
+            ],
+        }
+
+    @router.get("/cases/{case_id}/teaching-sources")
+    def list_case_teaching_sources(
+        case_id: UUID, authorization: str | None = Header(default=None)
+    ):
+        if teaching_applicability_service is None:
+            raise HTTPException(status_code=503, detail="UNAVAILABLE")
+        actor = _resolve_context(
+            authorization=authorization, context_resolver=security_runtime.context_resolver
+        )
+        try:
+            rows = teaching_applicability_service.list_sources(
+                actor=actor, target_case_id=case_id, now=datetime.now(tz=UTC)
+            )
+        except PermissionError as error:
+            raise HTTPException(status_code=403, detail="FORBIDDEN") from error
+        return {
+            "case_id": str(case_id),
+            "sources": [
+                CaseTeachingSourceResponse(
+                    source_case_id=row.source_case_id,
+                    source_case_label=row.source_case_label,
+                    source_interview_id=row.source_interview_id,
+                    source_rex_id=row.source_rex_id,
+                    held_on=row.held_on,
+                    source_locator=row.source_locator,
+                    interview_rationale=row.interview_rationale,
+                    expires_on=row.expires_on,
+                    source_validity=row.source_validity,
+                    snapshot=row.snapshot,
+                    can_assess=row.can_assess,
+                    block_reason=row.block_reason,
+                ).model_dump(mode="json")
+                for row in rows
+            ],
+        }
+
+    @router.post(
+        "/cases/{case_id}/teaching-applicabilities",
+        status_code=status.HTTP_201_CREATED,
+        response_model=RecordCaseTeachingApplicabilityResponse,
+    )
+    def record_case_teaching_applicability(
+        case_id: UUID,
+        request: RecordCaseTeachingApplicabilityRequest,
+        authorization: str | None = Header(default=None),
+    ):
+        if request.target_case_id != case_id:
+            raise HTTPException(status_code=422, detail="PATH_BODY_MISMATCH")
+        if teaching_applicability_service is None:
+            raise HTTPException(status_code=503, detail="UNAVAILABLE")
+        actor = _resolve_context(
+            authorization=authorization, context_resolver=security_runtime.context_resolver
+        )
+        try:
+            result = teaching_applicability_service.record_applicability(
+                actor=actor,
+                command=RecordCaseTeachingApplicabilityCommand(**request.model_dump()),
+                now=datetime.now(tz=UTC),
+            )
+        except PermissionError as error:
+            raise HTTPException(status_code=403, detail="FORBIDDEN") from error
+        except IdempotencyKeyReusedError as error:
+            raise HTTPException(status_code=409, detail="IDEMPOTENCY_KEY_REUSED") from error
+        except CommandInProgressError as error:
+            raise HTTPException(status_code=409, detail="COMMAND_IN_PROGRESS") from error
+        except CommandExecutionError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+        return JSONResponse(
+            status_code=status.HTTP_200_OK if result.replayed else status.HTTP_201_CREATED,
+            content=RecordCaseTeachingApplicabilityResponse(
+                status="SUCCEEDED",
+                result_code=result.result_code,
+                aggregate_refs=list(result.aggregate_refs),
+                event_ids=list(result.event_ids),
+                replayed=result.replayed,
+            ).model_dump(mode="json"),
+        )
+
+    @router.get("/cases/{case_id}/teaching-applicabilities")
+    def list_case_teaching_applicabilities(
+        case_id: UUID, authorization: str | None = Header(default=None)
+    ):
+        if teaching_applicability_service is None:
+            raise HTTPException(status_code=503, detail="UNAVAILABLE")
+        actor = _resolve_context(
+            authorization=authorization, context_resolver=security_runtime.context_resolver
+        )
+        try:
+            rows = teaching_applicability_service.list_for_case(
+                actor=actor, target_case_id=case_id, now=datetime.now(tz=UTC)
+            )
+        except PermissionError as error:
+            raise HTTPException(status_code=403, detail="FORBIDDEN") from error
+        return {
+            "case_id": str(case_id),
+            "applicabilities": [
+                CaseTeachingApplicabilityResponse(
+                    applicability_id=row.record.id,
+                    target_case_id=row.record.target_case_id,
+                    source_case_id=row.source_case_id,
+                    source_case_label=row.source_case_label,
+                    source_interview_id=row.record.source_interview_id,
+                    source_rex_id=row.record.source_rex_id,
+                    decision=row.record.decision,
+                    rationale=row.record.rationale,
+                    target_source_locator=row.record.target_source_locator,
+                    source_expires_on=row.record.source_expires_on,
+                    source_validity_at_recording=row.record.source_validity_at_recording,
+                    source_validity_current=row.source_validity,
+                    source_snapshot=row.record.source_snapshot_json,
+                    actor_id=row.record.actor_id,
+                    recorded_at=row.record.created_at,
                 ).model_dump(mode="json")
                 for row in rows
             ],

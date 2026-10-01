@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime
 from uuid import uuid4
 
@@ -16,6 +17,7 @@ from app.platform.security.context import (
     AssignmentScope,
     DataClassification,
     MembershipState,
+    OperationalProfile,
 )
 
 pytestmark = pytest.mark.security
@@ -267,3 +269,43 @@ def test_security_restricted_resource_is_denied_to_standard_patron_session() -> 
 
     assert decision.allowed is False
     assert decision.code == "AUTHORIZATION_DENIED"
+
+
+def test_partner_write_needs_case_scope_and_partner_engagement_is_patron_only() -> None:
+    case_id = uuid4()
+    collaborator = replace(
+        _context(
+            actor_kind=ActorKind.COLLABORATEUR,
+            assignment_scopes=(
+                AssignmentScope(
+                    case_id=case_id,
+                    allowed_actions=frozenset({Capability.CASE_PARTNER_READ}),
+                    allowed_classifications=frozenset({DataClassification.INTERNAL_OPERATIONAL}),
+                ),
+            ),
+        ),
+        operational_profile=OperationalProfile.RESPONSABLE,
+    )
+    policy = AuthorizationPolicy()
+    resource = _resource(
+        collaborator,
+        case_id=case_id,
+        classification=DataClassification.INTERNAL_OPERATIONAL,
+    )
+
+    assert policy.authorize(
+        context=collaborator,
+        request=AuthorizationRequest(action=Capability.CASE_PARTNER_READ, resource=resource),
+    ).allowed is True
+    assert policy.authorize(
+        context=collaborator,
+        request=AuthorizationRequest(action=Capability.CASE_PARTNER_WRITE, resource=resource),
+    ).allowed is False
+    assert Capability.CASE_PARTNER_ENGAGE not in collaborator.capabilities
+
+    delegated = capabilities_for(
+        ActorKind.PATRON_DELEGATE,
+        delegated_capabilities=frozenset({Capability.CASE_PARTNER_ENGAGE}),
+    )
+    assert Capability.CASE_PARTNER_ENGAGE in delegated
+    assert Capability.CASE_PARTNER_ENGAGE not in capabilities_for(ActorKind.COLLABORATEUR)

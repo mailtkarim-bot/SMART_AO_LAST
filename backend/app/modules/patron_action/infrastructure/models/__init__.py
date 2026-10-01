@@ -12,6 +12,9 @@ from app.modules.patron_action.infrastructure.models.retention import (
     CaseRetentionRecord,
 )
 from app.modules.patron_action.infrastructure.models.rex import CaseRexRecord
+from app.modules.patron_action.infrastructure.models.teaching_applicability import (
+    CaseTeachingApplicabilityRecord,
+)
 from app.modules.patron_action.infrastructure.models.transmission import (
     CaseOutcomeTransmissionRecord,
 )
@@ -26,6 +29,7 @@ __all__ = [
     "CaseP7ResultRecord",
     "CaseInterviewRecord",
     "CaseRexRecord",
+    "CaseTeachingApplicabilityRecord",
     "CaseDispositionRecord",
     "CaseExportRequestRecord",
     "CaseRetentionRecord",

@@ -64,6 +64,9 @@ class Capability(StrEnum):
     ENTERPRISE_LIBRARY_WRITE = "enterprise.library.write"
     ENTERPRISE_CAPABILITY_READ = "enterprise.capability.read"
     ENTERPRISE_CAPABILITY_WRITE = "enterprise.capability.write"
+    CASE_PARTNER_READ = "case.partner.read"
+    CASE_PARTNER_WRITE = "case.partner.write"
+    CASE_PARTNER_ENGAGE = "case.partner.engage"
     SYSTEM_JOB_EXECUTE = "system.job.execute"
 
 
@@ -112,6 +115,9 @@ _PATRON_ADMIN_CAPABILITIES = frozenset(
         Capability.ENTERPRISE_LIBRARY_WRITE,
         Capability.ENTERPRISE_CAPABILITY_READ,
         Capability.ENTERPRISE_CAPABILITY_WRITE,
+        Capability.CASE_PARTNER_READ,
+        Capability.CASE_PARTNER_WRITE,
+        Capability.CASE_PARTNER_ENGAGE,
         Capability.PREPARATION_REVIEW_DECIDE,
     }
 )
@@ -135,6 +141,8 @@ _COLLABORATOR_CAPABILITIES = frozenset(
         Capability.PREPARATION_CAPABILITY_PROPOSE,
         Capability.PREPARATION_CAPABILITY_GAP_REPORT,
         Capability.PREPARATION_REVIEW_REQUEST,
+        Capability.CASE_PARTNER_READ,
+        Capability.CASE_PARTNER_WRITE,
     }
 )
 _DELEGABLE_CAPABILITIES = frozenset(
@@ -153,6 +161,9 @@ _DELEGABLE_CAPABILITIES = frozenset(
         Capability.DECISION_FINALIZE,
         Capability.SUBMISSION_AUTHORIZE,
         Capability.SENSITIVE_EXPORT,
+        Capability.CASE_PARTNER_READ,
+        Capability.CASE_PARTNER_WRITE,
+        Capability.CASE_PARTNER_ENGAGE,
     }
 )
 

@@ -1,0 +1,1047 @@
+{
+  "captured_at_utc": "2026-10-01T08:31:12.149821+00:00",
+  "head": "1c8ac62fcddc78d2b156f70df9f0b130910cc918",
+  "snapshot_digest": "396b78e74db0f2ef87c44139e9d349475a80c6f043800de218ee70784f1afb1d",
+  "classification": "Functional-family judgment; evidence paths are not proof of complete implementation",
+  "families": [
+    {
+      "id": "F01",
+      "capability": "Identité, MFA, recovery et step-up",
+      "action": "KEEP",
+      "state": "EXISTANT_A_REQUALIFIER",
+      "code_paths": [
+        "backend/app/platform/security/authenticated_context.py",
+        "backend/app/platform/security/authentication.py",
+        "backend/app/platform/security/authorization.py",
+        "backend/app/platform/security/tokens.py"
+      ],
+      "test_paths": [
+        "backend/tests/security/test_authentication_services.py",
+        "backend/tests/security/test_totp.py",
+        "backend/tests/security/test_actor_context_authorization.py"
+      ],
+      "ux_paths": [
+        "web/src/features/auth/MfaPanel.tsx"
+      ],
+      "spec_refs": "PF31-06/07; CT31-06",
+      "gap": "Ne pas réécrire ; rejouer policies de toute route ajoutée. Pas de nouvelle preuve PostgreSQL/security complète dans cet audit.",
+      "implementation_block": "A0 puis transversal",
+      "proof_status": "Source inspected/inventoried; tests referenced not individually assumed green; executed suites listed in report"
+    },
+    {
+      "id": "F02",
+      "capability": "Membership, propriétaire, délégations et relève",
+      "action": "KEEP",
+      "state": "EXISTANT_A_REQUALIFIER",
+      "code_paths": [
+        "backend/app/platform/security/membership_governance.py",
+        "backend/app/modules/membership/__init__.py",
+        "backend/app/modules/membership/application/__init__.py",
+        "backend/app/modules/membership/application/assignment.py",
+        "backend/app/modules/membership/application/assignment_handler.py"
+      ],
+      "test_paths": [
+        "backend/tests/security/test_membership_governance.py",
+        "backend/tests/application/test_membership_mutation_service.py"
+      ],
+      "ux_paths": [],
+      "spec_refs": "PF31-06; PF2 rôles",
+      "gap": "Propriété organisationnelle ≠ Patron ; configurations ne peuvent distribuer de capabilities.",
+      "implementation_block": "Transversal/M0",
+      "proof_status": "Source inspected/inventoried; tests referenced not individually assumed green; executed suites listed in report"
+    },
+    {
+      "id": "F03",
+      "capability": "Entreprise, bibliothèque, capacités et preuves",
+      "action": "ADAPT",
+      "state": "EXISTANT_PARTIEL",
+      "code_paths": [
+        "backend/app/modules/enterprise/infrastructure/models/enterprise.py",
+        "backend/app/modules/enterprise/application/enterprise_capability.py",
+        "backend/app/modules/enterprise/application/enterprise_capability_commands.py"
+      ],
+      "test_paths": [
+        "backend/tests/api/test_enterprise_capability_api.py",
+        "backend/tests/application/test_enterprise_capability_foundation.py",
+        "backend/tests/architecture/test_enterprise_capability_ports.py",
+        "backend/tests/api/test_enterprise_library_api.py"
+      ],
+      "ux_paths": [
+        "web/src/features/enterprise/CaseInterviewsPanel.tsx"
+      ],
+      "spec_refs": "PF31-01/05; M2 mémoire entreprise",
+      "gap": "Company/capability versions existent ; ce n’est pas un profil métier/checklist publié et snapshotté.",
+      "implementation_block": "M0/M1",
+      "proof_status": "Source inspected/inventoried; tests referenced not individually assumed green; executed suites listed in report"
+    },
+    {
+      "id": "F04",
+      "capability": "Veille BOAMP, qualification P0/P1 et Affaire idempotente",
+      "action": "KEEP",
+      "state": "EXISTANT_A_REQUALIFIER",
+      "code_paths": [
+        "backend/app/modules/opportunity/__init__.py",
+        "backend/app/modules/opportunity/application/__init__.py",
+        "backend/app/modules/opportunity/application/boamp_case_creation.py",
+        "backend/app/modules/opportunity/application/boamp_ingestion.py",
+        "backend/app/modules/opportunity/application/boamp_qualification.py"
+      ],
+      "test_paths": [
+        "backend/tests/application/test_boamp_ingestion.py",
+        "backend/tests/application/test_boamp_qualification.py",
+        "backend/tests/application/test_boamp_scoring.py",
+        "backend/tests/application/test_boamp_source_status.py"
+      ],
+      "ux_paths": [
+        "web/src/features/opportunities/BoampOpportunityPanel.tsx"
+      ],
+      "spec_refs": "PF31-01/07/09",
+      "gap": "Socle à conserver ; ne pas multiplier sources de veille avant valeur longitudinale.",
+      "implementation_block": "Régression A0/A1",
+      "proof_status": "Source inspected/inventoried; tests referenced not individually assumed green; executed suites listed in report"
+    },
+    {
+      "id": "F05",
+      "capability": "Affaire, consultations, lots et DCE applicable",
+      "action": "ADAPT",
+      "state": "EXISTANT_PARTIEL",
+      "code_paths": [
+        "backend/app/modules/case/infrastructure/models/case.py",
+        "backend/app/modules/dce/infrastructure/models/dce_version.py"
+      ],
+      "test_paths": [
+        "backend/tests/api/test_case_assigned_api.py",
+        "backend/tests/api/test_case_creation_api.py",
+        "backend/tests/api/test_case_dce_reading_routes.py",
+        "backend/tests/api/test_case_partner_routes.py"
+      ],
+      "ux_paths": [
+        "web/src/features/dce/DceOpeningPanel.tsx"
+      ],
+      "spec_refs": "PF31-03; CT31-02",
+      "gap": "Versions DCE disponibles ; contrat signé/version source ne doit pas être déduit du DCE applicable.",
+      "implementation_block": "S0/A1/B1",
+      "proof_status": "Source inspected/inventoried; tests referenced not individually assumed green; executed suites listed in report"
+    },
+    {
+      "id": "F06",
+      "capability": "Sources documentaires version/hash/locator",
+      "action": "ADAPT",
+      "state": "EXISTANT_SOURCE_LINKS_ETENDUS",
+      "code_paths": [
+        "backend/app/modules/dce/infrastructure/models/dce_requirements.py",
+        "backend/app/modules/decision/application/lifecycle_commands.py",
+        "backend/app/modules/decision/infrastructure/repositories.py",
+        "backend/app/modules/pricing/infrastructure/models/contract_baseline.py"
+      ],
+      "test_paths": [
+        "backend/tests/domain/decision/test_business_method_profile_reference.py",
+        "backend/tests/db/test_business_method_profile_persistence.py"
+      ],
+      "ux_paths": [
+        "web/src/features/dce/DceKnowledgePanel.tsx"
+      ],
+      "spec_refs": "PF31-03; M31-02; CT31-02",
+      "gap": "Les exigences DCE gardent leurs ancrages ; le contexte Decision valide maintenant une référence tenant/Affaire exacte vers une preuve baseline append-only ou une version de profil adoptée et son empreinte. Les références historiques libres des contrats/paiements ne sont pas converties artificiellement.",
+      "implementation_block": "S0",
+      "proof_status": "Source inspected/inventoried; tests referenced not individually assumed green; executed suites listed in report"
+    },
+    {
+      "id": "F07",
+      "capability": "Ingestion, inventaire, extraction/OCR et formats",
+      "action": "KEEP",
+      "state": "EXISTANT_A_REQUALIFIER",
+      "code_paths": [
+        "backend/app/modules/dce/application/extraction.py",
+        "backend/app/modules/dce/infrastructure/extraction_factory.py"
+      ],
+      "test_paths": [
+        "backend/tests/application/test_dce_document_extraction.py",
+        "backend/tests/application/test_dce_extraction_worker.py"
+      ],
+      "ux_paths": [
+        "web/src/features/dce/DceOpeningPanel.tsx"
+      ],
+      "spec_refs": "PF31-09; M2 univers documentaire; CT2 parsing",
+      "gap": "Couverture locale bornée ; pas de garantie tous gros PDF/plans/formats. OCR/Docling artefacts et corpus à vérifier pour une promesse précise.",
+      "implementation_block": "E1/qualification",
+      "proof_status": "Source inspected/inventoried; tests referenced not individually assumed green; executed suites listed in report"
+    },
+    {
+      "id": "F08",
+      "capability": "RAG, ancrage et frontière financière",
+      "action": "KEEP",
+      "state": "EXISTANT_BORNE",
+      "code_paths": [
+        "backend/app/modules/knowledge/__init__.py",
+        "backend/app/modules/knowledge/application/__init__.py",
+        "backend/app/modules/knowledge/application/benchmark.py",
+        "backend/app/modules/knowledge/application/retrieval.py",
+        "backend/app/modules/knowledge/application/service.py"
+      ],
+      "test_paths": [
+        "backend/tests/api/test_knowledge_api.py",
+        "backend/tests/application/test_knowledge_benchmark.py",
+        "backend/tests/application/test_knowledge_retrieval.py",
+        "backend/tests/application/test_knowledge_service.py"
+      ],
+      "ux_paths": [
+        "web/src/features/dce/DceKnowledgePanel.tsx"
+      ],
+      "spec_refs": "PF31-06/09; CT31-06",
+      "gap": "RAG temporaire/corpus expurgé ; indexation persistante et supériorité non validées par cet audit.",
+      "implementation_block": "Q1/E1",
+      "proof_status": "Source inspected/inventoried; tests referenced not individually assumed green; executed suites listed in report"
+    },
+    {
+      "id": "F09",
+      "capability": "RC/exigences/confirmation/contradictions humaines",
+      "action": "ADAPT",
+      "state": "EXISTANT_PARTIEL",
+      "code_paths": [
+        "backend/app/modules/dce/infrastructure/models/dce_requirements.py",
+        "backend/app/modules/dce/infrastructure/models/dce_requirement_confirmations.py",
+        "backend/app/modules/decision/domain/document_contradictions.py"
+      ],
+      "test_paths": [
+        "backend/tests/application/test_dce_requirements.py",
+        "backend/tests/application/test_dce_requirements_worker.py",
+        "backend/tests/domain/decision/test_document_contradictions.py"
+      ],
+      "ux_paths": [
+        "web/src/features/decision/DecisionCrossChecksPanel.tsx"
+      ],
+      "spec_refs": "PF31-03/04; M2 analyse technique",
+      "gap": "Liens exigence/risque existants ; relier les impacts, engagement vendu et événements ultérieurs.",
+      "implementation_block": "A1/B1/C1",
+      "proof_status": "Source inspected/inventoried; tests referenced not individually assumed green; executed suites listed in report"
+    },
+    {
+      "id": "F10",
+      "capability": "Risques et liens risque–exigence",
+      "action": "ADAPT",
+      "state": "EXISTANT_PARTIEL",
+      "code_paths": [
+        "backend/app/modules/decision/domain/risk.py",
+        "backend/app/modules/decision/application/link_commands.py",
+        "backend/app/modules/decision/infrastructure/models/risk_requirement.py"
+      ],
+      "test_paths": [
+        "backend/tests/application/test_decision_risk_requirement.py",
+        "backend/tests/application/test_decision_risk_requirement_read.py",
+        "backend/tests/application/test_decision_risk_requirement_repository.py",
+        "backend/tests/ops/test_decision_risk_requirement_migration_contract.py"
+      ],
+      "ux_paths": [
+        "web/src/features/decision/DecisionRiskRequirementsPanel.tsx"
+      ],
+      "spec_refs": "PF31-03/06; CT31-03",
+      "gap": "Relation typée tenant/version déjà disponible ; ne pas dupliquer un graphe pour le même lien. Manque relation impact/condition/événement.",
+      "implementation_block": "S0/A1",
+      "proof_status": "Source inspected/inventoried; tests referenced not individually assumed green; executed suites listed in report"
+    },
+    {
+      "id": "F11",
+      "capability": "Baseline → dérogation → impact et revues",
+      "action": "ADAPT",
+      "state": "BASELINE_PROOF_APPEND_ONLY_AND_REFERENCABLE",
+      "code_paths": [
+        "backend/app/modules/dce/infrastructure/models/contract_baseline.py",
+        "backend/app/modules/decision/infrastructure/repositories.py",
+        "backend/alembic/versions/20260930_0122_business_method_profiles.py"
+      ],
+      "test_paths": [
+        "backend/tests/db/test_business_method_profile_persistence.py",
+        "backend/tests/domain/dce/test_contract_baseline_deviation_impact.py"
+      ],
+      "ux_paths": [
+        "web/src/features/decision/ContractBaselineImpactsPanel.tsx"
+      ],
+      "spec_refs": "PF31-03/04; M31-03; CT31-03",
+      "gap": "Exact proof id/revision is tenant/Affaire-validated in Decision and rows are append-only in PostgreSQL. Alembic check also reveals pre-existing constraint-name and tenant-index drift on this legacy table. baseline_observation_id has no document/version FK; source_refs remain strings; impact text remains free-form.",
+      "implementation_block": "S0/A1",
+      "proof_status": "Source inspected/inventoried; tests referenced not individually assumed green; executed suites listed in report"
+    },
+    {
+      "id": "F12",
+      "capability": "Applicabilité réglementaire et règles versionnées",
+      "action": "ADAPT",
+      "state": "PROFIL_EXISTANT_MOTEUR_NON_ETABLI",
+      "code_paths": [
+        "backend/app/modules/case/infrastructure/models/regulatory_profile.py",
+        "backend/app/modules/case/application/regulatory_profile_handler.py"
+      ],
+      "test_paths": [
+        "backend/tests/db/test_regulatory_profile_persistence.py",
+        "backend/tests/domain/test_regulatory_profile.py"
+      ],
+      "ux_paths": [
+        "web/src/features/decision/RegulatoryProfilesPanel.tsx"
+      ],
+      "spec_refs": "PF31-08; CT31-07",
+      "gap": "Profil déclaratif versionné ≠ bibliothèque de règles validées par régime/date. Validation externe et règle calendaire demeurent différées.",
+      "implementation_block": "S0 puis E1",
+      "proof_status": "Source inspected/inventoried; tests referenced not individually assumed green; executed suites listed in report"
+    },
+    {
+      "id": "F13",
+      "capability": "Contrat signé/avenant, remplacement et requalification",
+      "action": "ADAPT",
+      "state": "EXISTANT_PARTIEL",
+      "code_paths": [
+        "backend/app/modules/pricing/infrastructure/models/contract_instrument_version.py",
+        "backend/app/modules/pricing/infrastructure/models/contract_instrument_supersession.py",
+        "backend/app/modules/pricing/infrastructure/models/contract_execution_evidence_requalification.py"
+      ],
+      "test_paths": [
+        "backend/tests/domain/pricing/test_contract_instrument_supersession.py",
+        "backend/tests/domain/pricing/test_contract_execution_evidence_requalification.py"
+      ],
+      "ux_paths": [
+        "web/src/features/decision/ContractInstrumentVersionsPanel.tsx",
+        "web/src/features/decision/ContractExecutionEvidenceRequalificationPanel.tsx"
+      ],
+      "spec_refs": "PF31-03/08; M31-04/05",
+      "gap": "FK instrument et source refs déclarées existent ; raccord à la pièce/hash et au contexte avant-offre reste à établir.",
+      "implementation_block": "S0/B1/C1",
+      "proof_status": "Source inspected/inventoried; tests referenced not individually assumed green; executed suites listed in report"
+    },
+    {
+      "id": "F14",
+      "capability": "Droits et preuves humaines de réception/sortie",
+      "action": "ADAPT",
+      "state": "EXISTANT_PARTIEL",
+      "code_paths": [
+        "backend/app/modules/pricing/infrastructure/models/contract_execution_evidence.py",
+        "backend/app/modules/pricing/domain/contract_execution_evidence.py"
+      ],
+      "test_paths": [
+        "backend/tests/db/test_contract_execution_evidence_e2e.py",
+        "backend/tests/domain/pricing/test_contract_execution_evidence.py",
+        "backend/tests/domain/pricing/test_contract_execution_evidence_requalification.py"
+      ],
+      "ux_paths": [
+        "web/src/features/decision/ContractExecutionEvidencePanel.tsx"
+      ],
+      "spec_refs": "PF31-08; M31-05",
+      "gap": "Actes RIGHTS_PRESERVATION/WORK_RECEPTION/CONTRACT_EXIT réels ; aucune conséquence juridique certaine ni moteur de droit acquis prouvés.",
+      "implementation_block": "C1/E1",
+      "proof_status": "Source inspected/inventoried; tests referenced not individually assumed green; executed suites listed in report"
+    },
+    {
+      "id": "F15",
+      "capability": "Échéances juridiques déterministes",
+      "action": "ABSENT_FLUX_CIBLE",
+      "state": "NON_ETABLI",
+      "code_paths": [
+        "backend/app/modules/submission/application/calendar.py",
+        "backend/app/modules/submission/infrastructure/ics_calendar.py"
+      ],
+      "test_paths": [],
+      "ux_paths": [
+        "web/src/features/submission/SubmissionPanel.tsx"
+      ],
+      "spec_refs": "PF31-08; CT31-07; CT3 deadline",
+      "gap": "ICS et date déclarée ne constituent pas moteur régime/règle validée/déclencheur/calendrier/exceptions. Aucune échéance légale calculée dans A1.",
+      "implementation_block": "E1 après validation externe",
+      "proof_status": "Source inspected/inventoried; tests referenced not individually assumed green; executed suites listed in report"
+    },
+    {
+      "id": "F16",
+      "capability": "Sanctions/pénalités cumul/plafond/applicabilité",
+      "action": "ABSENT_FLUX_CIBLE",
+      "state": "NON_ETABLI",
+      "code_paths": [
+        "backend/app/modules/dce/application/analysis.py",
+        "backend/app/modules/pricing/domain/cost_basis.py"
+      ],
+      "test_paths": [
+        "backend/tests/domain/dce/test_contract_risk_taxonomy.py",
+        "backend/tests/domain/pricing/test_cost_basis.py"
+      ],
+      "ux_paths": [
+        "web/src/features/decision/DceContractRiskSignalsPanel.tsx"
+      ],
+      "spec_refs": "PF31-08/09; PF2 sanctions; CT3 sanction",
+      "gap": "Taxonomie/signal et réserve financière déclarée ≠ moteur de sanctions applicable ; pas de plafond inconnu converti à zéro.",
+      "implementation_block": "E1 après règles validées",
+      "proof_status": "Source inspected/inventoried; tests referenced not individually assumed green; executed suites listed in report"
+    },
+    {
+      "id": "F17",
+      "capability": "OS/instruction et delta longitudinal",
+      "action": "ABSENT_FLUX_CIBLE",
+      "state": "RELATIONS_LOCALES_PARTIELLES",
+      "code_paths": [
+        "backend/app/modules/dce/application/impact.py",
+        "backend/app/modules/pricing/domain/contract_instrument_supersession.py"
+      ],
+      "test_paths": [
+        "backend/tests/application/test_case_dce_impact.py",
+        "backend/tests/domain/pricing/test_contract_instrument_supersession.py"
+      ],
+      "ux_paths": [
+        "web/src/features/decision/ContractRightsAxisProjection.tsx"
+      ],
+      "spec_refs": "PF31-03/04; M31-05; CT3 change",
+      "gap": "Delta DCE et avenants existent ; pas de flux dédié OS → ancien engagement/condition → impact/action/preuve. Pas de moteur universel requis.",
+      "implementation_block": "C1 après A1/B1",
+      "proof_status": "Source inspected/inventoried; tests referenced not individually assumed green; executed suites listed in report"
+    },
+    {
+      "id": "F18",
+      "capability": "Prix/brouillon financier/import DPGF/BPU/Excel",
+      "action": "KEEP",
+      "state": "EXISTANT_A_REQUALIFIER",
+      "code_paths": [
+        "backend/app/modules/pricing/infrastructure/models/financial.py",
+        "backend/app/modules/pricing/application/import_commands.py",
+        "backend/app/modules/pricing/application/import_creation.py",
+        "backend/app/modules/pricing/application/import_creation_handler.py",
+        "backend/app/modules/pricing/application/import_handler.py"
+      ],
+      "test_paths": [
+        "backend/tests/application/test_pricing_import.py",
+        "backend/tests/application/test_pricing_import_commit.py",
+        "backend/tests/application/test_pricing_import_contracts.py",
+        "backend/tests/application/test_pricing_import_creation.py"
+      ],
+      "ux_paths": [
+        "web/src/features/pricing/PricingPanel.tsx"
+      ],
+      "spec_refs": "PF31-08/09; M2 prix",
+      "gap": "Import crée des lignes financières ; ne pas l’utiliser pour rapprochement partenaire sans source/receipt, ni comme preuve de coût couvert.",
+      "implementation_block": "A0/S0 puis A1",
+      "proof_status": "Source inspected/inventoried; tests referenced not individually assumed green; executed suites listed in report"
+    },
+    {
+      "id": "F19",
+      "capability": "Calcul coût/marge et scénarios exacts",
+      "action": "ADAPT",
+      "state": "CALCULS_EXISTANTS_RELATIONS_PARTIELLES",
+      "code_paths": [
+        "backend/app/modules/pricing/domain/cost_basis.py",
+        "backend/app/modules/pricing/domain/scenario.py",
+        "backend/app/modules/pricing/infrastructure/models/financial.py"
+      ],
+      "test_paths": [
+        "backend/tests/domain/pricing/test_cost_basis.py",
+        "backend/tests/application/test_pricing_scenario_transitions.py",
+        "backend/tests/application/test_pricing_scenarios.py",
+        "backend/tests/architecture/test_pricing_scenario_facade.py"
+      ],
+      "ux_paths": [
+        "web/src/features/pricing/PricingPanel.tsx"
+      ],
+      "spec_refs": "PF31-08; CT31-03",
+      "gap": "Arithmétique en unités mineures existe ; garder ce patron et ne pas imposer Decimal/rewrite. Relation clause → impact déclaré → scénario → condition manque.",
+      "implementation_block": "A1",
+      "proof_status": "Source inspected/inventoried; tests referenced not individually assumed green; executed suites listed in report"
+    },
+    {
+      "id": "F20",
+      "capability": "Impacts coût/cash/délai/capacité structurés",
+      "action": "ADAPT",
+      "state": "PARTIEL_TEXTE_ET_SCENARIOS",
+      "code_paths": [
+        "backend/app/modules/dce/infrastructure/models/contract_baseline.py",
+        "backend/app/modules/pricing/infrastructure/models/financial.py",
+        "backend/app/modules/optimization/application/capacity_planning.py"
+      ],
+      "test_paths": [
+        "backend/tests/domain/dce/test_contract_baseline_deviation_impact.py",
+        "backend/tests/application/test_pricing_scenario_transitions.py",
+        "backend/tests/application/test_pricing_scenarios.py",
+        "backend/tests/architecture/test_pricing_scenario_facade.py"
+      ],
+      "ux_paths": [
+        "web/src/features/decision/ContractBaselineImpactsPanel.tsx"
+      ],
+      "spec_refs": "PF31-03/08; M31-02/03; CT31-03",
+      "gap": "Axe/valeur connue/inconnue/unité/hypothèses et relation source-condition transversale non matérialisés ensemble. Déclaration ≠ calcul automatique de couverture.",
+      "implementation_block": "A1 après S0/M0",
+      "proof_status": "Source inspected/inventoried; tests referenced not individually assumed green; executed suites listed in report"
+    },
+    {
+      "id": "F21",
+      "capability": "Capacité/ressources/charge",
+      "action": "ADAPT",
+      "state": "SERVICE_EXISTANT_INTEGRATION_PARTIELLE",
+      "code_paths": [
+        "backend/app/modules/optimization/application/capacity_planning.py",
+        "backend/app/modules/optimization/application/resource_assignment.py",
+        "backend/app/modules/optimization/infrastructure/models.py"
+      ],
+      "test_paths": [
+        "backend/tests/application/test_capacity_planning.py",
+        "backend/tests/application/test_resource_optimization.py",
+        "backend/tests/application/test_capacity_run_service.py",
+        "backend/tests/db/test_capacity_run_persistence.py"
+      ],
+      "ux_paths": [
+        "web/src/app/App.tsx"
+      ],
+      "spec_refs": "PF31-06/08; M2 capacité",
+      "gap": "Solveur OR-Tools et persistence run existent ; pas calendrier entreprise/portefeuille/conducteur intégré complet prouvé. Ne pas recréer le solveur.",
+      "implementation_block": "A1 déclaration puis E1",
+      "proof_status": "Source inspected/inventoried; tests referenced not individually assumed green; executed suites listed in report"
+    },
+    {
+      "id": "F22",
+      "capability": "Portefeuille cash et couverture économique complète",
+      "action": "ABSENT_FLUX_CIBLE",
+      "state": "PROJECTION_PARTIELLE",
+      "code_paths": [
+        "backend/app/modules/case/infrastructure/resolution_reader.py",
+        "backend/app/modules/pricing/domain/cost_basis.py"
+      ],
+      "test_paths": [
+        "backend/tests/api/test_case_resolution_api.py",
+        "backend/tests/application/test_case_resolution_index.py",
+        "backend/tests/application/test_case_resolution_unknowns.py",
+        "backend/tests/domain/pricing/test_cost_basis.py"
+      ],
+      "ux_paths": [
+        "web/src/app/App.tsx"
+      ],
+      "spec_refs": "PF31-06/09; PF2 portefeuille",
+      "gap": "Vue liste/couverture et calcul par Affaire ne prouvent pas modèle consolidé besoins cash/financement simultanés.",
+      "implementation_block": "E1",
+      "proof_status": "Source inspected/inventoried; tests referenced not individually assumed green; executed suites listed in report"
+    },
+    {
+      "id": "F23",
+      "capability": "Partenaires fournisseur/sous-traitant/cotraitant/mandat",
+      "action": "ADAPT",
+      "state": "WIP_LOCAL_INTEGRE_A_REQUALIFIER",
+      "code_paths": [
+        "backend/app/modules/partner/__init__.py",
+        "backend/app/modules/partner/application/__init__.py",
+        "backend/app/modules/partner/application/commands.py",
+        "backend/app/modules/partner/application/partner_handler.py",
+        "backend/app/modules/partner/domain/__init__.py"
+      ],
+      "test_paths": [
+        "backend/tests/domain/partner/test_partner_events.py",
+        "backend/tests/api/test_case_partner_routes.py",
+        "backend/tests/db/test_case_partner_events.py"
+      ],
+      "ux_paths": [
+        "web/src/features/partners/CasePartnerPanel.tsx",
+        "web/src/features/partners/useCasePartnerEvents.ts"
+      ],
+      "spec_refs": "PF31-03/08; M2 partenaires",
+      "gap": "Module local, migration0118. Reçu/engagement humain existent ; locator/hachage pièce et lien vendu restent à enrichir.",
+      "implementation_block": "A0/S0/A1",
+      "proof_status": "Source inspected/inventoried; tests referenced not individually assumed green; executed suites listed in report"
+    },
+    {
+      "id": "F24",
+      "capability": "Offres partenaires prix/validité/périmètre/transport",
+      "action": "ADAPT",
+      "state": "WIP_LOCAL_INTEGRE_A_REQUALIFIER",
+      "code_paths": [
+        "backend/app/modules/pricing/infrastructure/models/partner_offer_price.py",
+        "backend/app/modules/pricing/infrastructure/models/partner_offer_scope_review.py"
+      ],
+      "test_paths": [
+        "backend/tests/db/test_partner_offer_price.py",
+        "backend/tests/domain/pricing/test_partner_offer_price_domain.py",
+        "backend/tests/db/test_partner_offer_scope_review.py",
+        "backend/tests/domain/pricing/test_partner_offer_scope_review_domain.py"
+      ],
+      "ux_paths": [
+        "web/src/features/pricing/PartnerOfferPricesPanel.tsx"
+      ],
+      "spec_refs": "PF31-08; M31-03; M2 interfaces",
+      "gap": "Déclarations et revues reçus exacts existent ; aucune somme/effet P3 induit. Pièce partenaire versionnée et hash restent non résolus.",
+      "implementation_block": "A0/S0/A1",
+      "proof_status": "Source inspected/inventoried; tests referenced not individually assumed green; executed suites listed in report"
+    },
+    {
+      "id": "F25",
+      "capability": "Rapprochement manuel par poste partenaire",
+      "action": "KEEP_AND_COMPLETE_UI",
+      "state": "BACKEND_POSTGRESQL_TARGETED_GREEN",
+      "code_paths": [
+        "backend/app/modules/pricing/infrastructure/models/partner_offer_line_comparison.py",
+        "backend/app/bootstrap/application.py",
+        "backend/alembic/versions/20260930_0121_partner_offer_line_comparisons.py",
+        "backend/app/interfaces/http/routes/patron_partner_offer_line_comparisons.py"
+      ],
+      "test_paths": [
+        "backend/tests/domain/pricing/test_partner_offer_line_comparison.py",
+        "backend/tests/db/test_partner_offer_line_comparison.py"
+      ],
+      "ux_paths": [],
+      "spec_refs": "M31-03; M2 prix/interfaces",
+      "gap": "NameError corrigé, modèles enregistrés à Alembic/runtime, tête intégrée à 0121 et route/handlers déjà branchés ; tests PostgreSQL de tenant, rejeu, validations et append-only exécutés dans la tranche ciblée. Le panneau UX dédié reste absent ; aucune somme ni promotion P3.",
+      "implementation_block": "A0 sans extension fonctionnelle",
+      "proof_status": "Source inspected/inventoried; tests referenced not individually assumed green; executed suites listed in report"
+    },
+    {
+      "id": "F26",
+      "capability": "Conditions Patron, contexte figé, P2/P3/P4/P5",
+      "action": "ADAPT",
+      "state": "CONTEXT_REFERENCES_EXTENDED",
+      "code_paths": [
+        "backend/app/modules/decision/application/lifecycle_commands.py",
+        "backend/app/modules/decision/public/lifecycle_contracts.py",
+        "backend/app/modules/decision/infrastructure/repositories.py",
+        "web/src/shared/types.ts"
+      ],
+      "test_paths": [
+        "backend/tests/domain/decision/test_business_method_profile_reference.py",
+        "backend/tests/db/test_business_method_profile_persistence.py"
+      ],
+      "ux_paths": [
+        "web/src/features/decision/PatronDecisionPanel.tsx"
+      ],
+      "spec_refs": "PF31-03/07; M31-03; CT31-03",
+      "gap": "Le contexte figé peut référencer la preuve baseline immuable et le profil adopté exact (tenant/Affaire/révision/hash). Les nouvelles références sont au niveau du contexte ; une relation par condition P3 et sa projection C07 restent A1.",
+      "implementation_block": "S0/M0/A1",
+      "proof_status": "Source inspected/inventoried; tests referenced not individually assumed green; executed suites listed in report"
+    },
+    {
+      "id": "F27",
+      "capability": "Réponse technique, administratif et engagement vendu",
+      "action": "ADAPT",
+      "state": "EXISTANT_PARTIEL",
+      "code_paths": [
+        "backend/app/modules/preparation/__init__.py",
+        "backend/app/modules/preparation/application/__init__.py",
+        "backend/app/modules/preparation/application/commands.py",
+        "backend/app/modules/preparation/application/document_content.py",
+        "backend/app/modules/preparation/application/ports.py"
+      ],
+      "test_paths": [
+        "backend/tests/api/test_preparation_routes.py",
+        "backend/tests/api/test_preparation_transmission_routes.py",
+        "backend/tests/application/test_preparation_completeness.py",
+        "backend/tests/application/test_preparation_completeness_commands.py"
+      ],
+      "ux_paths": [
+        "web/src/features/wizard/CollaboratorWizardPanel.tsx"
+      ],
+      "spec_refs": "PF31-03/09; M2 offre",
+      "gap": "Draft/snapshot/génération/proofs existent ; registre d’engagement versionné lié aux impacts/conditions et offre exacte non démontré de bout en bout.",
+      "implementation_block": "B1 après A1",
+      "proof_status": "Source inspected/inventoried; tests referenced not individually assumed green; executed suites listed in report"
+    },
+    {
+      "id": "F28",
+      "capability": "MIRP, constructibilité et interfaces de lots",
+      "action": "ADAPT",
+      "state": "EXIGENCES_RISQUES_PARTIELS",
+      "code_paths": [
+        "backend/app/modules/dce/infrastructure/models/dce_requirements.py",
+        "backend/app/modules/decision/domain/risk_requirement.py",
+        "backend/app/modules/partner/__init__.py",
+        "backend/app/modules/partner/application/__init__.py",
+        "backend/app/modules/partner/application/commands.py"
+      ],
+      "test_paths": [
+        "backend/tests/application/test_dce_requirements.py",
+        "backend/tests/application/test_dce_requirements_worker.py",
+        "backend/tests/application/test_decision_risk_requirement.py",
+        "backend/tests/application/test_decision_risk_requirement_read.py"
+      ],
+      "ux_paths": [
+        "web/src/features/decision/DecisionRiskRequirementsPanel.tsx"
+      ],
+      "spec_refs": "PF31-06/09; PF2 §9; M2 MIRP",
+      "gap": "Ni absence de toutes fonctions techniques ni MIRP intégral : exigences/risques sont socle ; contrats interfaces, moyens et constructibilité multi-lots dédiés restent à préciser.",
+      "implementation_block": "A1 scénario borné puis E1",
+      "proof_status": "Source inspected/inventoried; tests referenced not individually assumed green; executed suites listed in report"
+    },
+    {
+      "id": "F29",
+      "capability": "Assurance, HSE, environnement et obligations vendues",
+      "action": "ADAPT",
+      "state": "DOCUMENTS_SIGNAUX_PARTIELS",
+      "code_paths": [
+        "backend/app/modules/enterprise/infrastructure/models/enterprise.py",
+        "backend/app/modules/dce/application/analysis.py",
+        "backend/app/modules/pricing/infrastructure/models/post_reception_obligation.py"
+      ],
+      "test_paths": [
+        "backend/tests/api/test_enterprise_capability_api.py",
+        "backend/tests/application/test_enterprise_capability_foundation.py",
+        "backend/tests/architecture/test_enterprise_capability_ports.py",
+        "backend/tests/domain/dce/test_contract_risk_taxonomy.py"
+      ],
+      "ux_paths": [
+        "web/src/features/enterprise/CaseInterviewsPanel.tsx"
+      ],
+      "spec_refs": "PF31-06/09; PF2 §13; M2 assurance/HSE",
+      "gap": "Certificats et signaux existent ; adéquation assurance/prestation, prérequis ressources et engagements mesurables complets pas démontrés. Validation spécialisée toujours nécessaire.",
+      "implementation_block": "E1",
+      "proof_status": "Source inspected/inventoried; tests referenced not individually assumed green; executed suites listed in report"
+    },
+    {
+      "id": "F30",
+      "capability": "Paquet exact, manifeste/hash, signature et dépôt humain",
+      "action": "KEEP",
+      "state": "EXISTANT_A_REQUALIFIER",
+      "code_paths": [
+        "backend/app/modules/submission/__init__.py",
+        "backend/app/modules/submission/application/__init__.py",
+        "backend/app/modules/submission/application/calendar.py",
+        "backend/app/modules/submission/application/commands.py",
+        "backend/app/modules/submission/application/evidence_commands.py"
+      ],
+      "test_paths": [
+        "backend/tests/application/test_submission_package.py",
+        "backend/tests/application/test_submission_signature_commands.py",
+        "backend/tests/application/test_submission_signature_http_service.py",
+        "backend/tests/application/test_submission_signature_service.py"
+      ],
+      "ux_paths": [
+        "web/src/features/submission/SubmissionPanel.tsx"
+      ],
+      "spec_refs": "PF31-07; M2 remise; CT2 submission",
+      "gap": "Réutiliser P5/manifeste et preuves ; signature/export ≠ reçu externe. Aucun automatisme de dépôt supplémentaire.",
+      "implementation_block": "Régression B1",
+      "proof_status": "Source inspected/inventoried; tests referenced not individually assumed green; executed suites listed in report"
+    },
+    {
+      "id": "F31",
+      "capability": "Attribution par lot, P6/P7, commande et passation",
+      "action": "ADAPT",
+      "state": "EXISTANT_PARTIEL",
+      "code_paths": [
+        "backend/app/modules/patron_action/infrastructure/models/patron_action.py"
+      ],
+      "test_paths": [
+        "backend/tests/application/test_case_order_p6.py",
+        "backend/tests/application/test_case_outcome_contract.py",
+        "backend/tests/application/test_case_outcome_read.py",
+        "backend/tests/db/test_case_execution_results_http_e2e.py"
+      ],
+      "ux_paths": [
+        "web/src/features/results/CaseOutcomePanel.tsx"
+      ],
+      "spec_refs": "PF31-04/07; M31-04",
+      "gap": "WON/commande/P6/P7 et C12 existent ; joindre version attribuée, engagement vendu et conditions source. P7 ne vaut pas OS.",
+      "implementation_block": "B1",
+      "proof_status": "Source inspected/inventoried; tests referenced not individually assumed green; executed suites listed in report"
+    },
+    {
+      "id": "F32",
+      "capability": "Réception/réserves et obligations post-réception",
+      "action": "ADAPT",
+      "state": "EXISTANT_PARTIEL",
+      "code_paths": [
+        "backend/app/modules/pricing/infrastructure/models/post_reception_obligation.py",
+        "backend/app/modules/pricing/infrastructure/models/post_reception_obligation_transition.py",
+        "backend/app/modules/pricing/infrastructure/models/contract_execution_evidence.py"
+      ],
+      "test_paths": [
+        "backend/tests/db/test_post_reception_obligation_e2e.py",
+        "backend/tests/db/test_post_reception_obligation_persistence.py",
+        "backend/tests/domain/pricing/test_post_reception_obligation.py",
+        "backend/tests/domain/pricing/test_post_reception_obligation_transition.py"
+      ],
+      "ux_paths": [
+        "web/src/features/decision/PostReceptionObligationsPanel.tsx"
+      ],
+      "spec_refs": "PF31-08; M31-05",
+      "gap": "Acte de réception/issue et lien réserve/acte réels ; coûts/échéances souvent déclarés, aucune clôture juridique induite.",
+      "implementation_block": "C1 puis E1",
+      "proof_status": "Source inspected/inventoried; tests referenced not individually assumed green; executed suites listed in report"
+    },
+    {
+      "id": "F33",
+      "capability": "Paiement signal externe, qualification/revue/rejets",
+      "action": "ADAPT",
+      "state": "WORKFLOW_EXISTANT_TEXTE",
+      "code_paths": [
+        "backend/app/modules/pricing/infrastructure/models/payment_post_reception_cycle.py",
+        "backend/app/modules/pricing/infrastructure/models/payment_cycle_review.py",
+        "backend/app/modules/pricing/application/payment_collection_rejection_review_commands.py",
+        "backend/app/modules/pricing/application/payment_collection_rejection_review_handler.py",
+        "backend/app/modules/pricing/application/payment_collection_rejection_review_read_handler.py"
+      ],
+      "test_paths": [
+        "backend/tests/db/test_payment_post_reception_complete_e2e.py",
+        "backend/tests/db/test_payment_post_reception_cycle_persistence.py",
+        "backend/tests/domain/pricing/test_payment_post_reception_cycle.py",
+        "backend/tests/domain/pricing/test_payment_post_reception_external_signal.py"
+      ],
+      "ux_paths": [
+        "web/src/features/decision/PaymentCyclePanel.tsx"
+      ],
+      "spec_refs": "PF31-08; M2 paiement; CT3 settlement",
+      "gap": "Qualification texte/revue/collecte/rejets effectivement présents ; pas montant/currency/date attendue/encaissée/compte contractuel structuré. Ne pas refaire les reçus ; pas MOVE avant ADR.",
+      "implementation_block": "C1 déclaration puis E1",
+      "proof_status": "Source inspected/inventoried; tests referenced not individually assumed green; executed suites listed in report"
+    },
+    {
+      "id": "F34",
+      "capability": "Settlement/DGD/solde/garanties/forclusion",
+      "action": "ABSENT_FLUX_CIBLE",
+      "state": "ACTES_PARTIELS",
+      "code_paths": [
+        "backend/app/modules/pricing/domain/contract_execution_evidence.py",
+        "backend/app/modules/pricing/domain/payment_post_reception_cycle.py"
+      ],
+      "test_paths": [
+        "backend/tests/db/test_contract_execution_evidence_e2e.py",
+        "backend/tests/domain/pricing/test_contract_execution_evidence.py",
+        "backend/tests/domain/pricing/test_contract_execution_evidence_requalification.py",
+        "backend/tests/db/test_payment_post_reception_complete_e2e.py"
+      ],
+      "ux_paths": [
+        "web/src/features/decision/ContractExecutionEvidencePanel.tsx"
+      ],
+      "spec_refs": "PF31-08/09; PF2 §12/16; CT3 settlement",
+      "gap": "Signal, réception et sortie ne sont pas modèle de règlement des comptes complet ni DGD tacite calculable.",
+      "implementation_block": "E1 après validation externe",
+      "proof_status": "Source inspected/inventoried; tests referenced not individually assumed green; executed suites listed in report"
+    },
+    {
+      "id": "F35",
+      "capability": "Suspension/fermeture/conservation/export/intégrité",
+      "action": "KEEP",
+      "state": "EXISTANT_A_REQUALIFIER",
+      "code_paths": [
+        "backend/app/modules/patron_action/infrastructure/models/patron_action.py",
+        "backend/app/modules/dce/infrastructure/models/contract_query_export.py",
+        "backend/app/modules/dce/infrastructure/models/export_proof_verification.py"
+      ],
+      "test_paths": [
+        "backend/tests/db/test_contract_query_export_audit_persistence.py",
+        "backend/tests/db/test_contract_query_export_persistence.py",
+        "backend/tests/db/test_contract_query_export_proof_hash.py",
+        "backend/tests/db/test_contract_query_export_read_persistence.py"
+      ],
+      "ux_paths": [
+        "web/src/features/decision/ContractQueryExportAuditPanel.tsx"
+      ],
+      "spec_refs": "PF31-07/08; CT31-06",
+      "gap": "Historique d’actes réel ; ne pas multiplier une nouvelle synthèse administrative au lieu du lien métier. READY/hash ≠ réception externe.",
+      "implementation_block": "Régression C1",
+      "proof_status": "Source inspected/inventoried; tests referenced not individually assumed green; executed suites listed in report"
+    },
+    {
+      "id": "F36",
+      "capability": "REX/entretien/applicabilité nominative",
+      "action": "ADAPT",
+      "state": "EXISTANT_ET_WIP_LOCAL",
+      "code_paths": [
+        "backend/app/modules/patron_action/domain/case_interview.py",
+        "backend/app/modules/patron_action/domain/teaching_applicability.py",
+        "backend/app/modules/patron_action/infrastructure/models/case_interview.py"
+      ],
+      "test_paths": [
+        "backend/tests/db/test_case_interview_persistence.py",
+        "backend/tests/domain/patron_action/test_case_interview.py",
+        "backend/tests/domain/patron_action/test_teaching_applicability.py",
+        "backend/tests/db/test_case_teaching_applicability_persistence.py"
+      ],
+      "ux_paths": [
+        "web/src/features/enterprise/CaseInterviewsPanel.tsx"
+      ],
+      "spec_refs": "PF31-03/09; M31-02/07",
+      "gap": "Snapshot entretien et applicabilité humaine réels ; relier écart vécu à engagement/impact/événement, sans apprentissage automatique.",
+      "implementation_block": "C1/Q1/E1",
+      "proof_status": "Source inspected/inventoried; tests referenced not individually assumed green; executed suites listed in report"
+    },
+    {
+      "id": "F37",
+      "capability": "Configuration métier/version/adoption/snapshot",
+      "action": "KEEP_AND_COMPLETE_UI",
+      "state": "M0_BACKEND_VERSIONED_AND_TARGETED_GREEN",
+      "code_paths": [
+        "backend/app/modules/enterprise/application/business_method_profile_handler.py",
+        "backend/app/modules/enterprise/application/business_method_profile_commands.py",
+        "backend/app/modules/enterprise/infrastructure/models/business_method_profile.py",
+        "backend/app/modules/case/infrastructure/models/business_method_profile_adoption.py",
+        "backend/app/interfaces/http/routes/patron_business_method_profiles.py",
+        "backend/alembic/versions/20260930_0122_business_method_profiles.py"
+      ],
+      "test_paths": [
+        "backend/tests/domain/enterprise/test_business_method_profile.py",
+        "backend/tests/db/test_business_method_profile_persistence.py",
+        "backend/tests/api/test_patron_business_method_profiles_routes.py"
+      ],
+      "ux_paths": [],
+      "spec_refs": "PF31-05; M31-06; CT31-05",
+      "gap": "Publication append-only par entreprise, schéma allowlisté, hash canonique, adoption append-only par Affaire et référence décisionnelle exacts ; contrôle Patron, tenant, hash/révision et concurrence testés. Le panneau d’édition/aperçu M1 reste à construire. Les contrôles obligatoires ne sont pas configurables.",
+      "implementation_block": "M0 AVANT A1 ; M1 éditeur ensuite",
+      "proof_status": "Source inspected/inventoried; tests referenced not individually assumed green; executed suites listed in report"
+    },
+    {
+      "id": "F38",
+      "capability": "Graphe causal/transversal et confidentialité dérivée",
+      "action": "ADAPT",
+      "state": "TYPED_CONTEXT_EDGES_EXTENDED",
+      "code_paths": [
+        "backend/app/modules/decision/infrastructure/repositories.py",
+        "backend/app/modules/dce/infrastructure/models/risk_requirement.py",
+        "backend/app/modules/pricing/infrastructure/models/contract_baseline.py"
+      ],
+      "test_paths": [
+        "backend/tests/domain/decision/test_business_method_profile_reference.py",
+        "backend/tests/db/test_business_method_profile_persistence.py"
+      ],
+      "ux_paths": [
+        "web/src/features/decision/ContractRightsAxisProjection.tsx"
+      ],
+      "spec_refs": "PF31-03/06; CT31-02/06",
+      "gap": "Le contexte décideur accepte des références vérifiées aux objets exacts et au profil adopté. Le graphe longitudinal complet et une relation condition→preuve C07 ne sont pas livrés ; pas de graph DB.",
+      "implementation_block": "S0/A1/B1/C1",
+      "proof_status": "Source inspected/inventoried; tests referenced not individually assumed green; executed suites listed in report"
+    },
+    {
+      "id": "F39",
+      "capability": "UX C00–C16/PUX, accessibilité et responsive",
+      "action": "ADAPT",
+      "state": "SURFACES_PARTIELLES",
+      "code_paths": [
+        "web/src/app/App.tsx",
+        "web/src/app/deepLink.ts",
+        "web/src/features/decision/PatronDecisionPanel.tsx"
+      ],
+      "test_paths": [
+        "web/src/app/App.test.tsx",
+        "web/src/features/decision/PatronDecisionPanel.test.tsx",
+        "web/src/features/auth/MfaPanel.test.tsx",
+        "web/src/features/auth/MfaPanel.tsx"
+      ],
+      "ux_paths": [
+        "web/src/app/App.tsx"
+      ],
+      "spec_refs": "PF31-09/10; M31-07; catalogue v0.3",
+      "gap": "285 tests composants verts ne valent pas navigateur/lecteur d’écran. Conditions/références saisies JSON technique : à remplacer par interactions métier dans A1, pas suppression du backend.",
+      "implementation_block": "A1/M1/B1/C1 puis couverture E1",
+      "proof_status": "Source inspected/inventoried; tests referenced not individually assumed green; executed suites listed in report"
+    },
+    {
+      "id": "F40",
+      "capability": "Qualification Golden/recettes/benchmark et marché",
+      "action": "ADAPT",
+      "state": "HARNESS_EXISTANT_PREUVES_BORNEES",
+      "code_paths": [
+        "scripts/qualify_redacted_rag.py",
+        "scripts/qualify_redacted_rag_service.py",
+        "ops/golden-corpus/manifest.example.json"
+      ],
+      "test_paths": [
+        "backend/tests/application/test_golden_corpus.py"
+      ],
+      "ux_paths": [],
+      "spec_refs": "PF31-10; M31-07/08; CT31-09",
+      "gap": "Pas de benchmark concurrent client ; corpus et validations doivent être réellement exécutés. 854 chapitres ne constituent pas 854 tests passés.",
+      "implementation_block": "Q1",
+      "proof_status": "Source inspected/inventoried; tests referenced not individually assumed green; executed suites listed in report"
+    },
+    {
+      "id": "F41",
+      "capability": "Migrations/runtime et branche locale",
+      "action": "KEEP_AND_QUALIFY",
+      "state": "HEAD_0122_TARGETED_UPGRADE_GREEN",
+      "code_paths": [
+        "backend/app/platform/persistence/schema.py",
+        "backend/alembic/env.py",
+        "backend/alembic/versions/20260930_0121_partner_offer_line_comparisons.py",
+        "backend/alembic/versions/20260930_0122_business_method_profiles.py"
+      ],
+      "test_paths": [
+        "backend/tests/architecture/test_schema_head_contract.py",
+        "backend/tests/ops/test_preprod_ops_contract.py",
+        "backend/tests/db/test_partner_offer_line_comparison.py",
+        "backend/tests/db/test_business_method_profile_persistence.py"
+      ],
+      "ux_paths": [],
+      "spec_refs": "CT31-08/09/10",
+      "gap": "Runtime and migration head 0122 match; empty ephemeral base→0122 upgrade and targeted tests pass. alembic check still finds historical metadata drift on other tables, including the legacy baseline table; no global drift cleanup is claimed.",
+      "implementation_block": "A0",
+      "proof_status": "Source inspected/inventoried; tests referenced not individually assumed green; executed suites listed in report"
+    },
+    {
+      "id": "F42",
+      "capability": "Sécurité IA/tenant/classification/retries/concurrence",
+      "action": "KEEP",
+      "state": "SOCLE_EXISTANT_NOUVEAUX_LIENS_A_PROUVER",
+      "code_paths": [
+        "backend/app/platform/security/__init__.py",
+        "backend/app/platform/security/audit.py",
+        "backend/app/platform/security/authenticated_context.py",
+        "backend/app/platform/security/authentication.py",
+        "backend/app/platform/security/authorization.py"
+      ],
+      "test_paths": [
+        "backend/tests/security/test_capability_policy.py",
+        "backend/tests/security/test_authenticated_context_capabilities.py",
+        "backend/tests/application/test_command_dispatcher.py"
+      ],
+      "ux_paths": [],
+      "spec_refs": "PF31-06/07; CT31-06/09",
+      "gap": "Pas audit offensif complet ; les relations/config nouvelles réclament refus et non-divulgation serveur. Aucune fuite constatée déduite d’un seul champ libre.",
+      "implementation_block": "Transversal S0/M0/A1",
+      "proof_status": "Source inspected/inventoried; tests referenced not individually assumed green; executed suites listed in report"
+    },
+    {
+      "id": "F43",
+      "capability": "Exploitation, stockage, sauvegarde/rotation/reprise",
+      "action": "KEEP",
+      "state": "LOCAL_BORNE_PUBLIC_NON_QUALIFIE",
+      "code_paths": [
+        "ops/restore-preprod.sh",
+        "ops/backup-preprod.sh",
+        "ops/rotate-jwt-key-preprod.sh",
+        "scripts/simulate_preprod_local.sh"
+      ],
+      "test_paths": [
+        "backend/tests/ops/test_preprod_ops_contract.py",
+        "backend/tests/architecture/test_runtime_hardening.py"
+      ],
+      "ux_paths": [],
+      "spec_refs": "PF31-10; CT2 exploitation",
+      "gap": "Runbooks locaux réels ; pas de fournisseur VPS ni restauration/hardening hôte réel validés ici.",
+      "implementation_block": "PROD uniquement après GO adapté",
+      "proof_status": "Source inspected/inventoried; tests referenced not individually assumed green; executed suites listed in report"
+    },
+    {
+      "id": "F44",
+      "capability": "API/DTO/events/ownership et interop ERP",
+      "action": "ADAPT",
+      "state": "CONTRATS_EXISTANTS_RECONCILIATION_REQUISE",
+      "code_paths": [
+        "backend/app/modules/decision/public/__init__.py",
+        "backend/app/modules/decision/public/finalize_contracts.py",
+        "backend/app/modules/decision/public/lifecycle_contracts.py",
+        "backend/app/modules/decision/public/patron_contracts.py",
+        "backend/app/modules/decision/public/risk_contracts.py"
+      ],
+      "test_paths": [
+        "backend/tests/architecture/test_application_infrastructure_boundary.py",
+        "backend/tests/architecture/test_model_ownership.py"
+      ],
+      "ux_paths": [],
+      "spec_refs": "CT31-01/02/06; CT2 API/events",
+      "gap": "Évolution additive, réutiliser ports existants, pas intégration ERP générique ni changement ownership opportuniste. Config/source nouveaux types à intégrer explicitement.",
+      "implementation_block": "S0/M0/A1 puis E1",
+      "proof_status": "Source inspected/inventoried; tests referenced not individually assumed green; executed suites listed in report"
+    },
+    {
+      "id": "F45",
+      "capability": "Gouvernance documentaire et plan de reprise",
+      "action": "KEEP",
+      "state": "PREUVES_DOCUMENTAIRES",
+      "code_paths": [
+        "backend/tests/ops/test_product_freeze_authority_contract.py"
+      ],
+      "test_paths": [
+        "backend/tests/ops/test_product_freeze_authority_contract.py"
+      ],
+      "ux_paths": [],
+      "spec_refs": "PF31-09/10; CT31-10",
+      "gap": "CDC intégraux et plan local ; documents non suivis absents d’un clone HEAD seul. Conflits sémantiques intégrés à résoudre par tranche.",
+      "implementation_block": "Audit puis toutes tranches",
+      "proof_status": "Source inspected/inventoried; tests referenced not individually assumed green; executed suites listed in report"
+    }
+  ],
+  "source_snapshot_digest": "4f1d37dbc102f7b08d175acdf283547c54d77f4cd24e99f11abc220337649e4f"
+}

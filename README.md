@@ -1,6 +1,6 @@
 # SMART_AO V8
 
-SMART_AO V8 est un SaaS web dédié aux entreprises françaises du BTP pour qualifier les appels d'offres, analyser les DCE, préparer les réponses et sécuriser les décisions patronales.
+SMART_AO V8 vise la maîtrise des engagements d'une Affaire BTP, de l'étude DCE aux décisions, à la passation et aux événements chantier. Les fonctionnalités attendues et la personnalisation sont décrites dans les cahiers V3.1 ; leur présence dans ces cahiers ne signifie pas qu'elles sont toutes livrées.
 
 > Le socle durable (**Case**, **Consultation/DceVersion**, **Decision**, sécurité tenant-scoped et outbox) est complété par des parcours métier contrôlés : préparation collaborative, génération technique versionnée, cockpit patron initial, chiffrage confidentiel et paquet de dépôt immutable. Le système ne déclare jamais un dépôt externe réussi sans accusé de réception vérifiable.
 
@@ -11,6 +11,10 @@ SMART_AO V8 est un SaaS web dédié aux entreprises françaises du BTP pour qual
 - Une transaction modifie un aggregate métier propriétaire ; les effets inter-modules passent par événements, outbox et commandes idempotentes.
 - Les versions DCE, contextes de décision et résultats validés sont non destructifs.
 - Le domaine reste pur : FastAPI, SQLAlchemy, MinIO, workers et LLM restent hors de `domain/`.
+
+## Reprendre le codage
+
+Lire `AGENTS.md`, l'index actif et le début du plan global : une seule tranche active, ordre A0 → S0 (sources) → M0 (version de méthode) → A1 → M1 (éditeur) → B → C, critères de fin et limites de preuve. Vérifier `git status` et HEAD avant toute modification ; le checkout contient du travail local non qualifié. Ne pas supposer une suite verte à partir d'un ancien handoff. Aucun push ; NO-GO public maintenu.
 
 ## Démarrage local prévu
 
@@ -25,11 +29,12 @@ Le dépôt se démarre localement avec Docker Compose ou les services de dévelo
 ## Documentation
 
 - [Documentation active](docs/README_DOCUMENTATION.md)
-- [Index des références actives](docs/00_REFERENCE_ACTIVE/00_INDEX_REFERENCE_ACTIVE.md)
-- [Product Freeze v2.0](docs/00_REFERENCE_ACTIVE/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v2.0.md)
-- [Cahier technique d’exécution](docs/02_FUTURE_TECHNICAL/SMART_AO_CAHIER_TECHNIQUE_EXECUTION_v2.1.md)
-- [Plan global de conception et réalisation](docs/03_PRODUCT_DESIGN_WORKING/SMART_AO_PLAN_GLOBAL_CONCEPTION_REALISATION_CHECKLIST_v0.1.md)
-- [Checklist durable](todo.md)
+- [Index des références actives](docs/Actifs/00_INDEX_DOCUMENTATION_ACTIVE.md)
+- [Product Freeze v3.1 intégral](docs/Actifs/01_Cahiers_des_charges/SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v3.1.md)
+- [Master métier v3.1 intégral](docs/Actifs/01_Cahiers_des_charges/SMART_AO_CAHIER_DIRECTEUR_METIER_MASTER_v3.1.md)
+- [Cahier technique d’exécution](docs/Actifs/01_Cahiers_des_charges/SMART_AO_CAHIER_TECHNIQUE_EXECUTION_v3.1.md)
+- [Plan global de conception et réalisation](docs/Actifs/00_Pilotage_et_audits/SMART_AO_PLAN_GLOBAL_CONCEPTION_REALISATION_CHECKLIST_v0.1.md)
+- [Checklist technique historique](todo.md) — ne remplace pas le plan global
 
 ## Structure
 

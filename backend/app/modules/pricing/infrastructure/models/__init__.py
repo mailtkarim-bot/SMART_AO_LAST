@@ -17,6 +17,18 @@ from app.modules.pricing.infrastructure.models.financial import (
     PricingScenarioRecord,
     PricingScenarioTransitionRecord,
 )
+from app.modules.pricing.infrastructure.models.partner_offer_price import (
+    PartnerOfferPriceDeclarationRecord,
+)
+from app.modules.pricing.infrastructure.models.partner_offer_line_comparison import (
+    PartnerOfferLineComparisonRecord,
+    PartnerOfferLineGroupRecord,
+    PartnerOfferLineMemberRecord,
+)
+from app.modules.pricing.infrastructure.models.partner_offer_scope_review import (
+    PartnerOfferScopeReviewOfferRecord,
+    PartnerOfferScopeReviewRecord,
+)
 
 __all__ = [
     "FinancialReportLineRecord",
@@ -27,6 +39,12 @@ __all__ = [
     "PricingImportTransitionRecord",
     "PricingScenarioRecord",
     "PricingScenarioTransitionRecord",
+    "PartnerOfferPriceDeclarationRecord",
+    "PartnerOfferLineComparisonRecord",
+    "PartnerOfferLineGroupRecord",
+    "PartnerOfferLineMemberRecord",
+    "PartnerOfferScopeReviewRecord",
+    "PartnerOfferScopeReviewOfferRecord",
     "ContractInstrumentVersionRecord",
     "ContractInstrumentSupersessionRecord",
     "ContractExecutionEvidenceRequalificationRecord",

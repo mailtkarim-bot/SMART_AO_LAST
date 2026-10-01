@@ -210,6 +210,65 @@ class CaseInterviewResponse(BaseModel):
     created_at: datetime
 
 
+class RecordCaseTeachingApplicabilityRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    command_id: UUID
+    idempotency_key: UUID
+    correlation_id: UUID | None = None
+    applicability_id: UUID
+    target_case_id: UUID
+    source_case_id: UUID
+    source_interview_id: UUID
+    source_rex_id: UUID
+    decision: Literal["APPLICABLE", "NOT_APPLICABLE", "REVIEW_REQUIRED"]
+    rationale: str = Field(min_length=1, max_length=2_000)
+    target_source_locator: str = Field(min_length=1, max_length=500)
+
+
+class RecordCaseTeachingApplicabilityResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    status: Literal["SUCCEEDED"] = "SUCCEEDED"
+    result_code: Literal["CASE_TEACHING_APPLICABILITY_RECORDED"]
+    aggregate_refs: list[dict[str, object]]
+    event_ids: list[str]
+    replayed: bool
+
+
+class CaseTeachingSourceResponse(BaseModel):
+    source_case_id: UUID
+    source_case_label: str
+    source_interview_id: UUID
+    source_rex_id: UUID
+    held_on: date
+    source_locator: str
+    interview_rationale: str
+    expires_on: date
+    source_validity: Literal["USABLE", "EXPIRED"]
+    snapshot: dict[str, object]
+    can_assess: bool
+    block_reason: str | None
+
+
+class CaseTeachingApplicabilityResponse(BaseModel):
+    applicability_id: UUID
+    target_case_id: UUID
+    source_case_id: UUID
+    source_case_label: str
+    source_interview_id: UUID
+    source_rex_id: UUID
+    decision: Literal["APPLICABLE", "NOT_APPLICABLE", "REVIEW_REQUIRED"]
+    rationale: str
+    target_source_locator: str
+    source_expires_on: date
+    source_validity_at_recording: Literal["USABLE", "EXPIRED"]
+    source_validity_current: Literal["USABLE", "EXPIRED"]
+    source_snapshot: dict[str, object]
+    actor_id: UUID
+    recorded_at: datetime
+
+
 class RecordCaseDispositionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 

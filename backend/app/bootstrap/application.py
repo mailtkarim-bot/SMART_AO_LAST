@@ -32,6 +32,7 @@ from app.interfaces.http.routes.case_assigned import build_assigned_case_router
 from app.interfaces.http.routes.case_creation import build_case_creation_router
 from app.interfaces.http.routes.case_dce_applicability import build_case_dce_applicability_router
 from app.interfaces.http.routes.case_dce_reading import build_case_dce_reading_router
+from app.interfaces.http.routes.case_partners import build_case_partner_router
 from app.interfaces.http.routes.case_resolution import build_case_resolution_router
 from app.interfaces.http.routes.collaborator_capabilities import (
     build_collaborator_capability_router,
@@ -65,6 +66,9 @@ from app.interfaces.http.routes.patron_assignment_management import (
 )
 from app.interfaces.http.routes.patron_boamp_opportunities import (
     build_patron_boamp_opportunity_router,
+)
+from app.interfaces.http.routes.patron_business_method_profiles import (
+    build_patron_business_method_profile_router,
 )
 from app.interfaces.http.routes.patron_consolidated_export_resumption import (
     build_patron_consolidated_export_resumption_router,
@@ -121,6 +125,15 @@ from app.interfaces.http.routes.patron_human_resumption_timeline import (
 )
 from app.interfaces.http.routes.patron_opportunity_watch_profiles import (
     build_patron_opportunity_watch_profile_router,
+)
+from app.interfaces.http.routes.patron_partner_offer_line_comparisons import (
+    build_patron_partner_offer_line_comparisons_router,
+)
+from app.interfaces.http.routes.patron_partner_offer_prices import (
+    build_patron_partner_offer_prices_router,
+)
+from app.interfaces.http.routes.patron_partner_offer_scope_reviews import (
+    build_patron_partner_offer_scope_reviews_router,
 )
 from app.interfaces.http.routes.patron_payment_collection_rejection_review import (
     build_patron_payment_collection_rejection_review_router,
@@ -316,6 +329,10 @@ from app.modules.decision.infrastructure.risk_requirement_repository import (
 from app.modules.decision.infrastructure.verified_context_reader import (
     SqlAlchemyDecisionVerifiedContextReader,
 )
+from app.modules.enterprise.application.business_method_profile_handler import (
+    BusinessMethodProfileService,
+    business_method_profile_handlers,
+)
 from app.modules.enterprise.application.enterprise_capability import (
     EnterpriseCapabilityService,
     enterprise_capability_handlers,
@@ -415,6 +432,10 @@ from app.modules.opportunity.infrastructure.boamp_qualification_repository impor
 from app.modules.opportunity.infrastructure.case_unknown_reader import (
     SqlAlchemyBoampCaseUnknownReader,
 )
+from app.modules.partner.application.partner_handler import (
+    CasePartnerService,
+    partner_event_handlers,
+)
 from app.modules.patron_action.application.case_interview_handler import (
     CaseInterviewService,
     case_interview_handlers,
@@ -425,6 +446,10 @@ from app.modules.patron_action.application.service import (
     PatronActionService,
     PatronActionWriter,
     patron_action_handlers,
+)
+from app.modules.patron_action.application.teaching_applicability_handler import (
+    CaseTeachingApplicabilityService,
+    case_teaching_applicability_handlers,
 )
 from app.modules.patron_action.application.transition_service import (
     PatronActionTransitionService,
@@ -476,6 +501,18 @@ from app.modules.pricing.application.import_handler import pricing_import_handle
 from app.modules.pricing.application.import_preview import PricingImportPreviewService
 from app.modules.pricing.application.import_read import PricingImportReadService
 from app.modules.pricing.application.import_service import PricingImportService
+from app.modules.pricing.application.partner_offer_line_comparison_handler import (
+    PartnerOfferLineComparisonService,
+    partner_offer_line_comparison_handlers,
+)
+from app.modules.pricing.application.partner_offer_price_handler import (
+    PartnerOfferPriceService,
+    partner_offer_price_handlers,
+)
+from app.modules.pricing.application.partner_offer_scope_review_handler import (
+    PartnerOfferScopeReviewService,
+    partner_offer_scope_review_handlers,
+)
 from app.modules.pricing.application.payment_collection_rejection_review_handler import (
     payment_collection_rejection_review_handlers,
 )
@@ -632,6 +669,7 @@ class AppRuntime:
             "PublishFinancialReport": PublishFinancialReportHandler(),
             **financial_report_line_handlers(),
             **enterprise_capability_handlers(),
+            **business_method_profile_handlers(),
             **enterprise_library_handlers(),
             "RejectDceStagedObjectUpload": RejectDceStagedObjectUploadHandler(),
             "RegisterDceVersion": RegisterDceVersionHandler(),
@@ -649,6 +687,11 @@ class AppRuntime:
             **case_outcome_handlers(),
             **case_order_handlers(),
             **case_interview_handlers(),
+            **case_teaching_applicability_handlers(),
+            **partner_event_handlers(),
+            **partner_offer_price_handlers(),
+            **partner_offer_line_comparison_handlers(),
+            **partner_offer_scope_review_handlers(),
             **patron_action_transition_handlers(),
             **decision_risk_handlers(
                 repository_factory=lambda _session: SqlAlchemyDecisionRiskRepository(),
@@ -1149,6 +1192,16 @@ def create_app(
             session_factory=runtime.session_factory,
             policy=security_policy,
         )
+        case_teaching_applicability_service = CaseTeachingApplicabilityService(
+            dispatcher=runtime.dispatcher,
+            session_factory=runtime.session_factory,
+            policy=security_policy,
+        )
+        case_partner_service = CasePartnerService(
+            dispatcher=runtime.dispatcher,
+            session_factory=runtime.session_factory,
+            policy=security_policy,
+        )
         regulatory_profile_service = RegulatoryProfileService(
             dispatcher=runtime.dispatcher,
             policy=security_policy,
@@ -1243,6 +1296,21 @@ def create_app(
             dispatcher=runtime.dispatcher,
             policy=security_policy,
         )
+        partner_offer_price_service = PartnerOfferPriceService(
+            dispatcher=runtime.dispatcher,
+            session_factory=runtime.session_factory,
+            policy=security_policy,
+        )
+        partner_offer_line_comparison_service = PartnerOfferLineComparisonService(
+            dispatcher=runtime.dispatcher,
+            session_factory=runtime.session_factory,
+            policy=security_policy,
+        )
+        partner_offer_scope_review_service = PartnerOfferScopeReviewService(
+            dispatcher=runtime.dispatcher,
+            session_factory=runtime.session_factory,
+            policy=security_policy,
+        )
         pricing_file_security = LibmagicClamdPricingFileSecurity(
             host=os.getenv("SMART_AO_CLAMD_HOST", "clamav"),
             port=int(os.getenv("SMART_AO_CLAMD_PORT", "3310")),
@@ -1316,6 +1384,11 @@ def create_app(
             capability_context_reader=SqlAlchemyEnterpriseCapabilityContextReader(
                 runtime.session_factory
             ),
+            dispatcher=runtime.dispatcher,
+            policy=security_policy,
+        )
+        business_method_profile_service = BusinessMethodProfileService(
+            session_factory=runtime.session_factory,
             dispatcher=runtime.dispatcher,
             policy=security_policy,
         )
@@ -1495,6 +1568,12 @@ def create_app(
             )
         )
         app.include_router(
+            build_case_partner_router(
+                service=case_partner_service,
+                security_runtime=security_runtime,
+            )
+        )
+        app.include_router(
             build_consultation_router(
                 runtime=runtime,
                 security_runtime=security_runtime,
@@ -1567,6 +1646,7 @@ def create_app(
                 outcome_service=case_outcome_service,
                 order_service=case_order_service,
                 interview_service=case_interview_service,
+                teaching_applicability_service=case_teaching_applicability_service,
                 security_runtime=security_runtime,
             )
         )
@@ -1587,6 +1667,24 @@ def create_app(
             build_patron_pricing_router(
                 service=pricing_scenario_service,
                 transition_service=pricing_scenario_transition_service,
+                security_runtime=security_runtime,
+            )
+        )
+        app.include_router(
+            build_patron_partner_offer_prices_router(
+                service=partner_offer_price_service,
+                security_runtime=security_runtime,
+            )
+        )
+        app.include_router(
+            build_patron_partner_offer_line_comparisons_router(
+                service=partner_offer_line_comparison_service,
+                security_runtime=security_runtime,
+            )
+        )
+        app.include_router(
+            build_patron_partner_offer_scope_reviews_router(
+                service=partner_offer_scope_review_service,
                 security_runtime=security_runtime,
             )
         )
@@ -1661,6 +1759,12 @@ def create_app(
         app.include_router(
             build_patron_enterprise_capability_router(
                 service=enterprise_capability_service,
+                security_runtime=security_runtime,
+            )
+        )
+        app.include_router(
+            build_patron_business_method_profile_router(
+                service=business_method_profile_service,
                 security_runtime=security_runtime,
             )
         )

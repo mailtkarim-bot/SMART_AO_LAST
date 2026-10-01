@@ -30,7 +30,23 @@ class RecordCaseInterviewHandler(CommandHandler):
         except ValueError as error:
             raise CommandExecutionError(str(error)) from error
         rex_rows = session.scalars(sa.select(CaseRexRecord).where(CaseRexRecord.tenant_id == tenant_id, CaseRexRecord.case_id == command.case_id).order_by(CaseRexRecord.created_at.asc(), CaseRexRecord.id.asc())).all()
-        snapshot = {"captured_at": datetime.now(tz=UTC).isoformat(), "rex": [{"rex_id": str(row.id), "lot_reference": row.lot_reference, "motif": row.motif, "scope": row.scope, "validation": row.validation} for row in rex_rows]}
+        snapshot = {
+            "captured_at": datetime.now(tz=UTC).isoformat(),
+            "rex": [
+                {
+                    "rex_id": str(row.id),
+                    "lot_reference": row.lot_reference,
+                    "motif": row.motif,
+                    "scope": row.scope,
+                    "validation": row.validation,
+                    "observation": row.observation,
+                    "consequence": row.consequence,
+                    "follow_up": row.follow_up,
+                    "source_locator": row.source_locator,
+                }
+                for row in rex_rows
+            ],
+        }
         session.add(CaseInterviewRecord(id=command.interview_id, tenant_id=tenant_id, case_id=command.case_id, held_on=interview.held_on, source_locator=interview.source_locator, rationale=interview.rationale, expires_on=interview.expires_on, snapshot_json=snapshot, actor_id=UUID(str(context.actor_id)), membership_id=UUID(str(context.membership_id)), command_id=command.command_id, idempotency_key=command.idempotency_key, correlation_id=command.correlation_id))
         return HandlerOutcome(result_code="CASE_INTERVIEW_RECORDED", aggregate_refs=({"aggregate_type": "CASE_INTERVIEW", "aggregate_id": str(command.interview_id), "aggregate_revision": 1},), events=(PendingDomainEvent(aggregate_type="CASE_INTERVIEW", aggregate_id=command.interview_id, aggregate_revision=1, event_type="CASE_INTERVIEW_RECORDED", payload={"case_id": str(command.case_id), "expires_on": interview.expires_on.isoformat(), "rex_count": len(rex_rows)}),))
 

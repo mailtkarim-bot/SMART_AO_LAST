@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from app.modules.case.infrastructure.models import CaseBusinessMethodProfileAdoptionRecord
 from app.modules.enterprise.infrastructure.models import (
     CaseCapabilityGapRecord,
     CaseCapabilityProposalRecord,
+    EnterpriseBusinessMethodProfileVersionRecord,
     EnterpriseCapabilityProofLinkRecord,
     EnterpriseCapabilityRecord,
     EnterpriseCapabilityVersionRecord,
@@ -30,6 +32,9 @@ from app.modules.pricing.infrastructure.models import (
     FinancialReportLineRecord,
     FinancialReportPublicationRecord,
     FinancialReportSnapshotRecord,
+    PartnerOfferLineComparisonRecord,
+    PartnerOfferLineGroupRecord,
+    PartnerOfferLineMemberRecord,
     PricingImportBatchRecord,
     PricingImportRowRecord,
     PricingImportTransitionRecord,
@@ -46,11 +51,26 @@ OWNERS = {
     ContractExecutionEvidenceRequalificationRecord: (
         "app.modules.pricing.infrastructure.models.contract_execution_evidence_requalification"
     ),
+    EnterpriseBusinessMethodProfileVersionRecord: (
+        "app.modules.enterprise.infrastructure.models.business_method_profile"
+    ),
+    CaseBusinessMethodProfileAdoptionRecord: (
+        "app.modules.case.infrastructure.models.business_method_profile_adoption"
+    ),
     ContractInstrumentSupersessionRecord: (
         "app.modules.pricing.infrastructure.models.contract_instrument_supersession"
     ),
     ContractInstrumentVersionRecord: (
         "app.modules.pricing.infrastructure.models.contract_instrument_version"
+    ),
+    PartnerOfferLineComparisonRecord: (
+        "app.modules.pricing.infrastructure.models.partner_offer_line_comparison"
+    ),
+    PartnerOfferLineGroupRecord: (
+        "app.modules.pricing.infrastructure.models.partner_offer_line_comparison"
+    ),
+    PartnerOfferLineMemberRecord: (
+        "app.modules.pricing.infrastructure.models.partner_offer_line_comparison"
     ),
     **{
         model: "app.modules.pricing.infrastructure.models.financial"

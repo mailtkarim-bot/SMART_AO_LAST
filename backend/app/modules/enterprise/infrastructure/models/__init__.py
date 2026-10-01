@@ -1,3 +1,6 @@
+from app.modules.enterprise.infrastructure.models.business_method_profile import (
+    EnterpriseBusinessMethodProfileVersionRecord,
+)
 from app.modules.enterprise.infrastructure.models.enterprise import (
     CaseCapabilityGapRecord,
     CaseCapabilityProposalRecord,
@@ -20,4 +23,5 @@ __all__ = [
     "EnterpriseDocumentRecord",
     "EnterpriseDocumentUploadRecord",
     "EnterpriseDocumentVerificationRecord",
+    "EnterpriseBusinessMethodProfileVersionRecord",
 ]

@@ -64,6 +64,168 @@ describe("C12 result and handover transport", () => {
   });
 });
 
+describe("C13 teaching applicability transport", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("reads target-scoped sources/history and posts only a source reference plus human decision", async () => {
+    const receipt = { status: "SUCCEEDED", result_code: "CASE_TEACHING_APPLICABILITY_RECORDED", aggregate_refs: [], event_ids: [], replayed: false };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ case_id: "target-1", sources: [] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ case_id: "target-1", applicabilities: [] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(receipt), { status: 201 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const client = createApiClient("https://app.example.test", "access-1");
+    const command = {
+      command_id: "command-1", idempotency_key: "retry-1", correlation_id: "correlation-1",
+      applicability_id: "act-1", target_case_id: "target-1", source_case_id: "source-1",
+      source_interview_id: "interview-1", source_rex_id: "rex-1", decision: "REVIEW_REQUIRED" as const,
+      rationale: "À comparer au lot de l’Affaire cible", target_source_locator: "dce://target/lot-01",
+    };
+
+    await client.listCaseTeachingSources("target-1");
+    await client.listCaseTeachingApplicabilities("target-1");
+    await client.recordCaseTeachingApplicability(command);
+
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      "https://app.example.test/api/v1/patron/cases/target-1/teaching-sources",
+      "https://app.example.test/api/v1/patron/cases/target-1/teaching-applicabilities",
+      "https://app.example.test/api/v1/patron/cases/target-1/teaching-applicabilities",
+    ]);
+    const body = JSON.parse(String((fetchMock.mock.calls[2]?.[1] as RequestInit).body));
+    expect(body).toEqual(command);
+    expect(body).not.toHaveProperty("source_snapshot");
+  });
+});
+
+describe("C09 case partner transport", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("keeps request, receipt and engagement as distinct append commands", async () => {
+    const receipt = { status: "SUCCEEDED", result_code: "RECORDED", aggregate_refs: [], event_ids: [], replayed: false };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ case_id: "case-1", events: [], can_request: true, can_receive: true, can_declare_engagement: false }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(receipt), { status: 201 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(receipt), { status: 201 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(receipt), { status: 201 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const client = createApiClient("https://app.example.test", "access-1");
+    const request = { command_id: "c1", idempotency_key: "i1", correlation_id: "r1", event_id: "request-1", partner_id: "partner-1", case_id: "case-1", expected_revision: 0, partner_kind: "SUPPLIER" as const, partner_label: "Fournisseur", source_locator: "mail://request/1", rationale: "Consultation déclarée" };
+    const received = { command_id: "c2", idempotency_key: "i2", correlation_id: "r2", event_id: "receipt-1", partner_id: "partner-1", case_id: "case-1", expected_revision: 1, request_event_id: "request-1", partner_kind: "SUPPLIER" as const, partner_label: "Fournisseur", source_locator: "mail://offer/1", rationale: "Offre reçue", valid_until: null, exclusions_state: "UNKNOWN" as const, exclusions: [], mandate_state: "NOT_APPLICABLE" as const, mandate_source_locator: null };
+    const engagement = { command_id: "c3", idempotency_key: "i3", correlation_id: "r3", event_id: "engagement-1", partner_id: "partner-1", case_id: "case-1", expected_revision: 2, receipt_event_id: "receipt-1", source_locator: "agreement://signed/1", rationale: "Déclaration Patron" };
+
+    await client.listCasePartnerEvents("case-1");
+    await client.recordCasePartnerRequest(request);
+    await client.recordCasePartnerReceipt(received);
+    await client.declareCasePartnerEngagement(engagement);
+
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      "https://app.example.test/api/v1/cases/case-1/partners",
+      "https://app.example.test/api/v1/cases/case-1/partners/requests",
+      "https://app.example.test/api/v1/cases/case-1/partners/receipts",
+      "https://app.example.test/api/v1/cases/case-1/partners/engagements",
+    ]);
+    expect(JSON.parse(String((fetchMock.mock.calls[1]?.[1] as RequestInit).body))).toEqual(request);
+    expect(JSON.parse(String((fetchMock.mock.calls[2]?.[1] as RequestInit).body))).toEqual(received);
+    expect(JSON.parse(String((fetchMock.mock.calls[3]?.[1] as RequestInit).body))).toEqual(engagement);
+  });
+});
+
+describe("C08 private partner offer price transport", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("lists prices in C08 and declares a value against the exact received C09 event", async () => {
+    const list = {
+      case_id: "case-1",
+      offers: [{
+        receipt_event_id: "receipt-1",
+        partner_id: "partner-1",
+        partner_kind: "SUPPLIER",
+        partner_label: "Fournisseur A",
+        partner_revision: 2,
+        source_locator: "offre://v2.pdf",
+        source_rationale: "Devis fournisseur du lot 7",
+        valid_until: null,
+        validity_current: "UNKNOWN",
+        exclusions_state: "UNKNOWN",
+        exclusions: [],
+        mandate_state: "NOT_APPLICABLE",
+        is_latest_receipt: true,
+        price_state: "UNKNOWN",
+        declarations: [],
+      }],
+    };
+    const receipt = {
+      status: "SUCCEEDED",
+      result_code: "PARTNER_OFFER_PRICE_DECLARED",
+      aggregate_refs: [],
+      event_ids: ["declaration-1"],
+      replayed: false,
+    };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify(list), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(receipt), { status: 201 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const client = createApiClient("https://app.example.test", "access-1");
+    const input = {
+      command_id: "command-1",
+      idempotency_key: "key-1",
+      correlation_id: "correlation-1",
+      declaration_id: "declaration-1",
+      expected_revision: 0,
+      amount_as_declared: "1234,50",
+      currency_code: "MAD",
+    };
+
+    await client.listPartnerOfferPrices("case-1");
+    await client.declarePartnerOfferPrice("case-1", "receipt-1", input);
+
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      "https://app.example.test/api/v1/patron/cases/case-1/partner-offer-prices",
+      "https://app.example.test/api/v1/patron/cases/case-1/partner-offer-prices/receipt-1/declarations",
+    ]);
+    expect(JSON.parse(String((fetchMock.mock.calls[1]?.[1] as RequestInit).body))).toEqual(input);
+  });
+
+  it("reads and records a scope review without sending offer amounts", async () => {
+    const receipt = {
+      status: "SUCCEEDED",
+      result_code: "PARTNER_SCOPE_REVIEW_RECORDED",
+      aggregate_refs: [],
+      event_ids: ["review-1"],
+      replayed: false,
+    };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ case_id: "case-1", reviews: [] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(receipt), { status: 201 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const client = createApiClient("https://app.example.test", "access-1");
+    const input = {
+      command_id: "command-1",
+      idempotency_key: "key-1",
+      correlation_id: "correlation-1",
+      review_id: "review-1",
+      comparison_id: "comparison-1",
+      expected_revision: 0,
+      decision: "NEEDS_CLARIFICATION" as const,
+      rationale: "Le périmètre reste à confirmer.",
+      offers: [
+        { receipt_event_id: "receipt-1", inclusion_state: "UNKNOWN" as const, included_scope_note: null, exclusions_review_state: "UNKNOWN" as const, transport_state: "UNKNOWN" as const, transport_note: null },
+        { receipt_event_id: "receipt-2", inclusion_state: "DECLARED" as const, included_scope_note: "Lot 7", exclusions_review_state: "REVIEWED" as const, transport_state: "INCLUDED" as const, transport_note: "Transport au site." },
+      ],
+    };
+
+    await client.listPartnerOfferScopeReviews("case-1");
+    await client.recordPartnerOfferScopeReview("case-1", input);
+
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      "https://app.example.test/api/v1/patron/cases/case-1/partner-offer-scope-reviews",
+      "https://app.example.test/api/v1/patron/cases/case-1/partner-offer-scope-reviews",
+    ]);
+    expect(JSON.parse(String((fetchMock.mock.calls[1]?.[1] as RequestInit).body))).toEqual(input);
+    expect(JSON.stringify(input)).not.toContain("amount_as_declared");
+  });
+});
+
 
 describe("BOAMP transport", () => {
   afterEach(() => {

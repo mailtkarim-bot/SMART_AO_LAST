@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.platform.events.command_contracts import ApplicationCommand
 
@@ -19,6 +19,8 @@ class DecisionContextReferenceInput(BaseModel):
         "DCE_REQUIREMENT",
         "DECISION_RISK",
         "PRICING_SCENARIO",
+        "BUSINESS_METHOD_PROFILE",
+        "CONTRACT_BASELINE_IMPACT",
     ]
     aggregate_id: UUID
     aggregate_revision: int = Field(ge=0)
@@ -29,6 +31,18 @@ class DecisionContextReferenceInput(BaseModel):
         pattern=r"^[a-fA-F0-9]{64}$",
     )
     reference_role: str = Field(min_length=1, max_length=80)
+
+    @model_validator(mode="after")
+    def require_profile_hash(self) -> DecisionContextReferenceInput:
+        if self.aggregate_type == "BUSINESS_METHOD_PROFILE" and (
+            self.aggregate_revision < 1 or self.content_hash is None
+        ):
+            raise ValueError("business method profile references require version and hash")
+        if self.aggregate_type == "CONTRACT_BASELINE_IMPACT" and (
+            self.aggregate_revision < 1 or self.content_hash is not None
+        ):
+            raise ValueError("contract baseline references require an immutable proof revision")
+        return self
 
 
 class CreateDecisionCommand(ApplicationCommand):

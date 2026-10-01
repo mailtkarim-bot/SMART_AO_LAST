@@ -64,6 +64,17 @@ import type {
   CaseExecutionResults,
   CaseRexList,
   CaseInterviewList,
+  CaseTeachingSources,
+  CaseTeachingApplicabilityList,
+  RecordCaseTeachingApplicabilityInput,
+  CasePartnerEventList,
+  RecordCasePartnerRequestInput,
+  RecordCasePartnerReceiptInput,
+  DeclareCasePartnerEngagementInput,
+  PartnerOfferPriceList,
+  DeclarePartnerOfferPriceInput,
+  PartnerOfferScopeReviewList,
+  RecordPartnerOfferScopeReviewInput,
   RecordCaseInterviewInput,
   RecordCaseOutcomeInput,
   RecordCaseRexInput,
@@ -378,6 +389,28 @@ export function createApiClient(
       request<CaseInterviewList>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/interviews`),
     recordCaseInterview: (input: RecordCaseInterviewInput) =>
       request<CaseExecutionCommandReceipt>(`/api/v1/patron/cases/${encodeURIComponent(input.case_id)}/interviews`, { method: "POST", body: JSON.stringify(input) }),
+    listCaseTeachingSources: (caseId: string) =>
+      request<CaseTeachingSources>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/teaching-sources`),
+    listCaseTeachingApplicabilities: (caseId: string) =>
+      request<CaseTeachingApplicabilityList>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/teaching-applicabilities`),
+    recordCaseTeachingApplicability: (input: RecordCaseTeachingApplicabilityInput) =>
+      request<CaseExecutionCommandReceipt>(`/api/v1/patron/cases/${encodeURIComponent(input.target_case_id)}/teaching-applicabilities`, { method: "POST", body: JSON.stringify(input) }),
+    listCasePartnerEvents: (caseId: string) =>
+      request<CasePartnerEventList>(`/api/v1/cases/${encodeURIComponent(caseId)}/partners`),
+    recordCasePartnerRequest: (input: RecordCasePartnerRequestInput) =>
+      request<CaseExecutionCommandReceipt>(`/api/v1/cases/${encodeURIComponent(input.case_id)}/partners/requests`, { method: "POST", body: JSON.stringify(input) }),
+    recordCasePartnerReceipt: (input: RecordCasePartnerReceiptInput) =>
+      request<CaseExecutionCommandReceipt>(`/api/v1/cases/${encodeURIComponent(input.case_id)}/partners/receipts`, { method: "POST", body: JSON.stringify(input) }),
+    declareCasePartnerEngagement: (input: DeclareCasePartnerEngagementInput) =>
+      request<CaseExecutionCommandReceipt>(`/api/v1/cases/${encodeURIComponent(input.case_id)}/partners/engagements`, { method: "POST", body: JSON.stringify(input) }),
+    listPartnerOfferPrices: (caseId: string) =>
+      request<PartnerOfferPriceList>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/partner-offer-prices`),
+    declarePartnerOfferPrice: (caseId: string, receiptEventId: string, input: DeclarePartnerOfferPriceInput) =>
+      request<CaseExecutionCommandReceipt>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/partner-offer-prices/${encodeURIComponent(receiptEventId)}/declarations`, { method: "POST", body: JSON.stringify(input) }),
+    listPartnerOfferScopeReviews: (caseId: string) =>
+      request<PartnerOfferScopeReviewList>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/partner-offer-scope-reviews`),
+    recordPartnerOfferScopeReview: (caseId: string, input: RecordPartnerOfferScopeReviewInput) =>
+      request<CaseExecutionCommandReceipt>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/partner-offer-scope-reviews`, { method: "POST", body: JSON.stringify(input) }),
     recordCaseRex: (p7ResultId: string, input: RecordCaseRexInput) =>
       request<CaseExecutionCommandReceipt>(`/api/v1/patron/case-p7/${encodeURIComponent(p7ResultId)}/rex`, { method: "POST", body: JSON.stringify(input) }),
     recordCaseOutcome: (input: RecordCaseOutcomeInput) =>

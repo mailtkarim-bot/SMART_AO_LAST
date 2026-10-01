@@ -70,10 +70,10 @@ export function EnterpriseLibraryPanel({
   onVerifyDocument,
 }: EnterpriseLibraryPanelProps) {
   return (
-    <section className="section-block" id="library-section">
+    <section className="section-block">
       <div className="section-heading">
         <div>
-          <span className="section-kicker">BIBLIOTHÈQUE PATRONALE</span>
+          <span className="section-kicker">ESPACE ENTREPRISE</span>
           <h2>Entreprise & prix privés</h2>
         </div>
         <span className="count-pill">

@@ -1,0 +1,1 @@
+"""Pure partner domain rules."""

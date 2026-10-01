@@ -75,6 +75,29 @@ _PRICING_SCENARIOS_TABLE = sa.table(
     sa.column("version", sa.Integer),
     sa.column("state", sa.String(16)),
 )
+_BUSINESS_METHOD_PROFILE_VERSIONS_TABLE = sa.table(
+    "enterprise_business_method_profile_versions",
+    sa.column("id", PG_UUID(as_uuid=True)),
+    sa.column("tenant_id", PG_UUID(as_uuid=True)),
+    sa.column("company_id", PG_UUID(as_uuid=True)),
+    sa.column("version_number", sa.Integer),
+    sa.column("content_sha256", sa.String(64)),
+)
+_BUSINESS_METHOD_PROFILE_ADOPTIONS_TABLE = sa.table(
+    "case_business_method_profile_adoptions",
+    sa.column("id", PG_UUID(as_uuid=True)),
+    sa.column("tenant_id", PG_UUID(as_uuid=True)),
+    sa.column("case_id", PG_UUID(as_uuid=True)),
+    sa.column("profile_version_id", PG_UUID(as_uuid=True)),
+    sa.column("profile_content_sha256", sa.String(64)),
+)
+_CONTRACT_BASELINE_IMPACTS_TABLE = sa.table(
+    "contract_baseline_deviation_impacts",
+    sa.column("id", PG_UUID(as_uuid=True)),
+    sa.column("tenant_id", PG_UUID(as_uuid=True)),
+    sa.column("case_id", PG_UUID(as_uuid=True)),
+    sa.column("proof_revision", sa.Integer),
+)
 
 
 class SqlAlchemyDecisionLifecycleRepository(DecisionLifecycleRepository):
@@ -308,6 +331,52 @@ class SqlAlchemyDecisionLifecycleRepository(DecisionLifecycleRepository):
                         _PRICING_SCENARIOS_TABLE.c.case_id == case_id,
                         _PRICING_SCENARIOS_TABLE.c.version == aggregate_revision,
                         _PRICING_SCENARIOS_TABLE.c.state != "ARCHIVED",
+                    )
+                )
+                is not None
+            )
+
+        if aggregate_type == "BUSINESS_METHOD_PROFILE":
+            if content_hash is None:
+                return False
+            return (
+                db_session.scalar(
+                    sa.select(_BUSINESS_METHOD_PROFILE_VERSIONS_TABLE.c.id)
+                    .join(
+                        _BUSINESS_METHOD_PROFILE_ADOPTIONS_TABLE,
+                        sa.and_(
+                            _BUSINESS_METHOD_PROFILE_ADOPTIONS_TABLE.c.tenant_id
+                            == _BUSINESS_METHOD_PROFILE_VERSIONS_TABLE.c.tenant_id,
+                            _BUSINESS_METHOD_PROFILE_ADOPTIONS_TABLE.c.profile_version_id
+                            == _BUSINESS_METHOD_PROFILE_VERSIONS_TABLE.c.id,
+                            _BUSINESS_METHOD_PROFILE_ADOPTIONS_TABLE.c.profile_content_sha256
+                            == _BUSINESS_METHOD_PROFILE_VERSIONS_TABLE.c.content_sha256,
+                        ),
+                    )
+                    .where(
+                        _BUSINESS_METHOD_PROFILE_VERSIONS_TABLE.c.tenant_id == tenant_id,
+                        _BUSINESS_METHOD_PROFILE_VERSIONS_TABLE.c.id == aggregate_id,
+                        _BUSINESS_METHOD_PROFILE_VERSIONS_TABLE.c.version_number
+                        == aggregate_revision,
+                        sa.func.lower(_BUSINESS_METHOD_PROFILE_VERSIONS_TABLE.c.content_sha256)
+                        == content_hash.lower(),
+                        _BUSINESS_METHOD_PROFILE_ADOPTIONS_TABLE.c.tenant_id == tenant_id,
+                        _BUSINESS_METHOD_PROFILE_ADOPTIONS_TABLE.c.case_id == case_id,
+                    )
+                )
+                is not None
+            )
+
+        if aggregate_type == "CONTRACT_BASELINE_IMPACT":
+            if content_hash is not None:
+                return False
+            return (
+                db_session.scalar(
+                    sa.select(_CONTRACT_BASELINE_IMPACTS_TABLE.c.id).where(
+                        _CONTRACT_BASELINE_IMPACTS_TABLE.c.tenant_id == tenant_id,
+                        _CONTRACT_BASELINE_IMPACTS_TABLE.c.case_id == case_id,
+                        _CONTRACT_BASELINE_IMPACTS_TABLE.c.id == aggregate_id,
+                        _CONTRACT_BASELINE_IMPACTS_TABLE.c.proof_revision == aggregate_revision,
                     )
                 )
                 is not None

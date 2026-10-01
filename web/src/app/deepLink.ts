@@ -8,6 +8,7 @@ export const NAV_KEYS = [
   "dce-opening",
   "wizard",
   "library",
+  "partners",
   "decision",
   "submission",
   "results",

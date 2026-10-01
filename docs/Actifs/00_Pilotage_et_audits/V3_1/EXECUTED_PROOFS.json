@@ -1,0 +1,68 @@
+{
+  "head": "1c8ac62fcddc78d2b156f70df9f0b130910cc918",
+  "snapshot_digest": "396b78e74db0f2ef87c44139e9d349475a80c6f043800de218ee70784f1afb1d",
+  "backend_domain_architecture": {
+    "passed": 297,
+    "failed": 1,
+    "failure": "test_runtime_schema_head_matches_alembic_script_graph",
+    "expected": "20260930_0120",
+    "actual": "20260930_0121",
+    "duration_seconds": 1.68,
+    "command": "PYTHONDONTWRITEBYTECODE=1 ./.venv/bin/pytest backend/tests/domain backend/tests/architecture -q -p no:cacheprovider"
+  },
+  "frontend": {
+    "passed": 285,
+    "failed": 0,
+    "files": 52,
+    "command": "pnpm --dir web test"
+  },
+  "isolated_import": {
+    "status": "FAIL",
+    "error_type": "NameError",
+    "message": "name '_source_field_constraints' is not defined"
+  },
+  "full_backend_postgres": "NOT_EXECUTED_IN_THIS_AUDIT",
+  "public_go": "NO_GO",
+  "code_changes": "NONE",
+  "frontend_typecheck": "PASS",
+  "frontend_lint": {
+    "command": "pnpm --dir web lint",
+    "exit_code": 0
+  },
+  "documentation_tests": {
+    "command": "PYTHONDONTWRITEBYTECODE=1 ./.venv/bin/pytest backend/tests/ops/test_product_freeze_authority_contract.py -q -p no:cacheprovider",
+    "passed": 4,
+    "failed": 0
+  },
+  "audit_artifact_checks": {
+    "source_hashes_unchanged": 1265,
+    "functional_families": 45,
+    "section_locators_checked": 899,
+    "one_active_slice": true,
+    "evidence_paths_exist": true,
+    "git_diff_check": "PASS"
+  },
+  "branch": "feat/ccap-cctp-risk-register-20260831",
+  "source_snapshot_digest": "4f1d37dbc102f7b08d175acdf283547c54d77f4cd24e99f11abc220337649e4f",
+  "runtime_migration_head": "20260930_0122",
+  "temporary_postgresql_upgrade": "PASS",
+  "postgresql_targeted_tests": {
+    "passed": 9,
+    "failed": 0,
+    "modules": [
+      "backend/tests/db/test_business_method_profile_persistence.py",
+      "backend/tests/db/test_partner_offer_line_comparison.py"
+    ]
+  },
+  "domain_architecture_ops_api_tests": {
+    "passed": 338,
+    "failed": 0,
+    "command": "PYTHONDONTWRITEBYTECODE=1 ./.venv/bin/pytest backend/tests/domain backend/tests/architecture backend/tests/ops/test_preprod_ops_contract.py backend/tests/ops/test_product_freeze_authority_contract.py backend/tests/api/test_patron_business_method_profiles_routes.py -q -p no:cacheprovider"
+  },
+  "ruff_changed_files": "PASS",
+  "alembic_check_c08_m0": "PASS; no detected table/index/constraint diffs for C08 or M0",
+  "alembic_check_global": "FAIL: broader historical metadata drift outside this slice",
+  "full_backend_suite": "NOT_RUN",
+  "alembic_check_c08_profile_tables": "PASS: no new detected metadata differences on C08 and two M0 tables",
+  "alembic_check_baseline_table": "HISTORICAL_DIFF: existing tenant index and check-constraint names; 0122 adds append-only trigger only"
+}

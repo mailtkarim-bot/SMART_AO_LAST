@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
+import { Suspense, lazy, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { PricingPanel } from "../features/pricing/PricingPanel";
+import { PartnerOfferPricesPanel } from "../features/pricing/PartnerOfferPricesPanel";
 import { PaymentCyclePanel } from "../features/decision/PaymentCyclePanel";
 import { PostReceptionObligationsPanel } from "../features/decision/PostReceptionObligationsPanel";
 import { CaseOutcomePanel } from "../features/results/CaseOutcomePanel";
@@ -21,6 +22,9 @@ import { usePricingImport } from "../features/pricing/usePricingImport";
 import { SubmissionPanel } from "../features/submission/SubmissionPanel";
 import { useSubmissionActions } from "../features/submission/useSubmissionActions";
 import { EnterpriseLibraryPanel } from "../features/enterprise/EnterpriseLibraryPanel";
+import { CaseInterviewsPanel } from "../features/enterprise/CaseInterviewsPanel";
+import { useCaseTeachingApplicability } from "../features/enterprise/useCaseTeachingApplicability";
+import { useCasePartnerEvents } from "../features/partners/useCasePartnerEvents";
 import { useEnterpriseLibrary } from "../features/enterprise/useEnterpriseLibrary";
 import { CollaboratorWizardPanel } from "../features/wizard/CollaboratorWizardPanel";
 import { useCollaboratorWizard } from "../features/wizard/useCollaboratorWizard";
@@ -75,6 +79,15 @@ import type {
 } from "../shared/types";
 import { buildDeepLink, readDeepLink, type NavKey } from "./deepLink";
 import "./styles.css";
+
+const TeachingApplicabilityPanel = lazy(async () => {
+  const module = await import("../features/enterprise/TeachingApplicabilityPanel");
+  return { default: module.TeachingApplicabilityPanel };
+});
+const CasePartnerPanel = lazy(async () => {
+  const module = await import("../features/partners/CasePartnerPanel");
+  return { default: module.CasePartnerPanel };
+});
 
 const CATEGORIES: Array<{ value: FinancialCategory; label: string }> = [
   { value: "SALES", label: "Ventes" },
@@ -311,7 +324,15 @@ function App() {
   );
   const caseInterviews = useCaseInterview(
     api,
-    businessReady && currentActor?.actor_kind === "PATRON_ADMIN" ? selectedCaseId : "",
+    activeNav === "library" && businessReady && currentActor?.actor_kind === "PATRON_ADMIN" ? selectedCaseId : "",
+  );
+  const caseTeachingApplicability = useCaseTeachingApplicability(
+    api,
+    activeNav === "library" && businessReady && currentActor?.actor_kind === "PATRON_ADMIN" ? selectedCaseId : "",
+  );
+  const casePartnerEvents = useCasePartnerEvents(
+    api,
+    activeNav === "partners" && businessReady ? selectedCaseId : "",
   );
   const {
     assignments,
@@ -819,7 +840,8 @@ function App() {
           <button className={`nav-item ${activeNav === "dce" ? "active" : ""}`} onClick={() => navigateTo("dce-knowledge-section", "dce")}><span className="nav-icon">⌕</span>Lecture DCE / RAG</button>
           <button className={`nav-item ${activeNav === "dce-opening" ? "active" : ""}`} onClick={() => navigateTo("dce-opening-section", "dce-opening")}><span className="nav-icon">⤓</span>Espace DCE</button>
           <button className={`nav-item ${activeNav === "wizard" ? "active" : ""}`} onClick={() => navigateTo("collaborator-wizard-section", "wizard")}><span className="nav-icon">⌁</span>Wizard collaborateur</button>
-          {isPatron && <button className={`nav-item ${activeNav === "library" ? "active" : ""}`} onClick={() => navigateTo("library-section", "library")}><span className="nav-icon">▤</span>Bibliothèque</button>}
+          {(isPatron || isCollaborator) && <button className={`nav-item ${activeNav === "partners" ? "active" : ""}`} onClick={() => navigateTo("partners-section", "partners")}><span className="nav-icon">⇄</span>Partenaires C09</button>}
+          {isPatron && <button className={`nav-item ${activeNav === "library" ? "active" : ""}`} onClick={() => navigateTo("library-section", "library")}><span className="nav-icon">▤</span>Entreprise</button>}
           {isPatron && <button className={`nav-item ${activeNav === "decision" ? "active" : ""}`} onClick={() => navigateTo("decision-section", "decision")}><span className="nav-icon">◇</span>Décision</button>}
           {isPatron && <button className={`nav-item ${activeNav === "submission" ? "active" : ""}`} onClick={() => navigateTo("submission-section", "submission")}><span className="nav-icon">↗</span>Dépôt</button>}
           {currentActor?.actor_kind === "PATRON_ADMIN" && <button className={`nav-item ${activeNav === "results" ? "active" : ""}`} onClick={() => navigateTo("results-section", "results")}><span className="nav-icon">✓</span>Résultat et passation</button>}
@@ -866,7 +888,7 @@ function App() {
 
         {isPatron && <CreateCasePanel onCreate={createCase} disabled={!businessReady} />}
 
-        {isPatron && (
+        {isPatron && <div id="library-section">
           <EnterpriseLibraryPanel
           enterpriseCompany={enterpriseCompany}
           enterpriseCapabilities={enterpriseCapabilities}
@@ -894,7 +916,27 @@ function App() {
           onUploadDocument={() => void uploadEnterpriseDocument()}
             onVerifyDocument={() => void verifyEnterpriseDocument()}
           />
-        )}
+          {currentActor?.actor_kind === "PATRON_ADMIN" && <CaseInterviewsPanel
+            caseId={selectedCaseId}
+            caseLabel={selectedCase?.work_label ?? ""}
+            status={caseInterviews.status}
+            interviews={caseInterviews.interviews}
+            canManage={businessReady}
+            onRefresh={caseInterviews.refresh}
+            onRecordInterview={async (input) => { await api.recordCaseInterview(input); }}
+          />}
+          {activeNav === "library" && currentActor?.actor_kind === "PATRON_ADMIN" && <Suspense fallback={<p role="status">Chargement de l’applicabilité C13…</p>}>
+            <TeachingApplicabilityPanel
+              targetCaseId={selectedCaseId}
+              targetCaseLabel={selectedCase?.work_label ?? ""}
+              readStatus={caseTeachingApplicability.status}
+              sources={caseTeachingApplicability.sources}
+              applicabilities={caseTeachingApplicability.applicabilities}
+              onRefresh={caseTeachingApplicability.refresh}
+              onRecord={async (input) => { await api.recordCaseTeachingApplicability(input); }}
+            />
+          </Suspense>}
+        </div>}
 
         {isPatron && (
           <section className="section-block" id="pricing-section">
@@ -922,8 +964,26 @@ function App() {
             onReload={() => void pricingImport.reloadPricingImport()}
             onCommit={() => void pricingImport.commitPricingImport()}
             />
+          <PartnerOfferPricesPanel
+            api={api}
+            caseId={selectedCaseId}
+            enabled={businessReady && activeNav === "review"}
+          />
           </section>
         )}
+
+        {activeNav === "partners" && businessReady && <Suspense fallback={<p role="status">Chargement de C09…</p>}>
+          <CasePartnerPanel
+            caseId={selectedCaseId}
+            caseLabel={selectedCase?.work_label ?? ""}
+            status={casePartnerEvents.status}
+            list={casePartnerEvents.list}
+            onRequest={async (input) => { await api.recordCasePartnerRequest(input); }}
+            onReceive={async (input) => { await api.recordCasePartnerReceipt(input); }}
+            onDeclareEngagement={async (input) => { await api.declareCasePartnerEngagement(input); }}
+            onRefresh={casePartnerEvents.refresh}
+          />
+        </Suspense>}
 
         <section className="hero-grid" id="preparation-section">
           <div className="hero-card"><div className="hero-copy"><span className="hero-kicker">CETTE SEMAINE</span><h2>Décider avec la<br /><strong>bonne information.</strong></h2><p>Retrouvez vos affaires actives et reprenez chaque chiffrage là où vous l’avez laissé.</p><button className="primary-button" onClick={() => document.getElementById("draft-section")?.scrollIntoView({ behavior: "smooth" })}>Ouvrir un chiffrage <span>→</span></button></div><div className="hero-orbit"><div className="orbit orbit-one" /><div className="orbit orbit-two" /><div className="orbit-core">AO<br /><small>V8</small></div></div></div>
@@ -1205,14 +1265,12 @@ function App() {
             status={caseExecutionResults.status}
             data={caseExecutionResults.data}
             rex={caseRex.rex ?? []}
-            interviews={caseInterviews.interviews ?? []}
-            onRefresh={async () => { await caseExecutionResults.refresh(); await caseRex.refresh(); await caseInterviews.refresh(); }}
+            onRefresh={async () => { await caseExecutionResults.refresh(); await caseRex.refresh(); }}
             onRecordOutcome={async (input) => { await api.recordCaseOutcome(input); }}
             onRecordOrder={async (input) => { await api.recordCaseOrder(input); }}
             onRecordP6={async (orderId, input) => { await api.recordCaseP6Control(orderId, input); }}
             onRecordP7={async (p6Id, input) => { await api.recordCaseP7Result(p6Id, input); }}
             onRecordRex={async (p7ResultId, input) => { await api.recordCaseRex(p7ResultId, input); }}
-            onRecordInterview={async (input) => { await api.recordCaseInterview(input); }}
           />
         </div>}
 

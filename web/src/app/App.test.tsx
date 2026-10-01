@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import App from "./App";
-import type { AssignedCase, CaseExecutionResults } from "../shared/types";
+import type { AssignedCase, CaseExecutionResults, CaseInterview } from "../shared/types";
 
 const { authMfaRef, authProfileRef, authRoleRef, authSessionExpiredRef, authSessionRef, overridesRef } = vi.hoisted(() => ({
   authMfaRef: { current: true },
@@ -173,6 +173,92 @@ describe("App readiness integration", () => {
   it("expose C12 résultat/passation dans la navigation Patron", async () => {
     await renderApp();
     expect(screen.getByRole("button", { name: /Résultat et passation/ })).toBeVisible();
+  });
+
+  it("place la revue d’entretien PUX-19 dans C13 et distingue USABLE d’EXPIRED", async () => {
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", { configurable: true, value: vi.fn() });
+    const interviews: CaseInterview[] = [
+      { interview_id: "usable-1", case_id: "case-1", held_on: "2026-09-29", source_locator: "fixture://interview/usable", rationale: "Entretien à réutiliser sous conditions", expires_on: "2026-10-01", snapshot: { rex: [{ rex_id: "rex-1", lot_reference: "01", motif: "UNKNOWN", scope: "CASE_ONLY", validation: "PENDING" }] }, status: "USABLE", created_at: "2026-09-29T10:00:00Z" },
+      { interview_id: "expired-1", case_id: "case-1", held_on: "2026-03-01", source_locator: "fixture://interview/expired", rationale: "Entretien arrivé à expiration", expires_on: "2026-03-02", snapshot: { rex: [] }, status: "EXPIRED", created_at: "2026-03-01T10:00:00Z" },
+    ];
+    overridesRef.current = {
+      ...baseOverrides(),
+      listCaseInterviews: vi.fn(async () => ({ case_id: "case-1", interviews })),
+      listCaseTeachingSources: vi.fn(async () => ({
+        case_id: "case-1",
+        sources: [{
+          source_case_id: "source-case-1",
+          source_case_label: "Affaire source",
+          source_interview_id: "interview-source-1",
+          source_rex_id: "rex-source-1",
+          held_on: "2026-09-29",
+          source_locator: "entretien://source/1",
+          interview_rationale: "Revue d’enseignement",
+          expires_on: "2026-10-01",
+          source_validity: "USABLE",
+          snapshot: { rex_id: "rex-source-1", lot_reference: "01", motif: "KNOWN", scope: "ENTERPRISE_PATTERN", validation: "APPROVED", observation: "Coordination à vérifier", consequence: "Risque de retard", follow_up: "Contrôle au démarrage", source_locator: "dce://source/4" },
+          can_assess: true,
+          block_reason: null,
+        }],
+      })),
+      listCaseTeachingApplicabilities: vi.fn(async () => ({ case_id: "case-1", applicabilities: [] })),
+    };
+    await renderApp();
+
+    fireEvent.click(screen.getByRole("button", { name: /Entreprise/ }));
+    expect(await screen.findByRole("heading", { name: "Entretien du 2026-09-29" })).toBeVisible();
+    expect(screen.getByText(/USABLE · réemploi sous conditions jusqu’au 2026-10-01/)).toBeVisible();
+    expect(screen.getByText(/EXPIRED · réemploi à réinterroger/)).toBeVisible();
+    expect(screen.getByText(/Snapshot à date : 1 enseignement capturé/)).toBeVisible();
+    expect(await screen.findByText(/Coordination à vérifier/)).toBeVisible();
+    expect(screen.getByText(/Validité : USABLE · portée : ENTERPRISE_PATTERN · revue source : APPROVED/)).toBeVisible();
+    expect(screen.getByText(/ne transfère aucun contenu, ne prolonge pas la validité/)).toBeVisible();
+
+    const c12 = screen.getByRole("region", { name: "Résultats et passation C12" });
+    expect(within(c12).queryByText(/Entretien du 2026-09-29/)).toBeNull();
+  });
+
+  it("charge C09 seulement à l’ouverture et distingue un reçu d’un engagement Patron", async () => {
+    const listPartnerOfferPrices = vi.fn();
+    const listCasePartnerEvents = vi.fn(async () => ({
+      case_id: "case-1",
+      can_request: true,
+      can_receive: true,
+      can_declare_engagement: false,
+      events: [{
+        event_id: "partner-receipt-1",
+        partner_id: "partner-1",
+        case_id: "case-1",
+        revision: 1,
+        event_type: "RECEIVED" as const,
+        partner_kind: "SUBCONTRACTOR" as const,
+        partner_label: "Électricité déclarée",
+        related_event_id: null,
+        source_locator: "offer://received/lot-01",
+        rationale: "Offre reçue, revue à poursuivre.",
+        valid_until: null,
+        validity_at_recording: "UNKNOWN" as const,
+        validity_current: "UNKNOWN" as const,
+        exclusions_state: "UNKNOWN" as const,
+        exclusions: [],
+        mandate_state: "NOT_APPLICABLE" as const,
+        mandate_source_locator: null,
+        actor_id: "actor-1",
+        recorded_at: "2026-09-30T12:00:00Z",
+      }],
+    }));
+    overridesRef.current = { ...baseOverrides(), listCasePartnerEvents, listPartnerOfferPrices };
+    await renderApp();
+    expect(listCasePartnerEvents).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: /Partenaires C09/ }));
+
+    expect(await screen.findByText(/RECEIVED · preuve reçue/)).toBeVisible();
+    expect(screen.getByText(/Mandat : NOT_APPLICABLE/)).toBeVisible();
+    expect(screen.getByText(/reçu ≠ engagé/)).toBeVisible();
+    expect(listCasePartnerEvents).toHaveBeenCalledWith("case-1");
+    expect(listPartnerOfferPrices).not.toHaveBeenCalled();
+    expect(screen.queryByText(/ENGAGEMENT_DECLARED · acte humain Patron/)).toBeNull();
   });
 
   it("attend MFA et confirmation du contexte avant de lire les résultats C12", async () => {

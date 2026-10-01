@@ -3,7 +3,11 @@ from __future__ import annotations
 from logging.config import fileConfig
 
 from alembic import context
-from app.modules.case.infrastructure.models import case, regulatory_profile  # noqa: F401
+from app.modules.case.infrastructure.models import (  # noqa: F401
+    business_method_profile_adoption,
+    case,
+    regulatory_profile,
+)
 from app.modules.dce.infrastructure.models import (  # noqa: F401
     case_dce_impact,
     consultation,
@@ -25,6 +29,7 @@ from app.modules.dce.infrastructure.models import (  # noqa: F401
     human_resumption_act,
     unknown_audit_provenance,
 )
+from app.modules.enterprise.infrastructure.models import business_method_profile  # noqa: F401
 from app.modules.decision.infrastructure.models import (  # noqa: F401
     decision,
     risk,
@@ -36,15 +41,22 @@ from app.modules.opportunity.infrastructure import (
     observation_models as opportunity_observation_models,  # noqa: F401
 )
 from app.modules.optimization.infrastructure import models as optimization_models  # noqa: F401
+from app.modules.partner.infrastructure import models as partner_models  # noqa: F401
 from app.modules.patron_action.infrastructure.models import patron_action  # noqa: F401
 from app.modules.preparation.infrastructure.models import preparation  # noqa: F401
 from app.modules.pricing.infrastructure.models import (
+    contract_execution_evidence,  # noqa: F401
     contract_execution_evidence_requalification,  # noqa: F401
     contract_instrument_supersession,  # noqa: F401
     contract_instrument_version,  # noqa: F401
     financial,  # noqa: F401
+    partner_offer_price,  # noqa: F401
+    partner_offer_line_comparison,  # noqa: F401
+    partner_offer_scope_review,  # noqa: F401
+    payment_collection_rejection_review,  # noqa: F401
     payment_cycle_review,  # noqa: F401
     payment_post_reception_cycle,  # noqa: F401
+    payment_unknown_audit_owner_act,  # noqa: F401
     post_reception_obligation,  # noqa: F401
     post_reception_obligation_transition,  # noqa: F401
 )

@@ -1,0 +1,14 @@
+{
+  "captured_at_utc": "2026-09-30T23:39:39.283944+00:00",
+  "head": "1c8ac62fcddc78d2b156f70df9f0b130910cc918",
+  "snapshot_digest": "396b78e74db0f2ef87c44139e9d349475a80c6f043800de218ee70784f1afb1d",
+  "functional_families": 45,
+  "sections_indexed": 899,
+  "unresolved_section_mapping": 0,
+  "code_files": 1265,
+  "untracked_in_snapshot": 64,
+  "parse_errors": [],
+  "absence_scope": "Dedicated target flow not found in inspected models, services, routes and UI; does not prove no related primitive anywhere.",
+  "manual_scope_dispositions": 152,
+  "semantic_limitation": "All 899 headings indexed; 152 ambiguous/control headings manually scoped. This is not proof every atomic clause is implemented or semantically consistent."
+}

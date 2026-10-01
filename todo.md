@@ -1,6 +1,6 @@
 # SMART_AO V8 — Checklist durable
 
-Cette checklist est la source de vérité opérationnelle après réconciliation des deux audits. Les anciennes entrées historiques détaillées ont été remplacées par le journal des slices publiés et les seules frontières encore ouvertes.
+**Statut : checklist technique historique, pas source de vérité opérationnelle actuelle.** Pour reprendre et choisir le travail : [plan global unique](docs/Actifs/00_Pilotage_et_audits/SMART_AO_PLAN_GLOBAL_CONCEPTION_REALISATION_CHECKLIST_v0.1.md), puis [index actif V3.1](docs/Actifs/00_INDEX_DOCUMENTATION_ACTIVE.md). Les entrées ci-dessous sont des constats datés ; elles ne qualifient pas le checkout actuel et leurs anciennes consignes de push ne valent pas autorisation actuelle.
 
 ## Corrections d’audit publiées
 

@@ -1688,6 +1688,9 @@ from app.modules.enterprise.infrastructure.models.enterprise import (  # noqa: E
     EnterpriseCapabilityRecord,
     EnterpriseCapabilityVersionRecord,
 )
+from app.modules.partner.infrastructure.models.partner_event import (  # noqa: E402, F401
+    CasePartnerEventRecord,
+)
 from app.modules.patron_action.infrastructure.models.patron_action import (  # noqa: E402, F401
     PatronActionTransitionRecord,
 )
@@ -1705,6 +1708,13 @@ from app.modules.pricing.infrastructure.models.financial import (  # noqa: E402,
     PricingImportRowRecord,
     PricingImportTransitionRecord,
     PricingScenarioTransitionRecord,
+)
+from app.modules.pricing.infrastructure.models.partner_offer_price import (  # noqa: E402, F401
+    PartnerOfferPriceDeclarationRecord,
+)
+from app.modules.pricing.infrastructure.models.partner_offer_scope_review import (  # noqa: E402, F401
+    PartnerOfferScopeReviewOfferRecord,
+    PartnerOfferScopeReviewRecord,
 )
 from app.modules.submission.infrastructure.models.submission import (  # noqa: E402, F401
     SubmissionSignatureRecord,
