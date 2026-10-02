@@ -45,6 +45,11 @@ import type {
   PricingImportPreview,
   PricingImportBatchRead,
   EnterpriseCompany,
+  BusinessMethodProfileAdoption,
+  BusinessMethodProfileReceipt,
+  BusinessMethodProfileVersions,
+  AdoptBusinessMethodProfileInput,
+  PublishBusinessMethodProfileInput,
   EnterpriseCompanyInput,
   EnterpriseDocumentUploadInput,
   EnterpriseDocumentVerificationInput,
@@ -62,6 +67,9 @@ import type {
   CaseDceReading,
   CaseExecutionCommandReceipt,
   CaseExecutionResults,
+  CaseHandoverOfferOptions,
+  CaseHandoverSnapshots,
+  CaseContractChangeEventList,
   CaseRexList,
   CaseInterviewList,
   CaseTeachingSources,
@@ -77,6 +85,11 @@ import type {
   RecordPartnerOfferScopeReviewInput,
   RecordCaseInterviewInput,
   RecordCaseOutcomeInput,
+  RecordCaseHandoverInput,
+  RecordCaseHandoverReceipt,
+  RecordCaseContractChangeEventInput,
+  RecordCaseContractChangeApplicabilityInput,
+  RecordCaseContractChangeActionInput,
   RecordCaseRexInput,
   RecordCaseOrderInput,
   RecordCaseP6ControlInput,
@@ -88,6 +101,8 @@ import type {
   FreezeDecisionContextResponse,
   ResolveDecisionConditionRequest,
   ResolveDecisionConditionResponse,
+  RecordContractBaselineImpactInput,
+  LinkDecisionConditionContractEvidenceInput,
   FinalizeGoNoGoDecisionRequest,
   FinalizeGoNoGoDecisionResponse,
   DecisionRiskRequirementPage,
@@ -383,6 +398,22 @@ export function createApiClient(
     listAssignedCases: () => request<AssignedCase[]>("/api/v1/cases/assigned"),
     listCaseExecutionResults: (caseId: string) =>
       request<CaseExecutionResults>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/execution-results`),
+    listCaseHandoverOfferOptions: (caseId: string) =>
+      request<CaseHandoverOfferOptions>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/p7-handover-options`),
+    listCaseHandoverSnapshots: (caseId: string) =>
+      request<CaseHandoverSnapshots>(`/api/v1/cases/${encodeURIComponent(caseId)}/p7-handover`),
+    downloadCaseHandoverOffer: (caseId: string, snapshotId: string) =>
+      requestBlob(`/api/v1/cases/${encodeURIComponent(caseId)}/p7-handover/${encodeURIComponent(snapshotId)}/offer-document`),
+    recordCaseHandover: (caseId: string, input: RecordCaseHandoverInput) =>
+      request<RecordCaseHandoverReceipt>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/p7-handover`, { method: "POST", body: JSON.stringify(input) }),
+    listCaseContractChangeEvents: (caseId: string) =>
+      request<CaseContractChangeEventList>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-change-events`),
+    recordCaseContractChangeEvent: (caseId: string, input: RecordCaseContractChangeEventInput) =>
+      request<CaseExecutionCommandReceipt>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-change-events`, { method: "POST", body: JSON.stringify(input) }),
+    recordCaseContractChangeApplicability: (caseId: string, eventId: string, input: RecordCaseContractChangeApplicabilityInput) =>
+      request<CaseExecutionCommandReceipt>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-change-events/${encodeURIComponent(eventId)}/applicability`, { method: "POST", body: JSON.stringify(input) }),
+    recordCaseContractChangeAction: (caseId: string, eventId: string, input: RecordCaseContractChangeActionInput) =>
+      request<CaseExecutionCommandReceipt>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-change-events/${encodeURIComponent(eventId)}/actions`, { method: "POST", body: JSON.stringify(input) }),
     listCaseRex: (caseId: string) =>
       request<CaseRexList>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/rex`),
     listCaseInterviews: (caseId: string) =>
@@ -593,6 +624,11 @@ export function createApiClient(
       request<ContractBaselineImpactPage>(
         `/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-baseline-impacts`,
       ),
+    recordContractBaselineImpact: (caseId: string, input: RecordContractBaselineImpactInput) =>
+      request(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-baseline-impacts`, {
+        method: "POST",
+        body: JSON.stringify(input),
+      }),
     listContractProofReviews: (caseId: string) =>
       request<ContractProofReviewPage>(
         `/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-proof-reviews`,
@@ -735,6 +771,16 @@ export function createApiClient(
           }),
         },
       ),
+    linkDecisionConditionContractEvidence: (
+      caseId: string,
+      decisionId: string,
+      conditionId: string,
+      input: LinkDecisionConditionContractEvidenceInput,
+    ) =>
+      request(
+        `/api/v1/patron/cases/${encodeURIComponent(caseId)}/decisions/${encodeURIComponent(decisionId)}/conditions/${encodeURIComponent(conditionId)}/contract-evidence`,
+        { method: "POST", body: JSON.stringify(input) },
+      ),
     finalizeDecision: (
       caseId: string,
       decisionId: string,
@@ -784,6 +830,50 @@ export function createApiClient(
       ),
     getEnterpriseCompany: () =>
       request<EnterpriseCompany>("/api/v1/patron/enterprise/company"),
+    listBusinessMethodProfileVersions: (companyId: string) =>
+      request<BusinessMethodProfileVersions>(
+        `/api/v1/patron/enterprise/companies/${encodeURIComponent(companyId)}/business-method-profile/versions`,
+      ),
+    publishBusinessMethodProfile: (
+      companyId: string,
+      input: PublishBusinessMethodProfileInput,
+    ) =>
+      request<BusinessMethodProfileReceipt>(
+        `/api/v1/patron/enterprise/companies/${encodeURIComponent(companyId)}/business-method-profile/versions`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            command_id: input.command_id ?? makeId(),
+            idempotency_key: input.idempotency_key ?? makeId(),
+            correlation_id: input.correlation_id ?? makeId(),
+            expected_version: input.expected_version,
+            profile: input.profile,
+          }),
+        },
+      ),
+    getBusinessMethodProfileAdoption: (caseId: string) =>
+      request<BusinessMethodProfileAdoption | null>(
+        `/api/v1/patron/cases/${encodeURIComponent(caseId)}/business-method-profile/adoption`,
+      ),
+    adoptBusinessMethodProfile: (
+      caseId: string,
+      input: AdoptBusinessMethodProfileInput,
+    ) =>
+      request<BusinessMethodProfileReceipt>(
+        `/api/v1/patron/cases/${encodeURIComponent(caseId)}/business-method-profile/adoptions`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            command_id: input.command_id ?? makeId(),
+            idempotency_key: input.idempotency_key ?? makeId(),
+            correlation_id: input.correlation_id ?? makeId(),
+            expected_adoption_revision: input.expected_adoption_revision,
+            profile_version_id: input.profile_version_id,
+            profile_version: input.profile_version,
+            profile_content_sha256: input.profile_content_sha256,
+          }),
+        },
+      ),
     createEnterpriseCompany: (input: EnterpriseCompanyInput) =>
       request<EnterpriseReceipt>("/api/v1/patron/enterprise/company", {
         method: "POST",

@@ -29,12 +29,12 @@ from app.modules.dce.infrastructure.models import (  # noqa: F401
     human_resumption_act,
     unknown_audit_provenance,
 )
-from app.modules.enterprise.infrastructure.models import business_method_profile  # noqa: F401
 from app.modules.decision.infrastructure.models import (  # noqa: F401
     decision,
     risk,
     risk_requirement,
 )
+from app.modules.enterprise.infrastructure.models import business_method_profile  # noqa: F401
 from app.modules.knowledge.infrastructure import models as knowledge_models  # noqa: F401
 from app.modules.opportunity.infrastructure import models as opportunity_models  # noqa: F401
 from app.modules.opportunity.infrastructure import (
@@ -45,13 +45,14 @@ from app.modules.partner.infrastructure import models as partner_models  # noqa:
 from app.modules.patron_action.infrastructure.models import patron_action  # noqa: F401
 from app.modules.preparation.infrastructure.models import preparation  # noqa: F401
 from app.modules.pricing.infrastructure.models import (
+    case_contract_change,  # noqa: F401
     contract_execution_evidence,  # noqa: F401
     contract_execution_evidence_requalification,  # noqa: F401
     contract_instrument_supersession,  # noqa: F401
     contract_instrument_version,  # noqa: F401
     financial,  # noqa: F401
-    partner_offer_price,  # noqa: F401
     partner_offer_line_comparison,  # noqa: F401
+    partner_offer_price,  # noqa: F401
     partner_offer_scope_review,  # noqa: F401
     payment_collection_rejection_review,  # noqa: F401
     payment_cycle_review,  # noqa: F401

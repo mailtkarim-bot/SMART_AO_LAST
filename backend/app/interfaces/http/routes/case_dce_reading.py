@@ -111,6 +111,7 @@ def build_case_dce_reading_router(
             requirements=[
                 CaseDceReadingRequirementResponse(
                     requirement_id=requirement.requirement_id,
+                    confirmation_revision=requirement.confirmation_revision,
                     requirement_type=requirement.requirement_type,
                     directive_signal=requirement.directive_signal,
                     confirmation_outcome=requirement.confirmation_outcome,

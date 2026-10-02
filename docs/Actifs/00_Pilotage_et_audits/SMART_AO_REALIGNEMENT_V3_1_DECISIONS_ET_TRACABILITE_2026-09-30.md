@@ -83,3 +83,26 @@ A0 est clos pour les blocs touchés : C08 imports et route/model wiring, tête s
 Résultats : 9 tests DB ciblés M0/C08 verts ; 338 tests domaine/architecture/ops/API ciblés verts ; typecheck et Ruff verts. Le contrôle Alembic ne trouve pas d'écart nouveau dans les tables C08/profil/adoption. Il reste des écarts de métadonnées historiques ailleurs, dont index/noms de contraintes de la baseline ancienne. Le NO-GO public est maintenu ; rien n’est commité ou poussé. Le snapshot A0/M0 est local et inclut les fichiers non suivis listés dans `V3_1/A0_M0_SOURCE_SNAPSHOT_2026-10-01.json`.
 
 A1 est la prochaine tranche : prouver dans C07 le lien entre une exigence DCE et la preuve baseline, un impact déclaré et une condition Patron, avec le profil exact cité. M1 UI vient après A1. A1 garde UNKNOWN/refus/rejeu, pas de promotion P3 ni conclusion juridique automatique.
+
+
+## D31-10 — Contre-audit Smart BTP et gate terrain avant extension
+
+Le paquet reçu le 1er octobre est conservé dans [`Veille_concurrentielle_2026-10-01/`](Veille_concurrentielle_2026-10-01/). Il renforce une précaution déjà présente en v3.1 : les annonces d’un éditeur ne prouvent pas les workflows opérationnels, et une différenciation SMART AO n’est pas démontrée par la seule spécification.
+
+**Décision de pilotage :** Product Freeze, Master métier et cahier technique v3.1 restent inchangés. Avant d’élargir A1 ou d’ajouter des fonctions, ouvrir R0 : mesurer la douleur, l’usage actuel, la charge d’adoption et l’existence d’un décideur budget sur des affaires/corpus autorisés. A1 reste la prochaine tranche fonctionnelle, mais elle attend ce gate de terrain ; le code existant sert de baseline.
+
+**Limites :** les trois fichiers sont des propositions fournies par le propriétaire, non une validation du marché. Le Read Me cite des registres et protocoles supplémentaires qui ne figurent pas parmi les fichiers reçus ; les sources SB1–SB11 et les conclusions concurrentielles ne sont donc pas entièrement auditables depuis ce seul paquet. Aucun entretien, accès concurrent, DCE client ou pilote payé n’a été exécuté ici. Le protocole R0 v0.1 fixe avant collecte le seuil initial de cinq entretiens, trois DCE autorisés et douleur répétée par au moins trois participants sur cinq ; ces valeurs servent de gate exploratoire, pas de preuve PMF. Aucun cahier produit n’est réécrit et aucune supériorité concurrentielle n’est revendiquée.
+
+Le protocole opérationnel R0 v0.1 est dans `Veille_concurrentielle_2026-10-01/SMART_AO_R0_VALIDATION_TERRAIN_PROTOCOL_v0.1.md`. Il fixe une première gate et ses états `UNKNOWN`/`PARTIAL` ; aucune entrevue, mesure ou validation marché n’est déclarée.
+
+
+## D31-11 — R0 terrain différé, A1 réactivée
+
+Le propriétaire n’a pas les moyens de financer/organiser les entretiens et la collecte de trois DCE. Les annonces publiques de Smart BTP et les autres signaux présents dans les pièces reçues sont acceptés comme **hypothèses concurrentielles conservatrices** pour concevoir SMART AO. Ce choix ne certifie pas le fonctionnement réel des offres concurrentes, ne valide pas un besoin acheteur et ne constitue pas une preuve de marché.
+
+Le Product Freeze, le Master métier et le cahier technique v3.1 restent inchangés. Le dossier R0 de collecte terrain est archivé en option et ne bloque pas le codage. Le plan remet A1 en tranche active. Les assertions d’usage, d’achat, de charge et de différenciation restent `UNKNOWN` jusqu’à observation ; l’objectif immédiat est de produire la chaîne manuelle définie en A1, sans étendre le périmètre au-delà de ses critères de sortie.
+
+
+## D31-12 — Reprise du codage A1 sans gate terrain financée
+
+Le propriétaire indique ne pas pouvoir financer les entretiens ni l’acquisition de trois DCE, et demande de poursuivre le codage en prenant les annonces publiques concurrentes comme hypothèses de planification. R0 terrain reste différé et non validé ; ses inconnus ne sont pas transformés en preuves de marché. La tranche active revient à A1 conformément au Product Freeze v3.1. Les cahiers actifs ne changent pas : la veille modifie la priorité et la lecture concurrentielle, pas le périmètre fonctionnel.

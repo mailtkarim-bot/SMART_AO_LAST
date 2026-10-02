@@ -48,11 +48,26 @@ class DecisionDossierCondition:
 
 
 @dataclass(frozen=True, slots=True)
+class DecisionDossierContractEvidenceLink:
+    id: UUID
+    condition_id: UUID
+    context_id: UUID
+    dce_requirement_id: UUID
+    dce_requirement_revision: int
+    contract_impact_id: UUID
+    proof_revision: int
+    profile_version_id: UUID
+    profile_version: int
+    profile_content_sha256: str
+
+
+@dataclass(frozen=True, slots=True)
 class DecisionDossierLookup:
     decision: DecisionDossierDecision | None
     context: DecisionDossierContext | None
     references: tuple[DecisionDossierReference, ...]
     conditions: tuple[DecisionDossierCondition, ...]
+    contract_evidence_links: tuple[DecisionDossierContractEvidenceLink, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

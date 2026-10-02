@@ -119,6 +119,7 @@ def _client(*, runtime=None, policy=None, resolver_error=None):
 def _available_lookup(case_id):
     requirement = SimpleNamespace(
         requirement_id=uuid4(),
+        confirmation_revision=2,
         requirement_type="ADMINISTRATIVE",
         directive_signal="REQUIRED",
         confirmation_outcome="CONFIRMED",
@@ -184,9 +185,21 @@ def test_case_dce_reading_returns_closed_projection_and_uses_server_tenant():
     assert body["dce"]["integrity"] == "VERIFIED"
     assert body["counters"]["confirmed"] == 2
     assert body["requirements"][0]["source_locator_label"] == "page 2"
+    assert body["requirements"][0]["confirmation_revision"] == 2
     assert runtime.reading_calls[0][1] == case_id
     assert policy.calls[0]["request"].resource.tenant_id == runtime.tenant_id
     assert "gross_margin_minor" not in body
+
+
+def test_case_dce_reading_exposes_confirmed_revision_for_a1_context():
+    case_id = uuid4()
+    runtime = _Runtime(lookup=_available_lookup(case_id))
+    router = build_case_dce_reading_router(
+        runtime=runtime,
+        security_runtime=_security(),
+    )
+    response = router.routes[0].endpoint(case_id, "Bearer test-token")
+    assert response.requirements[0].confirmation_revision == 2
 
 
 def test_case_dce_reading_returns_neutral_404_for_unknown_case():

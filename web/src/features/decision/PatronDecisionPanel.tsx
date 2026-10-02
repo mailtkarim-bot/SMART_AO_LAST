@@ -5,6 +5,8 @@ import { ContractExecutionEvidenceTimeline } from "./ContractExecutionEvidenceTi
 import type {
   ContractExecutionEvidence,
   ContractExecutionEvidenceTimelineEvent,
+  ContractBaselineImpact,
+  LinkDecisionConditionContractEvidenceInput,
   PostReceptionObligation,
 } from "../../shared/types";
 import type { ContractExecutionEvidenceReadStatus } from "../pricing/useContractExecutionEvidence";
@@ -23,6 +25,8 @@ type PatronDecisionPanelProps = {
   onFreezeContext?: (input: FreezeDecisionContextRequest) => void;
   onResolveCondition?: (conditionId: string, input: ResolveDecisionConditionRequest) => void;
   onFinalize?: (input: FinalizeGoNoGoDecisionRequest) => void;
+  contractBaselineImpacts?: ContractBaselineImpact[];
+  onLinkContractEvidence?: (conditionId: string, input: LinkDecisionConditionContractEvidenceInput) => Promise<boolean>;
   postReceptionObligations?: PostReceptionObligation[];
   postReceptionObligationsLoading?: boolean;
   contractExecutionEvidence?: ContractExecutionEvidence[];
@@ -40,6 +44,8 @@ export function PatronDecisionPanel({
   onFreezeContext,
   onResolveCondition,
   onFinalize,
+  contractBaselineImpacts = [],
+  onLinkContractEvidence,
   postReceptionObligations = [],
   postReceptionObligationsLoading = false,
   contractExecutionEvidence = [],
@@ -57,6 +63,31 @@ export function PatronDecisionPanel({
   const [finalJustification, setFinalJustification] = useState("");
   const [conditionsJson, setConditionsJson] = useState("[]");
   const [finalizationError, setFinalizationError] = useState<string | null>(null);
+  const [pendingLinks, setPendingLinks] = useState<Record<string, LinkDecisionConditionContractEvidenceInput>>({});
+  const [linkingCondition, setLinkingCondition] = useState<string | null>(null);
+
+  async function linkContractEvidence(conditionId: string, impact: ContractBaselineImpact) {
+    if (!decisionDossier || !onLinkContractEvidence) return;
+    const pendingKey = `${conditionId}:${impact.proof_id}`;
+    const input = pendingLinks[pendingKey] ?? {
+      link_id: crypto.randomUUID(),
+      command_id: crypto.randomUUID(),
+      idempotency_key: crypto.randomUUID(),
+      correlation_id: crypto.randomUUID(),
+      contract_impact_id: impact.proof_id,
+      proof_revision: impact.proof_revision,
+      expected_decision_revision: decisionDossier.aggregate_revision,
+    };
+    setPendingLinks((current) => ({ ...current, [pendingKey]: input }));
+    setLinkingCondition(conditionId);
+    try {
+      if (await onLinkContractEvidence(conditionId, input)) {
+        setPendingLinks((current) => { const next = { ...current }; delete next[pendingKey]; return next; });
+      }
+    } finally {
+      setLinkingCondition(null);
+    }
+  }
 
   function submitFreeze() {
     if (!decisionDossier || !onFreezeContext || !contextId.trim() || !rationale.trim()) return;
@@ -284,6 +315,25 @@ export function PatronDecisionPanel({
                       <div>
                         <strong>{condition.label}</strong>
                         <small>{condition.failure_consequence}{condition.due_at ? ` · Échéance ${formatDate(condition.due_at)}` : ""}</small>
+                        {decisionDossier.contract_evidence_links.filter((link) => link.condition_id === condition.condition_id).map((link) => (
+                          <p className="panel-empty" key={link.link_id}>
+                            Source liée · exigence {link.dce_requirement_id} v{link.dce_requirement_revision} · impact {link.contract_impact_id} v{link.proof_revision} · profil adopté v{link.profile_version} ({link.profile_content_sha256.slice(0, 12)}…)
+                          </p>
+                        ))}
+                        {canManage && condition.status === "OPEN" && decisionDossier.outcome === "CONDITIONAL_GO" && onLinkContractEvidence && (
+                          <div className="decision-form condition-form">
+                            {contractBaselineImpacts.filter((impact) =>
+                              impact.status === "HUMAN_REVIEW_REQUIRED" &&
+                              decisionDossier.sources.some((source) => source.aggregate_type === "CONTRACT_BASELINE_IMPACT" && source.aggregate_id === impact.proof_id && source.aggregate_revision === impact.proof_revision) &&
+                              impact.dce_requirement_id !== null && decisionDossier.sources.some((source) => source.aggregate_type === "DCE_REQUIREMENT" && source.aggregate_id === impact.dce_requirement_id && source.aggregate_revision === impact.dce_requirement_revision) &&
+                              decisionDossier.sources.some((source) => source.aggregate_type === "BUSINESS_METHOD_PROFILE"),
+                            ).map((impact) => (
+                              <button key={impact.proof_id} className="secondary-button" type="button" disabled={linkingCondition === condition.condition_id} onClick={() => void linkContractEvidence(condition.condition_id, impact)}>
+                                {linkingCondition === condition.condition_id ? "Liaison…" : `Relier l’impact v${impact.proof_revision} à cette condition`}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                         {canManage && condition.status === "OPEN" && onResolveCondition && (
                           <div className="decision-form condition-form">
                             <select value={values.targetStatus} onChange={(event) => updateResolution(condition.condition_id, { targetStatus: event.target.value as "SATISFIED" | "FAILED" })}>

@@ -326,6 +326,9 @@ class DecisionConditionRecord(TenantScopedRecord, Base):
             ondelete="RESTRICT",
         ),
         sa.UniqueConstraint("tenant_id", "id", name="uq_decision_conditions__tenant_id"),
+        sa.UniqueConstraint(
+            "tenant_id", "decision_id", "id", name="uq_decision_conditions__tenant_decision_id"
+        ),
         sa.CheckConstraint(
             "due_at IS NOT NULL OR NULLIF(BTRIM(due_date_absence_reason), '') IS NOT NULL",
             name="deadline_or_reason",
@@ -355,3 +358,107 @@ class DecisionConditionRecord(TenantScopedRecord, Base):
     )
     failure_reason: Mapped[str | None] = mapped_column(sa.Text(), nullable=True)
     waiver_justification: Mapped[str | None] = mapped_column(sa.Text(), nullable=True)
+
+
+class DecisionConditionContractEvidenceLinkRecord(TenantScopedRecord, Base):
+    """Immutable relation from one Patron condition to its exact A1 evidence set."""
+
+    __tablename__ = "decision_condition_contract_evidence_links"
+    __table_args__ = (
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "decision_id"],
+            ["decisions.tenant_id", "decisions.id"],
+            name="fk_decision_condition_contract_links__decision",
+            ondelete="RESTRICT",
+        ),
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "decision_id", "condition_id"],
+            [
+                "decision_conditions.tenant_id",
+                "decision_conditions.decision_id",
+                "decision_conditions.id",
+            ],
+            name="fk_decision_condition_contract_links__condition",
+            ondelete="RESTRICT",
+        ),
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "decision_id", "context_id"],
+            [
+                "decision_contexts.tenant_id",
+                "decision_contexts.decision_id",
+                "decision_contexts.id",
+            ],
+            name="fk_decision_condition_contract_links__context",
+            ondelete="RESTRICT",
+        ),
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "contract_impact_id"],
+            [
+                "contract_baseline_deviation_impacts.tenant_id",
+                "contract_baseline_deviation_impacts.id",
+            ],
+            name="fk_decision_condition_contract_links__impact",
+            ondelete="RESTRICT",
+        ),
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "dce_requirement_id"],
+            ["dce_requirements.tenant_id", "dce_requirements.id"],
+            name="fk_decision_condition_contract_links__requirement",
+            ondelete="RESTRICT",
+        ),
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "profile_version_id", "profile_version", "profile_content_sha256"],
+            [
+                "enterprise_business_method_profile_versions.tenant_id",
+                "enterprise_business_method_profile_versions.id",
+                "enterprise_business_method_profile_versions.version_number",
+                "enterprise_business_method_profile_versions.content_sha256",
+            ],
+            name="fk_decision_condition_contract_links__profile",
+            ondelete="RESTRICT",
+        ),
+        sa.UniqueConstraint(
+            "tenant_id", "id", name="uq_decision_condition_contract_links__tenant_id"
+        ),
+        sa.UniqueConstraint(
+            "tenant_id", "command_id", name="uq_decision_condition_contract_links__command"
+        ),
+        sa.UniqueConstraint(
+            "tenant_id", "idempotency_key", name="uq_decision_condition_contract_links__idempotency"
+        ),
+        sa.UniqueConstraint(
+            "tenant_id",
+            "decision_id",
+            "condition_id",
+            "contract_impact_id",
+            "proof_revision",
+            name="uq_decision_condition_contract_links__relation",
+        ),
+        sa.CheckConstraint(
+            "proof_revision > 0 AND dce_requirement_revision > 0 AND profile_version > 0",
+            name="positive_revisions",
+        ),
+        sa.CheckConstraint("profile_content_sha256 ~ '^[0-9a-f]{64}$'", name="profile_hash"),
+        sa.Index(
+            "ix_decision_condition_contract_links__tenant_decision",
+            "tenant_id",
+            "decision_id",
+            "condition_id",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    decision_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    condition_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    context_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    dce_requirement_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    dce_requirement_revision: Mapped[int] = mapped_column(sa.Integer, nullable=False)
+    contract_impact_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    proof_revision: Mapped[int] = mapped_column(sa.Integer, nullable=False)
+    profile_version_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    profile_version: Mapped[int] = mapped_column(sa.Integer, nullable=False)
+    profile_content_sha256: Mapped[str] = mapped_column(sa.CHAR(64), nullable=False)
+    created_by_actor_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    command_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    idempotency_key: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    correlation_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), nullable=True)

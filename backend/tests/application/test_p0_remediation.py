@@ -331,3 +331,60 @@ def test_freeze_requires_dce_requirement_reference_when_case_has_dce():
             ),
             context=command_context(),
         )
+
+
+def test_a1_context_with_contract_impact_requires_adopted_profile_reference():
+    lifecycle_repository = FakeLifecycleRepository(applicable_dce=True)
+    case_id, decision_id = uuid4(), uuid4()
+    decision_repository = FakeDecisionRepository(
+        SimpleNamespace(
+            root=SimpleNamespace(
+                case_id=case_id,
+                aggregate_revision=0,
+                decision_type="GO_NO_GO",
+                lifecycle="DRAFT",
+                context_status="INCOMPLETE",
+            ),
+            contexts=(),
+        )
+    )
+    references = (
+        DecisionContextReferenceInput(
+            aggregate_type="CASE",
+            aggregate_id=case_id,
+            aggregate_revision=1,
+            reference_role="SUBJECT",
+        ),
+        DecisionContextReferenceInput(
+            aggregate_type="DCE_REQUIREMENT",
+            aggregate_id=uuid4(),
+            aggregate_revision=1,
+            reference_role="REQUIREMENT",
+        ),
+        DecisionContextReferenceInput(
+            aggregate_type="CONTRACT_BASELINE_IMPACT",
+            aggregate_id=uuid4(),
+            aggregate_revision=1,
+            reference_role="IMPACT",
+        ),
+    )
+    with pytest.raises(
+        CommandExecutionError, match="ADOPTED_BUSINESS_METHOD_PROFILE_REFERENCE_REQUIRED"
+    ):
+        FreezeDecisionContextHandler(
+            lifecycle_repository=lifecycle_repository,
+            repository_factory=lambda _session: decision_repository,
+        ).execute(
+            session=object(),
+            command=FreezeDecisionContextCommand(
+                command_id=uuid4(),
+                idempotency_key=uuid4(),
+                decision_id=decision_id,
+                case_id=case_id,
+                context_id=uuid4(),
+                expected_revision=0,
+                rationale="Contexte A1",
+                references=references,
+            ),
+            context=command_context(),
+        )

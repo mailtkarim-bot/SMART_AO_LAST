@@ -2,7 +2,14 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import App from "./App";
-import type { AssignedCase, CaseExecutionResults, CaseInterview } from "../shared/types";
+import type {
+  AssignedCase,
+  CaseExecutionResults,
+  CaseInterview,
+  ContractBaselineImpact,
+  FreezeDecisionContextRequest,
+  PatronDecisionDossier,
+} from "../shared/types";
 
 const { authMfaRef, authProfileRef, authRoleRef, authSessionExpiredRef, authSessionRef, overridesRef } = vi.hoisted(() => ({
   authMfaRef: { current: true },
@@ -23,52 +30,54 @@ vi.mock("../infrastructure/api", () => ({
     }) as never,
 }));
 
-vi.mock("../features/auth/useAuthentication", () => ({
-  useAuthentication: () => ({
-    accessToken: "token-test",
-    currentActor: authSessionRef.current ? {
-      actor_id: "actor-1",
-      identity_id: "identity-1",
-      tenant_slug: "entreprise-test",
-      actor_kind: authRoleRef.current,
-      operational_profile: authProfileRef.current,
-      membership_state: "ACTIVE",
-      mfa_verified: authMfaRef.current,
-    } : null,
-    isRestoring: false,
-    sessionExpired: authSessionExpiredRef.current,
-    hasSession: authSessionRef.current,
-    isAuthenticated: authSessionRef.current && authMfaRef.current,
-    api: new Proxy(
-      {
-        getEnterpriseCompany: () => Promise.reject(new Error("no company")),
-        listAssignedCases: () => Promise.resolve([]),
-        listPatronAssignments: () => Promise.resolve({ items: [] }),
-        listPatronActions: () => Promise.resolve({ items: [], open_count: 0 }),
-        listBoampObservations: () => Promise.resolve({ observations: [] }),
-        getCaseDceReading: () => Promise.reject(Object.assign(new Error("missing DCE"), { status: 404 })),
-        searchCaseKnowledge: () => Promise.resolve({ case_id: "case-1", query: "", results: [] }),
-        listPricingScenarios: () => Promise.resolve([]),
-        listDecisionRiskRequirementLinks: () => Promise.resolve({ items: [], next_cursor: null }),
-        listDceContractRiskSignals: () => Promise.resolve({ case_id: "case-1", items: [] }),
-        listRegulatoryProfiles: () => Promise.resolve({ case_id: "case-1", items: [] }),
-        crossCctpPricing: () => Promise.resolve({ case_id: "case-1", items: [] }),
-        listDocumentContradictions: () => Promise.resolve({ case_id: "case-1", items: [] }),
-        reconcileDecisionPricing: () => Promise.resolve({ link_id: "", search: "", items: [] }),
-        getDecisionDossier: () => Promise.reject(Object.assign(new Error("missing"), { status: 404 })),
-        ...overridesRef.current,
-      } as Record<string, unknown>,
-      {
-      get(target, prop) {
-        if (typeof prop === "string" && prop in target) return target[prop];
-        return () => Promise.resolve({});
-      },
-    }) as never,
-    login: vi.fn(),
-    refreshActor: vi.fn(),
-    logout: vi.fn(),
-  }),
-}));
+vi.mock("../features/auth/useAuthentication", () => {
+  const defaults: Record<string, unknown> = {
+    getEnterpriseCompany: () => Promise.reject(new Error("no company")),
+    listAssignedCases: () => Promise.resolve([]),
+    listPatronAssignments: () => Promise.resolve({ items: [] }),
+    listPatronActions: () => Promise.resolve({ items: [], open_count: 0 }),
+    listBoampObservations: () => Promise.resolve({ observations: [] }),
+    getCaseDceReading: () => Promise.reject(Object.assign(new Error("missing DCE"), { status: 404 })),
+    searchCaseKnowledge: () => Promise.resolve({ case_id: "case-1", query: "", results: [] }),
+    listPricingScenarios: () => Promise.resolve([]),
+    listDecisionRiskRequirementLinks: () => Promise.resolve({ items: [], next_cursor: null }),
+    listDceContractRiskSignals: () => Promise.resolve({ case_id: "case-1", items: [] }),
+    listRegulatoryProfiles: () => Promise.resolve({ case_id: "case-1", items: [] }),
+    crossCctpPricing: () => Promise.resolve({ case_id: "case-1", items: [] }),
+    listDocumentContradictions: () => Promise.resolve({ case_id: "case-1", items: [] }),
+    reconcileDecisionPricing: () => Promise.resolve({ link_id: "", search: "", items: [] }),
+    getDecisionDossier: () => Promise.reject(Object.assign(new Error("missing"), { status: 404 })),
+  };
+  const api = new Proxy(defaults, {
+    get(target, prop) {
+      if (typeof prop === "string" && prop in overridesRef.current) return overridesRef.current[prop];
+      if (typeof prop === "string" && prop in target) return target[prop];
+      return () => Promise.resolve({});
+    },
+  }) as never;
+  return {
+    useAuthentication: () => ({
+      accessToken: "token-test",
+      currentActor: authSessionRef.current ? {
+        actor_id: "actor-1",
+        identity_id: "identity-1",
+        tenant_slug: "entreprise-test",
+        actor_kind: authRoleRef.current,
+        operational_profile: authProfileRef.current,
+        membership_state: "ACTIVE",
+        mfa_verified: authMfaRef.current,
+      } : null,
+      isRestoring: false,
+      sessionExpired: authSessionExpiredRef.current,
+      hasSession: authSessionRef.current,
+      isAuthenticated: authSessionRef.current && authMfaRef.current,
+      api,
+      login: vi.fn(),
+      refreshActor: vi.fn(),
+      logout: vi.fn(),
+    }),
+  };
+});
 
 vi.mock("../features/connection/useBackendReadiness", () => ({
   useBackendReadiness: () => ({
@@ -597,5 +606,117 @@ describe("App error visibility", () => {
     ).toBeVisible();
     await new Promise((resolve) => setTimeout(resolve, 150));
     expect(screen.queryByText("ne doit jamais apparaître")).toBeNull();
+  });
+
+  it("relie depuis C07 l’impact au Patron et conserve le contrat de retry exact", async () => {
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+      configurable: true,
+      value: vi.fn(),
+    });
+    const impact: ContractBaselineImpact = {
+      proof_id: "proof-1",
+      case_id: "case-1",
+      baseline_observation_id: "observation-1",
+      dce_requirement_id: "requirement-1",
+      dce_requirement_revision: 2,
+      proof_revision: 1,
+      baseline_source_refs: ["CCAP · article 4 · page 12"],
+      baseline_statement: "Délai de paiement déclaré.",
+      deviation_statement: null,
+      impact_statement: "Effet à examiner, non calculé.",
+      status: "HUMAN_REVIEW_REQUIRED",
+    };
+    const dossier: PatronDecisionDossier = {
+      decision_id: "decision-1",
+      aggregate_revision: 4,
+      case_id: "case-1",
+      decision_type: "GO_NO_GO",
+      lifecycle: "FINALIZED",
+      outcome: "CONDITIONAL_GO",
+      validity: "CURRENT",
+      context_status: "FROZEN",
+      final_justification: "Décision conditionnelle Patron.",
+      known: [],
+      unknowns: [],
+      risks: [],
+      conditions: [{ condition_id: "condition-1", label: "Vérifier l’impact", status: "OPEN", due_at: null, failure_consequence: "Réexamen Patron" }],
+      sources: [
+        { aggregate_type: "DCE_REQUIREMENT", aggregate_id: "requirement-1", aggregate_revision: 2, role: "REQUIREMENT" },
+        { aggregate_type: "CONTRACT_BASELINE_IMPACT", aggregate_id: "proof-1", aggregate_revision: 1, role: "IMPACT" },
+        { aggregate_type: "BUSINESS_METHOD_PROFILE", aggregate_id: "profile-1", aggregate_revision: 1, role: "ADOPTED_METHOD" },
+      ],
+      contract_evidence_links: [],
+      context_fingerprint: "a".repeat(64),
+    };
+    const link = vi.fn(async () => ({ status: "SUCCEEDED" }));
+    overridesRef.current = {
+      ...baseOverrides(),
+      listContractBaselineImpacts: async () => ({ case_id: "case-1", items: [impact] }),
+      getDecisionDossier: async () => dossier,
+      linkDecisionConditionContractEvidence: link,
+    };
+    await renderApp();
+    fireEvent.click(screen.getByRole("button", { name: /Décision/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "Relier l’impact v1 à cette condition" }));
+    await waitFor(() => expect(link).toHaveBeenCalledOnce());
+    const [caseId, decisionId, conditionId, input] = link.mock.calls[0] as unknown as [string, string, string, Record<string, unknown>];
+    expect([caseId, decisionId, conditionId]).toEqual(["case-1", "decision-1", "condition-1"]);
+    expect(input).toMatchObject({ contract_impact_id: "proof-1", proof_revision: 1, expected_decision_revision: 4 });
+  });
+
+  it("ajoute au contexte A1 le profil versionné actuellement adopté", async () => {
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+      configurable: true,
+      value: vi.fn(),
+    });
+    const company = {
+      company_id: "company-1", aggregate_revision: 1, legal_name: "Entreprise test",
+      trade_name: null, siren: "123456789", siret: "12345678900012", vat_number: "FR123456789",
+      address_line1: "1 rue test", postal_code: "75000", city: "Paris", country_code: "FR", documents: [],
+    };
+    const adoption = {
+      adoption_id: "adoption-1", case_id: "case-1", adoption_revision: 3,
+      profile_version_id: "profile-2", profile_version: 2, profile_content_sha256: "b".repeat(64),
+    };
+    const decision: PatronDecisionDossier = {
+      decision_id: "decision-draft", aggregate_revision: 0, case_id: "case-1",
+      decision_type: "GO_NO_GO", lifecycle: "DRAFT", outcome: "UNDECIDED", validity: "CURRENT",
+      context_status: "INCOMPLETE", final_justification: null, known: [], unknowns: [], risks: [],
+      conditions: [], sources: [], contract_evidence_links: [], context_fingerprint: null,
+    };
+    const freeze = vi.fn(async (
+      _caseId: string,
+      _decisionId: string,
+      _input: FreezeDecisionContextRequest,
+    ) => ({ result_code: "DECISION_CONTEXT_FROZEN" }));
+    overridesRef.current = {
+      ...baseOverrides(),
+      getEnterpriseCompany: async () => company,
+      listEnterpriseCapabilities: async () => ({ capabilities: [] }),
+      listBusinessMethodProfileVersions: async () => ({ company_id: "company-1", versions: [] }),
+      getBusinessMethodProfileAdoption: async () => adoption,
+      getDecisionDossier: async () => decision,
+      freezeDecisionContext: freeze,
+    };
+    await renderApp();
+    fireEvent.click(screen.getByRole("button", { name: /Décision/ }));
+    await screen.findByText("Profil métier versionné");
+    fireEvent.change(screen.getByLabelText("Identifiant du contexte"), { target: { value: "context-1" } });
+    fireEvent.change(screen.getByLabelText("Justification"), { target: { value: "Décision à instruire" } });
+    fireEvent.change(screen.getByLabelText("Références JSON vérifiables"), { target: { value: JSON.stringify([
+      { aggregate_type: "CASE", aggregate_id: "case-1", aggregate_revision: 1, reference_role: "SUBJECT" },
+      { aggregate_type: "DCE_REQUIREMENT", aggregate_id: "requirement-1", aggregate_revision: 2, reference_role: "REQUIREMENT" },
+      { aggregate_type: "CONTRACT_BASELINE_IMPACT", aggregate_id: "proof-1", aggregate_revision: 1, reference_role: "DECLARED_IMPACT" },
+    ]) } });
+    fireEvent.click(screen.getByRole("button", { name: "Geler le contexte" }));
+    await waitFor(() => expect(freeze).toHaveBeenCalledOnce());
+    const input = freeze.mock.calls[0][2];
+    expect(input.references).toContainEqual({
+      aggregate_type: "BUSINESS_METHOD_PROFILE",
+      aggregate_id: "profile-2",
+      aggregate_revision: 2,
+      content_hash: "b".repeat(64),
+      reference_role: "ADOPTED_METHOD",
+    });
   });
 });

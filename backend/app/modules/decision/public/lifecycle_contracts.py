@@ -120,3 +120,27 @@ class ResolveDecisionConditionResponse(BaseModel):
     version: int = Field(ge=1)
     event_ids: list[UUID]
     replayed: bool
+
+
+class LinkDecisionConditionContractEvidenceRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    command_id: UUID
+    idempotency_key: UUID
+    correlation_id: UUID | None = None
+    link_id: UUID
+    contract_impact_id: UUID
+    proof_revision: int = Field(ge=1)
+    expected_decision_revision: int = Field(ge=1)
+
+
+class LinkDecisionConditionContractEvidenceResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    command_id: UUID
+    idempotency_key: UUID
+    result_code: Literal["DECISION_CONDITION_CONTRACT_EVIDENCE_LINKED"]
+    decision_id: UUID
+    condition_id: UUID
+    link_id: UUID
+    proof_revision: int = Field(ge=1)
+    event_ids: list[UUID]
+    replayed: bool

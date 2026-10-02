@@ -8,11 +8,13 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.modules.decision.application.queries import (
     DecisionDossierCondition,
     DecisionDossierContext,
+    DecisionDossierContractEvidenceLink,
     DecisionDossierDecision,
     DecisionDossierLookup,
     DecisionDossierReference,
 )
 from app.modules.decision.infrastructure.models.decision import (
+    DecisionConditionContractEvidenceLinkRecord,
     DecisionConditionRecord,
     DecisionContextRecord,
     DecisionContextReferenceRecord,
@@ -57,15 +59,16 @@ class SqlAlchemyDecisionDossierReader:
                 context_status=record.context_status,
                 final_justification=record.final_justification,
             )
-            context = session.scalar(
-                sa.select(DecisionContextRecord)
-                .where(
-                    DecisionContextRecord.tenant_id == tenant_id,
-                    DecisionContextRecord.decision_id == record.id,
-                    DecisionContextRecord.is_selected_final.is_(True),
+            context = (
+                session.scalar(
+                    sa.select(DecisionContextRecord).where(
+                        DecisionContextRecord.tenant_id == tenant_id,
+                        DecisionContextRecord.decision_id == record.id,
+                        DecisionContextRecord.id == record.selected_final_context_id,
+                    )
                 )
-                .order_by(DecisionContextRecord.sequence_number.desc())
-                .limit(1)
+                if record.selected_final_context_id is not None
+                else None
             )
             if context is None:
                 context = session.scalar(
@@ -118,6 +121,32 @@ class SqlAlchemyDecisionDossierReader:
                     .order_by(DecisionConditionRecord.id)
                 ).all()
             )
+            contract_evidence_links = tuple(
+                DecisionDossierContractEvidenceLink(
+                    id=item.id,
+                    condition_id=item.condition_id,
+                    context_id=item.context_id,
+                    dce_requirement_id=item.dce_requirement_id,
+                    dce_requirement_revision=item.dce_requirement_revision,
+                    contract_impact_id=item.contract_impact_id,
+                    proof_revision=item.proof_revision,
+                    profile_version_id=item.profile_version_id,
+                    profile_version=item.profile_version,
+                    profile_content_sha256=item.profile_content_sha256,
+                )
+                for item in session.scalars(
+                    sa.select(DecisionConditionContractEvidenceLinkRecord)
+                    .where(
+                        DecisionConditionContractEvidenceLinkRecord.tenant_id == tenant_id,
+                        DecisionConditionContractEvidenceLinkRecord.decision_id == record.id,
+                        DecisionConditionContractEvidenceLinkRecord.context_id == context.id,
+                    )
+                    .order_by(
+                        DecisionConditionContractEvidenceLinkRecord.created_at,
+                        DecisionConditionContractEvidenceLinkRecord.id,
+                    )
+                ).all()
+            )
             return DecisionDossierLookup(
                 decision=decision,
                 context=DecisionDossierContext(
@@ -128,4 +157,5 @@ class SqlAlchemyDecisionDossierReader:
                 ),
                 references=references,
                 conditions=conditions,
+                contract_evidence_links=contract_evidence_links,
             )

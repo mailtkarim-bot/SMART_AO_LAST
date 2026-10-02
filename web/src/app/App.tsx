@@ -4,6 +4,8 @@ import { PartnerOfferPricesPanel } from "../features/pricing/PartnerOfferPricesP
 import { PaymentCyclePanel } from "../features/decision/PaymentCyclePanel";
 import { PostReceptionObligationsPanel } from "../features/decision/PostReceptionObligationsPanel";
 import { CaseOutcomePanel } from "../features/results/CaseOutcomePanel";
+import { CaseHandoverPanel } from "../features/results/CaseHandoverPanel";
+import { CaseContractChangePanel } from "../features/decision/CaseContractChangePanel";
 import { useCaseExecutionResults } from "../features/results/useCaseExecutionResults";
 import { useCaseRex } from "../features/results/useCaseRex";
 import { useCaseInterview } from "../features/results/useCaseInterviews";
@@ -22,10 +24,12 @@ import { usePricingImport } from "../features/pricing/usePricingImport";
 import { SubmissionPanel } from "../features/submission/SubmissionPanel";
 import { useSubmissionActions } from "../features/submission/useSubmissionActions";
 import { EnterpriseLibraryPanel } from "../features/enterprise/EnterpriseLibraryPanel";
+import { BusinessMethodProfilePanel } from "../features/enterprise/BusinessMethodProfilePanel";
 import { CaseInterviewsPanel } from "../features/enterprise/CaseInterviewsPanel";
 import { useCaseTeachingApplicability } from "../features/enterprise/useCaseTeachingApplicability";
 import { useCasePartnerEvents } from "../features/partners/useCasePartnerEvents";
 import { useEnterpriseLibrary } from "../features/enterprise/useEnterpriseLibrary";
+import { useBusinessMethodProfile } from "../features/enterprise/useBusinessMethodProfile";
 import { CollaboratorWizardPanel } from "../features/wizard/CollaboratorWizardPanel";
 import { useCollaboratorWizard } from "../features/wizard/useCollaboratorWizard";
 import { PatronCockpitPanel } from "../features/cockpit/PatronCockpitPanel";
@@ -76,6 +80,8 @@ import type {
   DceContractRiskSignal,
   RegisterStructuredRiskInput,
   CreateCaseInput,
+  RecordContractBaselineImpactInput,
+  LinkDecisionConditionContractEvidenceInput,
 } from "../shared/types";
 import { buildDeepLink, readDeepLink, type NavKey } from "./deepLink";
 import "./styles.css";
@@ -218,6 +224,14 @@ function App() {
     uploadEnterpriseDocument,
     verifyEnterpriseDocument,
   } = useEnterpriseLibrary(api, setMessage);
+  const businessMethodProfile = useBusinessMethodProfile(
+    api,
+    setMessage,
+    businessReady && currentActor?.actor_kind === "PATRON_ADMIN"
+      ? enterpriseCompany?.company_id ?? ""
+      : "",
+    businessReady && currentActor?.actor_kind === "PATRON_ADMIN" ? selectedCaseId : "",
+  );
   const {
     wizardCaseId,
     wizardPackageId,
@@ -303,9 +317,13 @@ function App() {
   const contractBaselineImpacts = useContractBaselineImpacts(
     api,
     setMessage,
-    isPatron ? selectedCaseId : "",
+    businessReady && currentActor?.actor_kind === "PATRON_ADMIN" ? selectedCaseId : "",
   );
-  const contractProofReviews = useContractProofReviews(api, setMessage, isPatron ? selectedCaseId : "");
+  const contractProofReviews = useContractProofReviews(
+    api,
+    setMessage,
+    businessReady && currentActor?.actor_kind === "PATRON_ADMIN" ? selectedCaseId : "",
+  );
   const paymentCycles = usePaymentCycles(api, setMessage, isPatron ? selectedCaseId : "");
   const paymentCycleReviews = usePaymentCycleReviews(api, paymentCycles.cycles.map((cycle) => cycle.cycle_id));
   const paymentUnknownAudit = usePaymentUnknownAudit(api, isPatron ? selectedCaseId : "");
@@ -597,8 +615,51 @@ function App() {
 
   async function freezeDecisionContext(input: FreezeDecisionContextRequest) {
     if (!selectedCaseId || !decisionDossier || currentActor?.actor_kind !== "PATRON_ADMIN") return;
+    const profileReferences = input.references.filter(
+      (reference) => reference.aggregate_type === "BUSINESS_METHOD_PROFILE",
+    );
+    const hasA1Impact = input.references.some(
+      (reference) => reference.aggregate_type === "CONTRACT_BASELINE_IMPACT",
+    );
+    if (hasA1Impact && businessMethodProfile.status === "LOADING") {
+      setMessage({ tone: "warning", text: "Lecture du profil adopté en cours ; attendez avant de geler ce contexte." });
+      return;
+    }
+    const adoptedProfile = businessMethodProfile.adoption;
+    if (hasA1Impact && !adoptedProfile) {
+      setMessage({ tone: "error", text: "Adoptez une version de profil métier avant de geler ce contexte A1." });
+      return;
+    }
+    if (profileReferences.length > 1 || (profileReferences.length > 0 && !adoptedProfile)) {
+      setMessage({ tone: "error", text: "La référence de profil ne correspond pas à une adoption courante vérifiée." });
+      return;
+    }
+    const references = [...input.references];
+    if (adoptedProfile) {
+      const currentReference = profileReferences[0];
+      if (currentReference && (
+        currentReference.aggregate_id !== adoptedProfile.profile_version_id ||
+        currentReference.aggregate_revision !== adoptedProfile.profile_version ||
+        currentReference.content_hash?.toLowerCase() !== adoptedProfile.profile_content_sha256.toLowerCase()
+      )) {
+        setMessage({ tone: "error", text: "Le profil JSON doit correspondre au profil actuellement adopté. Actualisez ou adoptez la version souhaitée." });
+        return;
+      }
+      if (!currentReference) {
+        references.push({
+          aggregate_type: "BUSINESS_METHOD_PROFILE",
+          aggregate_id: adoptedProfile.profile_version_id,
+          aggregate_revision: adoptedProfile.profile_version,
+          content_hash: adoptedProfile.profile_content_sha256,
+          reference_role: "ADOPTED_METHOD",
+        });
+      }
+    }
     try {
-      await api.freezeDecisionContext(selectedCaseId, decisionDossier.decision_id, input);
+      await api.freezeDecisionContext(selectedCaseId, decisionDossier.decision_id, {
+        ...input,
+        references,
+      });
       await refreshDecisionDossier(selectedCaseId);
       setMessage({ tone: "success", text: "Contexte de décision gelé." });
     } catch (error) {
@@ -658,6 +719,40 @@ function App() {
         tone: "error",
         text: error instanceof Error ? error.message : "Impossible de finaliser la décision.",
       });
+    }
+  }
+
+  async function recordContractBaselineImpact(input: RecordContractBaselineImpactInput): Promise<boolean> {
+    if (!selectedCaseId || currentActor?.actor_kind !== "PATRON_ADMIN") return false;
+    try {
+      await api.recordContractBaselineImpact(selectedCaseId, input);
+      await contractBaselineImpacts.refresh();
+      setMessage({ tone: "success", text: "Impact déclaré et transmis à la revue humaine." });
+      return true;
+    } catch (error) {
+      setMessage({ tone: "error", text: error instanceof Error ? error.message : "Impossible d’enregistrer l’impact déclaré." });
+      return false;
+    }
+  }
+
+  async function linkDecisionConditionEvidence(
+    conditionId: string,
+    input: LinkDecisionConditionContractEvidenceInput,
+  ): Promise<boolean> {
+    if (!selectedCaseId || !decisionDossier || currentActor?.actor_kind !== "PATRON_ADMIN") return false;
+    try {
+      await api.linkDecisionConditionContractEvidence(
+        selectedCaseId,
+        decisionDossier.decision_id,
+        conditionId,
+        input,
+      );
+      await refreshDecisionDossier(selectedCaseId);
+      setMessage({ tone: "success", text: "La preuve exacte est reliée à la condition Patron. La décision reste inchangée." });
+      return true;
+    } catch (error) {
+      setMessage({ tone: "error", text: error instanceof Error ? error.message : "Impossible de relier la preuve à la condition." });
+      return false;
     }
   }
 
@@ -1115,6 +1210,17 @@ function App() {
               void resolveDecisionCondition(conditionId, input)
             }
             onFinalize={(input) => void finalizeDecision(input)}
+            contractBaselineImpacts={contractBaselineImpacts.items}
+            onLinkContractEvidence={linkDecisionConditionEvidence}
+          />
+        )}
+
+        {currentActor?.actor_kind === "PATRON_ADMIN" && (
+          <BusinessMethodProfilePanel
+            companyId={enterpriseCompany?.company_id ?? ""}
+            caseId={selectedCaseId}
+            canManage
+            manager={businessMethodProfile}
           />
         )}
 
@@ -1161,13 +1267,16 @@ function App() {
           />
         )}
 
-        {isPatron && (
+        {currentActor?.actor_kind === "PATRON_ADMIN" && (
           <ContractBaselineImpactsPanel
             caseId={selectedCaseId}
             items={contractBaselineImpacts.items}
             reviews={contractProofReviews.reviews}
+            requirements={dceKnowledge.reading?.requirements ?? []}
             loading={contractBaselineImpacts.loading}
+            canManage={currentActor?.actor_kind === "PATRON_ADMIN"}
             onRefresh={() => void contractBaselineImpacts.refresh()}
+            onRecord={recordContractBaselineImpact}
           />
         )}
 
@@ -1255,6 +1364,28 @@ function App() {
           formatMoney={formatMoney}
           formatDate={formatDate}
             categoryLabel={categoryLabel}
+          />
+        )}
+
+        {businessReady && (currentActor?.actor_kind === "PATRON_ADMIN" || currentActor?.actor_kind === "COLLABORATEUR") && selectedCaseId && (
+          <CaseHandoverPanel
+            api={api}
+            caseId={selectedCaseId}
+            canManage={currentActor.actor_kind === "PATRON_ADMIN"}
+          />
+        )}
+        {businessReady && currentActor?.actor_kind === "PATRON_ADMIN" && selectedCaseId && (
+          <CaseContractChangePanel
+            api={api}
+            caseId={selectedCaseId}
+            versions={contractInstrumentVersions.items}
+          />
+        )}
+        {currentActor?.actor_kind === "PATRON_ADMIN" && selectedCaseId && (
+          <CaseContractChangePanel
+            api={api}
+            caseId={selectedCaseId}
+            versions={contractInstrumentVersions.items}
           />
         )}
 

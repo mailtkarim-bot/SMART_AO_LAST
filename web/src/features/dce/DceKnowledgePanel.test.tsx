@@ -29,6 +29,7 @@ const reading: CaseDceReading = {
   requirements: [
     {
       requirement_id: "requirement-1",
+      confirmation_revision: null,
       requirement_type: "DELAI_EXECUTION",
       directive_signal: "EXPLICIT",
       confirmation_outcome: "PENDING",

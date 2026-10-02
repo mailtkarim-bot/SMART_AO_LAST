@@ -199,6 +199,7 @@ class CaseDceReadingCountersResponse(PublicResponseModel):
 
 class CaseDceReadingRequirementResponse(PublicResponseModel):
     requirement_id: UUID
+    confirmation_revision: int | None
     requirement_type: str
     directive_signal: str
     confirmation_outcome: str
@@ -602,18 +603,48 @@ class ContractBaselineImpactResponse(BaseModel):
     proof_id: UUID
     case_id: UUID
     baseline_observation_id: UUID
+    dce_requirement_id: UUID | None = None
+    dce_requirement_revision: int | None = None
     proof_revision: int
     baseline_source_refs: list[str]
     baseline_statement: str
     deviation_statement: str | None
     impact_statement: str | None
-    status: Literal["SOURCE_SIGNAL_ONLY", "HUMAN_REVIEW_REQUIRED", "CONFIRMED", "UNKNOWN", "SUPERSEDED"]
+    status: Literal[
+        "SOURCE_SIGNAL_ONLY", "HUMAN_REVIEW_REQUIRED", "CONFIRMED", "UNKNOWN", "SUPERSEDED"
+    ]
 
 
 class ContractBaselineImpactPageResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
     case_id: UUID
     items: list[ContractBaselineImpactResponse]
+
+
+class RecordContractBaselineImpactRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    command_id: UUID
+    idempotency_key: UUID
+    correlation_id: UUID | None = None
+    proof_id: UUID
+    dce_requirement_id: UUID
+    dce_requirement_revision: int = Field(ge=1)
+    baseline_source_refs: list[str] = Field(min_length=1, max_length=100)
+    baseline_statement: str = Field(min_length=1, max_length=4_000)
+    deviation_statement: str | None = Field(default=None, max_length=4_000)
+    impact_statement: str = Field(min_length=1, max_length=4_000)
+
+
+class RecordContractBaselineImpactResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    command_id: UUID
+    idempotency_key: UUID
+    proof_id: UUID
+    proof_revision: int
+    result_code: str
+    status: Literal["HUMAN_REVIEW_REQUIRED"]
+    replayed: bool
+
 
 class ContractProofReviewResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -624,10 +655,12 @@ class ContractProofReviewResponse(BaseModel):
     decision: Literal["ACCEPTED", "REJECTED", "NEEDS_CLARIFICATION"]
     rationale: str
 
+
 class ContractProofReviewPageResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
     case_id: UUID
     items: list[ContractProofReviewResponse]
+
 
 class ContractProofTimelineEventResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -639,10 +672,12 @@ class ContractProofTimelineEventResponse(BaseModel):
     rationale: str
     created_at: datetime
 
+
 class ContractProofTimelineResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
     case_id: UUID
     items: list[ContractProofTimelineEventResponse]
+
 
 class ContractQueryReceiptResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -655,10 +690,12 @@ class ContractQueryReceiptResponse(BaseModel):
     actor_id: UUID
     created_at: datetime
 
+
 class ContractQueryReceiptPageResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
     case_id: UUID
     items: list[ContractQueryReceiptResponse]
+
 
 class ContractQueryExportResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -669,10 +706,12 @@ class ContractQueryExportResponse(BaseModel):
     actor_id: UUID
     created_at: datetime
 
+
 class ContractQueryExportPageResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
     case_id: UUID
     items: list[ContractQueryExportResponse]
+
 
 class ContractQueryExportTransitionResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -682,10 +721,12 @@ class ContractQueryExportTransitionResponse(BaseModel):
     local_proof_ref: str | None
     created_at: datetime
 
+
 class ContractQueryExportAuditResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
     export: ContractQueryExportResponse
     transitions: list[ContractQueryExportTransitionResponse]
+
 
 class ExportVerificationOwnerActResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -696,6 +737,7 @@ class ExportVerificationOwnerActResponse(BaseModel):
     rationale: str
     created_at: datetime
 
+
 class ExportVerificationTimelineEventResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
     event_type: Literal["VERIFICATION", "TRANSITION", "OWNER_ACT"]
@@ -703,10 +745,12 @@ class ExportVerificationTimelineEventResponse(BaseModel):
     status: str
     created_at: datetime
 
+
 class ExportVerificationTimelineResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
     export_id: UUID
     items: list[ExportVerificationTimelineEventResponse]
+
 
 class ExportOperationalHandoffResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -717,6 +761,7 @@ class ExportOperationalHandoffResponse(BaseModel):
     last_transition_at: datetime | None
     read_only: bool = True
 
+
 class HumanResumptionResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
     act_id: UUID
@@ -726,6 +771,7 @@ class HumanResumptionResponse(BaseModel):
     rationale: str
     created_at: datetime
 
+
 class HumanResumptionTimelineEventResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
     event_type: Literal["TRANSITION", "HUMAN_RESUMPTION"]
@@ -733,10 +779,12 @@ class HumanResumptionTimelineEventResponse(BaseModel):
     status: str
     created_at: datetime
 
+
 class HumanResumptionTimelineResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
     export_id: UUID
     items: list[HumanResumptionTimelineEventResponse]
+
 
 class UnknownAuditProvenanceResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -748,6 +796,7 @@ class UnknownAuditProvenanceResponse(BaseModel):
     status: str
     occurred_at: datetime
     rationale: str | None
+
 
 class PaymentCycleResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")

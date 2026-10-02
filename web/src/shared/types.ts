@@ -325,7 +325,44 @@ export type PatronDecisionDossier = {
   risks: unknown[];
   conditions: Array<{ condition_id: string; label: string; status: string; due_at: string | null; failure_consequence: string }>;
   sources: Array<{ aggregate_type: string; aggregate_id: string; aggregate_revision: number; role: string }>;
+  contract_evidence_links: Array<DecisionConditionContractEvidenceLink>;
   context_fingerprint: string | null;
+};
+
+export type DecisionConditionContractEvidenceLink = {
+  link_id: string;
+  condition_id: string;
+  context_id: string;
+  dce_requirement_id: string;
+  dce_requirement_revision: number;
+  contract_impact_id: string;
+  proof_revision: number;
+  profile_version_id: string;
+  profile_version: number;
+  profile_content_sha256: string;
+};
+
+export type RecordContractBaselineImpactInput = {
+  command_id: string;
+  idempotency_key: string;
+  correlation_id: string;
+  proof_id: string;
+  dce_requirement_id: string;
+  dce_requirement_revision: number;
+  baseline_source_refs: string[];
+  baseline_statement: string;
+  deviation_statement?: string;
+  impact_statement: string;
+};
+
+export type LinkDecisionConditionContractEvidenceInput = {
+  link_id: string;
+  command_id: string;
+  idempotency_key: string;
+  correlation_id: string;
+  contract_impact_id: string;
+  proof_revision: number;
+  expected_decision_revision: number;
 };
 
 export type StructuredRiskTreatment = "OPEN" | "ACCEPTED" | "MITIGATED";
@@ -429,6 +466,8 @@ export type ContractBaselineImpact = {
   proof_id: string;
   case_id: string;
   baseline_observation_id: string;
+  dce_requirement_id: string | null;
+  dce_requirement_revision: number | null;
   proof_revision: number;
   baseline_source_refs: string[];
   baseline_statement: string;
@@ -460,6 +499,40 @@ export type CaseExecutionResults = {
     p7: { p7_result_id: string; p6_control_id: string; result: "COMPLETED" | "UNKNOWN" | "INTERRUPTED"; source_locator: string | null; reason: string | null; reservations: string[]; actor_id: string; recorded_at: string } | null;
   }>;
 };
+export type CaseHandoverOfferOption = {
+  outcome_id: string; lot_reference: string; submission_package_id: string; package_version: number;
+  manifest_sha256: string; dce_version_id: string; technical_document_id: string;
+  technical_document_version: number; technical_document_kind: string; technical_document_sha256: string;
+};
+export type CaseHandoverOfferOptions = { case_id: string; items: CaseHandoverOfferOption[] };
+export type CaseHandoverSnapshot = {
+  schema_version: number; kind: "P7_HANDOVER_SNAPSHOT"; p7_is_order_service: false;
+  award: { outcome_id: string; lot_reference: string; source_locator: string | null; recorded_at: string };
+  offer: { submission_package_id: string; package_version: number; manifest_sha256: string; dce_version_id: string; technical_document_id: string; technical_document_version: number; technical_document_kind: string; technical_document_sha256: string; financial_content: "NOT_INCLUDED" };
+  decision: { state: "KNOWN" | "UNKNOWN"; decision_id: string | null; revision: number | null; outcome: string; context_id: string | null; context_fingerprint: string | null; conditions_state: "KNOWN" | "UNKNOWN"; open_conditions: Array<{ condition_id: string; label: string; status: "OPEN"; due_at: string | null }>; condition_sources: Array<{ condition_id: string; requirement_id: string; requirement_revision: number; impact_id: string; impact_revision: number; profile_version_id: string; profile_version: number; profile_sha256: string }> };
+  contract_comparison: { state: "UNKNOWN"; reason: string };
+  excluded: string[];
+};
+export type CaseHandoverSnapshotItem = { snapshot_id: string; outcome_id: string; lot_reference: string; submission_package_id: string; package_version: number; manifest_sha256: string; revision: number; created_at: string; snapshot: CaseHandoverSnapshot };
+export type CaseHandoverSnapshots = { case_id: string; items: CaseHandoverSnapshotItem[] };
+export type RecordCaseHandoverInput = { command_id: string; idempotency_key: string; correlation_id: string; snapshot_id: string; outcome_id: string; submission_package_id: string };
+export type RecordCaseHandoverReceipt = { status: "SUCCEEDED"; result_code: "CASE_HANDOVER_SNAPSHOT_RECORDED"; replayed: boolean };
+export type CaseContractChangeKind = "ORDER_OF_SERVICE" | "CHANGE_REQUEST" | "ADDENDUM" | "SCHEDULE_CHANGE";
+export type CaseContractChangeApplicability = "APPLICABLE_TO_HANDOVER" | "NOT_APPLICABLE" | "NEEDS_CLARIFICATION";
+export type CaseContractChangeInstrument = { contract_instrument_version_id: string; instrument_kind: "SIGNED_CONTRACT" | "AMENDMENT"; version_reference: string; source_refs: string[]; evidence_refs: string[] };
+export type CaseContractChangeEvent = {
+  event_id: string; case_id: string; handover_snapshot_id: string; outcome_id: string | null; lot_reference: string;
+  offer_package_id: string | null; offer_package_version: number | null; offer_manifest_sha256: string | null; offer_source_locator: string | null;
+  change_kind: CaseContractChangeKind; issuer: string | null; summary: string; scope_note: string; source_refs: string[];
+  evidence_refs: string[]; declared_received_at: string; declared_instrument: CaseContractChangeInstrument | null;
+  applicability_state: "UNKNOWN" | CaseContractChangeApplicability;
+  applicability_history: Array<{ review_id: string; revision: number; contract_instrument_version_id: string; decision: CaseContractChangeApplicability; delta_state: "UNKNOWN" | "DECLARED"; delta_note: string | null; rationale: string; evidence_refs: string[]; recorded_at: string; contract_instrument: CaseContractChangeInstrument | null }>;
+  actions: Array<{ action_id: string; revision: number; applicability_review_id: string; summary: string; evidence_refs: string[]; due_at: string | null; due_date_absence_reason: string | null; state: "RECORDED"; recorded_at: string }>;
+};
+export type CaseContractChangeEventList = { case_id: string; events: CaseContractChangeEvent[] };
+export type RecordCaseContractChangeEventInput = { command_id: string; idempotency_key: string; correlation_id: string; event_id: string; handover_snapshot_id: string; change_kind: CaseContractChangeKind; contract_instrument_version_id: string | null; issuer: string | null; summary: string; scope_note: string; source_refs: string[]; evidence_refs: string[]; declared_received_at: string };
+export type RecordCaseContractChangeApplicabilityInput = { command_id: string; idempotency_key: string; correlation_id: string; review_id: string; handover_snapshot_id: string; contract_instrument_version_id: string; expected_revision: number; decision: CaseContractChangeApplicability; delta_state: "UNKNOWN" | "DECLARED"; delta_note: string | null; rationale: string; evidence_refs: string[] };
+export type RecordCaseContractChangeActionInput = { command_id: string; idempotency_key: string; correlation_id: string; action_id: string; applicability_review_id: string; expected_revision: number; action_summary: string; evidence_refs: string[]; due_at: string | null; due_date_absence_reason: string | null };
 export type RecordCaseOutcomeInput = { command_id: string; idempotency_key: string; correlation_id: string; outcome_id: string; case_id: string; lot_reference: string; outcome: CaseOutcomeValue; source_locator: string | null; reservations: string[]; unknown_reason: string | null };
 export type RecordCaseOrderInput = { command_id: string; idempotency_key: string; correlation_id: string; order_id: string; outcome_id: string; case_id: string; decision: "ACCEPTED" | "REJECTED"; rationale: string };
 export type RecordCaseP6ControlInput = { command_id: string; idempotency_key: string; correlation_id: string; p6_control_id: string; order_id: string; case_id: string; decision: "APPROVED" | "REJECTED"; reservations: string[]; rationale: string };
@@ -748,7 +821,68 @@ export type EnterpriseCompany = {
   documents: EnterpriseDocument[];
 };
 
+export type BusinessMethodProfileTerm =
+  | "affair"
+  | "lot"
+  | "owner"
+  | "collaborator"
+  | "evidence";
+export type BusinessMethodProfileAxis =
+  | "CONTRACT"
+  | "COST"
+  | "CASH"
+  | "SCHEDULE"
+  | "CAPACITY"
+  | "PARTNER"
+  | "DOCUMENT";
+export type BusinessMethodProfileCheck = {
+  key: string;
+  label: string;
+  axis: BusinessMethodProfileAxis;
+};
+export type BusinessMethodProfileContent = {
+  schema_version: 1;
+  terminology: Partial<Record<BusinessMethodProfileTerm, string>>;
+  additional_checks: BusinessMethodProfileCheck[];
+};
+export type BusinessMethodProfileVersion = {
+  profile_version_id: string;
+  version: number;
+  schema_version: 1;
+  profile: BusinessMethodProfileContent;
+  content_sha256: string;
+};
+export type BusinessMethodProfileVersions = {
+  company_id: string;
+  versions: BusinessMethodProfileVersion[];
+};
+export type BusinessMethodProfileAdoption = {
+  adoption_id: string;
+  case_id: string;
+  adoption_revision: number;
+  profile_version_id: string;
+  profile_version: number;
+  profile_content_sha256: string;
+};
+export type PublishBusinessMethodProfileInput = {
+  command_id?: string;
+  idempotency_key?: string;
+  correlation_id?: string;
+  expected_version: number;
+  profile: BusinessMethodProfileContent;
+};
+export type AdoptBusinessMethodProfileInput = {
+  command_id?: string;
+  idempotency_key?: string;
+  correlation_id?: string;
+  expected_adoption_revision: number;
+  profile_version_id: string;
+  profile_version: number;
+  profile_content_sha256: string;
+};
+
 export type EnterpriseReceipt = CommandReceipt;
+export type BusinessMethodProfileReceipt = CommandReceipt;
 
 export type EnterpriseUploadReceipt = {
   upload_id: string;
@@ -1282,6 +1416,7 @@ export type CaseDceReading = {
   };
   requirements: Array<{
     requirement_id: string;
+    confirmation_revision: number | null;
     requirement_type: string;
     directive_signal: string;
     confirmation_outcome: string;

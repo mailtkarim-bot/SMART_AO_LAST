@@ -18,6 +18,7 @@ from app.modules.decision.application.lifecycle_commands import (
     CreateDecisionCommand,
     DecisionContextReferenceInput,
     FreezeDecisionContextCommand,
+    LinkDecisionConditionContractEvidenceCommand,
     ResolveDecisionConditionCommand,
 )
 from app.modules.decision.application.link_commands import LinkRiskToRequirementCommand
@@ -46,6 +47,8 @@ from app.modules.decision.public.lifecycle_contracts import (
     CreateDecisionResponse,
     FreezeDecisionContextRequest,
     FreezeDecisionContextResponse,
+    LinkDecisionConditionContractEvidenceRequest,
+    LinkDecisionConditionContractEvidenceResponse,
     ResolveDecisionConditionRequest,
     ResolveDecisionConditionResponse,
 )
@@ -294,6 +297,71 @@ def build_patron_decision_router(
                 status_code=status.HTTP_200_OK, content=response.model_dump(mode="json")
             )
 
+        @router.post(
+            "/cases/{case_id}/decisions/{decision_id}/conditions/{condition_id}/contract-evidence",
+            response_model=LinkDecisionConditionContractEvidenceResponse,
+        )
+        def link_decision_condition_contract_evidence(
+            case_id: UUID,
+            decision_id: UUID,
+            condition_id: UUID,
+            request: LinkDecisionConditionContractEvidenceRequest,
+            authorization: str | None = Header(default=None),
+        ):
+            actor = _resolve_context(
+                authorization=authorization, context_resolver=security_runtime.context_resolver
+            )
+            try:
+                result = lifecycle_service.execute(
+                    actor=actor,
+                    command=LinkDecisionConditionContractEvidenceCommand(
+                        command_id=request.command_id,
+                        idempotency_key=request.idempotency_key,
+                        correlation_id=request.correlation_id,
+                        link_id=request.link_id,
+                        decision_id=decision_id,
+                        case_id=case_id,
+                        condition_id=condition_id,
+                        contract_impact_id=request.contract_impact_id,
+                        proof_revision=request.proof_revision,
+                        expected_decision_revision=request.expected_decision_revision,
+                    ),
+                    now=datetime.now(tz=UTC),
+                )
+            except PermissionError as error:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN, detail="FORBIDDEN"
+                ) from error
+            except (IdempotencyKeyReusedError, CommandInProgressError) as error:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT, detail="IDEMPOTENCY_CONFLICT"
+                ) from error
+            except CommandExecutionError as error:
+                detail = str(error)
+                code = (
+                    status.HTTP_409_CONFLICT
+                    if detail == "STALE_DECISION_REVISION"
+                    else status.HTTP_404_NOT_FOUND
+                    if detail == "NOT_FOUND_OR_FORBIDDEN"
+                    else status.HTTP_422_UNPROCESSABLE_CONTENT
+                )
+                raise HTTPException(status_code=code, detail=detail) from error
+            response = LinkDecisionConditionContractEvidenceResponse(
+                command_id=UUID(result.command_id),
+                idempotency_key=UUID(result.idempotency_key),
+                result_code="DECISION_CONDITION_CONTRACT_EVIDENCE_LINKED",
+                decision_id=decision_id,
+                condition_id=condition_id,
+                link_id=request.link_id,
+                proof_revision=request.proof_revision,
+                event_ids=[UUID(event_id) for event_id in result.event_ids],
+                replayed=result.replayed,
+            )
+            return JSONResponse(
+                status_code=status.HTTP_200_OK if result.replayed else status.HTTP_201_CREATED,
+                content=response.model_dump(mode="json"),
+            )
+
     @router.get("/cases/{case_id}/decision-dossier", response_model=PatronDecisionDossierResponse)
     def read_dossier(case_id: UUID, authorization: str | None = Header(default=None)):
         actor = _resolve_context(
@@ -313,6 +381,7 @@ def build_patron_decision_router(
         payload = asdict(dossier)
         payload["conditions"] = list(payload["conditions"])
         payload["sources"] = list(payload["sources"])
+        payload["contract_evidence_links"] = list(payload.get("contract_evidence_links", ()))
         return PatronDecisionDossierResponse(**payload)
 
     if risk_service is not None:

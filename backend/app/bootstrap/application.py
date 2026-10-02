@@ -32,6 +32,7 @@ from app.interfaces.http.routes.case_assigned import build_assigned_case_router
 from app.interfaces.http.routes.case_creation import build_case_creation_router
 from app.interfaces.http.routes.case_dce_applicability import build_case_dce_applicability_router
 from app.interfaces.http.routes.case_dce_reading import build_case_dce_reading_router
+from app.interfaces.http.routes.case_handover import build_case_handover_routers
 from app.interfaces.http.routes.case_partners import build_case_partner_router
 from app.interfaces.http.routes.case_resolution import build_case_resolution_router
 from app.interfaces.http.routes.collaborator_capabilities import (
@@ -69,6 +70,9 @@ from app.interfaces.http.routes.patron_boamp_opportunities import (
 )
 from app.interfaces.http.routes.patron_business_method_profiles import (
     build_patron_business_method_profile_router,
+)
+from app.interfaces.http.routes.patron_case_contract_changes import (
+    build_patron_case_contract_change_router,
 )
 from app.interfaces.http.routes.patron_consolidated_export_resumption import (
     build_patron_consolidated_export_resumption_router,
@@ -204,6 +208,7 @@ from app.modules.dce.application.consolidated_export_resumption_handler import (
 )
 from app.modules.dce.application.contract_baseline_handler import (
     ContractBaselineImpactReadService,
+    ContractBaselineImpactWriteService,
     contract_baseline_handlers,
 )
 from app.modules.dce.application.contract_query_export_handler import (
@@ -436,6 +441,10 @@ from app.modules.partner.application.partner_handler import (
     CasePartnerService,
     partner_event_handlers,
 )
+from app.modules.patron_action.application.case_handover import (
+    CaseHandoverService,
+    case_handover_handlers,
+)
 from app.modules.patron_action.application.case_interview_handler import (
     CaseInterviewService,
     case_interview_handlers,
@@ -455,6 +464,9 @@ from app.modules.patron_action.application.transition_service import (
     PatronActionTransitionService,
     patron_action_transition_handlers,
 )
+from app.modules.patron_action.infrastructure.handover_reader import (
+    SqlAlchemyCaseHandoverReader,
+)
 from app.modules.preparation.application.review import (
     PreparationReviewService,
     preparation_review_handlers,
@@ -470,6 +482,10 @@ from app.modules.preparation.infrastructure.dce_preparation_reader import (
 from app.modules.preparation.infrastructure.document_storage import (
     GeneratedDocumentStorage,
     LocalGeneratedDocumentStorage,
+)
+from app.modules.pricing.application.case_contract_change import (
+    CaseContractChangeService,
+    case_contract_change_handlers,
 )
 from app.modules.pricing.application.contract_execution_evidence_handler import (
     contract_execution_evidence_handlers,
@@ -549,6 +565,9 @@ from app.modules.pricing.application.scenario_handler import pricing_scenario_ha
 from app.modules.pricing.application.service import PricingScenarioService
 from app.modules.pricing.application.transition_handler import pricing_scenario_transition_handlers
 from app.modules.pricing.application.transition_service import PricingScenarioTransitionService
+from app.modules.pricing.infrastructure.case_contract_change_reader import (
+    SqlAlchemyCaseContractChangeReader,
+)
 from app.modules.pricing.infrastructure.case_reader import SqlAlchemyCaseExistenceReader
 from app.modules.pricing.infrastructure.import_reader import SqlAlchemyImportPreviewReader
 from app.modules.pricing.infrastructure.scenario_reader import SqlAlchemyPricingScenarioReader
@@ -647,6 +666,7 @@ class AppRuntime:
             **post_reception_obligation_handlers(),
             **post_reception_obligation_transition_handlers(),
             **contract_execution_evidence_handlers(),
+            **case_contract_change_handlers(),
             **contract_instrument_version_handlers(),
             **contract_instrument_supersession_handlers(),
             **contract_execution_evidence_requalification_handlers(),
@@ -686,6 +706,7 @@ class AppRuntime:
             **patron_action_handlers(),
             **case_outcome_handlers(),
             **case_order_handlers(),
+            **case_handover_handlers(),
             **case_interview_handlers(),
             **case_teaching_applicability_handlers(),
             **partner_event_handlers(),
@@ -1187,6 +1208,12 @@ def create_app(
             session_factory=runtime.session_factory,
             policy=security_policy,
         )
+        case_handover_service = CaseHandoverService(
+            dispatcher=runtime.dispatcher,
+            reader=SqlAlchemyCaseHandoverReader(runtime.session_factory),
+            policy=security_policy,
+            storage=runtime.preparation_storage,
+        )
         case_interview_service = CaseInterviewService(
             dispatcher=runtime.dispatcher,
             session_factory=runtime.session_factory,
@@ -1213,6 +1240,9 @@ def create_app(
         contract_baseline_impact_read_service = ContractBaselineImpactReadService(
             session_factory=runtime.session_factory, policy=security_policy
         )
+        contract_baseline_impact_write_service = ContractBaselineImpactWriteService(
+            dispatcher=runtime.dispatcher, policy=security_policy
+        )
         contract_query_receipt_read_service = ContractQueryReceiptReadService(
             session_factory=runtime.session_factory, policy=security_policy
         )
@@ -1222,17 +1252,39 @@ def create_app(
         contract_query_export_audit_read_service = ContractQueryExportAuditReadService(
             session_factory=runtime.session_factory, policy=security_policy
         )
-        export_verification_owner_act_handler_service = ExportVerificationOwnerActReadService(session_factory=runtime.session_factory)
-        export_verification_timeline_handler_service = ExportVerificationTimelineReadService(session_factory=runtime.session_factory)
-        export_operational_handoff_handler_service = ExportOperationalHandoffReadService(session_factory=runtime.session_factory)
-        human_resumption_read_service = HumanResumptionReadService(session_factory=runtime.session_factory)
-        human_resumption_timeline_read_service = HumanResumptionTimelineReadService(session_factory=runtime.session_factory)
-        unknown_audit_provenance_handler_service = UnknownAuditProvenanceReadService(session_factory=runtime.session_factory)
-        final_unknown_audit_handler_service = FinalUnknownAuditReadService(session_factory=runtime.session_factory)
-        payment_cycle_handler_service = PaymentCycleReadService(session_factory=runtime.session_factory)
-        payment_cycle_write_service = PaymentCycleWriteService(dispatcher=runtime.dispatcher, policy=security_policy)
-        payment_cycle_review_read_service = PaymentCycleReviewReadService(session_factory=runtime.session_factory)
-        consolidated_export_resumption_handler_service = ConsolidatedExportResumptionReadService(session_factory=runtime.session_factory)
+        export_verification_owner_act_handler_service = ExportVerificationOwnerActReadService(
+            session_factory=runtime.session_factory
+        )
+        export_verification_timeline_handler_service = ExportVerificationTimelineReadService(
+            session_factory=runtime.session_factory
+        )
+        export_operational_handoff_handler_service = ExportOperationalHandoffReadService(
+            session_factory=runtime.session_factory
+        )
+        human_resumption_read_service = HumanResumptionReadService(
+            session_factory=runtime.session_factory
+        )
+        human_resumption_timeline_read_service = HumanResumptionTimelineReadService(
+            session_factory=runtime.session_factory
+        )
+        unknown_audit_provenance_handler_service = UnknownAuditProvenanceReadService(
+            session_factory=runtime.session_factory
+        )
+        final_unknown_audit_handler_service = FinalUnknownAuditReadService(
+            session_factory=runtime.session_factory
+        )
+        payment_cycle_handler_service = PaymentCycleReadService(
+            session_factory=runtime.session_factory
+        )
+        payment_cycle_write_service = PaymentCycleWriteService(
+            dispatcher=runtime.dispatcher, policy=security_policy
+        )
+        payment_cycle_review_read_service = PaymentCycleReviewReadService(
+            session_factory=runtime.session_factory
+        )
+        consolidated_export_resumption_handler_service = ConsolidatedExportResumptionReadService(
+            session_factory=runtime.session_factory
+        )
         contract_proof_review_read_service = ContractProofReviewReadService(
             session_factory=runtime.session_factory, policy=security_policy
         )
@@ -1459,42 +1511,172 @@ def create_app(
                 security_runtime=security_runtime,
             )
         )
-        app.include_router(build_patron_contract_baseline_impact_router(
-            service=contract_baseline_impact_read_service,
-            security_runtime=security_runtime,
-        ))
-        app.include_router(build_patron_contract_query_receipt_router(
-            service=contract_query_receipt_read_service, security_runtime=security_runtime
-        ))
-        app.include_router(build_patron_contract_query_export_router(
-            service=contract_query_export_read_service, security_runtime=security_runtime
-        ))
-        app.include_router(build_patron_contract_query_export_audit_router(
-            service=contract_query_export_audit_read_service, security_runtime=security_runtime
-        ))
-        app.include_router(build_patron_export_verification_owner_act_router(service=export_verification_owner_act_handler_service, security_runtime=security_runtime))
-        app.include_router(build_patron_export_verification_timeline_router(service=export_verification_timeline_handler_service, security_runtime=security_runtime))
-        app.include_router(build_patron_export_operational_handoff_router(service=export_operational_handoff_handler_service, security_runtime=security_runtime))
-        app.include_router(build_patron_human_resumption_router(service=human_resumption_read_service, security_runtime=security_runtime))
-        app.include_router(build_patron_human_resumption_timeline_router(service=human_resumption_timeline_read_service, security_runtime=security_runtime))
-        app.include_router(build_patron_unknown_audit_provenance_router(service=unknown_audit_provenance_handler_service, security_runtime=security_runtime))
-        app.include_router(build_patron_final_unknown_audit_router(service=final_unknown_audit_handler_service, security_runtime=security_runtime))
-        app.include_router(build_patron_payment_cycle_router(service=payment_cycle_handler_service, security_runtime=security_runtime))
-        app.include_router(build_patron_post_reception_obligations_router(dispatcher=runtime.dispatcher, service=PostReceptionObligationReadService(session_factory=runtime.session_factory), security_runtime=security_runtime))
-        app.include_router(build_patron_contract_execution_evidence_router(dispatcher=runtime.dispatcher, service=ContractExecutionEvidenceReadService(session_factory=runtime.session_factory), instrument_version_service=ContractInstrumentVersionReadService(session_factory=runtime.session_factory), supersession_service=ContractInstrumentSupersessionReadService(session_factory=runtime.session_factory), requalification_service=ContractExecutionEvidenceRequalificationReadService(session_factory=runtime.session_factory), timeline_service=ContractExecutionEvidenceTimelineReadService(session_factory=runtime.session_factory), security_runtime=security_runtime))
-        app.include_router(build_patron_payment_collection_rejection_review_router(dispatcher=runtime.dispatcher, service=PaymentCollectionRejectionReviewReadService(session_factory=runtime.session_factory), security_runtime=security_runtime))
-        app.include_router(build_patron_payment_unknown_audit_router(service=payment_cycle_handler_service, security_runtime=security_runtime))
-        app.include_router(build_patron_payment_unknown_audit_owner_act_router(dispatcher=runtime.dispatcher, security_runtime=security_runtime))
-        app.include_router(build_patron_payment_unknown_audit_owner_act_read_router(service=PaymentUnknownAuditOwnerActReadService(session_factory=runtime.session_factory), security_runtime=security_runtime))
-        app.include_router(build_patron_payment_cycle_timeline_router(service=payment_cycle_handler_service, security_runtime=security_runtime))
-        app.include_router(build_patron_payment_cycle_review_router(dispatcher=runtime.dispatcher, security_runtime=security_runtime))
-        app.include_router(build_patron_payment_cycle_write_router(service=payment_cycle_write_service, security_runtime=security_runtime))
-        app.include_router(build_patron_payment_cycle_qualification_write_router(service=payment_cycle_write_service, security_runtime=security_runtime))
-        app.include_router(build_patron_payment_cycle_review_read_router(service=payment_cycle_review_read_service, security_runtime=security_runtime))
-        app.include_router(build_patron_consolidated_export_resumption_router(service=consolidated_export_resumption_handler_service, security_runtime=security_runtime))
-        app.include_router(build_patron_contract_proof_review_router(
-            service=contract_proof_review_read_service, security_runtime=security_runtime
-        ))
+        app.include_router(
+            build_patron_contract_baseline_impact_router(
+                service=contract_baseline_impact_read_service,
+                write_service=contract_baseline_impact_write_service,
+                security_runtime=security_runtime,
+            )
+        )
+        app.include_router(
+            build_patron_contract_query_receipt_router(
+                service=contract_query_receipt_read_service, security_runtime=security_runtime
+            )
+        )
+        app.include_router(
+            build_patron_contract_query_export_router(
+                service=contract_query_export_read_service, security_runtime=security_runtime
+            )
+        )
+        app.include_router(
+            build_patron_contract_query_export_audit_router(
+                service=contract_query_export_audit_read_service, security_runtime=security_runtime
+            )
+        )
+        app.include_router(
+            build_patron_export_verification_owner_act_router(
+                service=export_verification_owner_act_handler_service,
+                security_runtime=security_runtime,
+            )
+        )
+        app.include_router(
+            build_patron_export_verification_timeline_router(
+                service=export_verification_timeline_handler_service,
+                security_runtime=security_runtime,
+            )
+        )
+        app.include_router(
+            build_patron_export_operational_handoff_router(
+                service=export_operational_handoff_handler_service,
+                security_runtime=security_runtime,
+            )
+        )
+        app.include_router(
+            build_patron_human_resumption_router(
+                service=human_resumption_read_service, security_runtime=security_runtime
+            )
+        )
+        app.include_router(
+            build_patron_human_resumption_timeline_router(
+                service=human_resumption_timeline_read_service, security_runtime=security_runtime
+            )
+        )
+        app.include_router(
+            build_patron_unknown_audit_provenance_router(
+                service=unknown_audit_provenance_handler_service, security_runtime=security_runtime
+            )
+        )
+        app.include_router(
+            build_patron_final_unknown_audit_router(
+                service=final_unknown_audit_handler_service, security_runtime=security_runtime
+            )
+        )
+        app.include_router(
+            build_patron_payment_cycle_router(
+                service=payment_cycle_handler_service, security_runtime=security_runtime
+            )
+        )
+        app.include_router(
+            build_patron_post_reception_obligations_router(
+                dispatcher=runtime.dispatcher,
+                service=PostReceptionObligationReadService(session_factory=runtime.session_factory),
+                security_runtime=security_runtime,
+            )
+        )
+        app.include_router(
+            build_patron_contract_execution_evidence_router(
+                dispatcher=runtime.dispatcher,
+                service=ContractExecutionEvidenceReadService(
+                    session_factory=runtime.session_factory
+                ),
+                instrument_version_service=ContractInstrumentVersionReadService(
+                    session_factory=runtime.session_factory
+                ),
+                supersession_service=ContractInstrumentSupersessionReadService(
+                    session_factory=runtime.session_factory
+                ),
+                requalification_service=ContractExecutionEvidenceRequalificationReadService(
+                    session_factory=runtime.session_factory
+                ),
+                timeline_service=ContractExecutionEvidenceTimelineReadService(
+                    session_factory=runtime.session_factory
+                ),
+                security_runtime=security_runtime,
+            )
+        )
+        app.include_router(
+            build_patron_case_contract_change_router(
+                service=CaseContractChangeService(
+                    dispatcher=runtime.dispatcher,
+                    reader=SqlAlchemyCaseContractChangeReader(runtime.session_factory),
+                    policy=security_policy,
+                ),
+                security_runtime=security_runtime,
+            )
+        )
+        app.include_router(
+            build_patron_payment_collection_rejection_review_router(
+                dispatcher=runtime.dispatcher,
+                service=PaymentCollectionRejectionReviewReadService(
+                    session_factory=runtime.session_factory
+                ),
+                security_runtime=security_runtime,
+            )
+        )
+        app.include_router(
+            build_patron_payment_unknown_audit_router(
+                service=payment_cycle_handler_service, security_runtime=security_runtime
+            )
+        )
+        app.include_router(
+            build_patron_payment_unknown_audit_owner_act_router(
+                dispatcher=runtime.dispatcher, security_runtime=security_runtime
+            )
+        )
+        app.include_router(
+            build_patron_payment_unknown_audit_owner_act_read_router(
+                service=PaymentUnknownAuditOwnerActReadService(
+                    session_factory=runtime.session_factory
+                ),
+                security_runtime=security_runtime,
+            )
+        )
+        app.include_router(
+            build_patron_payment_cycle_timeline_router(
+                service=payment_cycle_handler_service, security_runtime=security_runtime
+            )
+        )
+        app.include_router(
+            build_patron_payment_cycle_review_router(
+                dispatcher=runtime.dispatcher, security_runtime=security_runtime
+            )
+        )
+        app.include_router(
+            build_patron_payment_cycle_write_router(
+                service=payment_cycle_write_service, security_runtime=security_runtime
+            )
+        )
+        app.include_router(
+            build_patron_payment_cycle_qualification_write_router(
+                service=payment_cycle_write_service, security_runtime=security_runtime
+            )
+        )
+        app.include_router(
+            build_patron_payment_cycle_review_read_router(
+                service=payment_cycle_review_read_service, security_runtime=security_runtime
+            )
+        )
+        app.include_router(
+            build_patron_consolidated_export_resumption_router(
+                service=consolidated_export_resumption_handler_service,
+                security_runtime=security_runtime,
+            )
+        )
+        app.include_router(
+            build_patron_contract_proof_review_router(
+                service=contract_proof_review_read_service, security_runtime=security_runtime
+            )
+        )
         if knowledge_service is not None:
             app.include_router(
                 build_knowledge_router(
@@ -1650,6 +1832,11 @@ def create_app(
                 security_runtime=security_runtime,
             )
         )
+        handover_routers = build_case_handover_routers(
+            service=case_handover_service, security_runtime=security_runtime
+        )
+        for router in handover_routers:
+            app.include_router(router)
         app.include_router(
             build_patron_decision_router(
                 service=patron_decision_dossier_service,

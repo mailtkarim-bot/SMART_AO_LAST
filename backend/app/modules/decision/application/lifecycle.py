@@ -11,7 +11,11 @@ from sqlalchemy.exc import IntegrityError
 from app.modules.decision.application.lifecycle_commands import (
     CreateDecisionCommand,
     FreezeDecisionContextCommand,
+    LinkDecisionConditionContractEvidenceCommand,
     ResolveDecisionConditionCommand,
+)
+from app.modules.decision.application.lifecycle_contract_evidence_handler import (
+    LinkConditionEvidenceHandler,
 )
 from app.modules.decision.application.ports import (
     DecisionConditionRepository,
@@ -52,16 +56,25 @@ class PatronDecisionLifecycleService:
     def execute(self, *, actor: ActorContext, command: Any, now) -> DispatchResult:
         if actor.actor_kind is not ActorKind.PATRON_ADMIN or actor.membership_id is None:
             raise PermissionError("PATRON_REQUIRED")
+        is_contract_evidence_link = isinstance(
+            command, LinkDecisionConditionContractEvidenceCommand
+        )
         decision = self._policy.authorize(
             context=actor,
             request=AuthorizationRequest(
-                action=Capability.DECISION_MANAGE,
+                action=Capability.PRICING_WRITE
+                if is_contract_evidence_link
+                else Capability.DECISION_MANAGE,
                 resource=AuthorizationResource(
                     resource_type="DECISION",
                     resource_id=command.decision_id,
                     tenant_id=actor.tenant_id,
                     case_id=command.case_id,
-                    classification=DataClassification.INTERNAL_OPERATIONAL,
+                    classification=(
+                        DataClassification.FINANCIAL_PRIVATE
+                        if is_contract_evidence_link
+                        else DataClassification.INTERNAL_OPERATIONAL
+                    ),
                 ),
                 evaluated_at=now,
             ),
@@ -197,6 +210,11 @@ class FreezeDecisionContextHandler:
             raise CommandExecutionError("DECISION_CONTEXT_CASE_REFERENCE_REQUIRED")
         valid_reference_types = {reference.aggregate_type for reference in command.references}
         if (
+            "CONTRACT_BASELINE_IMPACT" in valid_reference_types
+            and "BUSINESS_METHOD_PROFILE" not in valid_reference_types
+        ):
+            raise CommandExecutionError("ADOPTED_BUSINESS_METHOD_PROFILE_REFERENCE_REQUIRED")
+        if (
             self._lifecycle_repository.case_has_applicable_dce(
                 session=session,
                 tenant_id=UUID(str(context.tenant_id)),
@@ -268,7 +286,7 @@ class FreezeDecisionContextHandler:
             ),
             references=tuple(
                 DecisionContextReferenceDraft(
-                    id=_reference_id(reference),
+                    id=_reference_id(command.context_id, reference),
                     tenant_id=UUID(str(context.tenant_id)),
                     decision_context_id=command.context_id,
                     aggregate_type=reference.aggregate_type,
@@ -467,6 +485,9 @@ def decision_lifecycle_handlers(
             repository_factory=repository_factory,
             condition_repository=condition_repository,
         ),
+        LinkDecisionConditionContractEvidenceCommand.command_type: LinkConditionEvidenceHandler(
+            lifecycle_repository=lifecycle_repository,
+        ),
     }
 
 
@@ -474,17 +495,14 @@ def _reference_token(aggregate_type: str, aggregate_id: UUID, revision: int, rol
     return f"{aggregate_type}:{aggregate_id}:{revision}:{role}"
 
 
-def _reference_id(reference) -> UUID:
-    return UUID(
-        sha256(
-            _reference_token(
-                reference.aggregate_type,
-                reference.aggregate_id,
-                reference.aggregate_revision,
-                reference.reference_role,
-            ).encode("utf-8")
-        ).hexdigest()[:32]
+def _reference_id(context_id: UUID, reference) -> UUID:
+    token = _reference_token(
+        reference.aggregate_type,
+        reference.aggregate_id,
+        reference.aggregate_revision,
+        reference.reference_role,
     )
+    return UUID(sha256(f"{context_id}:{token}".encode()).hexdigest()[:32])
 
 
 def _sha256_json(value: dict[str, object]) -> str:

@@ -146,6 +146,7 @@ class SqlAlchemyCaseDceReadingReader(CaseDceReadingReader):
                 DceRequirementRecord.directive_signal,
                 DceRequirementRecord.uncertainty_status,
                 DceRequirementConfirmationCurrentRecord.outcome,
+                DceRequirementConfirmationCurrentRecord.revision,
                 DceDocumentClassificationRecord.classification,
                 DceDocumentExtractionFragmentRecord.locator_json,
             )
@@ -209,6 +210,7 @@ class SqlAlchemyCaseDceReadingReader(CaseDceReadingReader):
         projections = tuple(
             self._requirement_projection(
                 requirement_id=row.id,
+                confirmation_revision=row.revision,
                 requirement_type=row.requirement_type,
                 directive_signal=row.directive_signal,
                 uncertainty_status=row.uncertainty_status,
@@ -233,6 +235,7 @@ class SqlAlchemyCaseDceReadingReader(CaseDceReadingReader):
     def _requirement_projection(
         *,
         requirement_id: UUID,
+        confirmation_revision: int | None,
         requirement_type: str,
         directive_signal: str,
         uncertainty_status: str,
@@ -243,6 +246,7 @@ class SqlAlchemyCaseDceReadingReader(CaseDceReadingReader):
         document_family = _safe_document_family(classification)
         return CaseDceReadingRequirementProjection(
             requirement_id=requirement_id,
+            confirmation_revision=confirmation_revision,
             requirement_type=requirement_type,
             directive_signal=directive_signal,
             confirmation_outcome=confirmation_outcome or _PENDING_HUMAN_CONFIRMATION,

@@ -7,6 +7,11 @@ from app.modules.pricing.infrastructure.models.contract_instrument_supersession 
 from app.modules.pricing.infrastructure.models.contract_instrument_version import (
     ContractInstrumentVersionRecord,
 )
+from app.modules.pricing.infrastructure.models.case_contract_change import (
+    CaseContractChangeActionRecord,
+    CaseContractChangeApplicabilityRecord,
+    CaseContractChangeEventRecord,
+)
 from app.modules.pricing.infrastructure.models.financial import (
     FinancialReportLineRecord,
     FinancialReportPublicationRecord,
@@ -29,7 +34,6 @@ from app.modules.pricing.infrastructure.models.partner_offer_scope_review import
     PartnerOfferScopeReviewOfferRecord,
     PartnerOfferScopeReviewRecord,
 )
-
 __all__ = [
     "FinancialReportLineRecord",
     "FinancialReportPublicationRecord",
@@ -46,6 +50,9 @@ __all__ = [
     "PartnerOfferScopeReviewRecord",
     "PartnerOfferScopeReviewOfferRecord",
     "ContractInstrumentVersionRecord",
+    "CaseContractChangeEventRecord",
+    "CaseContractChangeApplicabilityRecord",
+    "CaseContractChangeActionRecord",
     "ContractInstrumentSupersessionRecord",
     "ContractExecutionEvidenceRequalificationRecord",
 ]

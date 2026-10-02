@@ -19,6 +19,9 @@ En cas de contradiction produit/métier, le Product Freeze prévaut. Les cahiers
 - [Parcours et preuves](04_Parcours_et_preuves/) — dossiers EXP-01 à EXP-07 et tranche C08/C09.
 - [Qualifications locales](05_Qualification_locale/) — résultats datés de recette, accessibilité et qualification ; ils ne valent pas GO public.
 - [Pilotage et audits](00_Pilotage_et_audits/) — plan opérationnel, décisions V3.1, couverture et snapshot du checkout.
+- [Qualification Q1 intégrée A1→B1→C1 du 2 octobre](00_Pilotage_et_audits/V3_1/Q1_CHAINE_A1_B1_C1_INTEGREE_2026-10-02.md) — recette même-Affaire et gates locales ; NO-GO public maintenu.
+- [Diagnostic Q1 du 1er octobre](00_Pilotage_et_audits/V3_1/Q1_QUALIFICATION_FIXTURES_LOCALES_2026-10-01.md) — constat partiel historique, complété par la qualification intégrée ci-dessus.
+- [Contre-audit Smart BTP et roadmap R0](00_Pilotage_et_audits/Veille_concurrentielle_2026-10-01/SMART_AO_READ_ME_FIRST.md) — pièces de recherche reçues, propositions de pilotage, pas de nouvelle autorité produit.
 - [Dépendances et exploitation](06_Dependances_et_exploitation/) — runbook et inventaires opérationnels.
 
 ## Autorité et limites

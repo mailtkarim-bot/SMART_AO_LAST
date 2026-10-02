@@ -61,6 +61,7 @@ class CaseDceReadingRequirementProjection:
     """One immutable DCE signal represented without source text or storage metadata."""
 
     requirement_id: UUID
+    confirmation_revision: int | None
     requirement_type: str
     directive_signal: str
     confirmation_outcome: str

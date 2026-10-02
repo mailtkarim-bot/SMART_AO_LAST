@@ -89,3 +89,16 @@ class ResolveDecisionConditionCommand(ApplicationCommand):
     target_status: Literal["SATISFIED", "FAILED"]
     evidence_reference: str | None = Field(default=None, max_length=2_000)
     failure_reason: str | None = Field(default=None, max_length=2_000)
+
+
+class LinkDecisionConditionContractEvidenceCommand(ApplicationCommand):
+    """Link an existing open Patron condition to the exact frozen A1 evidence set."""
+
+    command_type = "LinkDecisionConditionContractEvidence"
+    link_id: UUID
+    decision_id: UUID
+    case_id: UUID
+    condition_id: UUID
+    contract_impact_id: UUID
+    proof_revision: int = Field(ge=1)
+    expected_decision_revision: int = Field(ge=1)
