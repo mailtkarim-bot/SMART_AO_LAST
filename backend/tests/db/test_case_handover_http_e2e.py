@@ -95,9 +95,13 @@ from app.modules.pricing.infrastructure.case_contract_change_reader import (
     SqlAlchemyCaseContractChangeReader,
 )
 from app.modules.pricing.infrastructure.models.case_contract_change import (
+    CaseContractChangeActionImpactLinkRecord,
+    CaseContractChangeActionImpactRelationRecord,
     CaseContractChangeActionRecord,
     CaseContractChangeApplicabilityRecord,
+    CaseContractChangeEngagementLinkRecord,
     CaseContractChangeEventRecord,
+    CaseContractChangeImpactDeclarationRecord,
 )
 from app.modules.pricing.infrastructure.models.contract_instrument_version import (
     ContractInstrumentVersionRecord,
@@ -284,18 +288,14 @@ def _record_a1_source_condition(session_factory, *, actor: ActorContext, case_id
     )
 
     resolver = TokenResolver({"patron": actor})
-    security_runtime = ConsultationSecurityRuntime(
-        context_resolver=resolver, policy=policy
-    )
+    security_runtime = ConsultationSecurityRuntime(context_resolver=resolver, policy=policy)
     app = FastAPI()
     app.include_router(
         build_patron_contract_baseline_impact_router(
             service=ContractBaselineImpactReadService(
                 session_factory=session_factory, policy=policy
             ),
-            write_service=ContractBaselineImpactWriteService(
-                dispatcher=dispatcher, policy=policy
-            ),
+            write_service=ContractBaselineImpactWriteService(dispatcher=dispatcher, policy=policy),
             security_runtime=security_runtime,
         )
     )
@@ -304,9 +304,7 @@ def _record_a1_source_condition(session_factory, *, actor: ActorContext, case_id
             service=PatronDecisionDossierService(
                 reader=SqlAlchemyDecisionDossierReader(session_factory), policy=policy
             ),
-            lifecycle_service=PatronDecisionLifecycleService(
-                dispatcher=dispatcher, policy=policy
-            ),
+            lifecycle_service=PatronDecisionLifecycleService(dispatcher=dispatcher, policy=policy),
             finalization_service=PatronDecisionFinalizationService(
                 dispatcher=dispatcher, policy=policy
             ),
@@ -453,18 +451,13 @@ def _record_a1_source_condition(session_factory, *, actor: ActorContext, case_id
             },
         )
         assert unknown_link.status_code == 422
-        assert (
-            unknown_link.json()["detail"]
-            == "CONTRACT_PROOF_REQUIRES_HUMAN_REVIEW_STATE"
-        )
+        assert unknown_link.json()["detail"] == "CONTRACT_PROOF_REQUIRES_HUMAN_REVIEW_STATE"
         linked = client.post(link_path, headers=headers, json=link_payload)
         assert linked.status_code == 201, linked.text
         link_replay = client.post(link_path, headers=headers, json=link_payload)
         assert link_replay.status_code == 200
         assert link_replay.json()["replayed"] is True
-        dossier = client.get(
-            f"/api/v1/patron/cases/{case_id}/decision-dossier", headers=headers
-        )
+        dossier = client.get(f"/api/v1/patron/cases/{case_id}/decision-dossier", headers=headers)
         assert dossier.status_code == 200, dossier.text
         assert dossier.json()["conditions"][0]["status"] == "OPEN"
         assert len(dossier.json()["contract_evidence_links"]) == 1
@@ -740,9 +733,7 @@ def test_http_c1_keeps_unknown_until_patron_links_change_to_handover_and_records
         assert a1_decision.case_id == case_id
         assert a1_decision.validity == "CURRENT"
         assert a1_decision.selected_final_context_id is not None
-        selected_context = session.get(
-            DecisionContextRecord, a1_decision.selected_final_context_id
-        )
+        selected_context = session.get(DecisionContextRecord, a1_decision.selected_final_context_id)
         assert selected_context is not None
     outcome_id, handover_id = uuid4(), uuid4()
     outcome_service = CaseOutcomeService(
@@ -798,11 +789,14 @@ def test_http_c1_keeps_unknown_until_patron_links_change_to_handover_and_records
             json=outcome_payload,
         )
         assert outcome_response.status_code == 201, outcome_response.text
-        assert b1_client.post(
-            "/api/v1/patron/case-outcomes",
-            headers={"Authorization": "Bearer patron"},
-            json=outcome_payload,
-        ).status_code == 201
+        assert (
+            b1_client.post(
+                "/api/v1/patron/case-outcomes",
+                headers={"Authorization": "Bearer patron"},
+                json=outcome_payload,
+            ).status_code
+            == 201
+        )
         handover_payload = {
             "command_id": str(uuid4()),
             "idempotency_key": str(uuid4()),
@@ -949,6 +943,210 @@ def test_http_c1_keeps_unknown_until_patron_links_change_to_handover_and_records
             assert projection["declared_instrument"] is None
             assert projection["applicability_state"] == "UNKNOWN"
             assert projection["actions"] == []
+            assert projection["a1_engagements_state"] == "KNOWN"
+            assert projection["a1_engagements"] == condition_sources
+            assert projection["engagement_linkage_state"] == "UNKNOWN"
+            assert projection["engagement_linkage_history"] == []
+
+            linkage_path = f"{base}/{event_id}/engagement-links"
+            unknown_linkage_payload = {
+                "command_id": str(uuid4()),
+                "idempotency_key": str(uuid4()),
+                "correlation_id": str(uuid4()),
+                "linkage_id": str(uuid4()),
+                "expected_revision": 0,
+                "state": "UNKNOWN",
+                "selected_sources": [],
+                "rationale": "Le Patron n’a pas encore identifié l’engagement touché.",
+                "unknown_reason": "Le périmètre de l’instruction reste à rapprocher.",
+            }
+            unknown_linkage = client.post(
+                linkage_path, headers=headers, json=unknown_linkage_payload
+            )
+            unknown_linkage_replay = client.post(
+                linkage_path, headers=headers, json=unknown_linkage_payload
+            )
+            assert unknown_linkage.status_code == 201, unknown_linkage.text
+            assert unknown_linkage_replay.status_code == 200
+            assert unknown_linkage_replay.json()["replayed"] is True
+
+            impact_path = f"{base}/{event_id}/impact-declarations"
+            unknown_c2_impact_payload = {
+                "command_id": str(uuid4()),
+                "idempotency_key": str(uuid4()),
+                "correlation_id": str(uuid4()),
+                "declaration_id": str(uuid4()),
+                "linkage_id": unknown_linkage_payload["linkage_id"],
+                "source": condition_sources[0],
+                "expected_revision": 0,
+                "axis": "COST",
+                "impact_state": "DECLARED",
+                "impact_summary": "Coût de mobilisation complémentaire.",
+                "impact_unknown_reason": None,
+                "measurement_state": "DECLARED",
+                "value_as_declared": "0.00",
+                "currency_code": "EUR",
+                "unit": None,
+                "measurement_unknown_reason": None,
+                "assumptions": ["Zéro saisi explicitement, sans chiffrage système."],
+                "source_refs": ["os://reference/14"],
+                "evidence_refs": ["document://impact/estimate-01"],
+                "rationale": "Le Patron consigne une estimation déclarée sur la source choisie.",
+            }
+            blocked_by_unknown_c2 = client.post(
+                impact_path, headers=headers, json=unknown_c2_impact_payload
+            )
+            assert blocked_by_unknown_c2.status_code == 422
+            assert blocked_by_unknown_c2.json()["detail"] == "C2_LINKAGE_NOT_CURRENT_OR_LINKED"
+
+            selected_source = condition_sources[0]
+            linkage_payload = {
+                "command_id": str(uuid4()),
+                "idempotency_key": str(uuid4()),
+                "correlation_id": str(uuid4()),
+                "linkage_id": str(uuid4()),
+                "expected_revision": 1,
+                "state": "LINKED",
+                "selected_sources": [selected_source],
+                "rationale": "Le Patron relie l’instruction à cette condition A1 du snapshot B1.",
+                "unknown_reason": None,
+            }
+            linked = client.post(linkage_path, headers=headers, json=linkage_payload)
+            linked_replay = client.post(linkage_path, headers=headers, json=linkage_payload)
+            assert linked.status_code == 201, linked.text
+            assert linked_replay.status_code == 200
+            assert linked_replay.json()["replayed"] is True
+
+            unknown_impact_source_payload = {
+                **unknown_c2_impact_payload,
+                "command_id": str(uuid4()),
+                "idempotency_key": str(uuid4()),
+                "declaration_id": str(uuid4()),
+                "linkage_id": linkage_payload["linkage_id"],
+                "axis": "CAPACITY",
+                "impact_state": "UNKNOWN",
+                "impact_summary": None,
+                "impact_unknown_reason": "La charge de moyens du changement n’est pas établie.",
+                "measurement_state": "UNKNOWN",
+                "value_as_declared": None,
+                "currency_code": None,
+                "unit": None,
+                "measurement_unknown_reason": None,
+                "evidence_refs": [],
+            }
+            unknown_impact = client.post(
+                impact_path, headers=headers, json=unknown_impact_source_payload
+            )
+            unknown_impact_replay = client.post(
+                impact_path, headers=headers, json=unknown_impact_source_payload
+            )
+            assert unknown_impact.status_code == 201, unknown_impact.text
+            assert unknown_impact_replay.status_code == 200
+            assert unknown_impact_replay.json()["replayed"] is True
+
+            declared_impact_payload = {
+                **unknown_c2_impact_payload,
+                "command_id": str(uuid4()),
+                "idempotency_key": str(uuid4()),
+                "declaration_id": str(uuid4()),
+                "linkage_id": linkage_payload["linkage_id"],
+                "expected_revision": 0,
+            }
+            declared_impact = client.post(
+                impact_path, headers=headers, json=declared_impact_payload
+            )
+            declared_impact_replay = client.post(
+                impact_path, headers=headers, json=declared_impact_payload
+            )
+            assert declared_impact.status_code == 201, declared_impact.text
+            assert declared_impact_replay.status_code == 200
+            assert declared_impact_replay.json()["replayed"] is True
+
+            unknown_measurement_payload = {
+                **declared_impact_payload,
+                "command_id": str(uuid4()),
+                "idempotency_key": str(uuid4()),
+                "declaration_id": str(uuid4()),
+                "expected_revision": 1,
+                "impact_summary": "La mobilisation supplémentaire est identifiée.",
+                "measurement_state": "UNKNOWN",
+                "value_as_declared": None,
+                "currency_code": None,
+                "measurement_unknown_reason": "Aucun devis n’a confirmé le montant.",
+            }
+            unknown_measurement = client.post(
+                impact_path, headers=headers, json=unknown_measurement_payload
+            )
+            assert unknown_measurement.status_code == 201, unknown_measurement.text
+            impact_revision_conflict = client.post(
+                impact_path,
+                headers=headers,
+                json={
+                    **declared_impact_payload,
+                    "command_id": str(uuid4()),
+                    "idempotency_key": str(uuid4()),
+                    "declaration_id": str(uuid4()),
+                    "expected_revision": 0,
+                },
+            )
+            assert impact_revision_conflict.status_code == 422
+            assert (
+                impact_revision_conflict.json()["detail"]
+                == "CONTRACT_CHANGE_IMPACT_VERSION_CONFLICT"
+            )
+
+            forged_c3_source = client.post(
+                impact_path,
+                headers=headers,
+                json={
+                    **declared_impact_payload,
+                    "command_id": str(uuid4()),
+                    "idempotency_key": str(uuid4()),
+                    "declaration_id": str(uuid4()),
+                    "expected_revision": 2,
+                    "source": {**selected_source, "requirement_revision": 2},
+                },
+            )
+            assert forged_c3_source.status_code == 422
+            assert forged_c3_source.json()["detail"] == "A1_SOURCE_NOT_SELECTED_IN_C2"
+
+            with (
+                Session(database_engine) as session,
+                pytest.raises(sa.exc.DBAPIError),
+                session.begin_nested(),
+            ):
+                session.execute(
+                    sa.insert(CaseContractChangeImpactDeclarationRecord).values(
+                        id=uuid4(),
+                        tenant_id=patron.tenant_id,
+                        case_id=case_id,
+                        event_id=event_id,
+                        linkage_id=UUID(linkage_payload["linkage_id"]),
+                        condition_id=UUID(selected_source["condition_id"]),
+                        impact_id=UUID(selected_source["impact_id"]),
+                        impact_revision=selected_source["impact_revision"],
+                        source_a1_json={**selected_source, "requirement_revision": 2},
+                        axis="COST",
+                        revision=99,
+                        impact_state="DECLARED",
+                        impact_summary="Source forgée pour la preuve SQL.",
+                        impact_unknown_reason=None,
+                        measurement_state="DECLARED",
+                        value_as_declared="1.00",
+                        currency_code="EUR",
+                        unit=None,
+                        measurement_unknown_reason=None,
+                        assumptions_json=[],
+                        source_refs_json=["os://reference/14"],
+                        evidence_refs_json=["document://impact/forged"],
+                        rationale="Doit être refusé par la garde SQL C2/C3.",
+                        actor_id=patron.actor_id,
+                        membership_id=patron.membership_id,
+                        command_id=uuid4(),
+                        idempotency_key=uuid4(),
+                        correlation_id=uuid4(),
+                    )
+                )
 
             action_payload = {
                 "command_id": str(uuid4()),
@@ -1002,9 +1200,167 @@ def test_http_c1_keeps_unknown_until_patron_links_change_to_handover_and_records
             assert action_replay.status_code == 200
             assert action_replay.json()["replayed"] is True
 
+            c4_path = f"{base}/{event_id}/actions/{action_payload['action_id']}/impact-links"
+            c4_payload = {
+                "command_id": str(uuid4()),
+                "idempotency_key": str(uuid4()),
+                "correlation_id": str(uuid4()),
+                "relation_id": str(uuid4()),
+                "expected_revision": 0,
+                "state": "LINKED",
+                "declaration_ids": [
+                    declared_impact_payload["declaration_id"],
+                    unknown_impact_source_payload["declaration_id"],
+                ],
+                "rationale": "Le Patron rattache l’action à ces deux impacts déclarés.",
+                "unknown_reason": None,
+            }
+            c4_recorded = client.post(c4_path, headers=headers, json=c4_payload)
+            c4_replay = client.post(c4_path, headers=headers, json=c4_payload)
+            assert c4_recorded.status_code == 201, c4_recorded.text
+            assert c4_replay.status_code == 200
+            assert c4_replay.json()["replayed"] is True
+            c4_unknown_payload = {
+                **c4_payload,
+                "command_id": str(uuid4()),
+                "idempotency_key": str(uuid4()),
+                "relation_id": str(uuid4()),
+                "expected_revision": 1,
+                "state": "UNKNOWN",
+                "declaration_ids": [],
+                "rationale": "Le Patron ne peut pas encore déterminer le lien.",
+                "unknown_reason": "La portée de l’action doit être précisée.",
+            }
+            c4_unknown = client.post(c4_path, headers=headers, json=c4_unknown_payload)
+            assert c4_unknown.status_code == 201, c4_unknown.text
+            c4_not_applicable_payload = {
+                **c4_unknown_payload,
+                "command_id": str(uuid4()),
+                "idempotency_key": str(uuid4()),
+                "relation_id": str(uuid4()),
+                "expected_revision": 2,
+                "state": "NOT_APPLICABLE",
+                "rationale": "Après vérification, cette action n’est pas liée à un impact C3.",
+                "unknown_reason": "L’action concerne une formalité indépendante.",
+            }
+            c4_not_applicable = client.post(
+                c4_path, headers=headers, json=c4_not_applicable_payload
+            )
+            assert c4_not_applicable.status_code == 201, c4_not_applicable.text
+            c4_bad_revision = client.post(
+                c4_path,
+                headers=headers,
+                json={
+                    **c4_payload,
+                    "command_id": str(uuid4()),
+                    "idempotency_key": str(uuid4()),
+                    "relation_id": str(uuid4()),
+                    "expected_revision": 0,
+                },
+            )
+            assert c4_bad_revision.status_code == 422
+            assert c4_bad_revision.json()["detail"] == (
+                "CONTRACT_CHANGE_ACTION_IMPACT_VERSION_CONFLICT"
+            )
+
             final = client.get(base, headers=headers)
             assert final.status_code == 200, final.text
             final_event = final.json()["events"][0]
+            assert final_event["actions"][0]["state"] == "RECORDED"
+            c4_history = final_event["action_impact_relations"]
+            assert [item["state"] for item in c4_history] == ["LINKED", "UNKNOWN", "NOT_APPLICABLE"]
+            assert c4_history[0]["relation_id"] == c4_payload["relation_id"]
+            assert c4_history[0]["declaration_ids"] == c4_payload["declaration_ids"]
+            assert c4_history[0]["projection_state"] == "CURRENT"
+            assert c4_history[1]["declaration_ids"] == []
+            assert c4_history[1]["unknown_reason"] == c4_unknown_payload["unknown_reason"]
+            assert c4_history[2]["declaration_ids"] == []
+            assert c4_history[2]["unknown_reason"] == c4_not_applicable_payload["unknown_reason"]
+            assert final_event["a1_engagements"] == condition_sources
+            assert final_event["engagement_linkage_state"] == "LINKED"
+            assert [item["state"] for item in final_event["engagement_linkage_history"]] == [
+                "UNKNOWN",
+                "LINKED",
+            ]
+            assert final_event["engagement_linkage_history"][1]["selected_sources"] == [
+                selected_source
+            ]
+            stale_selection_payload = {
+                **linkage_payload,
+                "command_id": str(uuid4()),
+                "idempotency_key": str(uuid4()),
+                "linkage_id": str(uuid4()),
+                "expected_revision": 2,
+                "selected_sources": [{**selected_source, "requirement_revision": 2}],
+            }
+            stale_selection = client.post(
+                linkage_path, headers=headers, json=stale_selection_payload
+            )
+            assert stale_selection.status_code == 422
+            assert stale_selection.json()["detail"] == "A1_SOURCE_NOT_IN_HANDOVER_SNAPSHOT"
+            impact_history = final_event["impact_declarations"]
+            declared_cost = next(
+                item for item in impact_history if item["axis"] == "COST" and item["revision"] == 1
+            )
+            unknown_cost_measurement = next(
+                item for item in impact_history if item["axis"] == "COST" and item["revision"] == 2
+            )
+            unknown_capacity = next(item for item in impact_history if item["axis"] == "CAPACITY")
+            assert declared_cost["value_as_declared"] == "0.00"
+            assert declared_cost["currency_code"] == "EUR"
+            assert declared_cost["linkage_state"] == "CURRENT"
+            assert unknown_cost_measurement["impact_state"] == "DECLARED"
+            assert unknown_cost_measurement["measurement_state"] == "UNKNOWN"
+            assert unknown_cost_measurement["value_as_declared"] is None
+            assert unknown_cost_measurement["measurement_unknown_reason"] == (
+                "Aucun devis n’a confirmé le montant."
+            )
+            assert unknown_capacity["impact_state"] == "UNKNOWN"
+            assert unknown_capacity["impact_unknown_reason"] == (
+                "La charge de moyens du changement n’est pas établie."
+            )
+
+            superseding_c2_payload = {
+                **unknown_linkage_payload,
+                "command_id": str(uuid4()),
+                "idempotency_key": str(uuid4()),
+                "linkage_id": str(uuid4()),
+                "expected_revision": 2,
+            }
+            superseding_c2 = client.post(linkage_path, headers=headers, json=superseding_c2_payload)
+            assert superseding_c2.status_code == 201, superseding_c2.text
+            stale_c3_payload = {
+                **declared_impact_payload,
+                "command_id": str(uuid4()),
+                "idempotency_key": str(uuid4()),
+                "declaration_id": str(uuid4()),
+                "expected_revision": 2,
+            }
+            stale_c3 = client.post(impact_path, headers=headers, json=stale_c3_payload)
+            assert stale_c3.status_code == 422
+            assert stale_c3.json()["detail"] == "C2_LINKAGE_NOT_CURRENT_OR_LINKED"
+            after_c2_supersession = client.get(base, headers=headers).json()["events"][0]
+            assert after_c2_supersession["engagement_linkage_state"] == "UNKNOWN"
+            assert all(
+                item["linkage_state"] == "REVIEW_REQUIRED"
+                for item in after_c2_supersession["impact_declarations"]
+            )
+            assert after_c2_supersession["action_impact_relations"][0]["projection_state"] == (
+                "REVIEW_REQUIRED"
+            )
+            stale_c4_c3 = client.post(
+                c4_path,
+                headers=headers,
+                json={
+                    **c4_payload,
+                    "command_id": str(uuid4()),
+                    "idempotency_key": str(uuid4()),
+                    "relation_id": str(uuid4()),
+                    "expected_revision": 3,
+                },
+            )
+            assert stale_c4_c3.status_code == 422
+            assert stale_c4_c3.json()["detail"] == "C3_LINKAGE_NOT_CURRENT_OR_LINKED"
             assert final_event["applicability_state"] == "APPLICABLE_TO_HANDOVER"
             assert final_event["applicability_history"][0]["contract_instrument_version_id"] == str(
                 instrument_id
@@ -1012,15 +1368,51 @@ def test_http_c1_keeps_unknown_until_patron_links_change_to_handover_and_records
             assert final_event["applicability_history"][0]["delta_state"] == "DECLARED"
             assert "aucun coût" in final_event["applicability_history"][0]["delta_note"]
             assert final_event["actions"][0]["state"] == "RECORDED"
+
+            stale_review_payload = {
+                **review_payload,
+                "command_id": str(uuid4()),
+                "idempotency_key": str(uuid4()),
+                "review_id": str(uuid4()),
+                "expected_revision": 1,
+                "decision": "NEEDS_CLARIFICATION",
+                "delta_state": "UNKNOWN",
+                "delta_note": None,
+                "rationale": "La revue initiale doit être clarifiée.",
+                "evidence_refs": ["document://review/clarification"],
+            }
+            stale_review = client.post(review_path, headers=headers, json=stale_review_payload)
+            assert stale_review.status_code == 201, stale_review.text
+            c4_stale_review = client.post(
+                c4_path,
+                headers=headers,
+                json={
+                    **c4_unknown_payload,
+                    "command_id": str(uuid4()),
+                    "idempotency_key": str(uuid4()),
+                    "relation_id": str(uuid4()),
+                    "expected_revision": 3,
+                },
+            )
+            assert c4_stale_review.status_code == 422
+            assert c4_stale_review.json()["detail"] == (
+                "CONTRACT_CHANGE_ACTION_APPLICABILITY_STALE"
+            )
+            after_c1_review = client.get(base, headers=headers).json()["events"][0]
+            assert all(
+                relation["projection_state"] == "REVIEW_REQUIRED"
+                for relation in after_c1_review["action_impact_relations"]
+            )
             assert (
                 final_event["actions"][0]["due_date_absence_reason"]
                 == "Aucune date d’action validée."
             )
             assert final_event["handover_snapshot_id"] == str(handover_id)
             assert final_event["offer_package_id"] == str(package_id)
-            assert handover["snapshot"]["decision"]["condition_sources"][0]["impact_id"] == a1[
-                "impact_id"
-            ]
+            assert (
+                handover["snapshot"]["decision"]["condition_sources"][0]["impact_id"]
+                == a1["impact_id"]
+            )
 
             resolver.actors["collaborator"] = replace(
                 patron,
@@ -1029,9 +1421,73 @@ def test_http_c1_keeps_unknown_until_patron_links_change_to_handover_and_records
             )
             collaborator_read = client.get(base, headers={"Authorization": "Bearer collaborator"})
             assert collaborator_read.status_code == 403
+            collaborator_write = client.post(
+                linkage_path,
+                headers={"Authorization": "Bearer collaborator"},
+                json={
+                    **linkage_payload,
+                    "command_id": str(uuid4()),
+                    "idempotency_key": str(uuid4()),
+                },
+            )
+            assert collaborator_write.status_code == 403
+            collaborator_c3 = client.post(
+                impact_path,
+                headers={"Authorization": "Bearer collaborator"},
+                json={
+                    **declared_impact_payload,
+                    "command_id": str(uuid4()),
+                    "idempotency_key": str(uuid4()),
+                    "declaration_id": str(uuid4()),
+                },
+            )
+            assert collaborator_c3.status_code == 403
+            collaborator_c4 = client.post(
+                c4_path,
+                headers={"Authorization": "Bearer collaborator"},
+                json={
+                    **c4_payload,
+                    "command_id": str(uuid4()),
+                    "idempotency_key": str(uuid4()),
+                    "relation_id": str(uuid4()),
+                },
+            )
+            assert collaborator_c4.status_code == 403
             foreign_read = client.get(base, headers={"Authorization": "Bearer foreign"})
             assert foreign_read.status_code == 200
             assert foreign_read.json() == {"case_id": str(case_id), "events": []}
+            foreign_write = client.post(
+                linkage_path,
+                headers={"Authorization": "Bearer foreign"},
+                json={
+                    **linkage_payload,
+                    "command_id": str(uuid4()),
+                    "idempotency_key": str(uuid4()),
+                },
+            )
+            assert foreign_write.status_code == 422
+            foreign_c3 = client.post(
+                impact_path,
+                headers={"Authorization": "Bearer foreign"},
+                json={
+                    **declared_impact_payload,
+                    "command_id": str(uuid4()),
+                    "idempotency_key": str(uuid4()),
+                    "declaration_id": str(uuid4()),
+                },
+            )
+            assert foreign_c3.status_code == 422
+            foreign_c4 = client.post(
+                c4_path,
+                headers={"Authorization": "Bearer foreign"},
+                json={
+                    **c4_payload,
+                    "command_id": str(uuid4()),
+                    "idempotency_key": str(uuid4()),
+                    "relation_id": str(uuid4()),
+                },
+            )
+            assert foreign_c4.status_code == 422
     finally:
         server.should_exit = True
         thread.join(timeout=5)
@@ -1039,20 +1495,68 @@ def test_http_c1_keeps_unknown_until_patron_links_change_to_handover_and_records
     with Session(database_engine) as session:
         decision = session.get(DecisionRecord, UUID(a1["decision_id"]))
         condition = session.get(DecisionConditionRecord, UUID(a1["condition_id"]))
-        impact = session.get(
-            ContractBaselineDeviationImpactRecord, UUID(a1["impact_id"])
-        )
+        impact = session.get(ContractBaselineDeviationImpactRecord, UUID(a1["impact_id"]))
         assert decision is not None and decision.outcome == "CONDITIONAL_GO"
         assert condition is not None and condition.status == "OPEN"
         assert impact is not None and impact.status == "HUMAN_REVIEW_REQUIRED"
-        assert session.scalar(
-            sa.select(sa.func.count())
-            .select_from(CaseContractChangeEventRecord)
-            .where(
-                CaseContractChangeEventRecord.tenant_id == patron.tenant_id,
-                CaseContractChangeEventRecord.case_id == case_id,
+        assert (
+            session.scalar(
+                sa.select(sa.func.count())
+                .select_from(CaseContractChangeEventRecord)
+                .where(
+                    CaseContractChangeEventRecord.tenant_id == patron.tenant_id,
+                    CaseContractChangeEventRecord.case_id == case_id,
+                )
             )
-        ) == 1
+            == 1
+        )
+        assert (
+            session.scalar(
+                sa.select(sa.func.count())
+                .select_from(CaseContractChangeEngagementLinkRecord)
+                .where(
+                    CaseContractChangeEngagementLinkRecord.tenant_id == patron.tenant_id,
+                    CaseContractChangeEngagementLinkRecord.case_id == case_id,
+                    CaseContractChangeEngagementLinkRecord.event_id == event_id,
+                )
+            )
+            == 3
+        )
+        assert (
+            session.scalar(
+                sa.select(sa.func.count())
+                .select_from(CaseContractChangeImpactDeclarationRecord)
+                .where(
+                    CaseContractChangeImpactDeclarationRecord.tenant_id == patron.tenant_id,
+                    CaseContractChangeImpactDeclarationRecord.case_id == case_id,
+                    CaseContractChangeImpactDeclarationRecord.event_id == event_id,
+                )
+            )
+            == 3
+        )
+        assert (
+            session.scalar(
+                sa.select(sa.func.count())
+                .select_from(CaseContractChangeActionImpactRelationRecord)
+                .where(
+                    CaseContractChangeActionImpactRelationRecord.tenant_id == patron.tenant_id,
+                    CaseContractChangeActionImpactRelationRecord.case_id == case_id,
+                    CaseContractChangeActionImpactRelationRecord.event_id == event_id,
+                )
+            )
+            == 3
+        )
+        assert (
+            session.scalar(
+                sa.select(sa.func.count())
+                .select_from(CaseContractChangeActionImpactLinkRecord)
+                .where(
+                    CaseContractChangeActionImpactLinkRecord.relation_id
+                    == UUID(c4_payload["relation_id"])
+                )
+            )
+            == 2
+        )
 
     with (
         Session(database_engine) as session,
@@ -1080,9 +1584,88 @@ def test_http_c1_keeps_unknown_until_patron_links_change_to_handover_and_records
         session.begin_nested(),
     ):
         session.execute(
+            sa.update(CaseContractChangeImpactDeclarationRecord)
+            .where(
+                CaseContractChangeImpactDeclarationRecord.id
+                == declared_impact_payload["declaration_id"]
+            )
+            .values(impact_summary="Réécriture interdite")
+        )
+    with (
+        Session(database_engine) as session,
+        pytest.raises(sa.exc.DBAPIError),
+        session.begin_nested(),
+    ):
+        session.execute(
+            sa.delete(CaseContractChangeImpactDeclarationRecord).where(
+                CaseContractChangeImpactDeclarationRecord.id
+                == declared_impact_payload["declaration_id"]
+            )
+        )
+    with (
+        Session(database_engine) as session,
+        pytest.raises(sa.exc.DBAPIError),
+        session.begin_nested(),
+    ):
+        session.execute(
+            sa.delete(CaseContractChangeEngagementLinkRecord).where(
+                CaseContractChangeEngagementLinkRecord.id == linkage_payload["linkage_id"]
+            )
+        )
+    with (
+        Session(database_engine) as session,
+        pytest.raises(sa.exc.DBAPIError),
+        session.begin_nested(),
+    ):
+        session.execute(
             sa.update(CaseContractChangeActionRecord)
             .where(CaseContractChangeActionRecord.id == action_payload["action_id"])
             .values(action_summary="Réécriture interdite")
+        )
+
+    with (
+        Session(database_engine) as session,
+        pytest.raises(sa.exc.DBAPIError),
+        session.begin_nested(),
+    ):
+        session.execute(
+            sa.update(CaseContractChangeActionImpactRelationRecord)
+            .where(
+                CaseContractChangeActionImpactRelationRecord.id == UUID(c4_payload["relation_id"])
+            )
+            .values(rationale="Réécriture interdite")
+        )
+    with (
+        Session(database_engine) as session,
+        pytest.raises(sa.exc.DBAPIError),
+        session.begin_nested(),
+    ):
+        session.execute(
+            sa.delete(CaseContractChangeActionImpactRelationRecord).where(
+                CaseContractChangeActionImpactRelationRecord.id
+                == UUID(c4_payload["relation_id"])
+            )
+        )
+    with (
+        Session(database_engine) as session,
+        pytest.raises(sa.exc.DBAPIError),
+        session.begin_nested(),
+    ):
+        session.execute(
+            sa.delete(CaseContractChangeActionImpactLinkRecord).where(
+                CaseContractChangeActionImpactLinkRecord.relation_id
+                == UUID(c4_payload["relation_id"])
+            )
+        )
+    with (
+        Session(database_engine) as session,
+        pytest.raises(sa.exc.DBAPIError),
+        session.begin_nested(),
+    ):
+        session.execute(
+            sa.update(CaseContractChangeEngagementLinkRecord)
+            .where(CaseContractChangeEngagementLinkRecord.id == linkage_payload["linkage_id"])
+            .values(rationale="Réécriture interdite")
         )
     with Session(database_engine) as session:
         assert (
@@ -1093,9 +1676,33 @@ def test_http_c1_keeps_unknown_until_patron_links_change_to_handover_and_records
             session.scalar(
                 sa.select(sa.func.count()).select_from(CaseContractChangeApplicabilityRecord)
             )
-            == 1
+            == 2
         )
         assert (
             session.scalar(sa.select(sa.func.count()).select_from(CaseContractChangeActionRecord))
             == 1
+        )
+        assert (
+            session.scalar(
+                sa.select(sa.func.count()).select_from(CaseContractChangeEngagementLinkRecord)
+            )
+            == 3
+        )
+        assert (
+            session.scalar(
+                sa.select(sa.func.count()).select_from(CaseContractChangeImpactDeclarationRecord)
+            )
+            == 3
+        )
+        assert (
+            session.scalar(
+                sa.select(sa.func.count()).select_from(CaseContractChangeActionImpactRelationRecord)
+            )
+            == 3
+        )
+        assert (
+            session.scalar(
+                sa.select(sa.func.count()).select_from(CaseContractChangeActionImpactLinkRecord)
+            )
+            == 2
         )

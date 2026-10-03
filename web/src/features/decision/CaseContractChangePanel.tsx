@@ -1,12 +1,17 @@
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import type { ApiClient } from "../../infrastructure/api";
 import type {
+  A1EngagementSource,
   CaseContractChangeApplicability,
   CaseContractChangeEvent,
+  CaseContractChangeImpactAxis,
   CaseContractChangeKind,
   ContractInstrumentVersion,
   RecordCaseContractChangeActionInput,
+  RecordCaseContractChangeActionImpactRelationInput,
   RecordCaseContractChangeApplicabilityInput,
+  RecordCaseContractChangeEngagementLinkInput,
+  RecordCaseContractChangeImpactDeclarationInput,
   RecordCaseContractChangeEventInput,
 } from "../../shared/types";
 
@@ -14,7 +19,10 @@ type ReadState = "LOADING" | "READY" | "UNAVAILABLE";
 type IntentInput =
   | RecordCaseContractChangeEventInput
   | RecordCaseContractChangeApplicabilityInput
-  | RecordCaseContractChangeActionInput;
+  | RecordCaseContractChangeActionInput
+  | RecordCaseContractChangeActionImpactRelationInput
+  | RecordCaseContractChangeEngagementLinkInput
+  | RecordCaseContractChangeImpactDeclarationInput;
 type PendingIntent = { caseId: string; key: string; input: IntentInput };
 
 const CHANGE_KINDS: Array<{ value: CaseContractChangeKind; label: string }> = [
@@ -22,6 +30,13 @@ const CHANGE_KINDS: Array<{ value: CaseContractChangeKind; label: string }> = [
   { value: "CHANGE_REQUEST", label: "Demande de changement" },
   { value: "ADDENDUM", label: "Avenant" },
   { value: "SCHEDULE_CHANGE", label: "Changement de calendrier" },
+];
+const IMPACT_AXES: Array<{ value: CaseContractChangeImpactAxis; label: string }> = [
+  { value: "SCOPE", label: "Périmètre" },
+  { value: "COST", label: "Coût" },
+  { value: "CASH", label: "Cash" },
+  { value: "SCHEDULE", label: "Délai" },
+  { value: "CAPACITY", label: "Capacité" },
 ];
 const APPLICABILITY_CHOICES: Array<{ value: CaseContractChangeApplicability; label: string }> = [
   { value: "APPLICABLE_TO_HANDOVER", label: "À relier à cette passation" },
@@ -34,6 +49,16 @@ const ids = () => ({
   correlation_id: crypto.randomUUID(),
 });
 const refs = (value: string) => value.split("\n").map((item) => item.trim()).filter(Boolean);
+const a1SourceKey = (source: A1EngagementSource) => [
+  source.condition_id,
+  source.requirement_id,
+  source.requirement_revision,
+  source.impact_id,
+  source.impact_revision,
+  source.profile_version_id,
+  source.profile_version,
+  source.profile_sha256,
+].join(":");
 
 export function CaseContractChangePanel({
   api,
@@ -69,6 +94,20 @@ export function CaseContractChangePanel({
   const [actionDrafts, setActionDrafts] = useState<Record<string, {
     summary: string; evidenceRefs: string; dueAt: string; noDueReason: string;
   }>>({});
+  const [engagementDrafts, setEngagementDrafts] = useState<Record<string, {
+    state: "LINKED" | "UNKNOWN"; selectedKeys: string[]; rationale: string; unknownReason: string;
+  }>>({});
+  const [impactDrafts, setImpactDrafts] = useState<Record<string, {
+    sourceKey: string; axis: CaseContractChangeImpactAxis; impactState: "DECLARED" | "UNKNOWN";
+    impactSummary: string; impactUnknownReason: string;
+    measurementState: "DECLARED" | "UNKNOWN"; value: string; currency: string; unit: string;
+    measurementUnknownReason: string; assumptions: string; sourceRefs: string; evidenceRefs: string;
+    rationale: string;
+  }>>({});
+  const [actionImpactDrafts, setActionImpactDrafts] = useState<Record<string, {
+    state: "LINKED" | "UNKNOWN" | "NOT_APPLICABLE";
+    declarationIds: string[]; rationale: string; reason: string;
+  }>>({});
   const activeCaseId = useRef(caseId);
 
   useLayoutEffect(() => {
@@ -99,6 +138,9 @@ export function CaseContractChangePanel({
     setHandoverId("");
     setReviewDrafts({});
     setActionDrafts({});
+    setEngagementDrafts({});
+    setImpactDrafts({});
+    setActionImpactDrafts({});
     let active = true;
     setState("LOADING");
     void refresh(caseId).catch(() => {
@@ -214,6 +256,122 @@ export function CaseContractChangePanel({
     );
   }
 
+  function recordEngagementLink(event: CaseContractChangeEvent) {
+    const draft = engagementDrafts[event.event_id];
+    if (!draft?.rationale.trim()) return;
+    const selectedSources = event.a1_engagements.filter((source) =>
+      draft.selectedKeys.includes(a1SourceKey(source))
+    );
+    if (draft.state === "LINKED" && !selectedSources.length) return;
+    if (draft.state === "UNKNOWN" && !draft.unknownReason.trim()) return;
+    void submit(
+      "engagement-link:" + event.event_id,
+      () => ({
+        ...ids(),
+        linkage_id: crypto.randomUUID(),
+        expected_revision: event.engagement_linkage_history.length,
+        state: draft.state,
+        selected_sources: selectedSources,
+        rationale: draft.rationale.trim(),
+        unknown_reason: draft.state === "UNKNOWN" ? draft.unknownReason.trim() : null,
+      }),
+      (input) => api.recordCaseContractChangeEngagementLink(caseId, event.event_id, input),
+    );
+  }
+
+  function recordImpactDeclaration(event: CaseContractChangeEvent) {
+    const draft = impactDrafts[event.event_id];
+    const linkage = event.engagement_linkage_history.at(-1);
+    const source = linkage?.selected_sources.find(
+      (item) => a1SourceKey(item) === draft?.sourceKey
+    );
+    if (!draft || !linkage || linkage.state !== "LINKED" || !source || !draft.rationale.trim()) {
+      return;
+    }
+    if (draft.impactState === "DECLARED" && !draft.impactSummary.trim()) return;
+    if (draft.impactState === "UNKNOWN" && !draft.impactUnknownReason.trim()) return;
+    if (draft.impactState === "DECLARED" && !refs(draft.sourceRefs).length) return;
+    if (draft.impactState === "DECLARED" && !refs(draft.evidenceRefs).length) return;
+    if (draft.axis !== "SCOPE" && draft.impactState === "DECLARED") {
+      if (draft.measurementState === "UNKNOWN" && !draft.measurementUnknownReason.trim()) return;
+      if (draft.measurementState === "DECLARED" && !draft.value.trim()) return;
+      if (draft.axis === "COST" || draft.axis === "CASH") {
+        if (draft.measurementState === "DECLARED" && !draft.currency.trim()) return;
+      } else if (draft.measurementState === "DECLARED" && !draft.unit.trim()) return;
+    }
+    const impactKey = "impact:" + event.event_id;
+    const priorRevisionCount = event.impact_declarations.filter((item) =>
+      item.linkage_id === linkage.linkage_id
+      && item.axis === draft.axis
+      && a1SourceKey(item.source) === a1SourceKey(source)
+    ).length;
+    void submit(
+      impactKey,
+      () => ({
+        ...ids(),
+        declaration_id: crypto.randomUUID(),
+        linkage_id: linkage.linkage_id,
+        source,
+        expected_revision: priorRevisionCount,
+        axis: draft.axis,
+        impact_state: draft.impactState,
+        impact_summary: draft.impactState === "DECLARED" ? draft.impactSummary.trim() : null,
+        impact_unknown_reason: draft.impactState === "UNKNOWN" ? draft.impactUnknownReason.trim() : null,
+        measurement_state: draft.axis === "SCOPE"
+          ? "NOT_APPLICABLE" as const
+          : draft.impactState === "UNKNOWN" ? "UNKNOWN" as const : draft.measurementState,
+        value_as_declared: draft.impactState === "DECLARED"
+          && draft.measurementState === "DECLARED" && draft.axis !== "SCOPE"
+          ? draft.value.trim() : null,
+        currency_code: draft.impactState === "DECLARED"
+          && draft.measurementState === "DECLARED"
+          && (draft.axis === "COST" || draft.axis === "CASH") ? draft.currency.trim() : null,
+        unit: draft.impactState === "DECLARED"
+          && draft.measurementState === "DECLARED"
+          && (draft.axis === "SCHEDULE" || draft.axis === "CAPACITY") ? draft.unit.trim() : null,
+        measurement_unknown_reason: draft.impactState === "DECLARED"
+          && draft.measurementState === "UNKNOWN" && draft.axis !== "SCOPE"
+          ? draft.measurementUnknownReason.trim() : null,
+        assumptions: refs(draft.assumptions),
+        source_refs: refs(draft.sourceRefs),
+        evidence_refs: draft.impactState === "DECLARED" ? refs(draft.evidenceRefs) : [],
+        rationale: draft.rationale.trim(),
+      }),
+      (input) => api.recordCaseContractChangeImpactDeclaration(caseId, event.event_id, input),
+    );
+  }
+
+  function recordActionImpactRelation(event: CaseContractChangeEvent, actionId: string) {
+    const draft = actionImpactDrafts[actionId];
+    const latestReview = event.applicability_history.at(-1);
+    const selected = event.impact_declarations.filter((item) =>
+      draft?.declarationIds.includes(item.declaration_id) && item.linkage_state === "CURRENT"
+    );
+    if (!draft || !latestReview || latestReview.decision !== "APPLICABLE_TO_HANDOVER"
+      || !draft.rationale.trim()) return;
+    if (draft.state === "LINKED" && !selected.length) return;
+    if (draft.state !== "LINKED" && !draft.reason.trim()) return;
+    const key = "c4:" + actionId;
+    void submit(
+      key,
+      () => ({
+        ...ids(),
+        relation_id: crypto.randomUUID(),
+        expected_revision: event.action_impact_relations.filter(
+          (item) => item.action_id === actionId
+        ).length,
+        state: draft.state,
+        declaration_ids: draft.state === "LINKED"
+          ? selected.map((item) => item.declaration_id) : [],
+        rationale: draft.rationale.trim(),
+        unknown_reason: draft.state === "LINKED" ? null : draft.reason.trim(),
+      }),
+      (input) => api.recordCaseContractChangeActionImpactRelation(
+        caseId, event.event_id, actionId, input
+      ),
+    );
+  }
+
   const blocked = !!pending;
   return (
     <section className="section-block decision-section" aria-label="Événements contractuels C1">
@@ -238,6 +396,30 @@ export function CaseContractChangePanel({
           noDueReason: "",
         };
         const latestReview = event.applicability_history.at(-1);
+        const engagement = engagementDrafts[event.event_id] ?? {
+          state: "UNKNOWN" as const,
+          selectedKeys: [],
+          rationale: "",
+          unknownReason: "",
+        };
+        const currentLinkage = event.engagement_linkage_history.at(-1);
+        const impactDraft = impactDrafts[event.event_id] ?? {
+          sourceKey: currentLinkage?.selected_sources[0]
+            ? a1SourceKey(currentLinkage.selected_sources[0]) : "",
+          axis: "COST" as const,
+          impactState: "UNKNOWN" as const,
+          impactSummary: "",
+          impactUnknownReason: "",
+          measurementState: "UNKNOWN" as const,
+          value: "",
+          currency: "EUR",
+          unit: "",
+          measurementUnknownReason: "",
+          assumptions: "",
+          sourceRefs: event.source_refs.join("\n"),
+          evidenceRefs: "",
+          rationale: "",
+        };
         return <article className="detail-panel" key={event.event_id}>
           <h3>{CHANGE_KINDS.find((kind) => kind.value === event.change_kind)?.label ?? event.change_kind} · lot {event.lot_reference}</h3>
           <p>Passation B1 : paquet P5 v{event.offer_package_version} · SHA-256 {event.offer_manifest_sha256}</p>
@@ -248,6 +430,112 @@ export function CaseContractChangePanel({
             ? event.declared_instrument.instrument_kind + " · " + event.declared_instrument.version_reference
             : "UNKNOWN · aucun lien versionnel déclaré"}.</p>
           <p>Applicabilité à cette passation : {event.applicability_state}. Ce statut ne constitue pas une conclusion juridique.</p>
+          <section aria-label={"Engagements A1 concernés " + event.event_id}>
+            <h4>Engagements A1 figés dans la passation B1</h4>
+            {event.a1_engagements_state === "UNKNOWN" || event.a1_engagements.length === 0
+              ? <p>UNKNOWN · aucun engagement A1 sourcé n’est présent dans ce snapshot B1.</p>
+              : <ul>{event.a1_engagements.map((source) => <li key={a1SourceKey(source)}>
+                Condition {source.condition_id} · exigence {source.requirement_id} r{source.requirement_revision} · impact {source.impact_id} r{source.impact_revision} · profil {source.profile_version} · SHA-256 {source.profile_sha256}
+              </li>)}</ul>}
+            <p>Lien humain avec cet événement : {event.engagement_linkage_state}. Il ne modifie ni A1, ni le snapshot B1, ni l’événement C1.</p>
+            {event.engagement_linkage_history.map((item) => <p key={item.linkage_id}>
+              Acte Patron r{item.revision} : {item.state} · {item.rationale}{item.unknown_reason ? " · Motif UNKNOWN : " + item.unknown_reason : ""} · sources sélectionnées : {item.selected_sources.length}
+            </p>)}
+            <form onSubmit={(formEvent) => { formEvent.preventDefault(); recordEngagementLink(event); }}>
+              <label>État du rapprochement A1/C1
+                <select aria-label={"État du lien A1/C1 " + event.event_id} value={engagement.state} disabled={blocked} onChange={(formEvent) => setEngagementDrafts((current) => ({ ...current, [event.event_id]: { ...engagement, state: formEvent.target.value as "LINKED" | "UNKNOWN" } }))}>
+                  <option value="UNKNOWN">UNKNOWN · aucun engagement sélectionné</option>
+                  <option value="LINKED">Engagements sélectionnés par le Patron</option>
+                </select>
+              </label>
+              {engagement.state === "LINKED" && event.a1_engagements.map((source) => {
+                const key = a1SourceKey(source);
+                return <label key={key}>
+                  <input type="checkbox" aria-label={"Sélectionner la condition A1 " + source.condition_id} checked={engagement.selectedKeys.includes(key)} disabled={blocked} onChange={(formEvent) => setEngagementDrafts((current) => ({
+                    ...current,
+                    [event.event_id]: {
+                      ...engagement,
+                      selectedKeys: formEvent.target.checked
+                        ? [...engagement.selectedKeys, key]
+                        : engagement.selectedKeys.filter((selected) => selected !== key),
+                    },
+                  }))} />
+                  Sélectionner condition {source.condition_id} · impact {source.impact_id} r{source.impact_revision}
+                </label>;
+              })}
+              {engagement.state === "UNKNOWN" && <label>Motif explicite de l’inconnu<input required maxLength={1000} value={engagement.unknownReason} disabled={blocked} onChange={(formEvent) => setEngagementDrafts((current) => ({ ...current, [event.event_id]: { ...engagement, unknownReason: formEvent.target.value } }))} /></label>}
+              <label>Justification Patron<textarea required maxLength={2000} value={engagement.rationale} disabled={blocked} onChange={(formEvent) => setEngagementDrafts((current) => ({ ...current, [event.event_id]: { ...engagement, rationale: formEvent.target.value } }))} /></label>
+              <button type="submit" disabled={blocked || (engagement.state === "LINKED" && (!event.a1_engagements.length || !engagement.selectedKeys.length))}>
+                {submitting === "engagement-link:" + event.event_id ? "Enregistrement…" : failure?.key === "engagement-link:" + event.event_id && failure.kind === "UNCONFIRMED" ? "Réessayer le même lien" : "Enregistrer le lien Patron A1/C1"}
+              </button>
+            </form>
+          </section>
+          <section aria-label={"Impacts déclarés C3 " + event.event_id}>
+            <h4>Impact humain du changement sur l’engagement A1</h4>
+            {event.impact_declarations.length === 0
+              && <p>UNKNOWN · aucun impact post-événement n’est encore déclaré sur une source A1.</p>}
+            {event.impact_declarations.map((item) => <p key={item.declaration_id}>
+              C3 r{item.revision} · {IMPACT_AXES.find((axis) => axis.value === item.axis)?.label ?? item.axis} · {item.impact_state}
+              {item.impact_summary ? " · " + item.impact_summary : ""}
+              {item.impact_unknown_reason ? " · Motif : " + item.impact_unknown_reason : ""}
+              {item.measurement_state === "DECLARED"
+                ? " · Valeur déclarée " + item.value_as_declared + " " + (item.currency_code ?? item.unit)
+                : item.measurement_state === "UNKNOWN" ? " · Mesure UNKNOWN : " + (item.measurement_unknown_reason ?? item.impact_unknown_reason) : ""}
+              {item.linkage_state === "REVIEW_REQUIRED" ? " · REVIEW_REQUIRED — liaison C2 remplacée" : ""}
+            </p>)}
+            {!currentLinkage || currentLinkage.state !== "LINKED"
+              ? <p>UNKNOWN · une liaison C2 `LINKED` est requise avant d’attribuer l’impact à une source A1.</p>
+              : <form onSubmit={(formEvent) => { formEvent.preventDefault(); recordImpactDeclaration(event); }}>
+                <label>Source A1 liée en C2
+                  <select aria-label={"Source A1 de l’impact C3 " + event.event_id} value={impactDraft.sourceKey} disabled={blocked} onChange={(formEvent) => setImpactDrafts((current) => ({ ...current, [event.event_id]: { ...impactDraft, sourceKey: formEvent.target.value } }))}>
+                    {currentLinkage.selected_sources.map((source) => <option key={a1SourceKey(source)} value={a1SourceKey(source)}>
+                      Condition {source.condition_id} · impact {source.impact_id} r{source.impact_revision}
+                    </option>)}
+                  </select>
+                </label>
+                <label>Axe d’impact déclaré
+                  <select aria-label={"Axe d’impact C3 " + event.event_id} value={impactDraft.axis} disabled={blocked} onChange={(formEvent) => {
+                    const axis = formEvent.target.value as CaseContractChangeImpactAxis;
+                    setImpactDrafts((current) => ({ ...current, [event.event_id]: {
+                      ...impactDraft,
+                      axis,
+                      measurementState: "UNKNOWN",
+                    } }));
+                  }}>
+                    {IMPACT_AXES.map((axis) => <option key={axis.value} value={axis.value}>{axis.label}</option>)}
+                  </select>
+                </label>
+                <label>État de l’impact
+                  <select aria-label={"État de l’impact C3 " + event.event_id} value={impactDraft.impactState} disabled={blocked} onChange={(formEvent) => setImpactDrafts((current) => ({ ...current, [event.event_id]: { ...impactDraft, impactState: formEvent.target.value as "DECLARED" | "UNKNOWN" } }))}>
+                    <option value="UNKNOWN">UNKNOWN · effet non établi</option>
+                    <option value="DECLARED">Impact déclaré par le Patron</option>
+                  </select>
+                </label>
+                {impactDraft.impactState === "DECLARED" && <label>Description de l’impact déclaré<textarea required maxLength={2000} value={impactDraft.impactSummary} disabled={blocked} onChange={(formEvent) => setImpactDrafts((current) => ({ ...current, [event.event_id]: { ...impactDraft, impactSummary: formEvent.target.value } }))} /></label>}
+                {impactDraft.impactState === "UNKNOWN" && <label>Motif de l’impact inconnu<input required maxLength={1000} value={impactDraft.impactUnknownReason} disabled={blocked} onChange={(formEvent) => setImpactDrafts((current) => ({ ...current, [event.event_id]: { ...impactDraft, impactUnknownReason: formEvent.target.value } }))} /></label>}
+                {impactDraft.axis !== "SCOPE" && impactDraft.impactState === "DECLARED" && <label>État de la mesure
+                  <select aria-label={"État de la mesure C3 " + event.event_id} value={impactDraft.measurementState} disabled={blocked} onChange={(formEvent) => setImpactDrafts((current) => ({ ...current, [event.event_id]: { ...impactDraft, measurementState: formEvent.target.value as "DECLARED" | "UNKNOWN" } }))}>
+                    <option value="UNKNOWN">UNKNOWN · quantité non confirmée</option>
+                    <option value="DECLARED">Valeur déclarée par le Patron</option>
+                  </select>
+                </label>}
+                {impactDraft.axis !== "SCOPE" && impactDraft.impactState === "DECLARED" && impactDraft.measurementState === "DECLARED" && <>
+                  <label>Valeur déclarée, sans calcul<input required maxLength={80} value={impactDraft.value} disabled={blocked} onChange={(formEvent) => setImpactDrafts((current) => ({ ...current, [event.event_id]: { ...impactDraft, value: formEvent.target.value } }))} /></label>
+                  {(impactDraft.axis === "COST" || impactDraft.axis === "CASH")
+                    ? <label>Devise déclarée<input required maxLength={3} pattern="[A-Z]{3}" value={impactDraft.currency} disabled={blocked} onChange={(formEvent) => setImpactDrafts((current) => ({ ...current, [event.event_id]: { ...impactDraft, currency: formEvent.target.value.toUpperCase() } }))} /></label>
+                    : <label>Unité déclarée<input required maxLength={32} value={impactDraft.unit} disabled={blocked} onChange={(formEvent) => setImpactDrafts((current) => ({ ...current, [event.event_id]: { ...impactDraft, unit: formEvent.target.value } }))} /></label>}
+                </>}
+                {impactDraft.axis !== "SCOPE" && impactDraft.impactState === "DECLARED" && impactDraft.measurementState === "UNKNOWN" && <label>Motif de mesure inconnue<input required maxLength={1000} value={impactDraft.measurementUnknownReason} disabled={blocked} onChange={(formEvent) => setImpactDrafts((current) => ({ ...current, [event.event_id]: { ...impactDraft, measurementUnknownReason: formEvent.target.value } }))} /></label>}
+                <label>Hypothèses, une par ligne<textarea value={impactDraft.assumptions} disabled={blocked} onChange={(formEvent) => setImpactDrafts((current) => ({ ...current, [event.event_id]: { ...impactDraft, assumptions: formEvent.target.value } }))} /></label>
+                <label>Sources de l’impact, une par ligne<textarea required value={impactDraft.sourceRefs} disabled={blocked} onChange={(formEvent) => setImpactDrafts((current) => ({ ...current, [event.event_id]: { ...impactDraft, sourceRefs: formEvent.target.value } }))} /></label>
+                {impactDraft.impactState === "DECLARED" && <label>Preuves, une par ligne<textarea required value={impactDraft.evidenceRefs} disabled={blocked} onChange={(formEvent) => setImpactDrafts((current) => ({ ...current, [event.event_id]: { ...impactDraft, evidenceRefs: formEvent.target.value } }))} /></label>}
+                <label>Justification Patron C3<textarea required maxLength={2000} value={impactDraft.rationale} disabled={blocked} onChange={(formEvent) => setImpactDrafts((current) => ({ ...current, [event.event_id]: { ...impactDraft, rationale: formEvent.target.value } }))} /></label>
+                <button type="submit" disabled={blocked || !currentLinkage.selected_sources.length}>
+                  {submitting === "impact:" + event.event_id ? "Enregistrement…" : failure?.key === "impact:" + event.event_id && failure.kind === "UNCONFIRMED" ? "Réessayer le même impact" : "Enregistrer l’impact Patron C3"}
+                </button>
+                <p>Les valeurs restent déclarées ; elles ne modifient ni A1, ni la passation B1, ni l’événement C1 et ne sont pas calculées.</p>
+              </form>}
+          </section>
           {event.applicability_history.map((item) => <p key={item.review_id}>
             Revue Patron r{item.revision} : {item.decision} · version déclarée {item.contract_instrument?.version_reference ?? item.contract_instrument_version_id} · delta {item.delta_state}{item.delta_note ? " · " + item.delta_note : ""} · {item.rationale} · preuves : {item.evidence_refs.join(" · ")}
           </p>)}
@@ -283,6 +571,59 @@ export function CaseContractChangePanel({
             <button type="submit" disabled={blocked}>{submitting === "action:" + event.event_id ? "Enregistrement…" : failure?.key === "action:" + event.event_id && failure.kind === "UNCONFIRMED" ? "Réessayer la même action" : "Enregistrer l’action et la preuve"}</button>
           </form>}
           {event.actions.map((item) => <p key={item.action_id}>Action r{item.revision} · {item.state} · {item.summary} · preuves : {item.evidence_refs.join(" · ")} · échéance : {item.due_at ?? item.due_date_absence_reason}</p>)}
+          <section aria-label={"Liaisons C4 actions et impacts " + event.event_id}>
+            <h4>Lier une action Patron aux impacts déclarés</h4>
+            {event.action_impact_relations.map((item) => <p key={item.relation_id}>
+              C4 r{item.revision} · action {item.action_id} · {item.state} · impacts C3 : {item.declaration_ids.join(", ") || "aucun"} · projection {item.projection_state} · {item.rationale}
+              {item.unknown_reason ? " · motif : " + item.unknown_reason : ""}
+            </p>)}
+            {event.actions.map((item) => {
+              const draft = actionImpactDrafts[item.action_id] ?? {
+                state: "LINKED" as const, declarationIds: [], rationale: "", reason: "",
+              };
+              const latestReviewIsCurrent = latestReview?.decision === "APPLICABLE_TO_HANDOVER"
+                && item.applicability_review_id === latestReview.review_id;
+              return <form key={item.action_id} onSubmit={(formEvent) => {
+                formEvent.preventDefault();
+                recordActionImpactRelation(event, item.action_id);
+              }}>
+                <p>Action {item.action_id} · état {item.state} (la relation C4 ne change pas cet état).</p>
+                <label>État de la liaison C4
+                  <select aria-label={"État C4 " + item.action_id} value={draft.state} disabled={blocked || !latestReviewIsCurrent} onChange={(formEvent) => setActionImpactDrafts((current) => ({
+                    ...current,
+                    [item.action_id]: { ...draft, state: formEvent.target.value as typeof draft.state },
+                  }))}>
+                    <option value="LINKED">Relier à des impacts C3</option>
+                    <option value="UNKNOWN">UNKNOWN · lien non établi</option>
+                    <option value="NOT_APPLICABLE">Sans objet pour cette action</option>
+                  </select>
+                </label>
+                {draft.state === "LINKED" && event.impact_declarations
+                  .filter((declaration) => declaration.linkage_state === "CURRENT")
+                  .map((declaration) => <label key={declaration.declaration_id}>
+                    <input type="checkbox" aria-label={"Sélectionner l’impact C3 " + declaration.declaration_id}
+                      checked={draft.declarationIds.includes(declaration.declaration_id)} disabled={blocked || !latestReviewIsCurrent}
+                      onChange={(formEvent) => setActionImpactDrafts((current) => ({
+                        ...current,
+                        [item.action_id]: { ...draft, declarationIds: formEvent.target.checked
+                          ? [...draft.declarationIds, declaration.declaration_id]
+                          : draft.declarationIds.filter((id) => id !== declaration.declaration_id) },
+                      }))} />
+                    C3 {declaration.declaration_id} · {declaration.axis} · {declaration.impact_state}
+                  </label>)}
+                {draft.state !== "LINKED" && <label>Motif UNKNOWN / sans objet<input required maxLength={1000} value={draft.reason} disabled={blocked || !latestReviewIsCurrent} onChange={(formEvent) => setActionImpactDrafts((current) => ({ ...current, [item.action_id]: { ...draft, reason: formEvent.target.value } }))} /></label>}
+                <label>Justification Patron C4<textarea required maxLength={2000} value={draft.rationale} disabled={blocked || !latestReviewIsCurrent} onChange={(formEvent) => setActionImpactDrafts((current) => ({ ...current, [item.action_id]: { ...draft, rationale: formEvent.target.value } }))} /></label>
+                <button type="submit" disabled={blocked || !latestReviewIsCurrent
+                  || (draft.state === "LINKED" && !draft.declarationIds.some((id) =>
+                    event.impact_declarations.some((declaration) => declaration.declaration_id === id && declaration.linkage_state === "CURRENT")))
+                  || (draft.state !== "LINKED" && !draft.reason.trim())}>
+                  {submitting === "c4:" + item.action_id ? "Enregistrement…" : failure?.key === "c4:" + item.action_id && failure.kind === "UNCONFIRMED" ? "Réessayer la même liaison" : "Enregistrer la liaison Patron C4"}
+                </button>
+              </form>;
+            })}
+            {event.actions.length === 0 && <p>Une action C1 `RECORDED` doit exister avant de créer une liaison C4.</p>}
+            <p>C4 relie une déclaration à l’action ; il ne prouve ni son exécution ni sa clôture et ne crée aucune action automatiquement.</p>
+          </section>
         </article>;
       })}
       {message && <p role="status">{message}</p>}

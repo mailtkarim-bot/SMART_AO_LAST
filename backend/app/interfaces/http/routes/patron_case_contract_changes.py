@@ -13,18 +13,21 @@ from app.interfaces.http.routes.consultations import ConsultationSecurityRuntime
 from app.modules.pricing.application.case_contract_change import CaseContractChangeService
 from app.modules.pricing.application.case_contract_change_commands import (
     RecordCaseContractChangeActionCommand,
+    RecordCaseContractChangeActionImpactRelationCommand,
     RecordCaseContractChangeApplicabilityCommand,
+    RecordCaseContractChangeEngagementLinkCommand,
     RecordCaseContractChangeEventCommand,
+    RecordCaseContractChangeImpactDeclarationCommand,
 )
 from app.modules.pricing.public.case_contract_change_contracts import (
     CaseContractChangeEventListResponse,
-    ContractChangeActionResponse,
-    ContractChangeApplicabilityResponse,
     ContractChangeEventResponse,
-    ContractChangeInstrumentResponse,
+    RecordCaseContractChangeActionImpactRelationRequest,
     RecordCaseContractChangeActionRequest,
     RecordCaseContractChangeApplicabilityRequest,
+    RecordCaseContractChangeEngagementLinkRequest,
     RecordCaseContractChangeEventRequest,
+    RecordCaseContractChangeImpactDeclarationRequest,
     RecordCaseContractChangeResponse,
 )
 from app.platform.events.dispatcher import CommandExecutionError
@@ -50,40 +53,7 @@ def build_patron_case_contract_change_router(
             ) from error
         return CaseContractChangeEventListResponse(
             case_id=case_id,
-            events=[
-                ContractChangeEventResponse(
-                    **{
-                        **event,
-                        "declared_instrument": (
-                            ContractChangeInstrumentResponse.model_validate(
-                                event["declared_instrument"]
-                            )
-                            if event["declared_instrument"]
-                            else None
-                        ),
-                        "applicability_history": [
-                            ContractChangeApplicabilityResponse(
-                                **{
-                                    **review,
-                                    "contract_instrument": (
-                                        ContractChangeInstrumentResponse.model_validate(
-                                            review["contract_instrument"]
-                                        )
-                                        if review["contract_instrument"]
-                                        else None
-                                    ),
-                                }
-                            )
-                            for review in event["applicability_history"]
-                        ],
-                        "actions": [
-                            ContractChangeActionResponse.model_validate(action)
-                            for action in event["actions"]
-                        ],
-                    }
-                )
-                for event in events
-            ],
+            events=[ContractChangeEventResponse.model_validate(event) for event in events],
         )
 
     @router.post(
@@ -127,6 +97,55 @@ def build_patron_case_contract_change_router(
         authorization: str | None = Header(default=None),
     ):
         command = RecordCaseContractChangeActionCommand(
+            **request.model_dump(), case_id=case_id, event_id=event_id
+        )
+        return _record(service, command, actor=_actor(authorization, security_runtime))
+
+    @router.post(
+        "/{case_id}/contract-change-events/{event_id}/actions/{action_id}/impact-links",
+        response_model=RecordCaseContractChangeResponse,
+        status_code=status.HTTP_201_CREATED,
+    )
+    def record_action_impact_relation(
+        case_id: UUID,
+        event_id: UUID,
+        action_id: UUID,
+        request: RecordCaseContractChangeActionImpactRelationRequest,
+        authorization: str | None = Header(default=None),
+    ):
+        command = RecordCaseContractChangeActionImpactRelationCommand(
+            **request.model_dump(), case_id=case_id, event_id=event_id, action_id=action_id
+        )
+        return _record(service, command, actor=_actor(authorization, security_runtime))
+
+    @router.post(
+        "/{case_id}/contract-change-events/{event_id}/engagement-links",
+        response_model=RecordCaseContractChangeResponse,
+        status_code=status.HTTP_201_CREATED,
+    )
+    def record_engagement_link(
+        case_id: UUID,
+        event_id: UUID,
+        request: RecordCaseContractChangeEngagementLinkRequest,
+        authorization: str | None = Header(default=None),
+    ):
+        command = RecordCaseContractChangeEngagementLinkCommand(
+            **request.model_dump(), case_id=case_id, event_id=event_id
+        )
+        return _record(service, command, actor=_actor(authorization, security_runtime))
+
+    @router.post(
+        "/{case_id}/contract-change-events/{event_id}/impact-declarations",
+        response_model=RecordCaseContractChangeResponse,
+        status_code=status.HTTP_201_CREATED,
+    )
+    def record_impact_declaration(
+        case_id: UUID,
+        event_id: UUID,
+        request: RecordCaseContractChangeImpactDeclarationRequest,
+        authorization: str | None = Header(default=None),
+    ):
+        command = RecordCaseContractChangeImpactDeclarationCommand(
             **request.model_dump(), case_id=case_id, event_id=event_id
         )
         return _record(service, command, actor=_actor(authorization, security_runtime))

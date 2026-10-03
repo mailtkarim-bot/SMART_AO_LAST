@@ -1,3 +1,12 @@
+from app.modules.pricing.infrastructure.models.case_contract_change import (
+    CaseContractChangeActionImpactLinkRecord,
+    CaseContractChangeActionImpactRelationRecord,
+    CaseContractChangeActionRecord,
+    CaseContractChangeApplicabilityRecord,
+    CaseContractChangeEngagementLinkRecord,
+    CaseContractChangeEventRecord,
+    CaseContractChangeImpactDeclarationRecord,
+)
 from app.modules.pricing.infrastructure.models.contract_execution_evidence_requalification import (
     ContractExecutionEvidenceRequalificationRecord,
 )
@@ -6,11 +15,6 @@ from app.modules.pricing.infrastructure.models.contract_instrument_supersession 
 )
 from app.modules.pricing.infrastructure.models.contract_instrument_version import (
     ContractInstrumentVersionRecord,
-)
-from app.modules.pricing.infrastructure.models.case_contract_change import (
-    CaseContractChangeActionRecord,
-    CaseContractChangeApplicabilityRecord,
-    CaseContractChangeEventRecord,
 )
 from app.modules.pricing.infrastructure.models.financial import (
     FinancialReportLineRecord,
@@ -22,18 +26,19 @@ from app.modules.pricing.infrastructure.models.financial import (
     PricingScenarioRecord,
     PricingScenarioTransitionRecord,
 )
-from app.modules.pricing.infrastructure.models.partner_offer_price import (
-    PartnerOfferPriceDeclarationRecord,
-)
 from app.modules.pricing.infrastructure.models.partner_offer_line_comparison import (
     PartnerOfferLineComparisonRecord,
     PartnerOfferLineGroupRecord,
     PartnerOfferLineMemberRecord,
 )
+from app.modules.pricing.infrastructure.models.partner_offer_price import (
+    PartnerOfferPriceDeclarationRecord,
+)
 from app.modules.pricing.infrastructure.models.partner_offer_scope_review import (
     PartnerOfferScopeReviewOfferRecord,
     PartnerOfferScopeReviewRecord,
 )
+
 __all__ = [
     "FinancialReportLineRecord",
     "FinancialReportPublicationRecord",
@@ -53,6 +58,10 @@ __all__ = [
     "CaseContractChangeEventRecord",
     "CaseContractChangeApplicabilityRecord",
     "CaseContractChangeActionRecord",
+    "CaseContractChangeActionImpactRelationRecord",
+    "CaseContractChangeActionImpactLinkRecord",
+    "CaseContractChangeEngagementLinkRecord",
+    "CaseContractChangeImpactDeclarationRecord",
     "ContractInstrumentSupersessionRecord",
     "ContractExecutionEvidenceRequalificationRecord",
 ]

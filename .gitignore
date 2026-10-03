@@ -28,3 +28,8 @@ minio_data/
 .vscode/
 .idea/
 .DS_Store
+
+# Local coding-agent state; never version credentials, transcripts, or caches.
+.codex/
+.kimi-code/
+.serena/

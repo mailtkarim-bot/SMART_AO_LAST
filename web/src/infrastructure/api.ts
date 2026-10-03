@@ -90,6 +90,9 @@ import type {
   RecordCaseContractChangeEventInput,
   RecordCaseContractChangeApplicabilityInput,
   RecordCaseContractChangeActionInput,
+  RecordCaseContractChangeActionImpactRelationInput,
+  RecordCaseContractChangeEngagementLinkInput,
+  RecordCaseContractChangeImpactDeclarationInput,
   RecordCaseRexInput,
   RecordCaseOrderInput,
   RecordCaseP6ControlInput,
@@ -414,6 +417,12 @@ export function createApiClient(
       request<CaseExecutionCommandReceipt>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-change-events/${encodeURIComponent(eventId)}/applicability`, { method: "POST", body: JSON.stringify(input) }),
     recordCaseContractChangeAction: (caseId: string, eventId: string, input: RecordCaseContractChangeActionInput) =>
       request<CaseExecutionCommandReceipt>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-change-events/${encodeURIComponent(eventId)}/actions`, { method: "POST", body: JSON.stringify(input) }),
+    recordCaseContractChangeEngagementLink: (caseId: string, eventId: string, input: RecordCaseContractChangeEngagementLinkInput) =>
+      request<CaseExecutionCommandReceipt>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-change-events/${encodeURIComponent(eventId)}/engagement-links`, { method: "POST", body: JSON.stringify(input) }),
+    recordCaseContractChangeImpactDeclaration: (caseId: string, eventId: string, input: RecordCaseContractChangeImpactDeclarationInput) =>
+      request<CaseExecutionCommandReceipt>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-change-events/${encodeURIComponent(eventId)}/impact-declarations`, { method: "POST", body: JSON.stringify(input) }),
+    recordCaseContractChangeActionImpactRelation: (caseId: string, eventId: string, actionId: string, input: RecordCaseContractChangeActionImpactRelationInput) =>
+      request<CaseExecutionCommandReceipt>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-change-events/${encodeURIComponent(eventId)}/actions/${encodeURIComponent(actionId)}/impact-links`, { method: "POST", body: JSON.stringify(input) }),
     listCaseRex: (caseId: string) =>
       request<CaseRexList>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/rex`),
     listCaseInterviews: (caseId: string) =>

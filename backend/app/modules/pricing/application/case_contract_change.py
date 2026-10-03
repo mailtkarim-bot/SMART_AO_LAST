@@ -7,8 +7,11 @@ from uuid import UUID
 
 from app.modules.pricing.application.case_contract_change_commands import (
     RecordCaseContractChangeActionCommand,
+    RecordCaseContractChangeActionImpactRelationCommand,
     RecordCaseContractChangeApplicabilityCommand,
+    RecordCaseContractChangeEngagementLinkCommand,
     RecordCaseContractChangeEventCommand,
+    RecordCaseContractChangeImpactDeclarationCommand,
 )
 from app.modules.pricing.application.case_contract_change_handler import (
     CaseContractChangeHandler,
@@ -98,4 +101,7 @@ def case_contract_change_handlers() -> dict[str, CommandHandler]:
         RecordCaseContractChangeEventCommand.command_type: handler,
         RecordCaseContractChangeApplicabilityCommand.command_type: handler,
         RecordCaseContractChangeActionCommand.command_type: handler,
+        RecordCaseContractChangeActionImpactRelationCommand.command_type: handler,
+        RecordCaseContractChangeEngagementLinkCommand.command_type: handler,
+        RecordCaseContractChangeImpactDeclarationCommand.command_type: handler,
     }

@@ -520,6 +520,22 @@ export type RecordCaseHandoverReceipt = { status: "SUCCEEDED"; result_code: "CAS
 export type CaseContractChangeKind = "ORDER_OF_SERVICE" | "CHANGE_REQUEST" | "ADDENDUM" | "SCHEDULE_CHANGE";
 export type CaseContractChangeApplicability = "APPLICABLE_TO_HANDOVER" | "NOT_APPLICABLE" | "NEEDS_CLARIFICATION";
 export type CaseContractChangeInstrument = { contract_instrument_version_id: string; instrument_kind: "SIGNED_CONTRACT" | "AMENDMENT"; version_reference: string; source_refs: string[]; evidence_refs: string[] };
+export type A1EngagementSource = { condition_id: string; requirement_id: string; requirement_revision: number; impact_id: string; impact_revision: number; profile_version_id: string; profile_version: number; profile_sha256: string };
+export type CaseContractChangeImpactAxis = "SCOPE" | "COST" | "CASH" | "SCHEDULE" | "CAPACITY";
+export type CaseContractChangeImpactDeclaration = {
+  declaration_id: string; linkage_id: string; source: A1EngagementSource; axis: CaseContractChangeImpactAxis;
+  revision: number; impact_state: "DECLARED" | "UNKNOWN"; impact_summary: string | null;
+  impact_unknown_reason: string | null; measurement_state: "DECLARED" | "UNKNOWN" | "NOT_APPLICABLE";
+  value_as_declared: string | null; currency_code: string | null; unit: string | null;
+  measurement_unknown_reason: string | null; assumptions: string[]; source_refs: string[]; evidence_refs: string[];
+  rationale: string; linkage_state: "CURRENT" | "REVIEW_REQUIRED"; recorded_at: string;
+};
+export type CaseContractChangeActionImpactRelation = {
+  relation_id: string; action_id: string; applicability_review_id: string; revision: number;
+  state: "LINKED" | "UNKNOWN" | "NOT_APPLICABLE"; declaration_ids: string[];
+  rationale: string; unknown_reason: string | null; projection_state: "CURRENT" | "REVIEW_REQUIRED";
+  recorded_at: string;
+};
 export type CaseContractChangeEvent = {
   event_id: string; case_id: string; handover_snapshot_id: string; outcome_id: string | null; lot_reference: string;
   offer_package_id: string | null; offer_package_version: number | null; offer_manifest_sha256: string | null; offer_source_locator: string | null;
@@ -528,11 +544,30 @@ export type CaseContractChangeEvent = {
   applicability_state: "UNKNOWN" | CaseContractChangeApplicability;
   applicability_history: Array<{ review_id: string; revision: number; contract_instrument_version_id: string; decision: CaseContractChangeApplicability; delta_state: "UNKNOWN" | "DECLARED"; delta_note: string | null; rationale: string; evidence_refs: string[]; recorded_at: string; contract_instrument: CaseContractChangeInstrument | null }>;
   actions: Array<{ action_id: string; revision: number; applicability_review_id: string; summary: string; evidence_refs: string[]; due_at: string | null; due_date_absence_reason: string | null; state: "RECORDED"; recorded_at: string }>;
+  a1_engagements_state: "KNOWN" | "UNKNOWN"; a1_engagements: A1EngagementSource[];
+  engagement_linkage_state: "LINKED" | "UNKNOWN";
+  engagement_linkage_history: Array<{ linkage_id: string; revision: number; state: "LINKED" | "UNKNOWN"; selected_sources: A1EngagementSource[]; rationale: string; unknown_reason: string | null; recorded_at: string }>;
+  impact_declarations: CaseContractChangeImpactDeclaration[];
+  action_impact_relations: CaseContractChangeActionImpactRelation[];
 };
 export type CaseContractChangeEventList = { case_id: string; events: CaseContractChangeEvent[] };
 export type RecordCaseContractChangeEventInput = { command_id: string; idempotency_key: string; correlation_id: string; event_id: string; handover_snapshot_id: string; change_kind: CaseContractChangeKind; contract_instrument_version_id: string | null; issuer: string | null; summary: string; scope_note: string; source_refs: string[]; evidence_refs: string[]; declared_received_at: string };
 export type RecordCaseContractChangeApplicabilityInput = { command_id: string; idempotency_key: string; correlation_id: string; review_id: string; handover_snapshot_id: string; contract_instrument_version_id: string; expected_revision: number; decision: CaseContractChangeApplicability; delta_state: "UNKNOWN" | "DECLARED"; delta_note: string | null; rationale: string; evidence_refs: string[] };
 export type RecordCaseContractChangeActionInput = { command_id: string; idempotency_key: string; correlation_id: string; action_id: string; applicability_review_id: string; expected_revision: number; action_summary: string; evidence_refs: string[]; due_at: string | null; due_date_absence_reason: string | null };
+export type RecordCaseContractChangeEngagementLinkInput = { command_id: string; idempotency_key: string; correlation_id: string; linkage_id: string; expected_revision: number; state: "LINKED" | "UNKNOWN"; selected_sources: A1EngagementSource[]; rationale: string; unknown_reason: string | null };
+export type RecordCaseContractChangeImpactDeclarationInput = {
+  command_id: string; idempotency_key: string; correlation_id: string; declaration_id: string;
+  linkage_id: string; source: A1EngagementSource; expected_revision: number; axis: CaseContractChangeImpactAxis;
+  impact_state: "DECLARED" | "UNKNOWN"; impact_summary: string | null; impact_unknown_reason: string | null;
+  measurement_state: "DECLARED" | "UNKNOWN" | "NOT_APPLICABLE"; value_as_declared: string | null;
+  currency_code: string | null; unit: string | null; measurement_unknown_reason: string | null;
+  assumptions: string[]; source_refs: string[]; evidence_refs: string[]; rationale: string;
+};
+export type RecordCaseContractChangeActionImpactRelationInput = {
+  command_id: string; idempotency_key: string; correlation_id: string; relation_id: string;
+  expected_revision: number; state: "LINKED" | "UNKNOWN" | "NOT_APPLICABLE";
+  declaration_ids: string[]; rationale: string; unknown_reason: string | null;
+};
 export type RecordCaseOutcomeInput = { command_id: string; idempotency_key: string; correlation_id: string; outcome_id: string; case_id: string; lot_reference: string; outcome: CaseOutcomeValue; source_locator: string | null; reservations: string[]; unknown_reason: string | null };
 export type RecordCaseOrderInput = { command_id: string; idempotency_key: string; correlation_id: string; order_id: string; outcome_id: string; case_id: string; decision: "ACCEPTED" | "REJECTED"; rationale: string };
 export type RecordCaseP6ControlInput = { command_id: string; idempotency_key: string; correlation_id: string; p6_control_id: string; order_id: string; case_id: string; decision: "APPROVED" | "REJECTED"; reservations: string[]; rationale: string };
