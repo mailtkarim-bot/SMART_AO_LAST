@@ -1,3 +1,4 @@
+import hashlib
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from types import SimpleNamespace
@@ -250,6 +251,7 @@ class _ReviewService:
         return _result(code=code, replayed=self.calls > 1)
 
     def read_response_drafts(self, **kwargs):
+        content = "Texte de brouillon synthétique."
         return [
             SimpleNamespace(
                 draft_id=uuid4(),
@@ -258,8 +260,17 @@ class _ReviewService:
                 section_codes_json=["METHOD"],
                 source_refs_json=[str(uuid4())],
                 responsible_role="COLLABORATEUR",
+                content_sha256=hashlib.sha256(content.encode("utf-8")).hexdigest(),
+                response_plan_id=uuid4(),
+                response_plan_version=1,
             )
         ]
+
+    def read_response_drafts_package_revision(self, **kwargs):
+        return 3
+
+    def read_verified_response_drafts(self, **kwargs):
+        return ((self.read_response_drafts(**kwargs)[0], "Texte de brouillon synthétique."),)
 
 
 def _headers():
@@ -416,14 +427,20 @@ def test_review_routes_return_each_command_result():
         assert response.json()["result_code"] == code
 
 
-def test_patron_can_read_response_draft_projection_without_content():
+def test_patron_reads_response_draft_content_only_after_storage_hash_verification():
     response = _client(review_service=cast(Any, _ReviewService())).get(
         f"/api/v1/preparation/{uuid4()}/response-drafts", headers=_headers()
     )
 
     assert response.status_code == 200
     body = response.json()
+    assert body["package_revision"] == 3
     assert body["drafts"][0]["section_codes"] == ["METHOD"]
+    assert body["drafts"][0]["content"] == "Texte de brouillon synthétique."
+    assert (
+        body["drafts"][0]["content_sha256"]
+        == hashlib.sha256("Texte de brouillon synthétique.".encode()).hexdigest()
+    )
     assert "storage_key" not in body["drafts"][0]
 
 

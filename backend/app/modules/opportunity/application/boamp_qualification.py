@@ -93,6 +93,15 @@ class BoampQualificationCommand:
 
 
 @dataclass(frozen=True, slots=True)
+class PatronBoampSourceCaptureProjection:
+    ingestion_run_id: UUID
+    source_mode: str
+    run_recorded_at: str
+    source_contract_version: str | None
+    source_response_sha256: str | None
+
+
+@dataclass(frozen=True, slots=True)
 class PatronBoampObservationProjection:
     observation_id: UUID
     source_notice_id: str
@@ -123,6 +132,7 @@ class PatronBoampObservationProjection:
     deadline_source_timezone: str | None
     deadline_normalized_timezone: str | None
     unknowns: tuple[dict[str, object], ...]
+    source_captures: tuple[PatronBoampSourceCaptureProjection, ...]
 
 
 class PatronBoampObservationService:
@@ -271,6 +281,16 @@ def _projection(
             record,
             deadline_state=deadline_state,
             opened=state.case_id is not None,
+        ),
+        source_captures=tuple(
+            PatronBoampSourceCaptureProjection(
+                ingestion_run_id=capture.ingestion_run_id,
+                source_mode=capture.source_mode,
+                run_recorded_at=capture.run_recorded_at.isoformat(),
+                source_contract_version=capture.source_contract_version,
+                source_response_sha256=capture.source_response_sha256,
+            )
+            for capture in state.source_captures
         ),
     )
 

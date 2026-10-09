@@ -11,6 +11,79 @@ from app.modules.preparation.application.ports import PreparationRequirementInpu
 
 
 @dataclass(frozen=True, slots=True)
+class ResponsePlanDraftItem:
+    requirement_id: UUID
+    section_code: str
+    capability_name: str
+    capability_title: str
+    capability_version_number: int
+    verified_source_count: int
+
+
+_RESPONSE_PLAN_SECTIONS = {
+    "COVER": "Présentation",
+    "UNDERSTANDING": "Compréhension du besoin",
+    "METHOD": "Méthodologie",
+    "RESOURCES": "Moyens mobilisés",
+    "SCHEDULE": "Planning",
+    "RISKS": "Risques et prévention",
+    "SOURCES": "Références",
+}
+
+
+def build_response_plan_draft(
+    *,
+    plan_version: int,
+    draft_version: int,
+    items: tuple[ResponsePlanDraftItem, ...],
+) -> str:
+    """Render a non-financial, versioned outline from resolved plan facts only."""
+    sections = sorted({item.section_code for item in items})
+    if not items or any(section not in _RESPONSE_PLAN_SECTIONS for section in sections):
+        raise ValueError("invalid response-plan draft items")
+    ordered = sorted(items, key=lambda item: (item.section_code, str(item.requirement_id)))
+    lines = [
+        "# Brouillon de réponse technique",
+        "",
+        f"Plan de réponse — révision {plan_version}",
+        f"Brouillon — version {draft_version}",
+        "",
+        "> Trame non contractuelle. Le Collaborateur rédige et vérifie chaque contribution.",
+        "",
+    ]
+    for section in sections:
+        lines.extend([f"## {_RESPONSE_PLAN_SECTIONS[section]}", ""])
+        section_items = [item for item in ordered if item.section_code == section]
+        for index, item in enumerate(section_items, start=1):
+            if item.verified_source_count <= 0:
+                raise ValueError("response-plan source is not verified")
+            lines.extend(
+                [
+                    f"### Exigence {index}",
+                    f"- Proposition choisie : {_safe_response_fact(item.capability_name)} — "
+                    f"{_safe_response_fact(item.capability_title)} "
+                    f"(version {item.capability_version_number}).",
+                    f"- {item.verified_source_count} pièce(s) relue(s); SHA-256 recalculés "
+                    "et concordants avec le manifeste privé.",
+                    "- Contribution : à rédiger et vérifier par le Collaborateur.",
+                    "",
+                ]
+            )
+    return "\n".join(lines)
+
+
+def _safe_response_fact(value: str) -> str:
+    """Keep persisted labels on one escaped Markdown line."""
+    return (
+        " ".join(value.split())
+        .replace("\\", "\\\\")
+        .replace("`", "\\`")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+    )
+
+
+@dataclass(frozen=True, slots=True)
 class TechnicalDocumentFacts:
     """Server-resolved facts allowed in a collaborator technical draft."""
 

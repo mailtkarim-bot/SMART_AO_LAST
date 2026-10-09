@@ -18,6 +18,7 @@ from app.modules.dce.application.queries import (
     CaseDceReadingReader,
     CaseDceReadingRequirementProjection,
 )
+from app.modules.dce.application.source_anchor_projection import DceSourceAnchorProjection
 from app.modules.dce.infrastructure.models.dce_extraction import (
     DceDocumentExtractionFragmentRecord,
     DceDocumentExtractionRecord,
@@ -34,6 +35,7 @@ from app.modules.dce.infrastructure.models.dce_version import (
     DceDocumentRecord,
     DceVersionRecord,
 )
+from app.modules.dce.infrastructure.source_anchor_reader import SqlAlchemyDceSourceAnchorReader
 
 _SAFE_DOCUMENT_FAMILIES: Final[frozenset[str]] = frozenset(
     {
@@ -56,8 +58,9 @@ _PENDING_HUMAN_CONFIRMATION: Final[str] = "PENDING_HUMAN_CONFIRMATION"
 class SqlAlchemyCaseDceReadingReader(CaseDceReadingReader):
     """Rebuild the closed DCE reading view for one Case from source registers.
 
-    This adapter never returns document content, storage metadata, hashes, audit
-    facts, financial information, or current-confirmation authors.
+    It never returns source text, quarantine storage keys, audit facts, financial
+    information, or current-confirmation authors. Source hashes and parser versions
+    are exposed only for tenant-scoped fragments explicitly linked to a requirement.
     """
 
     def __init__(self, session: Session) -> None:
@@ -148,7 +151,17 @@ class SqlAlchemyCaseDceReadingReader(CaseDceReadingReader):
                 DceRequirementConfirmationCurrentRecord.outcome,
                 DceRequirementConfirmationCurrentRecord.revision,
                 DceDocumentClassificationRecord.classification,
-                DceDocumentExtractionFragmentRecord.locator_json,
+                sa.case(
+                    (
+                        sa.and_(
+                            DceDocumentExtractionRecord.id.is_not(None),
+                            DceDocumentRecord.id.is_not(None),
+                        ),
+                        DceDocumentExtractionFragmentRecord.locator_json,
+                    ),
+                    else_=None,
+                ).label("locator_json"),
+                DceRequirementSourceRecord.fragment_id.label("source_fragment_id"),
             )
             .select_from(DceRequirementRecord)
             .outerjoin(
@@ -180,6 +193,8 @@ class SqlAlchemyCaseDceReadingReader(CaseDceReadingReader):
                     DceDocumentExtractionRecord.tenant_id == tenant_id,
                     DceDocumentExtractionRecord.id
                     == DceDocumentExtractionFragmentRecord.extraction_id,
+                    DceDocumentExtractionRecord.dce_version_id == dce_version_id,
+                    DceDocumentExtractionRecord.status == "COMPLETED",
                 ),
             )
             .outerjoin(
@@ -187,6 +202,7 @@ class SqlAlchemyCaseDceReadingReader(CaseDceReadingReader):
                 sa.and_(
                     DceDocumentRecord.tenant_id == tenant_id,
                     DceDocumentRecord.id == DceDocumentExtractionRecord.dce_document_id,
+                    DceDocumentRecord.dce_version_id == dce_version_id,
                 ),
             )
             .outerjoin(
@@ -207,6 +223,12 @@ class SqlAlchemyCaseDceReadingReader(CaseDceReadingReader):
             )
         ).all()
 
+        source_anchors = SqlAlchemyDceSourceAnchorReader().get_many(
+            session=self._session,
+            tenant_id=tenant_id,
+            fragment_ids=(row.source_fragment_id for row in rows if row.source_fragment_id),
+            dce_version_id=dce_version_id,
+        )
         projections = tuple(
             self._requirement_projection(
                 requirement_id=row.id,
@@ -217,6 +239,7 @@ class SqlAlchemyCaseDceReadingReader(CaseDceReadingReader):
                 confirmation_outcome=row.outcome,
                 classification=row.classification,
                 locator_json=row.locator_json,
+                source_anchor=source_anchors.get(row.source_fragment_id),
             )
             for row in rows
         )
@@ -242,6 +265,7 @@ class SqlAlchemyCaseDceReadingReader(CaseDceReadingReader):
         confirmation_outcome: str | None,
         classification: str | None,
         locator_json: object,
+        source_anchor: DceSourceAnchorProjection | None = None,
     ) -> CaseDceReadingRequirementProjection:
         document_family = _safe_document_family(classification)
         return CaseDceReadingRequirementProjection(
@@ -256,6 +280,7 @@ class SqlAlchemyCaseDceReadingReader(CaseDceReadingReader):
                 document_family=document_family,
                 locator_json=locator_json,
             ),
+            source_anchor=source_anchor,
         )
 
     @staticmethod

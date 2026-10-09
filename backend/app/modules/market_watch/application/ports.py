@@ -16,6 +16,8 @@ class BoampNotice:
     department_codes: tuple[str, ...]
     market_types: tuple[str, ...]
     status: str | None
+    source_contract_version: str | None = None
+    source_response_sha256: str | None = None
 
 
 class PublicNoticeSearchPort(Protocol):

@@ -197,6 +197,33 @@ class CaseDceReadingCountersResponse(PublicResponseModel):
     not_applicable: int = Field(ge=0)
 
 
+class CaseDceSourceLocatorResponse(PublicResponseModel):
+    kind: Literal[
+        "pdf_page",
+        "pymupdf_block",
+        "ocr_page",
+        "docx_paragraph",
+        "xlsx_cell",
+        "text_line",
+        "docling_markdown",
+    ]
+    coordinates: dict[str, object]
+
+
+class CaseDceSourceAnchorResponse(PublicResponseModel):
+    source_anchor_id: UUID
+    dce_version_id: UUID
+    dce_document_id: UUID
+    extraction_id: UUID
+    fragment_ordinal: int = Field(ge=1)
+    source_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    extractor_id: str
+    extractor_version: str
+    fragment_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    locator_state: Literal["RESOLVED", "UNKNOWN"]
+    locator: CaseDceSourceLocatorResponse | None
+
+
 class CaseDceReadingRequirementResponse(PublicResponseModel):
     requirement_id: UUID
     confirmation_revision: int | None
@@ -206,6 +233,7 @@ class CaseDceReadingRequirementResponse(PublicResponseModel):
     uncertainty_status: str
     document_family: str
     source_locator_label: str
+    source_anchor: CaseDceSourceAnchorResponse | None = None
 
 
 class CaseDceReadingResponse(PublicResponseModel):

@@ -8,6 +8,12 @@ import pytest
 from app.interfaces.http.routes.case_dce_reading import build_case_dce_reading_router
 from app.interfaces.http.routes.consultations import ConsultationSecurityRuntime
 from app.modules.dce.application.queries import CaseDceReadingAvailability
+from app.modules.dce.application.source_anchor_projection import (
+    DceSourceAnchorLocatorState,
+    DceSourceAnchorProjection,
+    DceSourceLocator,
+    DceSourceLocatorKind,
+)
 from app.platform.security.authenticated_context import (
     AuthenticationContextResolver,
     UnauthenticatedError,
@@ -126,6 +132,7 @@ def _available_lookup(case_id):
         uncertainty_status="NONE",
         document_family="K_BIS",
         source_locator_label="page 2",
+        source_anchor=None,
     )
     reading = _Reading(
         dce_version_id=uuid4(),
@@ -185,10 +192,84 @@ def test_case_dce_reading_returns_closed_projection_and_uses_server_tenant():
     assert body["dce"]["integrity"] == "VERIFIED"
     assert body["counters"]["confirmed"] == 2
     assert body["requirements"][0]["source_locator_label"] == "page 2"
+    assert body["requirements"][0]["source_anchor"] is None
     assert body["requirements"][0]["confirmation_revision"] == 2
     assert runtime.reading_calls[0][1] == case_id
     assert policy.calls[0]["request"].resource.tenant_id == runtime.tenant_id
     assert "gross_margin_minor" not in body
+
+
+def test_case_dce_reading_exposes_typed_source_anchor_without_source_text():
+    case_id = uuid4()
+    lookup = _available_lookup(case_id)
+    lookup.reading.requirements[0].source_anchor = DceSourceAnchorProjection(
+        source_anchor_id=uuid4(),
+        dce_version_id=uuid4(),
+        dce_document_id=uuid4(),
+        extraction_id=uuid4(),
+        fragment_ordinal=2,
+        source_sha256="a" * 64,
+        extractor_id="smart-ao-native",
+        extractor_version="2",
+        fragment_sha256="b" * 64,
+        locator=DceSourceLocator(
+            kind=DceSourceLocatorKind.PDF_PAGE,
+            coordinates={"page": 2, "part": 1},
+        ),
+    )
+
+    response = _client(runtime=_Runtime(lookup=lookup)).get(
+        f"/api/v1/cases/{case_id}/dce-reading", headers=_headers()
+    )
+
+    assert response.status_code == 200
+    anchor = response.json()["requirements"][0]["source_anchor"]
+    expected_anchor_id = lookup.reading.requirements[0].source_anchor.source_anchor_id
+    assert anchor["source_anchor_id"] == str(expected_anchor_id)
+    assert anchor["locator_state"] == DceSourceAnchorLocatorState.RESOLVED.value
+    assert anchor["locator"] == {"kind": "pdf_page", "coordinates": {"page": 2, "part": 1}}
+    assert anchor["source_sha256"] == "a" * 64
+    assert anchor["fragment_sha256"] == "b" * 64
+    assert set(anchor) == {
+        "source_anchor_id",
+        "dce_version_id",
+        "dce_document_id",
+        "extraction_id",
+        "fragment_ordinal",
+        "source_sha256",
+        "extractor_id",
+        "extractor_version",
+        "fragment_sha256",
+        "locator_state",
+        "locator",
+    }
+    assert "source_text" not in anchor
+
+
+def test_case_dce_reading_preserves_unknown_source_anchor_locator():
+    case_id = uuid4()
+    lookup = _available_lookup(case_id)
+    lookup.reading.requirements[0].source_anchor = DceSourceAnchorProjection(
+        source_anchor_id=uuid4(),
+        dce_version_id=uuid4(),
+        dce_document_id=uuid4(),
+        extraction_id=uuid4(),
+        fragment_ordinal=1,
+        source_sha256="a" * 64,
+        extractor_id="legacy-parser",
+        extractor_version="1",
+        fragment_sha256="b" * 64,
+        locator=None,
+    )
+
+    response = _client(runtime=_Runtime(lookup=lookup)).get(
+        f"/api/v1/cases/{case_id}/dce-reading", headers=_headers()
+    )
+
+    assert response.status_code == 200
+    anchor = response.json()["requirements"][0]["source_anchor"]
+    assert anchor["locator_state"] == "UNKNOWN"
+    assert anchor["locator"] is None
 
 
 def test_case_dce_reading_exposes_confirmed_revision_for_a1_context():

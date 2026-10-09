@@ -23,6 +23,7 @@ const observation = (id = "observation-1"): BoampObservation => ({
   department_codes: ["59"],
   market_types: ["TRAVAUX"],
   source_status: "EN_COURS",
+  source_captures: [],
   score_version: "BOAMP_PUBLIC_V1",
   score: 82,
   score_explanation: { keyword_hits: ["réhabilitation"] },

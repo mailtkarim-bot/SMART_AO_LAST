@@ -63,6 +63,28 @@ class PricingScenarioService:
         )
 
     def list_for_case(self, *, actor: ActorContext, case_id: UUID, now: datetime):
-        if actor.actor_kind is not ActorKind.PATRON_ADMIN or actor.membership_id is None:
-            raise PermissionError("PATRON_REQUIRED")
+        authorize_scenario_read(policy=self._policy, actor=actor, case_id=case_id, now=now)
         return self._reader.list_for_case(tenant_id=actor.tenant_id, case_id=case_id)
+
+
+def authorize_scenario_read(
+    *, policy: AuthorizationPolicyPort, actor: ActorContext, case_id: UUID, now: datetime
+) -> None:
+    if actor.actor_kind is not ActorKind.PATRON_ADMIN or actor.membership_id is None:
+        raise PermissionError("PATRON_REQUIRED")
+    decision = policy.authorize(
+        context=actor,
+        request=AuthorizationRequest(
+            action=Capability.PRICING_READ,
+            resource=AuthorizationResource(
+                resource_type="PRICING_SCENARIO",
+                resource_id=case_id,
+                tenant_id=actor.tenant_id,
+                classification=DataClassification.FINANCIAL_PRIVATE,
+                case_id=case_id,
+            ),
+            evaluated_at=now,
+        ),
+    )
+    if not decision.allowed:
+        raise PermissionError(decision.code)

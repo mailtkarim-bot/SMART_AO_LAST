@@ -6,6 +6,7 @@ import hashlib
 import json
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Literal
 from uuid import UUID, uuid4, uuid5
 
 import sqlalchemy as sa
@@ -24,6 +25,9 @@ from app.platform.persistence.models import DomainEventRecord, OutboxMessageReco
 
 class BoampObservationPersistenceConflict(RuntimeError):
     """An idempotency key or command identifies incompatible ingestion data."""
+
+
+BoampIngestionSourceMode = Literal["LIVE", "REPLAY"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -54,7 +58,10 @@ class BoampObservationRepository:
         pages_read: int,
         truncated: bool,
         scored_candidates: tuple[tuple[OpportunityCandidate, ExplainableOpportunityScore], ...],
+        source_mode: BoampIngestionSourceMode = "LIVE",
     ) -> BoampPersistenceResult:
+        if source_mode not in ("LIVE", "REPLAY"):
+            raise ValueError("BOAMP ingestion source mode is invalid")
         run_id = uuid5(
             UUID("00000000-0000-0000-0000-000000000001"),
             f"boamp-ingestion:{tenant_id}:{idempotency_key}",
@@ -79,6 +86,7 @@ class BoampObservationRepository:
                 or record.command_id != command_id
                 or record.idempotency_key != idempotency_key
                 or record.request_hash != request_hash
+                or record.source_mode != source_mode
             ):
                 raise BoampObservationPersistenceConflict("ingestion idempotency conflict")
             links = tuple(
@@ -118,6 +126,7 @@ class BoampObservationRepository:
             correlation_id=correlation_id,
             request_hash=request_hash,
             status="RECORDED",
+            source_mode=source_mode,
             pages_read=pages_read,
             candidate_count=len(scored_candidates),
             truncated=truncated,
@@ -178,6 +187,8 @@ class BoampObservationRepository:
                     tenant_id=tenant_id,
                     ingestion_run_id=run_id,
                     observation_id=persisted,
+                    source_contract_version=candidate.source_contract_version,
+                    source_response_sha256=candidate.source_response_sha256,
                 )
                 .on_conflict_do_nothing(constraint="uq_boamp_links_run_observation")
             )
@@ -242,16 +253,32 @@ def ingestion_request_hash(
     pages_read: int,
     truncated: bool,
     scored_candidates: tuple[tuple[OpportunityCandidate, ExplainableOpportunityScore], ...],
+    source_mode: BoampIngestionSourceMode = "LIVE",
 ) -> str:
+    if source_mode not in ("LIVE", "REPLAY"):
+        raise ValueError("BOAMP ingestion source mode is invalid")
+    candidate_payloads = []
+    for candidate, score in scored_candidates:
+        candidate_payload: dict[str, object] = {
+            "candidate": candidate.snapshot(),
+            "score": score.snapshot(),
+        }
+        if candidate.source_contract_version is not None:
+            candidate_payload["source_transport"] = {
+                "contract_version": candidate.source_contract_version,
+                "response_sha256": candidate.source_response_sha256,
+            }
+        candidate_payloads.append(candidate_payload)
     payload = {
         "pages_read": pages_read,
         "profile_id": str(profile_id),
         "profile_version": profile_version,
         "truncated": truncated,
-        "candidates": [
-            {"candidate": candidate.snapshot(), "score": score.snapshot()}
-            for candidate, score in scored_candidates
-        ],
+        "candidates": candidate_payloads,
     }
+    # Preserve hashes for legacy live requests; replay is part of the canonical
+    # identity so the same idempotency key cannot cross source modes.
+    if source_mode == "REPLAY":
+        payload["source_mode"] = source_mode
     canonical = json.dumps(payload, ensure_ascii=True, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()

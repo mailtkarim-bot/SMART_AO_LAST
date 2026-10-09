@@ -1,10 +1,14 @@
 from app.modules.pricing.infrastructure.models.case_contract_change import (
+    CaseContractChangeActionExecutionEvidenceLinkRecord,
+    CaseContractChangeActionExecutionRecord,
     CaseContractChangeActionImpactLinkRecord,
     CaseContractChangeActionImpactRelationRecord,
     CaseContractChangeActionRecord,
     CaseContractChangeApplicabilityRecord,
     CaseContractChangeEngagementLinkRecord,
     CaseContractChangeEventRecord,
+    CaseContractChangeEvidenceObjectRecord,
+    CaseContractChangeExternalConfirmationRecord,
     CaseContractChangeImpactDeclarationRecord,
 )
 from app.modules.pricing.infrastructure.models.contract_execution_evidence_requalification import (
@@ -59,6 +63,10 @@ __all__ = [
     "CaseContractChangeApplicabilityRecord",
     "CaseContractChangeActionRecord",
     "CaseContractChangeActionImpactRelationRecord",
+    "CaseContractChangeActionExecutionRecord",
+    "CaseContractChangeEvidenceObjectRecord",
+    "CaseContractChangeActionExecutionEvidenceLinkRecord",
+    "CaseContractChangeExternalConfirmationRecord",
     "CaseContractChangeActionImpactLinkRecord",
     "CaseContractChangeEngagementLinkRecord",
     "CaseContractChangeImpactDeclarationRecord",

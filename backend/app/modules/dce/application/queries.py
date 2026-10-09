@@ -8,6 +8,8 @@ from enum import StrEnum
 from typing import Protocol
 from uuid import UUID
 
+from app.modules.dce.application.source_anchor_projection import DceSourceAnchorProjection
+
 
 @dataclass(frozen=True, slots=True)
 class ConsultationProjection:
@@ -58,7 +60,7 @@ class CaseDceReadingCounters:
 
 @dataclass(frozen=True, slots=True)
 class CaseDceReadingRequirementProjection:
-    """One immutable DCE signal represented without source text or storage metadata."""
+    """One immutable DCE signal and its optional source provenance projection."""
 
     requirement_id: UUID
     confirmation_revision: int | None
@@ -68,6 +70,7 @@ class CaseDceReadingRequirementProjection:
     uncertainty_status: str
     document_family: str
     source_locator_label: str
+    source_anchor: DceSourceAnchorProjection | None = None
 
 
 @dataclass(frozen=True, slots=True)

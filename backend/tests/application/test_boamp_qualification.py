@@ -15,6 +15,7 @@ from app.modules.opportunity.application.boamp_qualification import (
 from app.modules.opportunity.infrastructure.boamp_qualification_repository import (
     BoampObservationState,
     BoampQualificationRepository,
+    BoampSourceCaptureRecord,
     QualificationPersistenceResult,
 )
 from app.platform.events.dispatcher import CommandContext
@@ -72,6 +73,19 @@ def _record():
 def test_patron_read_returns_closed_projection_and_tenant_scope() -> None:
     tenant_id = uuid4()
     repository = FakeRepository(_record())
+    run_id = uuid4()
+    response_hash = "b" * 64
+    repository.states[repository.record.id] = BoampObservationState(
+        source_captures=(
+            BoampSourceCaptureRecord(
+                ingestion_run_id=run_id,
+                source_mode="REPLAY",
+                run_recorded_at=NOW,
+                source_contract_version=None,
+                source_response_sha256=response_hash,
+            ),
+        )
+    )
     service = PatronBoampObservationService(
         repository=cast(BoampQualificationRepository, repository)
     )
@@ -95,6 +109,9 @@ def test_patron_read_returns_closed_projection_and_tenant_scope() -> None:
     assert result[0].lot_scope_source == "BOAMP"
     assert result[0].deadline_state.value == "EXPIRED"
     assert result[0].unknowns == ()
+    assert result[0].source_captures[0].ingestion_run_id == run_id
+    assert result[0].source_captures[0].source_mode == "REPLAY"
+    assert result[0].source_captures[0].source_response_sha256 == response_hash
     assert not hasattr(result[0], "tenant_id")
     assert repository.calls == [{"tenant_id": tenant_id, "limit": 10, "min_score": 80}]
 

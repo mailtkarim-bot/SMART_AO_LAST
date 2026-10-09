@@ -1,5 +1,14 @@
+import { CapabilityCandidatesPanel } from "../features/cases/CapabilityCandidatesPanel";
+import { useCapabilityCandidates } from "../features/cases/useCapabilityCandidates";
+import { CapabilityAssessmentsPanel } from "../features/cases/CapabilityAssessmentsPanel";
+import { useCapabilityAssessments } from "../features/cases/useCapabilityAssessments";
+import { useCapabilityProposal } from "../features/cases/useCapabilityProposal";
 import { Suspense, lazy, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
+import { usePricingScenarios } from "../features/pricing/usePricingScenarios";
 import { PricingPanel } from "../features/pricing/PricingPanel";
+import { CaseResolutionPanel } from "../features/cases/CaseResolutionPanel";
+import { useCaseResolution } from "../features/cases/useCaseResolution";
+import { formatMinorMoney as formatMoney } from "../shared/financialFormatting";
 import { PartnerOfferPricesPanel } from "../features/pricing/PartnerOfferPricesPanel";
 import { PaymentCyclePanel } from "../features/decision/PaymentCyclePanel";
 import { PostReceptionObligationsPanel } from "../features/decision/PostReceptionObligationsPanel";
@@ -67,14 +76,12 @@ import {
 } from "../infrastructure/runtimeConfig";
 import type {
   AssignedCase,
-  CaseResolution,
   FinancialCategory,
   PatronAction,
   PatronDecisionDossier,
   FreezeDecisionContextRequest,
   ResolveDecisionConditionRequest,
   FinalizeGoNoGoDecisionRequest,
-  PricingScenario,
   StructuredRiskProjection,
   TransitionStructuredRiskTreatmentInput,
   DceContractRiskSignal,
@@ -107,13 +114,6 @@ const CATEGORIES: Array<{ value: FinancialCategory; label: string }> = [
 
 const categoryLabel = (category: FinancialCategory) =>
   CATEGORIES.find((item) => item.value === category)?.label ?? category;
-
-const formatMoney = (minor: number, currency = "EUR") =>
-  new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 2,
-  }).format(minor / 100);
 
 const formatDate = (value: string) =>
   new Intl.DateTimeFormat("fr-FR", {
@@ -151,9 +151,7 @@ function App() {
   const [loginPassword, setLoginPassword] = useState("");
   const [tenantId, setTenantId] = useState("");
   const [cases, setCases] = useState<AssignedCase[]>([]);
-  const [caseResolution, setCaseResolution] = useState<CaseResolution | null>(null);
   const [actions, setActions] = useState<PatronAction[]>([]);
-  const [scenarios, setScenarios] = useState<PricingScenario[]>([]);
   const [decisionDossier, setDecisionDossier] = useState<PatronDecisionDossier | null>(null);
   const initialDeepLink = readDeepLink(window.location.hash);
   const [selectedCaseId, setSelectedCaseId] = useState(initialDeepLink.caseId);
@@ -167,6 +165,7 @@ function App() {
   const lastConfirmedView = useRef<ConfirmedView | null>(null);
   const [activeNav, setActiveNav] = useState<NavKey>(initialDeepLink.section);
   const {
+    sessionGeneration,
     currentActor,
     isRestoring,
     sessionExpired,
@@ -183,6 +182,18 @@ function App() {
     currentActor?.actor_kind === "PATRON_DELEGATE"
   );
   const isCollaborator = businessReady && currentActor?.actor_kind === "COLLABORATEUR";
+  const dceReadingScopeKey = businessReady && currentActor
+    ? JSON.stringify([baseUrl, sessionGeneration, currentActor.identity_id, currentActor.tenant_slug, currentActor.actor_id, currentActor.actor_kind, currentActor.operational_profile, currentActor.membership_state])
+    : "";
+  const resolutionScopeKey = businessReady && currentActor && (
+    currentActor.actor_kind === "PATRON_ADMIN" || currentActor.actor_kind === "COLLABORATEUR"
+  ) ? JSON.stringify([baseUrl, sessionGeneration, currentActor.identity_id, currentActor.tenant_slug, currentActor.actor_id, currentActor.actor_kind, currentActor.operational_profile, currentActor.membership_state]) : "";
+  const resolutionReading = useCaseResolution(api, selectedCaseId, resolutionScopeKey);
+  const caseResolution = resolutionReading.projection;
+  const capabilityReading = useCapabilityAssessments(api, selectedCaseId, isCollaborator ? resolutionScopeKey : "");
+  const candidateScopeKey = isCollaborator ? resolutionScopeKey : "";
+  const candidateReading = useCapabilityCandidates(api, selectedCaseId, candidateScopeKey);
+  const capabilityProposal = useCapabilityProposal(api, selectedCaseId, candidateScopeKey, capabilityReading.refresh);
   const roleLabel = currentActor?.actor_kind === "PATRON_ADMIN"
     ? "Propriétaire et Patron administrateur"
     : currentActor?.actor_kind === "PATRON_DELEGATE"
@@ -242,14 +253,24 @@ function App() {
     wizardOutcome,
     wizardSnapshotId,
     wizardTransmissionId,
+    wizardSnapshotReceipt,
+    wizardTransmissionReceipt,
+    wizardSnapshotBusy,
+    wizardTransmissionBusy,
+    wizardSnapshotRetryPending,
+    wizardTransmissionRetryPending,
+    canCreateWizardSnapshot,
+    canTransmitWizardSnapshot,
     wizardPreviewDocumentId,
     wizardPreviewContent,
     wizardDocumentBusy,
     wizardTaskWorkflow,
     wizardDocumentKind,
-    wizardDraftSourceDocumentId,
-    wizardDraftSections,
-    wizardDraftSourceRefs,
+    wizardResponsePlan,
+    canSaveWizardResponsePlan,
+    isWizardResponsePlanCurrent,
+    canCreateWizardResponseDraft,
+    canRetryWizardResponseDraft,
     setWizardCaseId,
     setWizardPackageId,
     setWizardTaskId,
@@ -258,16 +279,19 @@ function App() {
     setWizardSnapshotId,
     setWizardTransmissionId,
     setWizardDocumentKind,
-    setWizardDraftSourceDocumentId,
-    setWizardDraftSections,
-    setWizardDraftSourceRefs,
+    setWizardResponsePlanItem,
     loadCollaboratorWizard,
     evaluateWizardReadiness,
     generateWizardDocument,
+    createWizardResponsePlan,
+    retryWizardResponsePlan,
+    readWizardResponsePlan,
     createWizardResponseDraft,
+    retryWizardResponseDraft,
     claimWizardTask,
     recordWizardTaskResult,
     completeWizardTask,
+    createWizardSnapshot,
     transmitWizardSnapshot,
     previewWizardDocument,
     downloadWizardDocument,
@@ -277,17 +301,30 @@ function App() {
     declareWizardTaskBlocker,
     resolveWizardTaskBlocker,
   } = useCollaboratorWizard(api, setMessage);
-  const financialDraft = useFinancialDraft(api, setMessage, selectedCaseId);
+  const financialDraft = useFinancialDraft(api, setMessage, selectedCaseId, currentActor?.actor_kind === "PATRON_ADMIN" ? resolutionScopeKey : "");
+  const scenarioReading = usePricingScenarios(api, selectedCaseId, currentActor?.actor_kind === "PATRON_ADMIN" ? resolutionScopeKey : "", financialDraft.publishedReport);
   const cockpit = usePatronCockpit(api, setMessage, async (caseId) => {
     setSelectedCaseId(caseId);
-    await refreshScenarios(caseId);
   });
   const boamp = useBoampOpportunities(api, setMessage, async (result) => {
     setSelectedCaseId(result.case_id);
     setActiveNav("review");
     await refreshCases();
   });
-  const dceKnowledge = useDceKnowledge(api, setMessage, selectedCaseId);
+  const dceKnowledge = useDceKnowledge(api, setMessage, selectedCaseId, dceReadingScopeKey);
+  const capabilityDceReading = dceKnowledge.reading?.case_id === selectedCaseId
+    && dceKnowledge.reading.dce_freshness === "CURRENT"
+    && dceKnowledge.reading.dce.lifecycle === "ADMITTED"
+    && dceKnowledge.reading.dce.integrity === "VERIFIED"
+    && Boolean(dceKnowledge.reading.dce.dce_version_id)
+    ? dceKnowledge.reading
+    : null;
+  const capabilityRequirementSources = capabilityDceReading?.requirements.map((requirement) => ({
+    id: requirement.requirement_id,
+    requirementId: requirement.requirement_id,
+    label: [requirement.requirement_type, requirement.document_family, requirement.directive_signal].filter(Boolean).join(" · "),
+    state: requirement.uncertainty_status,
+  })) ?? [];
   const decisionRiskRequirements = useDecisionRiskRequirements(
     api,
     setMessage,
@@ -386,12 +423,13 @@ function App() {
   });
   const primaryAction = actions[0];
   const watchItems = actions.filter((action) => action.action_id !== primaryAction?.action_id).slice(0, 3);
-  const summaryCards = draft
+  const financialReport = draft ?? financialDraft.publishedReport;
+  const summaryCards = financialReport
     ? [
-        { label: "Ventes", value: formatMoney(draft.summary.sales_total_minor, draft.currency_code), accent: "blue" },
-        { label: "Coûts directs", value: formatMoney(draft.summary.direct_cost_total_minor, draft.currency_code), accent: "amber" },
-        { label: "Marge brute", value: formatMoney(draft.summary.gross_margin_minor, draft.currency_code), accent: "green" },
-        { label: "Trésorerie", value: formatMoney(draft.summary.forecast_cashflow_minor, draft.currency_code), accent: "violet" },
+        { label: "Ventes", value: financialReport.lines.some((line) => line.category === "SALES") ? formatMoney(financialReport.summary.sales_total_minor, financialReport.currency_code) : "UNKNOWN", accent: "blue" },
+        { label: "Coûts directs", value: financialReport.lines.some((line) => line.category === "DIRECT_COST") ? formatMoney(financialReport.summary.direct_cost_total_minor, financialReport.currency_code) : "UNKNOWN", accent: "amber" },
+        { label: "Marge brute", value: "UNKNOWN", accent: "green" },
+        { label: "Trésorerie", value: financialReport.lines.some((line) => line.category === "FORECAST_CASHFLOW") ? formatMoney(financialReport.summary.forecast_cashflow_minor, financialReport.currency_code) : "UNKNOWN", accent: "violet" },
       ]
     : [];
 
@@ -426,9 +464,7 @@ function App() {
   useEffect(() => {
     if (!sessionExpired) return;
     setCases([]);
-    setCaseResolution(null);
     setActions([]);
-    setScenarios([]);
     setDecisionDossier(null);
     setSelectedCaseId("");
     setMessage(null);
@@ -488,24 +524,13 @@ function App() {
   useEffect(() => {
     if (!selectedCaseId || !businessReady) return;
     if (isPatron) {
-      void refreshScenarios(selectedCaseId);
       void refreshDecisionDossier(selectedCaseId);
     }
     if (isPatron || isCollaborator) void dceKnowledge.loadReading(selectedCaseId);
     void dceOpening.openSpace();
   // See the session/case keying rationale above; feature-hook commands are intentionally omitted.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCaseId, businessReady, isCollaborator, isPatron]);
-
-  useEffect(() => {
-    if (!selectedCaseId || !businessReady) {
-      setCaseResolution(null);
-      return;
-    }
-    void refreshCaseResolution(selectedCaseId);
-  // Resolution is keyed by the confirmed Case and current session only.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCaseId, businessReady]);
+  }, [selectedCaseId, businessReady, isCollaborator, isPatron, dceReadingScopeKey]);
 
   useEffect(() => {
     setContextConfirmed(false);
@@ -561,37 +586,6 @@ function App() {
       setMessage({
         tone: "error",
         text: error instanceof Error ? error.message : "Impossible de charger les actions.",
-      });
-    }
-  }
-
-  async function refreshScenarios(caseId: string) {
-    try {
-      setScenarios(await api.listPricingScenarios(caseId));
-    } catch (error) {
-      setMessage({
-        tone: "error",
-        text:
-          error instanceof Error
-            ? error.message
-            : "Impossible de charger les scénarios de chiffrage.",
-      });
-    }
-  }
-
-  async function refreshCaseResolution(caseId: string) {
-    try {
-      setCaseResolution(await api.getCaseResolution(caseId));
-    } catch (error) {
-      setCaseResolution(null);
-      const status = (error as { status?: number }).status;
-      if (status === 403 || status === 404) return;
-      setMessage({
-        tone: "error",
-        text:
-          error instanceof Error
-            ? error.message
-            : "Impossible de charger la couverture de l’affaire.",
       });
     }
   }
@@ -1033,10 +1027,15 @@ function App() {
           </Suspense>}
         </div>}
 
-        {isPatron && (
+        {businessReady && currentActor?.actor_kind === "PATRON_ADMIN" && (
           <section className="section-block" id="pricing-section">
           <PricingPanel
-            scenarios={scenarios}
+            scenarioCreation={scenarioReading.creation}
+            scenarioTransition={scenarioReading.transition}
+            scenarios={scenarioReading.scenarios}
+            scenariosLoading={scenarioReading.loading}
+            scenariosError={scenarioReading.error}
+            onRefreshScenarios={() => void scenarioReading.refresh()}
             formatMoney={formatMoney}
             selectedCaseId={selectedCaseId}
             reportId={reportId}
@@ -1085,7 +1084,11 @@ function App() {
           <div className="metric-stack"><div className="small-metric"><span className="metric-label">AFFAIRES ACTIVES</span><strong>{cases.length.toString().padStart(2, "0")}</strong><span className="metric-meta">dans votre périmètre</span></div><div className="small-metric"><span className="metric-label">ÉTAT DE LA CONNEXION</span><strong className={isAuthenticated ? "text-green" : "text-amber"}>{isAuthenticated ? "Prête" : isRestoring ? "Restauration…" : "À configurer"}</strong><span className="metric-meta">{baseUrl}</span></div></div>
         </section>
 
-        <section className="section-block" id="review-section"><div className="section-heading"><div><span className="section-kicker">PORTEFEUILLE</span><h2>Mes affaires</h2></div><span className="count-pill">{cases.length} visible{cases.length > 1 ? "s" : ""}</span></div><div className="case-grid">{cases.length === 0 ? <div className="empty-card"><strong>Aucune affaire chargée</strong><p>Connectez-vous avec votre compte pour charger les affaires auxquelles vous avez accès.</p><button className="secondary-button" onClick={openConnection}>Configurer la connexion</button></div> : cases.map((item) => <button key={item.case_id} className={`case-card ${item.case_id === selectedCaseId ? "selected" : ""}`} onClick={() => setSelectedCaseId(item.case_id)}><div className="case-top"><span className="case-status">{item.dce_availability}</span><span className="case-arrow" aria-hidden="true">↗</span></div><h3>{item.work_label}</h3><p>{item.case_id}</p><div className="case-footer"><span>{item.commercial_stage}</span><span>{item.case_lifecycle}</span></div></button>)}</div>{isPatron && caseResolution?.economic_coverage && <div className="economic-coverage" aria-label="Couverture économique de l’affaire"><div className="subheading"><strong>COUVERTURE ÉCONOMIQUE</strong><span>lecture sourcée · aucun feu vert implicite</span></div><div className="economic-coverage-grid"><div><span>Hypothèses</span><strong className={`coverage-state coverage-${caseResolution.economic_coverage.assumptions.state.toLowerCase()}`}>{caseResolution.economic_coverage.assumptions.state}</strong><small>{caseResolution.economic_coverage.assumptions.note}</small></div><div><span>Validité des devis</span><strong className={`coverage-state coverage-${caseResolution.economic_coverage.quote_validity.state.toLowerCase()}`}>{caseResolution.economic_coverage.quote_validity.state}</strong><small>{caseResolution.economic_coverage.quote_validity.note}</small></div><div><span>Capacité</span><strong className={`coverage-state coverage-${caseResolution.economic_coverage.capacity.state.toLowerCase()}`}>{caseResolution.economic_coverage.capacity.state}</strong><small>{caseResolution.economic_coverage.capacity.note}</small></div><div><span>Financement</span><strong className={`coverage-state coverage-${caseResolution.economic_coverage.financing.state.toLowerCase()}`}>{caseResolution.economic_coverage.financing.state}</strong><small>{caseResolution.economic_coverage.financing.note}</small></div></div></div>}</section>
+        <section className="section-block" id="review-section"><div className="section-heading"><div><span className="section-kicker">PORTEFEUILLE</span><h2>Mes affaires</h2></div><span className="count-pill">{cases.length} visible{cases.length > 1 ? "s" : ""}</span></div><div className="case-grid">{cases.length === 0 ? <div className="empty-card"><strong>Aucune affaire chargée</strong><p>Connectez-vous avec votre compte pour charger les affaires auxquelles vous avez accès.</p><button className="secondary-button" onClick={openConnection}>Configurer la connexion</button></div> : cases.map((item) => <button key={item.case_id} className={`case-card ${item.case_id === selectedCaseId ? "selected" : ""}`} onClick={() => setSelectedCaseId(item.case_id)}><div className="case-top"><span className="case-status">{item.dce_availability}</span><span className="case-arrow" aria-hidden="true">↗</span></div><h3>{item.work_label}</h3><p>{item.case_id}</p><div className="case-footer"><span>{item.commercial_stage}</span><span>{item.case_lifecycle}</span></div></button>)}</div>
+          {resolutionScopeKey && <CaseResolutionPanel caseId={selectedCaseId} projection={caseResolution} loading={resolutionReading.loading} error={resolutionReading.error} onRefresh={() => void resolutionReading.refresh()} />}
+          {isCollaborator && <CapabilityAssessmentsPanel caseId={selectedCaseId} projection={capabilityReading.projection} loading={capabilityReading.loading} error={capabilityReading.error} onRefresh={() => void capabilityReading.refresh()} />}
+          {isCollaborator && <CapabilityCandidatesPanel caseId={selectedCaseId} scopeKey={candidateScopeKey} candidates={candidateReading.candidates} loading={candidateReading.loading} error={candidateReading.error} onRefresh={() => void candidateReading.refresh()} requirements={capabilityRequirementSources} dceSourceReady={Boolean(capabilityDceReading) && !dceKnowledge.loading} dceVersionId={capabilityDceReading?.dce.dce_version_id ?? null} proposal={capabilityProposal} />}
+          {isPatron && caseResolution?.economic_coverage && <div className="economic-coverage" aria-label="Couverture économique de l’affaire"><div className="subheading"><strong>COUVERTURE ÉCONOMIQUE</strong><span>lecture sourcée · aucun feu vert implicite</span></div><div className="economic-coverage-grid"><div><span>Hypothèses</span><strong className={`coverage-state coverage-${caseResolution.economic_coverage.assumptions.state.toLowerCase()}`}>{caseResolution.economic_coverage.assumptions.state}</strong><small>{caseResolution.economic_coverage.assumptions.note}</small></div><div><span>Validité des devis</span><strong className={`coverage-state coverage-${caseResolution.economic_coverage.quote_validity.state.toLowerCase()}`}>{caseResolution.economic_coverage.quote_validity.state}</strong><small>{caseResolution.economic_coverage.quote_validity.note}</small></div><div><span>Capacité</span><strong className={`coverage-state coverage-${caseResolution.economic_coverage.capacity.state.toLowerCase()}`}>{caseResolution.economic_coverage.capacity.state}</strong><small>{caseResolution.economic_coverage.capacity.note}</small></div><div><span>Financement</span><strong className={`coverage-state coverage-${caseResolution.economic_coverage.financing.state.toLowerCase()}`}>{caseResolution.economic_coverage.financing.state}</strong><small>{caseResolution.economic_coverage.financing.note}</small></div></div></div>}</section>
 
         {isPatron && (
           <BoampOpportunityPanel
@@ -1149,18 +1152,29 @@ function App() {
           wizardOutcome={wizardOutcome}
           wizardSnapshotId={wizardSnapshotId}
           wizardTransmissionId={wizardTransmissionId}
+          wizardSnapshotReceipt={wizardSnapshotReceipt}
+          wizardTransmissionReceipt={wizardTransmissionReceipt}
+          wizardSnapshotBusy={wizardSnapshotBusy}
+          wizardTransmissionBusy={wizardTransmissionBusy}
+          wizardSnapshotRetryPending={wizardSnapshotRetryPending}
+          wizardTransmissionRetryPending={wizardTransmissionRetryPending}
+          canCreateWizardSnapshot={canCreateWizardSnapshot}
+          canTransmitWizardSnapshot={canTransmitWizardSnapshot}
           wizardPreviewDocumentId={wizardPreviewDocumentId}
           wizardPreviewContent={wizardPreviewContent}
           wizardDocumentBusy={wizardDocumentBusy}
           taskWorkflow={wizardTaskWorkflow}
           wizardDocumentKind={wizardDocumentKind}
-          wizardDraftSourceDocumentId={wizardDraftSourceDocumentId}
-          wizardDraftSections={wizardDraftSections}
-          wizardDraftSourceRefs={wizardDraftSourceRefs}
+          wizardResponsePlan={wizardResponsePlan}
+          canSaveWizardResponsePlan={canSaveWizardResponsePlan}
+          isWizardResponsePlanCurrent={isWizardResponsePlanCurrent}
+          canCreateWizardResponseDraft={canCreateWizardResponseDraft}
+          canRetryWizardResponseDraft={canRetryWizardResponseDraft}
+          onChangeResponsePlanItem={setWizardResponsePlanItem}
+          onCreateResponsePlan={() => void createWizardResponsePlan()}
+          onRetryResponsePlan={() => void retryWizardResponsePlan()}
+          onReadResponsePlan={() => void readWizardResponsePlan()}
           setWizardDocumentKind={setWizardDocumentKind}
-          setWizardDraftSourceDocumentId={setWizardDraftSourceDocumentId}
-          setWizardDraftSections={setWizardDraftSections}
-          setWizardDraftSourceRefs={setWizardDraftSourceRefs}
           setWizardCaseId={setWizardCaseId}
           setWizardPackageId={setWizardPackageId}
           setWizardTaskId={setWizardTaskId}
@@ -1175,6 +1189,8 @@ function App() {
           onEvaluateReadiness={() => void evaluateWizardReadiness()}
           onGenerateDocument={() => void generateWizardDocument()}
           onCreateResponseDraft={() => void createWizardResponseDraft()}
+          onRetryResponseDraft={() => void retryWizardResponseDraft()}
+          onCreateSnapshot={() => void createWizardSnapshot()}
           onTransmitSnapshot={() => void transmitWizardSnapshot()}
           onPreviewDocument={(documentId) => void previewWizardDocument(documentId)}
           onDownloadDocument={(documentId) => void downloadWizardDocument(documentId)}
@@ -1346,14 +1362,24 @@ function App() {
           />
         )}
 
-        {isPatron && (
+        {businessReady && currentActor?.actor_kind === "PATRON_ADMIN" && (
           <FinancialDraftPanel
+            scenarioSourceLocked={scenarioReading.creation.locked}
           cases={cases}
           selectedCaseId={selectedCaseId}
           setSelectedCaseId={setSelectedCaseId}
           reportId={reportId}
           setReportId={setReportId}
           draft={draft}
+          publishedReport={financialDraft.publishedReport}
+          publicationState={financialDraft.publicationState}
+          publicationRevision={financialDraft.publicationRevision}
+          publicationExpectedRevision={financialDraft.publicationExpectedRevision}
+          publicationError={financialDraft.publicationError}
+          publishedReadError={financialDraft.publishedReadError}
+          publicationLocked={financialDraft.publicationLocked}
+          publishReport={() => void financialDraft.publishReport()}
+          loadPublishedReport={() => void financialDraft.loadPublishedReport()}
           loadingDraft={loadingDraft}
           lineForm={lineForm}
           setLineForm={setLineForm}

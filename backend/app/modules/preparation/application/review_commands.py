@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Literal
 from uuid import UUID
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 
 from app.platform.events.command_contracts import ApplicationCommand
 
@@ -32,9 +32,21 @@ class RequestPreparationReviewCommand(ApplicationCommand):
 
     review_id: UUID
     package_id: UUID
-    target_document_id: UUID
-    target_version: int = Field(gt=0)
+    target_document_id: UUID | None = None
+    target_version: int | None = Field(default=None, gt=0)
+    target_draft_id: UUID | None = None
+    target_draft_version: int | None = Field(default=None, gt=0)
+    target_content_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     expected_package_revision: int = Field(ge=0)
+
+    @model_validator(mode="after")
+    def require_exact_target(self):
+        if self.target_draft_id is not None:
+            if self.target_draft_version is None or self.target_content_sha256 is None:
+                raise ValueError("REVIEW_TARGET_INCOMPLETE")
+        elif self.target_document_id is None or self.target_version is None:
+            raise ValueError("REVIEW_TARGET_INCOMPLETE")
+        return self
 
 
 class DecidePreparationReviewCommand(ApplicationCommand):
@@ -44,7 +56,10 @@ class DecidePreparationReviewCommand(ApplicationCommand):
 
     review_id: UUID
     package_id: UUID
-    target_document_id: UUID
+    target_document_id: UUID | None = None
+    target_draft_id: UUID | None = None
+    target_draft_version: int | None = Field(default=None, gt=0)
+    target_content_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     expected_review_revision: int = Field(ge=1)
     decision_code: Literal["ACCEPTED", "CORRECTIONS_REQUIRED", "REJECTED"]
     decision_note: str | None = Field(default=None, max_length=2000)
@@ -61,14 +76,21 @@ class AddPreparationCorrectionCommand(ApplicationCommand):
 
     review_id: UUID
     package_id: UUID
-    target_document_id: UUID
+    target_document_id: UUID | None = None
+    target_draft_id: UUID | None = None
+    target_draft_version: int | None = Field(default=None, gt=0)
+    target_content_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     correction_code: Literal[
         "SOURCE_MISSING", "SOURCE_WRONG", "SECTION_INCOMPLETE", "WORDING_UNCLEAR"
     ]
     instruction: str = Field(min_length=1, max_length=2000)
     source_locator: str | None = Field(default=None, max_length=500)
+    corrected_content: str | None = Field(default=None, min_length=1, max_length=100_000)
 
     _instruction_without_finance = field_validator("instruction", mode="before")(
+        _reject_financial_text
+    )
+    _corrected_content_without_finance = field_validator("corrected_content", mode="before")(
         _reject_financial_text
     )
 

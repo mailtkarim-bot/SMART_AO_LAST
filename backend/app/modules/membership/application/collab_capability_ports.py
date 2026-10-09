@@ -2,14 +2,31 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Protocol
+from typing import Literal, Protocol
 from uuid import UUID
+
+from sqlalchemy.orm import Session
 
 
 @dataclass(frozen=True, slots=True)
 class AssignmentProjection:
     id: UUID
     case_id: UUID
+
+
+@dataclass(frozen=True, slots=True)
+class CapabilityCandidateProjection:
+    capability_id: UUID
+    capability_kind: str
+    name: str
+    version_id: UUID
+    version_number: int
+    title: str
+    valid_from: datetime
+    valid_until: datetime | None
+    validity_state: Literal["CURRENT", "EXPIRED"]
+    source_evidence_state: Literal["CURRENT", "EXPIRED", "UNKNOWN"]
+    evaluated_at: datetime
 
 
 @dataclass(frozen=True, slots=True)
@@ -25,6 +42,14 @@ class CapabilityProposalProjection:
     validity_state: str
     justification: str
     source_locator: str | None
+    source_evidence_state: Literal["CURRENT", "EXPIRED", "UNKNOWN"] = "UNKNOWN"
+    source_evidence_evaluated_at: datetime | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class CapabilityProposalSourceEvidence:
+    state: Literal["CURRENT", "EXPIRED", "UNKNOWN"]
+    proof_refs: tuple[tuple[UUID, str], ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -55,11 +80,26 @@ class CollaboratorCapabilityReader(Protocol):
         tenant_id: UUID,
         membership_id: UUID,
         case_id: UUID,
-        assignment_id: UUID,
+        assignment_id: UUID | None,
         required_action: str,
         received_at: datetime,
     ) -> AssignmentProjection: ...
 
+    def read_candidates(
+        self, *, tenant_id: UUID, evaluated_at: datetime
+    ) -> tuple[CapabilityCandidateProjection, ...]: ...
+
     def read_assessments(
-        self, *, tenant_id: UUID, case_id: UUID, assignment_id: UUID
+        self, *, tenant_id: UUID, case_id: UUID, assignment_id: UUID, evaluated_at: datetime
     ) -> CollaboratorCapabilityAssessmentProjection: ...
+
+    def read_proposal_source_evidence(
+        self,
+        *,
+        session: Session,
+        tenant_id: UUID,
+        case_id: UUID,
+        assignment_id: UUID,
+        proposal_ids: set[UUID],
+        evaluated_at: datetime,
+    ) -> dict[UUID, CapabilityProposalSourceEvidence]: ...

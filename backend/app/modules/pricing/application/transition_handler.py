@@ -24,14 +24,19 @@ from app.platform.events.dispatcher import (
 
 class TransitionPricingScenarioHandler:
     def execute(self, *, session: Session, command, context: CommandContext) -> HandlerOutcome:
-        scenario = session.scalar(
+        # ponytail: serialize the Case rows; use a parent lock if Case size grows.
+        # Lock the immutable rows in one order before examining any target.
+        # Selecting peers target-first could deadlock on their opposite sibling locks.
+        scenarios = session.scalars(
             sa.select(PricingScenarioRecord)
             .where(
                 PricingScenarioRecord.tenant_id == context.tenant_id,
-                PricingScenarioRecord.id == command.scenario_id,
+                PricingScenarioRecord.case_id == context.case_id,
             )
+            .order_by(PricingScenarioRecord.id)
             .with_for_update()
-        )
+        ).all()
+        scenario = next((item for item in scenarios if item.id == command.scenario_id), None)
         if scenario is None:
             raise CommandExecutionError("NOT_FOUND_OR_FORBIDDEN")
         latest = session.scalar(
@@ -52,16 +57,9 @@ class TransitionPricingScenarioHandler:
         if command.target_state == current_state:
             raise CommandExecutionError("INVALID_STATE_TRANSITION")
         if command.target_state == "SELECTED":
-            siblings = session.scalars(
-                sa.select(PricingScenarioRecord)
-                .where(
-                    PricingScenarioRecord.tenant_id == context.tenant_id,
-                    PricingScenarioRecord.case_id == scenario.case_id,
-                    PricingScenarioRecord.id != scenario.id,
-                )
-                .with_for_update()
-            ).all()
-            for sibling in siblings:
+            for sibling in scenarios:
+                if sibling.id == scenario.id:
+                    continue
                 sibling_latest = session.scalar(
                     sa.select(PricingScenarioTransitionRecord)
                     .where(

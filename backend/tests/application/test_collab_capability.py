@@ -5,7 +5,7 @@ from uuid import UUID, uuid4
 
 import pytest
 import sqlalchemy as sa
-from app.modules.case.infrastructure.models.case import CaseRecord
+from app.modules.case.infrastructure.models.case import CaseConsultationLinkRecord, CaseRecord
 from app.modules.dce.infrastructure.models.consultation import ConsultationRecord
 from app.modules.dce.infrastructure.models.dce_rc_analysis import (
     DceRcAnalysisRunRecord,
@@ -43,6 +43,7 @@ from app.platform.security.models import (
     CaseAssignmentRecord,
     CaseCapabilityGapRecord,
     CaseCapabilityProposalRecord,
+    CollaboratorTaskRecord,
     EnterpriseCapabilityRecord,
     EnterpriseCapabilityVersionRecord,
     IdentityRecord,
@@ -401,6 +402,7 @@ def test_proposal_and_gap_are_rebac_scoped_idempotent_and_projected(
         actor=actor, case_id=case_id, assignment_id=assignment_id, now=NOW
     )
 
+    assert service.read_assessments(actor=actor, case_id=case_id, now=NOW) == projection
     assert proposed.result_code == "CAPABILITY_PROPOSED_FOR_CASE"
     assert replay.replayed is True
     assert reported.result_code == "CAPABILITY_GAP_REPORTED"
@@ -502,3 +504,296 @@ def test_append_only_and_tenant_neutrality(session_factory: sessionmaker[Session
             assignment_id=other_assignment,
             now=NOW,
         )
+
+
+@pytest.mark.parametrize(
+    "change", ["suspended", "future", "ended", "scope", "tenant", "member", "case"]
+)
+def test_case_only_assignment_resolution_preserves_boundaries(session_factory, change):
+    actor, assignment_id, case_id, *_ = _seed(session_factory)
+    reader = SqlAlchemyCollaboratorCapabilityReader(session_factory)
+    params = dict(
+        tenant_id=actor.tenant_id,
+        membership_id=actor.membership_id,
+        case_id=case_id,
+        assignment_id=None,
+        required_action=Capability.PREPARATION_CAPABILITY_PROPOSE.value,
+        received_at=NOW,
+    )
+    if change in {"tenant", "member", "case"}:
+        params[{"tenant": "tenant_id", "member": "membership_id", "case": "case_id"}[change]] = (
+            uuid4()
+        )
+    else:
+        with session_factory.begin() as session:
+            assignment = session.get(CaseAssignmentRecord, assignment_id)
+            if change == "suspended":
+                assignment.state = "SUSPENDED"
+            if change == "future":
+                assignment.starts_at = NOW + timedelta(seconds=1)
+            if change == "ended":
+                assignment.starts_at = NOW - timedelta(seconds=1)
+                assignment.ends_at = NOW
+            if change == "scope":
+                assignment.scope_actions_json = [Capability.WORK_TASK_READ.value]
+    with pytest.raises(
+        CommandExecutionError,
+        match="SCOPE_DENIED" if change == "scope" else "NOT_FOUND_OR_FORBIDDEN",
+    ):
+        reader.require_active_assignment(**params)
+
+
+def _clone_requirement_for_another_consultation(
+    session_factory: sessionmaker[Session], requirement_id: UUID
+) -> UUID:
+    with session_factory.begin() as session:
+        source_requirement = session.get(DceRequirementRecord, requirement_id)
+        source_run = session.get(
+            DceRequirementMaterializationRunRecord, source_requirement.requirements_run_id
+        )
+        source_observation = session.get(
+            DceRcRequirementObservationRecord, source_requirement.source_observation_id
+        )
+        source_analysis = session.get(DceRcAnalysisRunRecord, source_observation.analysis_id)
+        source_version = session.get(DceVersionRecord, source_requirement.dce_version_id)
+        source_consultation = session.get(ConsultationRecord, source_version.consultation_id)
+
+        consultation_id, version_id, analysis_id = uuid4(), uuid4(), uuid4()
+        observation_id, run_id, foreign_requirement_id = uuid4(), uuid4(), uuid4()
+        consultation_values = {
+            column.name: getattr(source_consultation, column.name)
+            for column in ConsultationRecord.__table__.columns
+        }
+        consultation_values.update(
+            id=consultation_id,
+            functional_identity_hash=uuid4().hex + uuid4().hex,
+        )
+        consultation = ConsultationRecord(**consultation_values)
+        version_values = {
+            column.name: getattr(source_version, column.name)
+            for column in DceVersionRecord.__table__.columns
+        }
+        version_values.update(
+            id=version_id,
+            consultation_id=consultation_id,
+            predecessor_dce_version_id=None,
+            corpus_hash=uuid4().hex + uuid4().hex,
+        )
+        version = DceVersionRecord(**version_values)
+        analysis_values = {
+            column.name: getattr(source_analysis, column.name)
+            for column in DceRcAnalysisRunRecord.__table__.columns
+        }
+        analysis_values.update(id=analysis_id, dce_version_id=version_id)
+        analysis = DceRcAnalysisRunRecord(**analysis_values)
+        observation_values = {
+            column.name: getattr(source_observation, column.name)
+            for column in DceRcRequirementObservationRecord.__table__.columns
+        }
+        observation_values.update(
+            id=observation_id,
+            analysis_id=analysis_id,
+            dce_version_id=version_id,
+            fragment_id=uuid4(),
+        )
+        observation = DceRcRequirementObservationRecord(**observation_values)
+        run_values = {
+            column.name: getattr(source_run, column.name)
+            for column in DceRequirementMaterializationRunRecord.__table__.columns
+        }
+        run_values.update(id=run_id, dce_version_id=version_id, dce_rc_analysis_id=analysis_id)
+        run = DceRequirementMaterializationRunRecord(**run_values)
+        foreign_requirement = DceRequirementRecord(
+            **{
+                column.name: getattr(source_requirement, column.name)
+                for column in DceRequirementRecord.__table__.columns
+                if column.name
+                not in {"id", "dce_version_id", "requirements_run_id", "source_observation_id"}
+            },
+            id=foreign_requirement_id,
+            dce_version_id=version_id,
+            requirements_run_id=run_id,
+            source_observation_id=observation_id,
+        )
+        for source_row in (consultation, version, analysis, observation, run, foreign_requirement):
+            session.add(source_row)
+            session.flush()
+        return foreign_requirement_id
+
+
+def test_capability_commands_reject_requirement_from_another_case_consultation(
+    session_factory: sessionmaker[Session],
+) -> None:
+    actor, assignment_id, case_id, requirement_id, capability_id, version_id = _seed(
+        session_factory
+    )
+    foreign_requirement_id = _clone_requirement_for_another_consultation(
+        session_factory, requirement_id
+    )
+    service = _service(session_factory)
+
+    for command, execute in (
+        (
+            _proposal(
+                assignment_id=assignment_id,
+                case_id=case_id,
+                requirement_id=foreign_requirement_id,
+                capability_id=capability_id,
+                version_id=version_id,
+            ),
+            service.propose_capability,
+        ),
+        (
+            _gap(
+                assignment_id=assignment_id,
+                case_id=case_id,
+                requirement_id=foreign_requirement_id,
+                capability_id=capability_id,
+            ),
+            service.report_gap,
+        ),
+    ):
+        with pytest.raises(CommandExecutionError, match="NOT_FOUND_OR_FORBIDDEN"):
+            execute(actor=actor, command=command, now=NOW)
+
+    with session_factory() as session:
+        assert (
+            session.scalar(sa.select(sa.func.count()).select_from(CaseCapabilityProposalRecord))
+            == 0
+        )
+        assert session.scalar(sa.select(sa.func.count()).select_from(CaseCapabilityGapRecord)) == 0
+        assert session.scalar(sa.select(sa.func.count()).select_from(DomainEventRecord)) == 0
+        assert session.scalar(sa.select(sa.func.count()).select_from(OutboxMessageRecord)) == 0
+
+
+def _clone_requirement_on_same_dce(
+    session_factory: sessionmaker[Session], requirement_id: UUID
+) -> UUID:
+    with session_factory.begin() as session:
+        source = session.get(DceRequirementRecord, requirement_id)
+        observation = session.get(DceRcRequirementObservationRecord, source.source_observation_id)
+        new_observation_id, new_requirement_id = uuid4(), uuid4()
+        observation_values = {
+            column.name: getattr(observation, column.name)
+            for column in DceRcRequirementObservationRecord.__table__.columns
+        }
+        observation_values.update(id=new_observation_id, fragment_id=uuid4())
+        session.add(DceRcRequirementObservationRecord(**observation_values))
+        session.flush()
+        requirement_values = {
+            column.name: getattr(source, column.name)
+            for column in DceRequirementRecord.__table__.columns
+        }
+        requirement_values.update(id=new_requirement_id, source_observation_id=new_observation_id)
+        session.add(DceRequirementRecord(**requirement_values))
+        return new_requirement_id
+
+
+@pytest.mark.db
+@pytest.mark.security
+def test_capability_commands_refuse_requirement_different_from_task_source(
+    session_factory: sessionmaker[Session],
+) -> None:
+    actor, assignment_id, case_id, requirement_id, capability_id, version_id = _seed(
+        session_factory
+    )
+    other_requirement_id = _clone_requirement_on_same_dce(session_factory, requirement_id)
+    task_id = uuid4()
+    with session_factory.begin() as session:
+        session.add(
+            CollaboratorTaskRecord(
+                id=task_id,
+                tenant_id=actor.tenant_id,
+                case_id=case_id,
+                assignment_id=assignment_id,
+                requirement_id=requirement_id,
+                task_kind="SYNTHETIC_REQUIREMENT",
+                title="Fixture task",
+                objective="Source consistency test",
+                priority="NORMAL",
+                state="READY",
+                functional_key=str(uuid4()),
+                aggregate_revision=0,
+            )
+        )
+    service = _service(session_factory)
+    commands = (
+        (
+            _proposal(
+                assignment_id=assignment_id,
+                case_id=case_id,
+                requirement_id=other_requirement_id,
+                capability_id=capability_id,
+                version_id=version_id,
+            ).model_copy(update={"task_id": task_id}),
+            service.propose_capability,
+        ),
+        (
+            _gap(
+                assignment_id=assignment_id,
+                case_id=case_id,
+                requirement_id=other_requirement_id,
+                capability_id=capability_id,
+            ).model_copy(update={"task_id": task_id}),
+            service.report_gap,
+        ),
+    )
+    for command, execute in commands:
+        with pytest.raises(CommandExecutionError, match="NOT_FOUND_OR_FORBIDDEN"):
+            execute(actor=actor, command=command, now=NOW)
+
+
+@pytest.mark.parametrize("case_change", ["no_dce", "review_required", "consultation_unlinked"])
+@pytest.mark.db
+@pytest.mark.security
+def test_capability_commands_reject_missing_or_obsolete_case_dce(
+    session_factory: sessionmaker[Session], case_change: str
+) -> None:
+    actor, assignment_id, case_id, requirement_id, capability_id, version_id = _seed(
+        session_factory
+    )
+    with session_factory.begin() as session:
+        case = session.get(CaseRecord, case_id)
+        if case_change == "no_dce":
+            case.applicable_dce_version_id = None
+            case.dce_freshness = "NO_DCE"
+        elif case_change == "review_required":
+            case.dce_freshness = "REVIEW_REQUIRED"
+        else:
+            session.add(
+                CaseConsultationLinkRecord(
+                    id=uuid4(),
+                    tenant_id=actor.tenant_id,
+                    case_id=case_id,
+                    consultation_id=case.consultation_id,
+                    scope_snapshot_json={},
+                    rationale="Synthetic historical link only",
+                    is_current=False,
+                    created_by_actor_id=actor.identity_id,
+                )
+            )
+    service = _service(session_factory)
+    commands = (
+        (
+            _proposal(
+                assignment_id=assignment_id,
+                case_id=case_id,
+                requirement_id=requirement_id,
+                capability_id=capability_id,
+                version_id=version_id,
+            ),
+            service.propose_capability,
+        ),
+        (
+            _gap(
+                assignment_id=assignment_id,
+                case_id=case_id,
+                requirement_id=requirement_id,
+                capability_id=capability_id,
+            ),
+            service.report_gap,
+        ),
+    )
+    for command, execute in commands:
+        with pytest.raises(CommandExecutionError, match="NOT_FOUND_OR_FORBIDDEN"):
+            execute(actor=actor, command=command, now=NOW)

@@ -33,3 +33,6 @@ minio_data/
 .codex/
 .kimi-code/
 .serena/
+
+# Derived local codebase graph and extraction caches; keep outside checkpoints.
+graphify-out/

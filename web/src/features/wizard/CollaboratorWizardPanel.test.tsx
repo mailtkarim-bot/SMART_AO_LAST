@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import type { CollaboratorTask, PreparationPackage } from "../../shared/types";
+import type { WizardResponsePlan } from "./useCollaboratorWizard";
 import { CollaboratorWizardPanel } from "./CollaboratorWizardPanel";
 
 const packageProjection: PreparationPackage = {
@@ -55,6 +56,22 @@ const task: CollaboratorTask = {
   aggregate_revision: 4,
 };
 
+const responsePlan: WizardResponsePlan = {
+  loading: false,
+  readState: "READY",
+  requestState: "IDLE",
+  draftRequestState: "IDLE",
+  error: null,
+  requirements: [{ requirement_id: "private-requirement-id", confirmation_revision: 1, requirement_type: "Méthodologie", directive_signal: "REQUIRED", confirmation_outcome: "CONFIRMED", uncertainty_status: "KNOWN", document_family: "CCTP", source_locator_label: "Article 4", source_anchor: null }],
+  proposals: [{ proposal_id: "private-proposal-id", case_id: "case-1", assignment_id: "assignment-1", capability_id: "private-capability-id", capability_version_id: "private-version-id", requirement_id: "private-requirement-id", task_id: null, state: "PROPOSED", validity_state: "CURRENT", justification: "private justification", source_locator: "private locator", source_evidence_state: "UNKNOWN", source_evidence_evaluated_at: null }],
+  candidates: [{ capability_id: "private-capability-id", capability_kind: "METHOD", name: "Méthodologie travaux", version_id: "private-version-id", version_number: 2, title: "Organisation de chantier", valid_from: "2026-10-01T00:00:00Z", valid_until: null, validity_state: "CURRENT", source_evidence_state: "UNKNOWN", evaluated_at: null }],
+  items: [{ requirement_id: "private-requirement-id", section_code: "", source_proposal_id: null }],
+  planId: null,
+  hasPriorDcePlan: false,
+  exactPlan: null,
+  draftedPlanVersion: null,
+};
+
 function renderPanel(
   overrides: Partial<React.ComponentProps<typeof CollaboratorWizardPanel>> = {},
 ) {
@@ -68,13 +85,23 @@ function renderPanel(
     wizardOutcome: "RECORDED",
     wizardSnapshotId: "",
     wizardTransmissionId: "",
+    wizardSnapshotReceipt: null,
+    wizardTransmissionReceipt: null,
+    wizardSnapshotBusy: false,
+    wizardTransmissionBusy: false,
+    wizardSnapshotRetryPending: false,
+    wizardTransmissionRetryPending: false,
+    canCreateWizardSnapshot: false,
+    canTransmitWizardSnapshot: false,
     wizardPreviewDocumentId: null,
     wizardPreviewContent: null,
     wizardDocumentBusy: false,
     wizardDocumentKind: "TECHNICAL_RESPONSE",
-    wizardDraftSourceDocumentId: "",
-    wizardDraftSections: "METHOD,SOURCES",
-    wizardDraftSourceRefs: "",
+    wizardResponsePlan: responsePlan,
+    canSaveWizardResponsePlan: false,
+    isWizardResponsePlanCurrent: false,
+    canCreateWizardResponseDraft: false,
+    canRetryWizardResponseDraft: false,
     setWizardCaseId: vi.fn(),
     setWizardPackageId: vi.fn(),
     setWizardTaskId: vi.fn(),
@@ -83,9 +110,10 @@ function renderPanel(
     setWizardSnapshotId: vi.fn(),
     setWizardTransmissionId: vi.fn(),
     setWizardDocumentKind: vi.fn(),
-    setWizardDraftSourceDocumentId: vi.fn(),
-    setWizardDraftSections: vi.fn(),
-    setWizardDraftSourceRefs: vi.fn(),
+    onChangeResponsePlanItem: vi.fn(),
+    onCreateResponsePlan: vi.fn(),
+    onRetryResponsePlan: vi.fn(),
+    onReadResponsePlan: vi.fn(),
     onLoad: vi.fn(),
     onClaimTask: vi.fn(),
     onRecordResult: vi.fn(),
@@ -93,6 +121,8 @@ function renderPanel(
     onEvaluateReadiness: vi.fn(),
     onGenerateDocument: vi.fn(),
     onCreateResponseDraft: vi.fn(),
+    onRetryResponseDraft: vi.fn(),
+    onCreateSnapshot: vi.fn(),
     onTransmitSnapshot: vi.fn(),
     onPreviewDocument: vi.fn(),
     onDownloadDocument: vi.fn(),
@@ -118,6 +148,19 @@ describe("CollaboratorWizardPanel", () => {
     expect(onLoad).toHaveBeenCalledTimes(1);
   });
 
+  it("offers explicit snapshot creation and delegates the human action", () => {
+    const onCreateSnapshot = vi.fn();
+    renderPanel({
+      wizardPackage: packageProjection,
+      canCreateWizardSnapshot: true,
+      onCreateSnapshot,
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Créer le snapshot complet" }));
+
+    expect(onCreateSnapshot).toHaveBeenCalledTimes(1);
+  });
+
   it("renders readiness, generated document and task controls from server projections", () => {
     renderPanel({
       wizardPackage: packageProjection,
@@ -129,10 +172,59 @@ describe("CollaboratorWizardPanel", () => {
     expect(screen.getAllByText("READY_WITH_WARNINGS")).toHaveLength(2);
     expect(screen.getByText("OPTIONAL_REFERENCE_MISSING")).toBeInTheDocument();
     expect(screen.getByText("TECHNICAL_RESPONSE")).toBeInTheDocument();
-    expect(screen.getByText("Plan de réponse")).toBeInTheDocument();
+    expect(screen.getAllByText("Plan de réponse").length).toBeGreaterThan(0);
     expect(screen.getByText("METHOD · SOURCES")).toBeInTheDocument();
     expect(screen.getByText("Enregistrer le résultat")).toBeInTheDocument();
     expect(screen.getByRole("option", { name: "DC4" })).toBeInTheDocument();
+  });
+
+  it("shows human-readable DCE and capability choices while keeping identifiers and proof locators out of the UI", () => {
+    renderPanel({ wizardPackage: packageProjection, wizardResponsePlan: responsePlan });
+
+    expect(screen.getAllByText("Méthodologie").length).toBeGreaterThan(0);
+    expect(screen.getByText(/Méthodologie travaux.*Organisation de chantier.*v2/)).toBeInTheDocument();
+    expect(screen.queryByText(/private-(requirement|proposal|capability|version)-id|private justification|private locator/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Créer le brouillon/ })).toBeDisabled();
+  });
+
+  it("records only the collaborator's explicit requirement-section and versioned-proposal choices", () => {
+    const onChangeResponsePlanItem = vi.fn();
+    renderPanel({ wizardPackage: packageProjection, wizardResponsePlan: responsePlan, onChangeResponsePlanItem });
+
+    fireEvent.change(screen.getByLabelText("Section de réponse"), { target: { value: "METHOD" } });
+    fireEvent.change(screen.getByLabelText("Proposition de capacité (facultatif)"), { target: { value: "private-proposal-id" } });
+
+    expect(onChangeResponsePlanItem).toHaveBeenNthCalledWith(1, "private-requirement-id", { section_code: "METHOD" });
+    expect(onChangeResponsePlanItem).toHaveBeenNthCalledWith(2, "private-requirement-id", { source_proposal_id: "private-proposal-id" });
+  });
+
+  it("requires a server-read SOURCES_CURRENT plan before enabling draft creation", () => {
+    const currentPlan: WizardResponsePlan = {
+      ...responsePlan,
+      items: [{ requirement_id: "private-requirement-id", section_code: "METHOD", source_proposal_id: "private-proposal-id" }],
+      exactPlan: {
+        plan_id: "private-plan-id", version: 2, package_id: "package-1", dce_version_id: "dce-1", state: "SOURCES_CURRENT", plan_sha256: "a".repeat(64),
+        content: { schema_version: 1, case_id: "case-1", package_id: "package-1", dce_version_id: "dce-1", items: [{ requirement_id: "private-requirement-id", requirement_state: "CONFIRMED", section_code: "METHOD", source_proposal_id: "private-proposal-id", source_capability_version_id: "private-version-id", source_validity_state: "CURRENT", source_evidence_state: "CURRENT" }] },
+      },
+    };
+    renderPanel({ wizardPackage: packageProjection, wizardResponsePlan: currentPlan, isWizardResponsePlanCurrent: true, canCreateWizardResponseDraft: true });
+
+    expect(screen.getAllByText("SOURCES_CURRENT").length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Révision 2/).length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: /Créer le brouillon/ })).toBeEnabled();
+    expect(screen.queryByText(/private-plan-id|private-proposal-id|a{20}/)).not.toBeInTheDocument();
+  });
+
+  it("shows UNKNOWN and offers only the exact retry after source-byte verification fails", () => {
+    renderPanel({
+      wizardPackage: packageProjection,
+      wizardResponsePlan: { ...responsePlan, draftRequestState: "SOURCE_UNKNOWN", error: "RESPONSE_PLAN_UNKNOWN" },
+      canRetryWizardResponseDraft: true,
+    });
+
+    expect(screen.getByText(/les octets d’une pièce sont indisponibles|leur hash discordant/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Réessayer la relecture de source" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Créer le brouillon de réponse/ })).toBeDisabled();
   });
 
   it("delegates document preview and download actions", () => {
@@ -217,6 +309,7 @@ describe("CollaboratorWizardPanel", () => {
       wizardPackage: packageProjection,
       wizardTasks: [task],
       wizardTaskId: "task-1",
+      canTransmitWizardSnapshot: true,
       onClaimTask,
       onRecordResult,
       onCompleteTask,

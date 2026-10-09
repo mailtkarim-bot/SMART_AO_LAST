@@ -237,6 +237,10 @@ def test_list_scenarios_returns_financial_projection_for_patron():
     assert body[0]["case_id"] == str(case_id)
     assert body[0]["gross_margin_minor"] == 20_000
     assert body[0]["state"] == "DRAFT"
+    assert body[0]["source_basis_state"] == "UNKNOWN"
+    assert body[0]["source_snapshot_id"] is None
+    assert body[0]["source_basis_reason"] == "UNQUALIFIED_HISTORY"
+    assert response.headers["cache-control"] == "no-store"
 
 
 def test_list_scenarios_maps_permission_error_to_403():
@@ -374,7 +378,8 @@ def test_archive_scenario_uses_archive_command_and_returns_receipt():
         (CommandExecutionError("VERSION_CONFLICT"), 409, "VERSION_CONFLICT"),
         (CommandExecutionError("SCENARIO_ALREADY_SELECTED"), 409, "SCENARIO_ALREADY_SELECTED"),
         (CommandExecutionError("SCENARIO_ALREADY_ARCHIVED"), 409, "SCENARIO_ALREADY_ARCHIVED"),
-        (CommandExecutionError("INVALID_TRANSITION"), 422, "INVALID_TRANSITION"),
+        (CommandExecutionError("INVALID_STATE_TRANSITION"), 422, "INVALID_STATE_TRANSITION"),
+        (CommandExecutionError("NOT_FOUND_OR_FORBIDDEN"), 422, "NOT_FOUND_OR_FORBIDDEN"),
     ],
 )
 def test_select_scenario_maps_service_errors(error, status_code, detail):

@@ -47,6 +47,9 @@ class BoampIngestionRunRecord(TenantScopedRecord, Base):
         sa.CheckConstraint(
             "status IN ('RECORDED', 'REJECTED')", name="boamp_ingestion_runs_status"
         ),
+        sa.CheckConstraint(
+            "source_mode IN ('LIVE', 'REPLAY')", name="boamp_ingestion_runs_source_mode"
+        ),
         sa.CheckConstraint("profile_version >= 1", name="boamp_ingestion_runs_profile_version"),
         sa.CheckConstraint("pages_read >= 0", name="boamp_ingestion_runs_pages_read"),
         sa.CheckConstraint("candidate_count >= 0", name="boamp_ingestion_runs_candidate_count"),
@@ -65,6 +68,7 @@ class BoampIngestionRunRecord(TenantScopedRecord, Base):
     correlation_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True))
     request_hash: Mapped[str] = mapped_column(sa.CHAR(64), nullable=False)
     status: Mapped[str] = mapped_column(sa.String(24), nullable=False, server_default="RECORDED")
+    source_mode: Mapped[str] = mapped_column(sa.String(16), nullable=False, server_default="LIVE")
     pages_read: Mapped[int] = mapped_column(sa.Integer, nullable=False)
     candidate_count: Mapped[int] = mapped_column(sa.Integer, nullable=False)
     truncated: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, server_default=sa.false())
@@ -201,9 +205,24 @@ class BoampIngestionObservationLinkRecord(TenantScopedRecord, Base):
         sa.UniqueConstraint(
             "tenant_id", "ingestion_run_id", "observation_id", name="uq_boamp_links_run_observation"
         ),
+        sa.CheckConstraint(
+            "(source_contract_version IS NULL AND source_response_sha256 IS NULL) OR "
+            "(source_contract_version IS NOT NULL AND source_response_sha256 IS NOT NULL)",
+            name="boamp_links_transport_source_pair",
+        ),
+        sa.CheckConstraint(
+            "source_contract_version IS NULL OR source_contract_version ~ '^[A-Z0-9_]{1,64}$'",
+            name="boamp_links_transport_source_contract",
+        ),
+        sa.CheckConstraint(
+            "source_response_sha256 IS NULL OR source_response_sha256 ~ '^[a-f0-9]{64}$'",
+            name="boamp_links_transport_source_hash",
+        ),
         sa.Index("ix_boamp_links_tenant_run", "tenant_id", "ingestion_run_id"),
     )
 
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
     ingestion_run_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     observation_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    source_contract_version: Mapped[str | None] = mapped_column(sa.String(64))
+    source_response_sha256: Mapped[str | None] = mapped_column(sa.CHAR(64))

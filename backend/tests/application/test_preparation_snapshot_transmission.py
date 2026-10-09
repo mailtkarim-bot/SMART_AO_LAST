@@ -304,6 +304,8 @@ def test_snapshot_handler_rejects_incomplete_preparation(mutation: str, error: s
                 return package
             if self.scalar_calls == 2:
                 return assignment
+            if mutation == "state" and self.scalar_calls == 3:
+                return None
             return readiness
 
         def scalars(self, statement):

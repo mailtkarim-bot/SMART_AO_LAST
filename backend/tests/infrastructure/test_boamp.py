@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 from typing import Any, cast
 
 import pytest
@@ -13,6 +15,9 @@ class FakeResponse:
     def __init__(self, status_code: int, payload: dict | None = None) -> None:
         self.status_code = status_code
         self._payload = payload or {}
+        self.content = json.dumps(
+            self._payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+        ).encode("utf-8")
 
     def json(self):
         return self._payload
@@ -62,6 +67,8 @@ def test_boamp_search_returns_only_allowlisted_public_facts() -> None:
     assert notice.department_codes == ("75",)
     assert notice.market_types == ("TRAVAUX",)
     assert notice.status == "INITIAL"
+    assert notice.source_contract_version == "BOAMP_EXPLORE_V2_1_ALLOWLIST_V1"
+    assert notice.source_response_sha256 == hashlib.sha256(client.response.content).hexdigest()
     assert "donnees" not in notice.__dict__ if hasattr(notice, "__dict__") else True
     request = cast(dict[str, Any], client.calls[0])
     assert request["url"].startswith("https://www.boamp.fr/")

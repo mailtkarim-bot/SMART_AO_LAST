@@ -5,7 +5,9 @@ from uuid import UUID
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
+from app.modules.case.infrastructure.models.case import CaseConsultationLinkRecord, CaseRecord
 from app.modules.dce.infrastructure.models.dce_requirements import DceRequirementRecord
+from app.modules.dce.infrastructure.models.dce_version import DceVersionRecord
 from app.modules.enterprise.infrastructure.models import (
     CaseCapabilityGapRecord,
     CaseCapabilityProposalRecord,
@@ -70,17 +72,17 @@ def _validate_source(
     requirement_id: UUID | None,
     task_id: UUID | None,
 ) -> None:
-    if requirement_id is None and task_id is None:
-        raise CommandExecutionError("CAPABILITY_SOURCE_REQUIRED")
-    if requirement_id is not None:
-        requirement = session.scalar(
-            sa.select(DceRequirementRecord).where(
-                DceRequirementRecord.tenant_id == tenant_id,
-                DceRequirementRecord.id == requirement_id,
-            )
+    case = session.scalar(
+        sa.select(CaseRecord).where(
+            CaseRecord.tenant_id == tenant_id,
+            CaseRecord.id == case_id,
+            CaseRecord.lifecycle == "ACTIVE",
+            CaseRecord.dce_freshness == "CURRENT",
         )
-        if requirement is None:
-            raise CommandExecutionError("NOT_FOUND_OR_FORBIDDEN")
+    )
+    if case is None or case.applicable_dce_version_id is None:
+        raise CommandExecutionError("NOT_FOUND_OR_FORBIDDEN")
+
     if task_id is not None:
         task = session.scalar(
             sa.select(CollaboratorTaskRecord).where(
@@ -90,8 +92,56 @@ def _validate_source(
                 CollaboratorTaskRecord.assignment_id == assignment_id,
             )
         )
-        if task is None:
+        if task is None or (requirement_id is not None and task.requirement_id != requirement_id):
             raise CommandExecutionError("NOT_FOUND_OR_FORBIDDEN")
+        requirement_id = task.requirement_id
+
+    if requirement_id is None:
+        raise CommandExecutionError("CAPABILITY_SOURCE_REQUIRED")
+
+    current_consultation_link = session.scalar(
+        sa.select(CaseConsultationLinkRecord).where(
+            CaseConsultationLinkRecord.tenant_id == tenant_id,
+            CaseConsultationLinkRecord.case_id == case_id,
+            CaseConsultationLinkRecord.is_current.is_(True),
+        )
+    )
+    current_consultation_id: UUID | None
+    if current_consultation_link is not None:
+        current_consultation_id = current_consultation_link.consultation_id
+    else:
+        any_consultation_link = session.scalar(
+            sa.select(CaseConsultationLinkRecord.id)
+            .where(
+                CaseConsultationLinkRecord.tenant_id == tenant_id,
+                CaseConsultationLinkRecord.case_id == case_id,
+            )
+            .limit(1)
+        )
+        if any_consultation_link is not None:
+            raise CommandExecutionError("NOT_FOUND_OR_FORBIDDEN")
+        current_consultation_id = case.consultation_id
+    if current_consultation_id is None:
+        raise CommandExecutionError("NOT_FOUND_OR_FORBIDDEN")
+
+    version = session.scalar(
+        sa.select(DceVersionRecord).where(
+            DceVersionRecord.tenant_id == tenant_id,
+            DceVersionRecord.id == case.applicable_dce_version_id,
+            DceVersionRecord.consultation_id == current_consultation_id,
+            DceVersionRecord.lifecycle == "ADMITTED",
+            DceVersionRecord.integrity == "VERIFIED",
+        )
+    )
+    requirement = session.scalar(
+        sa.select(DceRequirementRecord).where(
+            DceRequirementRecord.tenant_id == tenant_id,
+            DceRequirementRecord.id == requirement_id,
+            DceRequirementRecord.dce_version_id == case.applicable_dce_version_id,
+        )
+    )
+    if version is None or requirement is None:
+        raise CommandExecutionError("NOT_FOUND_OR_FORBIDDEN")
 
 
 class ProposeCapabilityForCaseHandler:
@@ -102,6 +152,8 @@ class ProposeCapabilityForCaseHandler:
         command: ProposeCapabilityForCaseCommand,
         context: CommandContext,
     ) -> HandlerOutcome:
+        if command.assignment_id is None:
+            raise CommandExecutionError("ASSIGNMENT_REQUIRED")
         tenant_id = UUID(str(context.tenant_id))
         _require_active_assignment(
             session,

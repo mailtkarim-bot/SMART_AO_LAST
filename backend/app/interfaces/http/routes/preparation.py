@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Header, HTTPException, status
+from fastapi import APIRouter, Header, HTTPException, Response, status
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from app.interfaces.http.dependencies.auth import resolve_bearer_context as _resolve_context
@@ -11,6 +11,9 @@ from app.interfaces.http.routes.consultations import ConsultationSecurityRuntime
 from app.modules.preparation.application.commands import (
     EvaluatePreparationReadinessCommand,
     GenerateTechnicalDocumentCommand,
+)
+from app.modules.preparation.application.plan_commands import (
+    CreatePreparationResponsePlanCommand,
 )
 from app.modules.preparation.application.review import PreparationReviewService
 from app.modules.preparation.application.review_commands import (
@@ -22,6 +25,7 @@ from app.modules.preparation.application.review_commands import (
 from app.modules.preparation.application.service import PreparationService
 from app.modules.preparation.public.contracts import (
     AddPreparationCorrectionRequest,
+    CreatePreparationResponsePlanRequest,
     CreateTechnicalResponseDraftRequest,
     DecidePreparationReviewRequest,
     EvaluatePreparationReadinessRequest,
@@ -32,6 +36,8 @@ from app.modules.preparation.public.contracts import (
     PreparationPackageProjection,
     PreparationReadinessProjection,
     PreparationResponseDraftListResponse,
+    PreparationResponsePlanListResponse,
+    PreparationResponsePlanProjection,
     PreparationReviewCorrectionProjection,
     PreparationReviewListResponse,
     PreparationReviewProjection,
@@ -259,6 +265,9 @@ def build_preparation_review_router(
                     package_id=review.package_id,
                     target_document_id=review.target_document_id,
                     target_version=review.target_version,
+                    target_draft_id=review.target_draft_id,
+                    target_draft_version=review.target_draft_version,
+                    target_content_sha256=review.target_content_sha256,
                     revision=review.revision,
                     state=review.state,
                     decision_code=review.decision_code,
@@ -269,6 +278,9 @@ def build_preparation_review_router(
                             review_revision=correction.review_revision,
                             revision=correction.revision,
                             target_document_id=correction.target_document_id,
+                            target_draft_id=correction.target_draft_id,
+                            target_draft_version=correction.target_draft_version,
+                            target_content_sha256=correction.target_content_sha256,
                             correction_code=correction.correction_code,
                             instruction=correction.instruction,
                             source_locator=correction.source_locator,
@@ -286,6 +298,7 @@ def build_preparation_review_router(
     )
     def read_response_drafts(
         package_id: UUID,
+        response: Response,
         authorization: str | None = Header(default=None),
     ) -> PreparationResponseDraftListResponse:
         actor = _resolve_context(
@@ -293,7 +306,61 @@ def build_preparation_review_router(
             context_resolver=security_runtime.context_resolver,
         )
         try:
-            drafts = service.read_response_drafts(
+            package_revision = service.read_response_drafts_package_revision(
+                actor=actor, package_id=package_id, now=datetime.now(tz=UTC)
+            )
+            verified = service.read_verified_response_drafts(
+                actor=actor, package_id=package_id, now=datetime.now(tz=UTC)
+            )
+        except PermissionError as error:
+            if str(error) == "NOT_FOUND_OR_FORBIDDEN":
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND, detail="NOT_FOUND_OR_FORBIDDEN"
+                ) from error
+            if str(error) == "RESPONSE_DRAFT_UNKNOWN":
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                    detail="RESPONSE_DRAFT_UNKNOWN",
+                ) from error
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="FORBIDDEN"
+            ) from error
+        response.headers["Cache-Control"] = "no-store"
+        return PreparationResponseDraftListResponse(
+            package_id=package_id,
+            package_revision=package_revision,
+            drafts=[
+                TechnicalResponseDraftProjection(
+                    draft_id=draft.draft_id,
+                    version=draft.version,
+                    state=draft.state,
+                    section_codes=list(draft.section_codes_json),
+                    source_refs=list(draft.source_refs_json),
+                    responsible_role=draft.responsible_role,
+                    content_sha256=draft.content_sha256,
+                    response_plan_id=draft.response_plan_id,
+                    response_plan_version=draft.response_plan_version,
+                    content=content,
+                )
+                for draft, content in verified
+            ],
+        )
+
+    @router.get(
+        "/{package_id}/response-plans",
+        response_model=PreparationResponsePlanListResponse,
+    )
+    def read_response_plans(
+        package_id: UUID,
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> PreparationResponsePlanListResponse:
+        actor = _resolve_context(
+            authorization=authorization,
+            context_resolver=security_runtime.context_resolver,
+        )
+        try:
+            plans = service.read_response_plans(
                 actor=actor, package_id=package_id, now=datetime.now(tz=UTC)
             )
         except PermissionError as error:
@@ -304,19 +371,48 @@ def build_preparation_review_router(
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="FORBIDDEN"
             ) from error
-        return PreparationResponseDraftListResponse(
+        response.headers["Cache-Control"] = "no-store"
+        return PreparationResponsePlanListResponse(
             package_id=package_id,
-            drafts=[
-                TechnicalResponseDraftProjection(
-                    draft_id=draft.draft_id,
-                    version=draft.version,
-                    state=draft.state,
-                    section_codes=list(draft.section_codes_json),
-                    source_refs=list(draft.source_refs_json),
-                    responsible_role=draft.responsible_role,
+            plans=[
+                PreparationResponsePlanProjection(
+                    plan_id=plan.plan_id,
+                    version=plan.version,
+                    package_id=plan.package_id,
+                    dce_version_id=plan.dce_version_id,
+                    state=plan.state,
+                    plan_sha256=plan.plan_sha256,
+                    content=plan.content_json,
                 )
-                for draft in drafts
+                for plan in plans
             ],
+        )
+
+    @router.post(
+        "/{package_id}/response-plans",
+        response_model=PreparationCommandResponse,
+    )
+    def create_response_plan(
+        package_id: UUID,
+        request: CreatePreparationResponsePlanRequest,
+        authorization: str | None = Header(default=None),
+    ):
+        actor = _resolve_context(
+            authorization=authorization,
+            context_resolver=security_runtime.context_resolver,
+        )
+        return _dispatch_review(
+            service=service,
+            actor=actor,
+            command=CreatePreparationResponsePlanCommand(
+                command_id=request.command_id,
+                idempotency_key=request.idempotency_key,
+                correlation_id=request.correlation_id,
+                package_id=package_id,
+                plan_id=request.plan_id,
+                expected_package_revision=request.expected_package_revision,
+                items=[item.model_dump() for item in request.items],
+            ),
         )
 
     @router.post("/{package_id}/reviews", response_model=PreparationCommandResponse)
@@ -340,6 +436,9 @@ def build_preparation_review_router(
                 package_id=package_id,
                 target_document_id=request.target_document_id,
                 target_version=request.target_version,
+                target_draft_id=request.target_draft_id,
+                target_draft_version=request.target_draft_version,
+                target_content_sha256=request.target_content_sha256,
                 expected_package_revision=request.expected_package_revision,
             ),
         )
@@ -368,6 +467,9 @@ def build_preparation_review_router(
                 review_id=review_id,
                 package_id=package_id,
                 target_document_id=request.target_document_id,
+                target_draft_id=request.target_draft_id,
+                target_draft_version=request.target_draft_version,
+                target_content_sha256=request.target_content_sha256,
                 expected_review_revision=request.expected_review_revision,
                 decision_code=request.decision_code,
                 decision_note=request.decision_note,
@@ -398,9 +500,13 @@ def build_preparation_review_router(
                 review_id=review_id,
                 package_id=package_id,
                 target_document_id=request.target_document_id,
+                target_draft_id=request.target_draft_id,
+                target_draft_version=request.target_draft_version,
+                target_content_sha256=request.target_content_sha256,
                 correction_code=request.correction_code,
                 instruction=request.instruction,
                 source_locator=request.source_locator,
+                corrected_content=request.corrected_content,
             ),
         )
 
@@ -453,7 +559,9 @@ def _dispatch_review(*, service: PreparationReviewService, actor, command):
     except CommandExecutionError as error:
         detail = str(error)
         code = (
-            status.HTTP_409_CONFLICT
+            status.HTTP_404_NOT_FOUND
+            if detail == "NOT_FOUND_OR_FORBIDDEN"
+            else status.HTTP_409_CONFLICT
             if detail == "VERSION_CONFLICT"
             else status.HTTP_422_UNPROCESSABLE_CONTENT
         )

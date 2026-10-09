@@ -36,6 +36,19 @@ const reading: CaseDceReading = {
       uncertainty_status: "TO_CONFIRM",
       document_family: "CCTP",
       source_locator_label: "CCTP · page 12",
+      source_anchor: {
+        source_anchor_id: "fragment-1",
+        dce_version_id: "dce-1",
+        dce_document_id: "document-1",
+        extraction_id: "extraction-1",
+        fragment_ordinal: 2,
+        source_sha256: "a".repeat(64),
+        extractor_id: "smart-ao-native",
+        extractor_version: "2",
+        fragment_sha256: "b".repeat(64),
+        locator_state: "RESOLVED",
+        locator: { kind: "pdf_page", coordinates: { page: 12, part: 1 } },
+      },
     },
   ],
 };
@@ -81,6 +94,49 @@ describe("DceKnowledgePanel", () => {
     expect(screen.getByText("CCTP · page 12")).toBeInTheDocument();
     expect(screen.getByText("91%")).toBeInTheDocument();
     expect(screen.queryByText("texte intégral secret")).not.toBeInTheDocument();
+  });
+
+  it("renders read-only source provenance without source text", () => {
+    renderPanel({ reading });
+
+    expect(screen.getByText(/Provenance de la source · RESOLVED/)).toBeInTheDocument();
+    expect(screen.getByText(/smart-ao-native · v2/)).toBeInTheDocument();
+    expect(screen.getByText("a".repeat(64))).toBeInTheDocument();
+    expect(screen.getByText("b".repeat(64))).toBeInTheDocument();
+    expect(screen.queryByText("Texte source confidentiel")).not.toBeInTheDocument();
+  });
+
+  it("keeps unresolved source locators visibly UNKNOWN", () => {
+    const unknownReading: CaseDceReading = {
+      ...reading,
+      requirements: [
+        {
+          ...reading.requirements[0],
+          source_anchor: {
+            ...reading.requirements[0].source_anchor!,
+            locator_state: "UNKNOWN",
+            locator: null,
+          },
+        },
+      ],
+    };
+
+    renderPanel({ reading: unknownReading });
+
+    expect(screen.getByText("Provenance de la source · UNKNOWN")).toBeInTheDocument();
+    expect(screen.getByText("Localisation source non résolue")).toBeInTheDocument();
+  });
+
+  it("keeps a missing source anchor visibly UNKNOWN", () => {
+    const unanchoredReading: CaseDceReading = {
+      ...reading,
+      requirements: [{ ...reading.requirements[0], source_anchor: null }],
+    };
+
+    renderPanel({ reading: unanchoredReading });
+
+    expect(screen.getByText("Provenance de la source · UNKNOWN")).toBeInTheDocument();
+    expect(screen.getByText("UNKNOWN · ancre de fragment non disponible")).toBeInTheDocument();
   });
 
   it("makes a partial classification explicit", () => {

@@ -19,7 +19,10 @@ from app.modules.dce.public.contracts import (
     FinancialReportPublicationResponse,
     PublishFinancialReportRequest,
 )
-from app.modules.membership.application.financial_report import PatronFinancialReportService
+from app.modules.membership.application.financial_report import (
+    FinancialReportProjection,
+    PatronFinancialReportService,
+)
 from app.modules.membership.application.financial_report_draft import (
     PatronFinancialReportDraftCreationService,
 )
@@ -27,16 +30,33 @@ from app.modules.membership.application.financial_report_publication import (
     PatronFinancialReportPublicationService,
 )
 from app.modules.membership.public.contracts import (
+    FinancialMarginCalculationResponse,
     PatronFinancialReportDraftResponse,
     PatronFinancialReportLineResponse,
     PatronFinancialReportResponse,
     PatronFinancialReportSummaryResponse,
+)
+from app.modules.pricing.public.declared_margin import (
+    BASE_MARGIN_CATEGORIES,
+    calculate_declared_base_margin,
 )
 from app.platform.events.dispatcher import (
     CommandExecutionError,
     CommandInProgressError,
     IdempotencyKeyReusedError,
 )
+
+
+def _margin_calculation(report: FinancialReportProjection) -> FinancialMarginCalculationResponse:
+    calculation = calculate_declared_base_margin(
+        [(line.category, line.amount_minor) for line in report.lines]
+    )
+    return FinancialMarginCalculationResponse(
+        **asdict(calculation),
+        basis_line_ids=[
+            line.line_id for line in report.lines if line.category in BASE_MARGIN_CATEGORIES
+        ],
+    )
 
 
 def build_patron_financial_report_router(
@@ -256,6 +276,7 @@ def build_patron_financial_report_router(
             ruleset_version=report.ruleset_version,
             summary=PatronFinancialReportSummaryResponse(**report.summary),
             lines=[PatronFinancialReportLineResponse(**asdict(line)) for line in report.lines],
+            margin_calculation=_margin_calculation(report),
         )
 
     @router.get(
@@ -300,11 +321,13 @@ def build_patron_financial_report_router(
             report_id=report.report_id,
             case_id=report.case_id,
             status="PUBLISHED",
+            aggregate_revision=report.aggregate_revision,
             currency_code=report.currency_code,
             calculated_at=report.calculated_at,
             ruleset_version=report.ruleset_version,
             summary=PatronFinancialReportSummaryResponse(**report.summary),
             lines=[PatronFinancialReportLineResponse(**asdict(line)) for line in report.lines],
+            margin_calculation=_margin_calculation(report),
         )
 
     return router

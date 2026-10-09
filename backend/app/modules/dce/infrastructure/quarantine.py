@@ -6,6 +6,7 @@ import asyncio
 import hashlib
 import logging
 import os
+import stat
 from collections.abc import AsyncIterable
 from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
@@ -65,7 +66,7 @@ class LocalQuarantineStorageAdapter(DceQuarantineStoragePort):
             await asyncio.to_thread(handle.close)
             handle = None
             await asyncio.to_thread(_replace_without_overwrite, temporary, target)
-        except Exception:
+        except BaseException:
             if handle is not None:
                 await asyncio.to_thread(handle.close)
             await asyncio.to_thread(_unlink_missing_ok, temporary)
@@ -75,12 +76,58 @@ class LocalQuarantineStorageAdapter(DceQuarantineStoragePort):
     async def delete(self, *, storage_key: str) -> None:
         await asyncio.to_thread(_unlink_missing_ok, self._path(storage_key=storage_key))
 
+    async def delete_partials(self, *, storage_key: str) -> int:
+        """Remove temporary files created for one private object key."""
+
+        return await asyncio.to_thread(_delete_partials, self._path(storage_key=storage_key))
+
     async def read_bytes(self, *, storage_key: str, max_bytes: int) -> bytes:
         path = self._path(storage_key=storage_key)
         size = await asyncio.to_thread(path.stat)
         if size.st_size > max_bytes:
             raise ValueError("private document exceeds extraction limit")
         return await asyncio.to_thread(path.read_bytes)
+
+    def read_digest(self, *, storage_key: str, max_bytes: int) -> tuple[int, str]:
+        """Re-read one private object and recalculate its size and SHA-256."""
+        if max_bytes <= 0:
+            raise ValueError("private document read limit must be positive")
+        relative = PurePosixPath(storage_key)
+        if relative.is_absolute() or any(part in {"", ".", ".."} for part in relative.parts):
+            raise ValueError("invalid private storage key")
+        target = self._root
+        for part in relative.parts:
+            target = target / part
+            if target.is_symlink():
+                raise ValueError("private document path contains a symlink")
+        parent = target.parent.resolve()
+        if self._root not in parent.parents and parent != self._root:
+            raise ValueError("private document path escapes quarantine root")
+        flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+        descriptor = os.open(target, flags)
+        try:
+            before = os.fstat(descriptor)
+            if not stat.S_ISREG(before.st_mode) or before.st_size > max_bytes:
+                raise ValueError("private document exceeds configured read limit")
+            digest = hashlib.sha256()
+            byte_size = 0
+            with os.fdopen(descriptor, "rb", closefd=False) as handle:
+                while chunk := handle.read(min(64 * 1024, max_bytes - byte_size + 1)):
+                    byte_size += len(chunk)
+                    if byte_size > max_bytes:
+                        raise ValueError("private document exceeds configured read limit")
+                    digest.update(chunk)
+                after = os.fstat(descriptor)
+            if (
+                byte_size != before.st_size
+                or before.st_dev != after.st_dev
+                or before.st_ino != after.st_ino
+                or before.st_mtime_ns != after.st_mtime_ns
+            ):
+                raise ValueError("private document changed while it was read")
+            return byte_size, digest.hexdigest()
+        finally:
+            os.close(descriptor)
 
     async def local_path(self, *, storage_key: str) -> Path:
         return self._path(storage_key=storage_key)
@@ -202,6 +249,31 @@ def _unlink_missing_ok(path: Path) -> None:
         path.unlink()
     except FileNotFoundError:
         return
+
+
+def _delete_partials(target: Path) -> int:
+    prefix = f".{target.name}."
+    try:
+        candidates = tuple(target.parent.iterdir())
+    except FileNotFoundError:
+        return 0
+
+    removed = 0
+    for candidate in candidates:
+        if not candidate.name.startswith(prefix) or not candidate.name.endswith(".part"):
+            continue
+        try:
+            mode = candidate.lstat().st_mode
+        except FileNotFoundError:
+            continue
+        if not stat.S_ISREG(mode):
+            continue
+        try:
+            candidate.unlink()
+        except FileNotFoundError:
+            continue
+        removed += 1
+    return removed
 
 
 def _clamd_verdict(*, response: bytes) -> str:

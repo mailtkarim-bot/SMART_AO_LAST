@@ -7,12 +7,25 @@ import type {
   CreateInformationRequestInput,
   DeclareTaskBlockerInput,
   PreparationPackage,
+  PreparationResponsePlanSection,
   RecordInformationResponseInput,
   ResolveTaskBlockerInput,
+  CommandReceipt,
 } from "../../shared/types";
+import type { ResponsePlanItemDraft, WizardResponsePlan } from "./useCollaboratorWizard";
 import { TaskWorkflowPanel } from "./TaskWorkflowPanel";
 
 type WizardOutcome = "RECORDED" | "NOT_APPLICABLE" | "UNABLE_TO_COMPLETE";
+
+const responsePlanSections: Array<[PreparationResponsePlanSection, string]> = [
+  ["COVER", "Présentation"],
+  ["UNDERSTANDING", "Compréhension du besoin"],
+  ["METHOD", "Méthodologie"],
+  ["RESOURCES", "Moyens mobilisés"],
+  ["SCHEDULE", "Planning"],
+  ["RISKS", "Risques et prévention"],
+  ["SOURCES", "Références"],
+];
 
 type CollaboratorWizardPanelProps = {
   wizardCaseId: string;
@@ -24,13 +37,23 @@ type CollaboratorWizardPanelProps = {
   wizardOutcome: WizardOutcome;
   wizardSnapshotId: string;
   wizardTransmissionId: string;
+  wizardSnapshotReceipt: { snapshot_id: string; receipt: CommandReceipt } | null;
+  wizardTransmissionReceipt: { snapshot_id: string; transmission_id: string; receipt: CommandReceipt } | null;
+  wizardSnapshotBusy: boolean;
+  wizardTransmissionBusy: boolean;
+  wizardSnapshotRetryPending: boolean;
+  wizardTransmissionRetryPending: boolean;
+  canCreateWizardSnapshot: boolean;
+  canTransmitWizardSnapshot: boolean;
   wizardPreviewDocumentId: string | null;
   wizardPreviewContent: string | null;
   wizardDocumentBusy: boolean;
   wizardDocumentKind: "TECHNICAL_RESPONSE" | "DC1" | "DC2" | "DC4";
-  wizardDraftSourceDocumentId: string;
-  wizardDraftSections: string;
-  wizardDraftSourceRefs: string;
+  wizardResponsePlan: WizardResponsePlan;
+  canSaveWizardResponsePlan: boolean;
+  isWizardResponsePlanCurrent: boolean;
+  canCreateWizardResponseDraft: boolean;
+  canRetryWizardResponseDraft: boolean;
   setWizardCaseId: Dispatch<SetStateAction<string>>;
   setWizardPackageId: Dispatch<SetStateAction<string>>;
   setWizardTaskId: Dispatch<SetStateAction<string>>;
@@ -39,9 +62,10 @@ type CollaboratorWizardPanelProps = {
   setWizardSnapshotId: Dispatch<SetStateAction<string>>;
   setWizardTransmissionId: Dispatch<SetStateAction<string>>;
   setWizardDocumentKind: Dispatch<SetStateAction<"TECHNICAL_RESPONSE" | "DC1" | "DC2" | "DC4">>;
-  setWizardDraftSourceDocumentId: Dispatch<SetStateAction<string>>;
-  setWizardDraftSections: Dispatch<SetStateAction<string>>;
-  setWizardDraftSourceRefs: Dispatch<SetStateAction<string>>;
+  onChangeResponsePlanItem: (requirementId: string, patch: Partial<ResponsePlanItemDraft>) => void;
+  onCreateResponsePlan: () => void;
+  onRetryResponsePlan: () => void;
+  onReadResponsePlan: () => void;
   onLoad: () => void;
   onClaimTask: () => void;
   onRecordResult: () => void | Promise<boolean | void>;
@@ -49,6 +73,8 @@ type CollaboratorWizardPanelProps = {
   onEvaluateReadiness: () => void;
   onGenerateDocument: () => void;
   onCreateResponseDraft: () => void;
+  onRetryResponseDraft: () => void;
+  onCreateSnapshot: () => void;
   onTransmitSnapshot: () => void;
   onPreviewDocument: (documentId: string) => void;
   onDownloadDocument: (documentId: string) => void;
@@ -70,6 +96,14 @@ export function CollaboratorWizardPanel({
   wizardOutcome,
   wizardSnapshotId,
   wizardTransmissionId,
+  wizardSnapshotReceipt,
+  wizardTransmissionReceipt,
+  wizardSnapshotBusy,
+  wizardTransmissionBusy,
+  wizardSnapshotRetryPending,
+  wizardTransmissionRetryPending,
+  canCreateWizardSnapshot,
+  canTransmitWizardSnapshot,
   setWizardCaseId,
   setWizardPackageId,
   setWizardTaskId,
@@ -78,16 +112,19 @@ export function CollaboratorWizardPanel({
   setWizardSnapshotId,
   setWizardTransmissionId,
   setWizardDocumentKind,
-  setWizardDraftSourceDocumentId,
-  setWizardDraftSections,
-  setWizardDraftSourceRefs,
+  wizardResponsePlan,
+  canSaveWizardResponsePlan,
+  isWizardResponsePlanCurrent,
+  canCreateWizardResponseDraft,
+  canRetryWizardResponseDraft,
+  onChangeResponsePlanItem,
+  onCreateResponsePlan,
+  onRetryResponsePlan,
+  onReadResponsePlan,
   wizardPreviewDocumentId,
   wizardPreviewContent,
   wizardDocumentBusy,
   wizardDocumentKind,
-  wizardDraftSourceDocumentId,
-  wizardDraftSections,
-  wizardDraftSourceRefs,
   onLoad,
   onClaimTask,
   onRecordResult,
@@ -95,6 +132,8 @@ export function CollaboratorWizardPanel({
   onEvaluateReadiness,
   onGenerateDocument,
   onCreateResponseDraft,
+  onRetryResponseDraft,
+  onCreateSnapshot,
   onTransmitSnapshot,
   onPreviewDocument,
   onDownloadDocument,
@@ -122,6 +161,11 @@ export function CollaboratorWizardPanel({
     const result = await onRecordResult();
     setCaptureState(result === false ? "PENDING" : "CONFIRMED");
   }
+
+  const responsePlanStatus = isWizardResponsePlanCurrent && wizardResponsePlan.requestState === "IDLE" ? "SOURCES_CURRENT" : "UNKNOWN";
+  const responsePlanControlsDisabled = wizardResponsePlan.loading
+    || ["SUBMITTING", "UNKNOWN", "READING"].includes(wizardResponsePlan.requestState)
+    || wizardResponsePlan.draftRequestState === "UNKNOWN";
 
   return (
     <section className="section-block wizard-section" id="collaborator-wizard-section">
@@ -317,21 +361,120 @@ export function CollaboratorWizardPanel({
                   Générer la réponse technique
                 </button>
               </div>
-              <div className="response-draft-form">
-                <label>
-                  <span>Document source (UUID)</span>
-                  <input value={wizardDraftSourceDocumentId} onChange={(event) => setWizardDraftSourceDocumentId(event.target.value)} placeholder="Par défaut : premier document généré" />
-                </label>
-                <label>
-                  <span>Sections (séparées par des virgules)</span>
-                  <input value={wizardDraftSections} onChange={(event) => setWizardDraftSections(event.target.value)} />
-                </label>
-                <label>
-                  <span>Sources (UUID séparés par des virgules)</span>
-                  <input value={wizardDraftSourceRefs} onChange={(event) => setWizardDraftSourceRefs(event.target.value)} placeholder="UUID exigence ou tâche" />
-                </label>
-                <button className="secondary-button" type="button" onClick={onCreateResponseDraft}>Créer le brouillon de réponse</button>
-              </div>
+              <section className="response-plan" aria-labelledby="response-plan-title" aria-busy={wizardResponsePlan.loading}>
+                <div className="response-plan-header">
+                  <div>
+                    <h4 id="response-plan-title">Plan de réponse</h4>
+                    <p>Reliez chaque exigence DCE à une section et, si elle existe, à une proposition de capacité versionnée.</p>
+                  </div>
+                  <span className={`state-badge ${responsePlanStatus === "SOURCES_CURRENT" ? "state-success" : "state-warning"}`}>
+                    {responsePlanStatus}
+                  </span>
+                </div>
+                {wizardResponsePlan.loading && <p className="response-plan-message" role="status">Lecture des exigences et du plan…</p>}
+                {wizardResponsePlan.error && <p className="response-plan-message response-plan-error" role="alert">{wizardResponsePlan.error}</p>}
+                {wizardResponsePlan.hasPriorDcePlan && <p className="response-plan-message" role="status">Le plan précédent est lié à une autre version DCE. Recomposez les correspondances depuis les exigences de la version courante; l’ancien plan reste conservé.</p>}
+                {!wizardResponsePlan.loading && wizardResponsePlan.readState === "READY" && wizardResponsePlan.requirements.length === 0 && (
+                  <p className="response-plan-message">Aucune exigence DCE n’est disponible dans cette version. Aucun plan ne peut être enregistré.</p>
+                )}
+                {wizardResponsePlan.readState === "READY" && wizardResponsePlan.requirements.length > 0 && (
+                  <div className="response-plan-items">
+                    {wizardResponsePlan.requirements.map((requirement, index) => {
+                      const item = wizardResponsePlan.items.find((candidate) => candidate.requirement_id === requirement.requirement_id);
+                      const choices = wizardResponsePlan.proposals
+                        .filter((proposal) => proposal.requirement_id === requirement.requirement_id && proposal.task_id === null)
+                        .map((proposal) => ({ proposal, candidate: wizardResponsePlan.candidates.find((candidate) => candidate.capability_id === proposal.capability_id && candidate.version_id === proposal.capability_version_id) }))
+                        .filter((choice) => choice.candidate !== undefined);
+                      const sectionId = `response-plan-section-${index}`;
+                      const sourceId = `response-plan-source-${index}`;
+                      return (
+                        <fieldset className="response-plan-item" key={`${requirement.requirement_id}-${index}`}>
+                          <legend><span>Exigence {index + 1}</span><strong>{requirement.requirement_type}</strong></legend>
+                          <p className="response-plan-requirement-state">{requirement.document_family} · {requirement.confirmation_outcome}</p>
+                          <label htmlFor={sectionId}>Section de réponse</label>
+                          <select
+                            id={sectionId}
+                            value={item?.section_code ?? ""}
+                            disabled={responsePlanControlsDisabled}
+                            onChange={(event) => onChangeResponsePlanItem(requirement.requirement_id, { section_code: event.target.value as PreparationResponsePlanSection | "" })}
+                          >
+                            <option value="">Choisir une section…</option>
+                            {responsePlanSections.map(([code, label]) => <option key={code} value={code}>{label}</option>)}
+                          </select>
+                          <label htmlFor={sourceId}>Proposition de capacité (facultatif)</label>
+                          <select
+                            id={sourceId}
+                            value={item?.source_proposal_id ?? ""}
+                            disabled={responsePlanControlsDisabled}
+                            onChange={(event) => onChangeResponsePlanItem(requirement.requirement_id, { source_proposal_id: event.target.value || null })}
+                          >
+                            <option value="">Aucune proposition · le plan restera UNKNOWN</option>
+                            {choices.map(({ proposal, candidate }) => candidate ? (
+                              <option
+                                key={proposal.proposal_id}
+                                value={proposal.proposal_id}
+                                disabled={proposal.validity_state === "EXPIRED" || proposal.source_evidence_state === "EXPIRED" || candidate.validity_state === "EXPIRED" || candidate.source_evidence_state === "EXPIRED"}
+                              >
+                                {candidate.name} · {candidate.title} · v{candidate.version_number} · {proposal.source_evidence_state}
+                              </option>
+                            ) : null)}
+                          </select>
+                        </fieldset>
+                      );
+                    })}
+                  </div>
+                )}
+                <div className="response-plan-actions">
+                  <button className="primary-button" type="button" disabled={!canSaveWizardResponsePlan || wizardResponsePlan.requestState === "SUBMITTING" || wizardResponsePlan.requestState === "READING"} onClick={onCreateResponsePlan}>
+                    {wizardResponsePlan.requestState === "SUBMITTING" ? "Enregistrement…" : "Enregistrer le plan"}
+                  </button>
+                  {wizardResponsePlan.requestState === "UNKNOWN" && <button className="secondary-button" type="button" onClick={onRetryResponsePlan}>Réessayer le même enregistrement</button>}
+                  <button className="secondary-button" type="button" disabled={!wizardPackage || responsePlanControlsDisabled} onClick={onReadResponsePlan}>Relire le plan</button>
+                </div>
+                <div className="response-plan-readback" aria-live="polite">
+                  <div className="response-plan-header">
+                    <h4>Lecture serveur</h4>
+                    {wizardResponsePlan.exactPlan && <span>Révision {wizardResponsePlan.exactPlan.version}</span>}
+                  </div>
+                  {wizardResponsePlan.exactPlan ? (
+                    <ul className="response-plan-readback-list">
+                      {wizardResponsePlan.exactPlan.content.items.map((planItem, index) => {
+                        const requirement = wizardResponsePlan.requirements.find((candidate) => candidate.requirement_id === planItem.requirement_id);
+                        const proposal = planItem.source_proposal_id ? wizardResponsePlan.proposals.find((candidate) => candidate.proposal_id === planItem.source_proposal_id) : undefined;
+                        const capability = proposal ? wizardResponsePlan.candidates.find((candidate) => candidate.capability_id === proposal.capability_id && candidate.version_id === planItem.source_capability_version_id) : undefined;
+                        const sectionLabel = responsePlanSections.find(([code]) => code === planItem.section_code)?.[1] ?? "Section non résolue";
+                        return <li key={`${planItem.requirement_id}-${index}`}><strong>{requirement?.requirement_type ?? "Exigence DCE"}</strong><span>{sectionLabel}</span><span>{capability ? `${capability.name} · ${capability.title} · v${capability.version_number}` : "Proposition non résolue · UNKNOWN"}</span></li>;
+                      })}
+                    </ul>
+                  ) : (
+                    <p>Aucun plan exact n’a été relu. UNKNOWN reste opposable.</p>
+                  )}
+                </div>
+                <div className="response-plan-draft-gate">
+                  <div>
+                    <strong>{canCreateWizardResponseDraft ? "Plan SOURCES_CURRENT relu" : "Création du brouillon verrouillée"}</strong>
+                    <p>{canCreateWizardResponseDraft
+                      ? "Le brouillon utilisera cette révision exacte et les sections et propositions relues."
+                      : wizardResponsePlan.draftRequestState === "CONFLICT"
+                        ? "Conflit détecté. Relisez le plan explicitement avant toute nouvelle intention."
+                        : wizardResponsePlan.draftRequestState === "UNKNOWN"
+                          ? "Résultat incertain. Réessayez le même brouillon; ne créez pas une nouvelle intention."
+                        : wizardResponsePlan.draftRequestState === "SOURCE_UNKNOWN"
+                          ? "Les octets d’une pièce sont indisponibles ou leur hash discordant. UNKNOWN bloque la création; rétablissez la pièce ou modifiez le plan avant un nouvel essai."
+                        : wizardResponsePlan.draftRequestState === "ERROR"
+                          ? "Le serveur a refusé ce brouillon. Relisez le plan et ses sources avant toute nouvelle tentative."
+                          : wizardResponsePlan.requestState === "CONFLICT" || wizardResponsePlan.requestState === "ERROR"
+                            ? "Relisez explicitement le plan après ce conflit ou refus avant de continuer."
+                          : wizardResponsePlan.draftedPlanVersion === wizardResponsePlan.exactPlan?.version
+                            ? "Un brouillon a déjà été créé depuis cette révision du plan."
+                            : wizardResponsePlan.exactPlan?.state === "SOURCES_CURRENT"
+                              ? "Les choix courants diffèrent du plan relu, ou le document technique manque. Relisez et vérifiez le plan avant de continuer."
+                              : "UNKNOWN, source absente ou plan non relu : aucun brouillon ne peut être créé."}</p>
+                  </div>
+                  <button className="secondary-button" type="button" disabled={!canCreateWizardResponseDraft || wizardResponsePlan.draftRequestState === "SUBMITTING"} onClick={onCreateResponseDraft}>Créer le brouillon de réponse</button>
+                  {canRetryWizardResponseDraft && <button className="secondary-button" type="button" onClick={onRetryResponseDraft}>Réessayer la relecture de source</button>}
+                </div>
+              </section>
               {wizardPackage.latest_readiness ? (
                 <div className="readiness-card">
                   <div className="case-top">
@@ -396,11 +539,11 @@ export function CollaboratorWizardPanel({
                 </div>
               )}
               {wizardPackage.response_drafts.length > 0 && (
-                <div className="response-plan" aria-label="Plan de réponse">
+                <div className="response-draft-history" aria-labelledby="response-draft-history-title">
                   <div className="panel-heading">
                     <div>
-                      <h3>Plan de réponse</h3>
-                      <p>Sections et sources réutilisables, sans donnée financière.</p>
+                      <h3 id="response-draft-history-title">Brouillons enregistrés</h3>
+                      <p>Versions créées depuis un plan relu; leur contenu reste distinct du plan.</p>
                     </div>
                     <span className="rule-tag">
                       {wizardPackage.response_drafts.length} brouillon{wizardPackage.response_drafts.length > 1 ? "s" : ""}
@@ -437,24 +580,42 @@ export function CollaboratorWizardPanel({
                 </div>
               </div>
               <label>
-                <span>Snapshot préparé</span>
+                <span>Identifiant du snapshot (laisser vide pour en générer un)</span>
                 <input
                   value={wizardSnapshotId}
                   onChange={(event) => setWizardSnapshotId(event.target.value)}
                   placeholder="UUID du snapshot"
+                  disabled={wizardSnapshotBusy || wizardSnapshotRetryPending || wizardTransmissionBusy || wizardTransmissionRetryPending}
                 />
               </label>
+              <button
+                className="secondary-button"
+                type="button"
+                disabled={!canCreateWizardSnapshot}
+                onClick={onCreateSnapshot}
+              >
+                {wizardSnapshotBusy ? "Création en cours…" : wizardSnapshotRetryPending ? "Rejouer la même création" : "Créer le snapshot complet"}
+              </button>
+              {wizardSnapshotReceipt && <div className="workflow-response">
+                <strong>Snapshot créé · {wizardSnapshotReceipt.snapshot_id}</strong>
+                <span>{wizardSnapshotReceipt.receipt.aggregate_refs.find((ref) => ref.aggregate_type === "PreparationSnapshot")?.aggregate_revision ?? "Révision inconnue"} · reçu {wizardSnapshotReceipt.receipt.command_id}</span>
+              </div>}
               <label>
-                <span>Identifiant de transmission</span>
+                <span>Identifiant de transmission (laisser vide pour en générer un)</span>
                 <input
                   value={wizardTransmissionId}
                   onChange={(event) => setWizardTransmissionId(event.target.value)}
                   placeholder="UUID de transmission"
+                  disabled={wizardTransmissionBusy || wizardTransmissionRetryPending}
                 />
               </label>
-              <button className="primary-button" type="button" onClick={onTransmitSnapshot}>
-                Transmettre au patron <span>→</span>
+              <button className="primary-button" type="button" disabled={!canTransmitWizardSnapshot} onClick={onTransmitSnapshot}>
+                {wizardTransmissionRetryPending ? "Rejouer la même transmission" : "Transmettre au patron"} <span>→</span>
               </button>
+              {wizardTransmissionReceipt && <div className="workflow-response">
+                <strong>Reçu de transmission · {wizardTransmissionReceipt.transmission_id}</strong>
+                <span>Snapshot {wizardTransmissionReceipt.snapshot_id} · révision package {wizardTransmissionReceipt.receipt.aggregate_refs.find((ref) => ref.aggregate_type === "PreparationTransmission")?.aggregate_revision ?? "UNKNOWN"}</span>
+              </div>}
               <small className="invariant-note">
                 Sortie : contexte non financier, blocages et preuves structurées uniquement.
               </small>

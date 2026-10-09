@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
 from uuid import UUID
 
 import sqlalchemy as sa
@@ -10,20 +11,29 @@ from sqlalchemy.orm import Session
 from app.modules.case.infrastructure.models.case import CaseRecord
 from app.modules.patron_action.infrastructure.models.handover import CaseHandoverSnapshotRecord
 from app.modules.pricing.application.case_contract_change_commands import (
+    CASE_CONTRACT_CHANGE_EVIDENCE_RETENTION_TOPIC,
+    ExpireCaseContractChangeEvidenceUploadCommand,
+    PrepareCaseContractChangeEvidenceUploadCommand,
     RecordCaseContractChangeActionCommand,
+    RecordCaseContractChangeActionExecutionCommand,
     RecordCaseContractChangeActionImpactRelationCommand,
     RecordCaseContractChangeApplicabilityCommand,
     RecordCaseContractChangeEngagementLinkCommand,
     RecordCaseContractChangeEventCommand,
+    RecordCaseContractChangeExternalConfirmationCommand,
     RecordCaseContractChangeImpactDeclarationCommand,
 )
 from app.modules.pricing.infrastructure.models.case_contract_change import (
+    CaseContractChangeActionExecutionEvidenceLinkRecord,
+    CaseContractChangeActionExecutionRecord,
     CaseContractChangeActionImpactLinkRecord,
     CaseContractChangeActionImpactRelationRecord,
     CaseContractChangeActionRecord,
     CaseContractChangeApplicabilityRecord,
     CaseContractChangeEngagementLinkRecord,
     CaseContractChangeEventRecord,
+    CaseContractChangeEvidenceObjectRecord,
+    CaseContractChangeExternalConfirmationRecord,
     CaseContractChangeImpactDeclarationRecord,
 )
 from app.modules.pricing.infrastructure.models.contract_instrument_version import (
@@ -63,6 +73,16 @@ class CaseContractChangeHandler(CommandHandler):
             return self._record_action(session=session, command=command, context=context)
         if isinstance(command, RecordCaseContractChangeActionImpactRelationCommand):
             return self._record_action_impact_relation(
+                session=session, command=command, context=context
+            )
+        if isinstance(command, RecordCaseContractChangeActionExecutionCommand):
+            return self._record_action_execution(session=session, command=command, context=context)
+        if isinstance(command, PrepareCaseContractChangeEvidenceUploadCommand):
+            return self._prepare_evidence_upload(session=session, command=command, context=context)
+        if isinstance(command, ExpireCaseContractChangeEvidenceUploadCommand):
+            return self._expire_evidence_upload(session=session, command=command, context=context)
+        if isinstance(command, RecordCaseContractChangeExternalConfirmationCommand):
+            return self._record_external_confirmation(
                 session=session, command=command, context=context
             )
         if isinstance(command, RecordCaseContractChangeEngagementLinkCommand):
@@ -604,6 +624,346 @@ class CaseContractChangeHandler(CommandHandler):
                 "state": record.state,
                 "declaration_ids": [str(item.id) for item in declarations],
             },
+        )
+
+    def _record_action_execution(
+        self, *, session: Session, command, context: CommandContext
+    ) -> HandlerOutcome:
+        action = session.scalar(
+            sa.select(CaseContractChangeActionRecord).where(
+                CaseContractChangeActionRecord.tenant_id == context.tenant_id,
+                CaseContractChangeActionRecord.case_id == command.case_id,
+                CaseContractChangeActionRecord.event_id == command.event_id,
+                CaseContractChangeActionRecord.id == command.action_id,
+            )
+        )
+        relation = session.scalar(
+            sa.select(CaseContractChangeActionImpactRelationRecord).where(
+                CaseContractChangeActionImpactRelationRecord.tenant_id == context.tenant_id,
+                CaseContractChangeActionImpactRelationRecord.case_id == command.case_id,
+                CaseContractChangeActionImpactRelationRecord.event_id == command.event_id,
+                CaseContractChangeActionImpactRelationRecord.id == command.c4_relation_id,
+                CaseContractChangeActionImpactRelationRecord.action_id == command.action_id,
+            )
+        )
+        if action is None or relation is None:
+            raise CommandExecutionError("C5_ACTION_OR_EXACT_C4_RELATION_NOT_FOUND_OR_FORBIDDEN")
+
+        if command.evidence_object_ids != command.verified_evidence_object_ids:
+            raise CommandExecutionError("C5_EVIDENCE_SOURCE_NOT_VERIFIED")
+        evidence_objects = []
+        if command.evidence_object_ids:
+            evidence_objects = list(
+                session.scalars(
+                    sa.select(CaseContractChangeEvidenceObjectRecord).where(
+                        CaseContractChangeEvidenceObjectRecord.tenant_id == context.tenant_id,
+                        CaseContractChangeEvidenceObjectRecord.case_id == command.case_id,
+                        CaseContractChangeEvidenceObjectRecord.event_id == command.event_id,
+                        CaseContractChangeEvidenceObjectRecord.action_id == command.action_id,
+                        CaseContractChangeEvidenceObjectRecord.c4_relation_id
+                        == command.c4_relation_id,
+                        CaseContractChangeEvidenceObjectRecord.id.in_(command.evidence_object_ids),
+                        CaseContractChangeEvidenceObjectRecord.evidence_kind
+                        == "EXECUTION_EVIDENCE",
+                        CaseContractChangeEvidenceObjectRecord.state == "CLEAN",
+                    )
+                ).all()
+            )
+            if len(evidence_objects) != len(command.evidence_object_ids):
+                raise CommandExecutionError("C5_EVIDENCE_OBJECT_NOT_FOUND_OR_FORBIDDEN")
+
+        current_revision = int(
+            session.scalar(
+                sa.select(
+                    sa.func.coalesce(
+                        sa.func.max(CaseContractChangeActionExecutionRecord.revision), 0
+                    )
+                ).where(
+                    CaseContractChangeActionExecutionRecord.tenant_id == context.tenant_id,
+                    CaseContractChangeActionExecutionRecord.case_id == command.case_id,
+                    CaseContractChangeActionExecutionRecord.event_id == command.event_id,
+                    CaseContractChangeActionExecutionRecord.action_id == command.action_id,
+                )
+            )
+            or 0
+        )
+        if command.expected_revision != current_revision:
+            raise CommandExecutionError("C5_ACTION_EXECUTION_VERSION_CONFLICT")
+
+        record = CaseContractChangeActionExecutionRecord(
+            id=command.act_id,
+            tenant_id=context.tenant_id,
+            case_id=command.case_id,
+            event_id=command.event_id,
+            action_id=action.id,
+            c4_relation_id=relation.id,
+            revision=current_revision + 1,
+            declared_state=command.declared_state,
+            declared_summary=(
+                command.declared_summary.strip() if command.declared_summary else None
+            ),
+            unknown_reason=command.unknown_reason.strip() if command.unknown_reason else None,
+            evidence_refs_json=[item.strip() for item in command.evidence_refs],
+            evidence_state=(
+                "RETRIEVED"
+                if evidence_objects
+                else "REFERENCED"
+                if command.evidence_refs
+                else "UNKNOWN"
+            ),
+            external_confirmation_state=command.external_confirmation_state,
+            external_confirmation_note=(
+                command.external_confirmation_note.strip()
+                if command.external_confirmation_note
+                else None
+            ),
+            actor_id=context.actor_id,
+            membership_id=context.membership_id,
+            command_id=command.command_id,
+            idempotency_key=command.idempotency_key,
+            correlation_id=command.correlation_id,
+        )
+        session.add(record)
+        session.flush()
+        for position, evidence in enumerate(evidence_objects):
+            session.add(
+                CaseContractChangeActionExecutionEvidenceLinkRecord(
+                    tenant_id=context.tenant_id,
+                    case_id=command.case_id,
+                    event_id=command.event_id,
+                    act_id=record.id,
+                    action_id=record.action_id,
+                    c4_relation_id=record.c4_relation_id,
+                    evidence_id=evidence.id,
+                    evidence_kind=evidence.evidence_kind,
+                    position=position,
+                )
+            )
+        return self._outcome(
+            record=record,
+            revision=record.revision,
+            event_type="CaseContractChangeActionExecutionDeclared",
+            result_code="CASE_CONTRACT_CHANGE_ACTION_EXECUTION_DECLARED",
+            payload={
+                "case_id": str(command.case_id),
+                "event_id": str(command.event_id),
+                "action_id": str(command.action_id),
+                "act_id": str(record.id),
+                "c4_relation_id": str(relation.id),
+                "declared_state": record.declared_state,
+                "evidence_state": record.evidence_state,
+                "evidence_object_ids": [str(item.id) for item in evidence_objects],
+                "external_confirmation_state": record.external_confirmation_state,
+            },
+        )
+
+    def _prepare_evidence_upload(
+        self, *, session: Session, command, context: CommandContext
+    ) -> HandlerOutcome:
+        action = session.scalar(
+            sa.select(CaseContractChangeActionRecord).where(
+                CaseContractChangeActionRecord.tenant_id == context.tenant_id,
+                CaseContractChangeActionRecord.case_id == command.case_id,
+                CaseContractChangeActionRecord.event_id == command.event_id,
+                CaseContractChangeActionRecord.id == command.action_id,
+            )
+        )
+        relation = session.scalar(
+            sa.select(CaseContractChangeActionImpactRelationRecord).where(
+                CaseContractChangeActionImpactRelationRecord.tenant_id == context.tenant_id,
+                CaseContractChangeActionImpactRelationRecord.case_id == command.case_id,
+                CaseContractChangeActionImpactRelationRecord.event_id == command.event_id,
+                CaseContractChangeActionImpactRelationRecord.id == command.c4_relation_id,
+                CaseContractChangeActionImpactRelationRecord.action_id == command.action_id,
+            )
+        )
+        if action is None or relation is None:
+            raise CommandExecutionError("C5_ACTION_OR_EXACT_C4_RELATION_NOT_FOUND_OR_FORBIDDEN")
+        if command.expected_byte_size > 150_000_000:
+            raise CommandExecutionError("C5_EVIDENCE_UPLOAD_INTENT_INVALID")
+        record = CaseContractChangeEvidenceObjectRecord(
+            id=command.evidence_object_id,
+            tenant_id=context.tenant_id,
+            case_id=command.case_id,
+            event_id=command.event_id,
+            action_id=action.id,
+            c4_relation_id=relation.id,
+            evidence_kind=command.evidence_kind,
+            version=1,
+            storage_key=(
+                f"c5-action-evidence/{context.tenant_id}/{command.case_id}/"
+                f"{command.event_id}/{command.action_id}/{command.evidence_object_id}"
+            ),
+            expected_byte_size=command.expected_byte_size,
+            actual_byte_size=None,
+            sha256=None,
+            media_type=None,
+            state="AWAITING_UPLOAD",
+            scan_verdict=None,
+            scanner_name=None,
+            scanner_signature_version=None,
+            scanned_at=None,
+            expires_at=context.received_at + timedelta(minutes=30),
+            actor_id=context.actor_id,
+            membership_id=context.membership_id,
+            command_id=command.command_id,
+            idempotency_key=command.idempotency_key,
+            correlation_id=command.correlation_id,
+        )
+        session.add(record)
+        return self._outcome(
+            record=record,
+            revision=1,
+            event_type="CaseContractChangeEvidenceUploadPrepared",
+            result_code="CASE_CONTRACT_CHANGE_EVIDENCE_UPLOAD_PREPARED",
+            payload={
+                "case_id": str(command.case_id),
+                "event_id": str(command.event_id),
+                "action_id": str(command.action_id),
+                "c4_relation_id": str(command.c4_relation_id),
+                "evidence_object_id": str(record.id),
+                "evidence_kind": record.evidence_kind,
+                "state": record.state,
+            },
+        )
+
+    def _record_external_confirmation(
+        self, *, session: Session, command, context: CommandContext
+    ) -> HandlerOutcome:
+        act = session.scalar(
+            sa.select(CaseContractChangeActionExecutionRecord).where(
+                CaseContractChangeActionExecutionRecord.tenant_id == context.tenant_id,
+                CaseContractChangeActionExecutionRecord.case_id == command.case_id,
+                CaseContractChangeActionExecutionRecord.event_id == command.event_id,
+                CaseContractChangeActionExecutionRecord.action_id == command.action_id,
+                CaseContractChangeActionExecutionRecord.c4_relation_id == command.c4_relation_id,
+                CaseContractChangeActionExecutionRecord.id == command.act_id,
+            )
+        )
+        if act is None:
+            raise CommandExecutionError("C5_ACT_NOT_FOUND_OR_FORBIDDEN")
+        if command.verified_evidence_object_id != command.evidence_object_id:
+            raise CommandExecutionError("C5_EXTERNAL_CONFIRMATION_SOURCE_NOT_VERIFIED")
+        source = session.scalar(
+            sa.select(CaseContractChangeEvidenceObjectRecord).where(
+                CaseContractChangeEvidenceObjectRecord.tenant_id == context.tenant_id,
+                CaseContractChangeEvidenceObjectRecord.case_id == command.case_id,
+                CaseContractChangeEvidenceObjectRecord.event_id == command.event_id,
+                CaseContractChangeEvidenceObjectRecord.action_id == command.action_id,
+                CaseContractChangeEvidenceObjectRecord.c4_relation_id == command.c4_relation_id,
+                CaseContractChangeEvidenceObjectRecord.id == command.evidence_object_id,
+                CaseContractChangeEvidenceObjectRecord.evidence_kind == "EXTERNAL_CONFIRMATION",
+                CaseContractChangeEvidenceObjectRecord.state == "CLEAN",
+            )
+        )
+        if source is None:
+            raise CommandExecutionError("C5_EXTERNAL_CONFIRMATION_SOURCE_NOT_FOUND_OR_FORBIDDEN")
+        current_revision = int(
+            session.scalar(
+                sa.select(
+                    sa.func.coalesce(
+                        sa.func.max(CaseContractChangeExternalConfirmationRecord.revision), 0
+                    )
+                ).where(
+                    CaseContractChangeExternalConfirmationRecord.tenant_id == context.tenant_id,
+                    CaseContractChangeExternalConfirmationRecord.case_id == command.case_id,
+                    CaseContractChangeExternalConfirmationRecord.event_id == command.event_id,
+                    CaseContractChangeExternalConfirmationRecord.act_id == command.act_id,
+                )
+            )
+            or 0
+        )
+        if command.expected_revision != current_revision:
+            raise CommandExecutionError("C5_EXTERNAL_CONFIRMATION_VERSION_CONFLICT")
+        record = CaseContractChangeExternalConfirmationRecord(
+            id=command.confirmation_id,
+            tenant_id=context.tenant_id,
+            case_id=command.case_id,
+            event_id=command.event_id,
+            action_id=command.action_id,
+            act_id=act.id,
+            c4_relation_id=act.c4_relation_id,
+            evidence_id=source.id,
+            evidence_kind=source.evidence_kind,
+            revision=current_revision + 1,
+            received_at=command.received_at,
+            external_party=command.external_party,
+            rationale=command.rationale.strip(),
+            actor_id=context.actor_id,
+            membership_id=context.membership_id,
+            command_id=command.command_id,
+            idempotency_key=command.idempotency_key,
+            correlation_id=command.correlation_id,
+        )
+        session.add(record)
+        return self._outcome(
+            record=record,
+            revision=record.revision,
+            event_type="CaseContractChangeExternalConfirmationRecorded",
+            result_code="CASE_CONTRACT_CHANGE_EXTERNAL_CONFIRMATION_RECORDED",
+            payload={
+                "case_id": str(command.case_id),
+                "event_id": str(command.event_id),
+                "action_id": str(command.action_id),
+                "act_id": str(command.act_id),
+                "confirmation_id": str(record.id),
+                "evidence_object_id": str(source.id),
+                "state": "CONFIRMED",
+            },
+        )
+
+    def _expire_evidence_upload(
+        self, *, session: Session, command, context: CommandContext
+    ) -> HandlerOutcome:
+        record = session.scalar(
+            sa.select(CaseContractChangeEvidenceObjectRecord)
+            .where(
+                CaseContractChangeEvidenceObjectRecord.tenant_id == context.tenant_id,
+                CaseContractChangeEvidenceObjectRecord.case_id == command.case_id,
+                CaseContractChangeEvidenceObjectRecord.event_id == command.event_id,
+                CaseContractChangeEvidenceObjectRecord.action_id == command.action_id,
+                CaseContractChangeEvidenceObjectRecord.id == command.evidence_object_id,
+            )
+            .with_for_update()
+        )
+        if record is None:
+            raise CommandExecutionError("C5_EVIDENCE_UPLOAD_NOT_FOUND_OR_FORBIDDEN")
+        if record.expires_at > context.received_at:
+            raise CommandExecutionError("C5_EVIDENCE_UPLOAD_NOT_EXPIRED")
+        if record.state == "CLEAN":
+            return HandlerOutcome(
+                result_code="C5_EVIDENCE_UPLOAD_ALREADY_CLEAN",
+                aggregate_refs=(),
+                events=(),
+            )
+        if record.state not in {"AWAITING_UPLOAD", "UPLOADING", "REJECTED"}:
+            raise CommandExecutionError("C5_EVIDENCE_UPLOAD_STATE_INVALID")
+        record.state = "REJECTED"
+        return HandlerOutcome(
+            result_code="C5_EVIDENCE_UPLOAD_EXPIRED",
+            aggregate_refs=(
+                {
+                    "aggregate_type": "CaseContractChangeEvidenceObject",
+                    "aggregate_id": str(record.id),
+                    "aggregate_revision": record.version,
+                },
+            ),
+            events=(
+                PendingDomainEvent(
+                    aggregate_type="CaseContractChangeEvidenceObject",
+                    aggregate_id=record.id,
+                    aggregate_revision=record.version,
+                    event_type="CaseContractChangeEvidenceUploadExpired",
+                    payload={
+                        "tenant_id": str(record.tenant_id),
+                        "case_id": str(record.case_id),
+                        "event_id": str(record.event_id),
+                        "action_id": str(record.action_id),
+                        "evidence_object_id": str(record.id),
+                    },
+                    topic=CASE_CONTRACT_CHANGE_EVIDENCE_RETENTION_TOPIC,
+                ),
+            ),
         )
 
     @staticmethod

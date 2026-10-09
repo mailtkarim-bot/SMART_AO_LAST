@@ -619,3 +619,388 @@ class CaseContractChangeActionImpactLinkRecord(TenantScopedRecord, Base):
     relation_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     declaration_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     position: Mapped[int] = mapped_column(sa.Integer, nullable=False)
+
+
+class CaseContractChangeActionExecutionRecord(TenantScopedRecord, Base):
+    """Append-only C5 declaration tied to one exact C1 action and C4 revision."""
+
+    __tablename__ = "case_contract_change_action_executions"
+    __table_args__ = (
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "case_id", "event_id", "action_id"],
+            [
+                "case_contract_change_actions.tenant_id",
+                "case_contract_change_actions.case_id",
+                "case_contract_change_actions.event_id",
+                "case_contract_change_actions.id",
+            ],
+            name="fk_case_change_action_executions__action",
+            ondelete="RESTRICT",
+        ),
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "case_id", "event_id", "c4_relation_id"],
+            [
+                "case_contract_change_action_impact_relations.tenant_id",
+                "case_contract_change_action_impact_relations.case_id",
+                "case_contract_change_action_impact_relations.event_id",
+                "case_contract_change_action_impact_relations.id",
+            ],
+            name="fk_case_change_action_executions__c4",
+            ondelete="RESTRICT",
+        ),
+        sa.UniqueConstraint("tenant_id", "id", name="uq_case_change_action_executions__tenant_id"),
+        sa.UniqueConstraint(
+            "tenant_id", "command_id", name="uq_case_change_action_executions__command"
+        ),
+        sa.UniqueConstraint(
+            "tenant_id", "idempotency_key", name="uq_case_change_action_executions__idempotency"
+        ),
+        sa.UniqueConstraint(
+            "tenant_id",
+            "case_id",
+            "event_id",
+            "action_id",
+            "revision",
+            name="uq_case_change_action_executions__revision",
+        ),
+        sa.UniqueConstraint(
+            "tenant_id",
+            "case_id",
+            "event_id",
+            "id",
+            "action_id",
+            "c4_relation_id",
+            name="uq_case_change_action_executions__exact_parent",
+        ),
+        sa.CheckConstraint("revision > 0", name="case_change_action_execution_revision_positive"),
+        sa.CheckConstraint(
+            "declared_state IN ('DECLARED_PERFORMED', 'DECLARED_PARTIAL', "
+            "'DECLARED_NOT_PERFORMED', 'UNKNOWN')",
+            name="case_change_action_execution_state_closed",
+        ),
+        sa.CheckConstraint(
+            "(declared_state = 'UNKNOWN' AND declared_summary IS NULL "
+            "AND NULLIF(BTRIM(unknown_reason), '') IS NOT NULL) OR "
+            "(declared_state <> 'UNKNOWN' AND NULLIF(BTRIM(declared_summary), '') IS NOT NULL "
+            "AND unknown_reason IS NULL)",
+            name="case_change_action_execution_declaration_matches_state",
+        ),
+        sa.CheckConstraint(
+            "evidence_state IN ('UNKNOWN', 'REFERENCED', 'RETRIEVED') AND "
+            "((evidence_state = 'UNKNOWN' AND jsonb_array_length(evidence_refs_json) = 0) OR "
+            "(evidence_state = 'REFERENCED' AND jsonb_array_length(evidence_refs_json) > 0) OR "
+            "evidence_state = 'RETRIEVED')",
+            name="case_change_action_execution_evidence_matches_refs",
+        ),
+        sa.CheckConstraint(
+            "external_confirmation_state IN ('UNKNOWN', 'NOT_CONFIRMED') AND "
+            "((external_confirmation_state = 'UNKNOWN' AND external_confirmation_note IS NULL) OR "
+            "(external_confirmation_state = 'NOT_CONFIRMED' "
+            "AND NULLIF(BTRIM(external_confirmation_note), '') IS NOT NULL))",
+            name="case_change_action_execution_external_confirmation_matches_state",
+        ),
+        sa.Index(
+            "ix_case_change_action_executions__action_revision",
+            "tenant_id",
+            "case_id",
+            "event_id",
+            "action_id",
+            "revision",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    case_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    event_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    action_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    c4_relation_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    revision: Mapped[int] = mapped_column(sa.Integer, nullable=False)
+    declared_state: Mapped[str] = mapped_column(sa.String(32), nullable=False)
+    declared_summary: Mapped[str | None] = mapped_column(sa.Text)
+    unknown_reason: Mapped[str | None] = mapped_column(sa.Text)
+    evidence_refs_json: Mapped[list[str]] = mapped_column(JSONB, nullable=False)
+    evidence_state: Mapped[str] = mapped_column(sa.String(16), nullable=False)
+    external_confirmation_state: Mapped[str] = mapped_column(sa.String(16), nullable=False)
+    external_confirmation_note: Mapped[str | None] = mapped_column(sa.Text)
+    actor_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    membership_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    command_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    idempotency_key: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    correlation_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True))
+
+
+class CaseContractChangeEvidenceObjectRecord(TenantScopedRecord, Base):
+    """Private, scanned C5 upload; immutable after clean admission."""
+
+    __tablename__ = "case_contract_change_evidence_objects"
+    __table_args__ = (
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "case_id", "event_id", "action_id"],
+            [
+                "case_contract_change_actions.tenant_id",
+                "case_contract_change_actions.case_id",
+                "case_contract_change_actions.event_id",
+                "case_contract_change_actions.id",
+            ],
+            name="fk_case_change_evidence_objects__action",
+            ondelete="RESTRICT",
+        ),
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "case_id", "event_id", "c4_relation_id"],
+            [
+                "case_contract_change_action_impact_relations.tenant_id",
+                "case_contract_change_action_impact_relations.case_id",
+                "case_contract_change_action_impact_relations.event_id",
+                "case_contract_change_action_impact_relations.id",
+            ],
+            name="fk_case_change_evidence_objects__c4",
+            ondelete="RESTRICT",
+        ),
+        sa.UniqueConstraint("tenant_id", "id", name="uq_case_change_evidence_objects__tenant_id"),
+        sa.UniqueConstraint(
+            "tenant_id",
+            "case_id",
+            "event_id",
+            "action_id",
+            "c4_relation_id",
+            "id",
+            "evidence_kind",
+            name="uq_case_change_evidence_objects__source",
+        ),
+        sa.UniqueConstraint("storage_key", name="uq_case_change_evidence_objects__storage_key"),
+        sa.UniqueConstraint(
+            "tenant_id", "command_id", name="uq_case_change_evidence_objects__command"
+        ),
+        sa.UniqueConstraint(
+            "tenant_id", "idempotency_key", name="uq_case_change_evidence_objects__idempotency"
+        ),
+        sa.CheckConstraint(
+            "expected_byte_size <= 150000000",
+            name="case_change_evidence_expected_size_limit",
+        ),
+        sa.CheckConstraint(
+            "evidence_kind IN ('EXECUTION_EVIDENCE', 'EXTERNAL_CONFIRMATION')",
+            name="case_change_evidence_kind_closed",
+        ),
+        sa.CheckConstraint("version = 1", name="case_change_evidence_version_immutable"),
+        sa.CheckConstraint(
+            "state IN ('AWAITING_UPLOAD', 'UPLOADING', 'CLEAN', 'REJECTED')",
+            name="case_change_evidence_state_closed",
+        ),
+        sa.CheckConstraint("expected_byte_size > 0", name="case_change_evidence_expected_size"),
+        sa.CheckConstraint(
+            "actual_byte_size IS NULL OR actual_byte_size > 0",
+            name="case_change_evidence_actual_size",
+        ),
+        sa.CheckConstraint(
+            "sha256 IS NULL OR sha256 ~ '^[0-9a-f]{64}$'",
+            name="case_change_evidence_sha256",
+        ),
+        sa.CheckConstraint(
+            "scan_verdict IS NULL OR scan_verdict IN ('CLEAN', 'INFECTED', 'ERROR')",
+            name="case_change_evidence_scan_verdict",
+        ),
+        sa.CheckConstraint(
+            "state <> 'CLEAN' OR (actual_byte_size IS NOT NULL AND sha256 IS NOT NULL "
+            "AND media_type IS NOT NULL AND scan_verdict = 'CLEAN' "
+            "AND scanner_name IS NOT NULL AND scanner_signature_version IS NOT NULL "
+            "AND scanned_at IS NOT NULL)",
+            name="case_change_evidence_clean_metadata_required",
+        ),
+        sa.Index(
+            "ix_case_change_evidence_objects__action_created",
+            "tenant_id",
+            "case_id",
+            "event_id",
+            "action_id",
+            "created_at",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    case_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    event_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    action_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    c4_relation_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    evidence_kind: Mapped[str] = mapped_column(sa.String(32), nullable=False)
+    version: Mapped[int] = mapped_column(sa.Integer, nullable=False, default=1, server_default="1")
+    storage_key: Mapped[str] = mapped_column(sa.String(1000), nullable=False)
+    expected_byte_size: Mapped[int] = mapped_column(sa.BigInteger, nullable=False)
+    actual_byte_size: Mapped[int | None] = mapped_column(sa.BigInteger)
+    sha256: Mapped[str | None] = mapped_column(sa.CHAR(64))
+    media_type: Mapped[str | None] = mapped_column(sa.String(180))
+    state: Mapped[str] = mapped_column(sa.String(24), nullable=False)
+    scan_verdict: Mapped[str | None] = mapped_column(sa.String(16))
+    scanner_name: Mapped[str | None] = mapped_column(sa.String(120))
+    scanner_signature_version: Mapped[str | None] = mapped_column(sa.String(240))
+    scanned_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
+    expires_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False)
+    actor_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    membership_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    command_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    idempotency_key: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    correlation_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True))
+
+
+class CaseContractChangeActionExecutionEvidenceLinkRecord(TenantScopedRecord, Base):
+    """Immutable relation from one C5 act to an exact scanned execution piece."""
+
+    __tablename__ = "case_contract_change_action_execution_evidence_links"
+    __table_args__ = (
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "case_id", "event_id", "act_id", "action_id", "c4_relation_id"],
+            [
+                "case_contract_change_action_executions.tenant_id",
+                "case_contract_change_action_executions.case_id",
+                "case_contract_change_action_executions.event_id",
+                "case_contract_change_action_executions.id",
+                "case_contract_change_action_executions.action_id",
+                "case_contract_change_action_executions.c4_relation_id",
+            ],
+            name="fk_case_change_execution_evidence_links__act",
+            ondelete="RESTRICT",
+        ),
+        sa.ForeignKeyConstraint(
+            [
+                "tenant_id",
+                "case_id",
+                "event_id",
+                "action_id",
+                "c4_relation_id",
+                "evidence_id",
+                "evidence_kind",
+            ],
+            [
+                "case_contract_change_evidence_objects.tenant_id",
+                "case_contract_change_evidence_objects.case_id",
+                "case_contract_change_evidence_objects.event_id",
+                "case_contract_change_evidence_objects.action_id",
+                "case_contract_change_evidence_objects.c4_relation_id",
+                "case_contract_change_evidence_objects.id",
+                "case_contract_change_evidence_objects.evidence_kind",
+            ],
+            name="fk_case_change_execution_evidence_links__object",
+            ondelete="RESTRICT",
+        ),
+        sa.CheckConstraint(
+            "position >= 0", name="case_change_execution_evidence_position_nonnegative"
+        ),
+        sa.PrimaryKeyConstraint("tenant_id", "act_id", "evidence_id"),
+        sa.UniqueConstraint(
+            "tenant_id",
+            "act_id",
+            "position",
+            name="uq_case_change_execution_evidence_links__position",
+        ),
+        sa.CheckConstraint(
+            "evidence_kind = 'EXECUTION_EVIDENCE'",
+            name="case_change_execution_evidence_links_kind",
+        ),
+        sa.Index(
+            "ix_case_change_execution_evidence_links__event",
+            "tenant_id",
+            "case_id",
+            "event_id",
+            "act_id",
+        ),
+    )
+
+    tenant_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    case_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    event_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    act_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    action_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    c4_relation_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    evidence_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    evidence_kind: Mapped[str] = mapped_column(sa.String(32), nullable=False)
+    position: Mapped[int] = mapped_column(sa.Integer, nullable=False)
+
+
+class CaseContractChangeExternalConfirmationRecord(TenantScopedRecord, Base):
+    """Separate Patron act that links an exact external confirmation to C5."""
+
+    __tablename__ = "case_contract_change_external_confirmations"
+    __table_args__ = (
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "case_id", "event_id", "action_id", "act_id", "c4_relation_id"],
+            [
+                "case_contract_change_action_executions.tenant_id",
+                "case_contract_change_action_executions.case_id",
+                "case_contract_change_action_executions.event_id",
+                "case_contract_change_action_executions.action_id",
+                "case_contract_change_action_executions.id",
+                "case_contract_change_action_executions.c4_relation_id",
+            ],
+            name="fk_case_change_external_confirmations__act",
+            ondelete="RESTRICT",
+        ),
+        sa.ForeignKeyConstraint(
+            [
+                "tenant_id",
+                "case_id",
+                "event_id",
+                "action_id",
+                "c4_relation_id",
+                "evidence_id",
+                "evidence_kind",
+            ],
+            [
+                "case_contract_change_evidence_objects.tenant_id",
+                "case_contract_change_evidence_objects.case_id",
+                "case_contract_change_evidence_objects.event_id",
+                "case_contract_change_evidence_objects.action_id",
+                "case_contract_change_evidence_objects.c4_relation_id",
+                "case_contract_change_evidence_objects.id",
+                "case_contract_change_evidence_objects.evidence_kind",
+            ],
+            name="fk_case_change_external_confirmations__source",
+            ondelete="RESTRICT",
+        ),
+        sa.UniqueConstraint(
+            "tenant_id", "id", name="uq_case_change_external_confirmations__tenant_id"
+        ),
+        sa.UniqueConstraint(
+            "tenant_id", "command_id", name="uq_case_change_external_confirmations__command"
+        ),
+        sa.UniqueConstraint(
+            "tenant_id",
+            "idempotency_key",
+            name="uq_case_change_external_confirmations__idempotency",
+        ),
+        sa.UniqueConstraint(
+            "tenant_id",
+            "act_id",
+            "revision",
+            name="uq_case_change_external_confirmations__revision",
+        ),
+        sa.CheckConstraint(
+            "revision > 0", name="case_change_external_confirmation_revision_positive"
+        ),
+        sa.CheckConstraint(
+            "evidence_kind = 'EXTERNAL_CONFIRMATION'", name="case_change_external_confirmation_kind"
+        ),
+        sa.CheckConstraint(
+            "length(trim(rationale)) > 0", name="case_change_external_confirmation_rationale"
+        ),
+        sa.Index(
+            "ix_case_change_external_confirmations__act_revision", "tenant_id", "act_id", "revision"
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    case_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    event_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    action_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    act_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    c4_relation_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    evidence_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    evidence_kind: Mapped[str] = mapped_column(sa.String(32), nullable=False)
+    revision: Mapped[int] = mapped_column(sa.Integer, nullable=False)
+    received_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False)
+    external_party: Mapped[str | None] = mapped_column(sa.String(240))
+    rationale: Mapped[str] = mapped_column(sa.Text, nullable=False)
+    actor_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    membership_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    command_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    idempotency_key: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    correlation_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True))

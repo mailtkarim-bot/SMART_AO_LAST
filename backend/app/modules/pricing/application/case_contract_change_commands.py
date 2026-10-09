@@ -8,6 +8,7 @@ from app.platform.events.command_contracts import ApplicationCommand
 
 ChangeKind = Literal["ORDER_OF_SERVICE", "CHANGE_REQUEST", "ADDENDUM", "SCHEDULE_CHANGE"]
 HandoverApplicability = Literal["APPLICABLE_TO_HANDOVER", "NOT_APPLICABLE", "NEEDS_CLARIFICATION"]
+CASE_CONTRACT_CHANGE_EVIDENCE_RETENTION_TOPIC = "case_contract_change_evidence_retention"
 
 
 class RecordCaseContractChangeEventCommand(ApplicationCommand):
@@ -117,6 +118,117 @@ class RecordCaseContractChangeActionImpactRelationCommand(ApplicationCommand):
                 raise ValueError("C4_LINKED_REQUIRES_DECLARATIONS")
         elif self.declaration_ids or not (self.unknown_reason and self.unknown_reason.strip()):
             raise ValueError("C4_NON_LINKED_REQUIRES_REASON_AND_NO_DECLARATIONS")
+        return self
+
+
+class PrepareCaseContractChangeEvidenceUploadCommand(ApplicationCommand):
+    """Create one server-owned C5 evidence upload intent for an exact C1/C4 pair."""
+
+    command_type = "PrepareCaseContractChangeEvidenceUpload"
+
+    evidence_object_id: UUID
+    case_id: UUID
+    event_id: UUID
+    action_id: UUID
+    c4_relation_id: UUID
+    evidence_kind: Literal["EXECUTION_EVIDENCE", "EXTERNAL_CONFIRMATION"]
+    expected_byte_size: int = Field(gt=0, le=150_000_000)
+
+
+class ExpireCaseContractChangeEvidenceUploadCommand(ApplicationCommand):
+    """System command to close one expired C5 upload and queue private cleanup."""
+
+    command_type = "ExpireCaseContractChangeEvidenceUpload"
+
+    case_id: UUID
+    event_id: UUID
+    action_id: UUID
+    evidence_object_id: UUID
+
+
+class RecordCaseContractChangeActionExecutionCommand(ApplicationCommand):
+    """C5 human declaration; references alone never establish retrieved evidence."""
+
+    command_type = "RecordCaseContractChangeActionExecution"
+
+    act_id: UUID
+    case_id: UUID
+    event_id: UUID
+    action_id: UUID
+    c4_relation_id: UUID
+    expected_revision: int = Field(ge=0)
+    declared_state: Literal[
+        "DECLARED_PERFORMED", "DECLARED_PARTIAL", "DECLARED_NOT_PERFORMED", "UNKNOWN"
+    ]
+    declared_summary: str | None = Field(default=None, max_length=2_000)
+    unknown_reason: str | None = Field(default=None, max_length=1_000)
+    evidence_refs: tuple[Annotated[str, Field(min_length=1, max_length=1_000)], ...] = Field(
+        default=(), max_length=32
+    )
+    evidence_object_ids: tuple[UUID, ...] = Field(default=(), max_length=16)
+    verified_evidence_object_ids: tuple[UUID, ...] = Field(default=(), max_length=16, exclude=True)
+    external_confirmation_state: Literal["UNKNOWN", "NOT_CONFIRMED"] = "UNKNOWN"
+    external_confirmation_note: str | None = Field(default=None, max_length=1_000)
+
+    @model_validator(mode="after")
+    def validate_declaration(self):
+        if self.declared_state == "UNKNOWN":
+            if self.declared_summary is not None or not (
+                self.unknown_reason and self.unknown_reason.strip()
+            ):
+                raise ValueError("C5_UNKNOWN_REQUIRES_REASON_ONLY")
+        elif not (self.declared_summary and self.declared_summary.strip()) or (
+            self.unknown_reason is not None
+        ):
+            raise ValueError("C5_DECLARATION_REQUIRES_SUMMARY_ONLY")
+        if self.external_confirmation_state == "NOT_CONFIRMED":
+            if not (self.external_confirmation_note and self.external_confirmation_note.strip()):
+                raise ValueError("C5_NOT_CONFIRMED_REQUIRES_NOTE")
+        elif self.external_confirmation_note is not None:
+            raise ValueError("C5_UNKNOWN_CONFIRMATION_MUST_NOT_HAVE_NOTE")
+        if any(not value.strip() for value in self.evidence_refs):
+            raise ValueError("C5_EVIDENCE_REFERENCE_MUST_NOT_BE_EMPTY")
+        if len(set(self.evidence_object_ids)) != len(self.evidence_object_ids):
+            raise ValueError("C5_EVIDENCE_OBJECT_IDS_MUST_BE_UNIQUE")
+        if not set(self.verified_evidence_object_ids).issubset(self.evidence_object_ids):
+            raise ValueError("C5_VERIFIED_EVIDENCE_MUST_BE_REQUESTED")
+        return self
+
+
+class RecordCaseContractChangeExternalConfirmationCommand(ApplicationCommand):
+    """Append a separate human act referencing a retrieved external confirmation."""
+
+    command_type = "RecordCaseContractChangeExternalConfirmation"
+
+    confirmation_id: UUID
+    case_id: UUID
+    event_id: UUID
+    action_id: UUID
+    act_id: UUID
+    c4_relation_id: UUID
+    evidence_object_id: UUID
+    expected_revision: int = Field(ge=0)
+    received_at: datetime
+    external_party: str | None = Field(default=None, max_length=240)
+    rationale: str = Field(min_length=1, max_length=2_000)
+    verified_evidence_object_id: UUID | None = Field(default=None, exclude=True)
+
+    @field_validator("received_at")
+    @classmethod
+    def received_at_must_be_aware(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("C5_EXTERNAL_CONFIRMATION_RECEIVED_AT_MUST_BE_AWARE")
+        return value
+
+    @field_validator("external_party")
+    @classmethod
+    def external_party_must_not_be_blank(cls, value: str | None) -> str | None:
+        return value.strip() if value and value.strip() else None
+
+    @model_validator(mode="after")
+    def source_must_be_verified(self):
+        if self.verified_evidence_object_id != self.evidence_object_id:
+            raise ValueError("C5_EXTERNAL_CONFIRMATION_SOURCE_MUST_BE_VERIFIED")
         return self
 
 

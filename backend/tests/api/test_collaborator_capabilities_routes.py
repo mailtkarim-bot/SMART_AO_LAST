@@ -1,13 +1,17 @@
 from dataclasses import dataclass
 from types import SimpleNamespace
 from typing import Any, cast
-from uuid import uuid4
+from uuid import NAMESPACE_URL, uuid4, uuid5
 
 import pytest
 from app.interfaces.http.routes.collaborator_capabilities import (
     build_collaborator_capability_router,
 )
 from app.interfaces.http.routes.consultations import ConsultationSecurityRuntime
+from app.modules.membership.public.collab_capability_contracts import (
+    ProposeCapabilityForCaseRequest,
+    ReportCapabilityGapRequest,
+)
 from app.platform.events.dispatcher import (
     CommandExecutionError,
     CommandInProgressError,
@@ -59,7 +63,7 @@ def _runtime(*, resolver_error: Exception | None = None) -> ConsultationSecurity
     )
 
 
-def _client(*, service=None, resolver_error=None) -> TestClient:
+def _client(*, service=None, resolver_error=None, raise_server_exceptions=False) -> TestClient:
     app = FastAPI()
     app.include_router(
         build_collaborator_capability_router(
@@ -67,7 +71,7 @@ def _client(*, service=None, resolver_error=None) -> TestClient:
             security_runtime=_runtime(resolver_error=resolver_error),
         )
     )
-    return TestClient(app, raise_server_exceptions=False)
+    return TestClient(app, raise_server_exceptions=raise_server_exceptions)
 
 
 def _result(*, replayed: bool = False, result_code: str) -> SimpleNamespace:
@@ -118,6 +122,8 @@ class _CapabilityService:
         self.propose_error = propose_error
         self.gap_error = gap_error
         self.read_error = read_error
+        self.candidate_calls = 0
+        self.candidate_kwargs = None
         self.propose_calls = 0
         self.gap_calls = 0
 
@@ -137,6 +143,27 @@ class _CapabilityService:
         return _result(
             replayed=self.gap_calls > 1,
             result_code="CAPABILITY_GAP_REPORTED",
+        )
+
+    def read_candidates(self, **kwargs):
+        from datetime import UTC, datetime
+
+        self.candidate_calls += 1
+        self.candidate_kwargs = kwargs
+        return (
+            SimpleNamespace(
+                capability_id=uuid4(),
+                capability_kind="EQUIPMENT",
+                name="Fixture means",
+                version_id=uuid4(),
+                version_number=1,
+                title="Fixture version",
+                valid_from=datetime(2026, 8, 1, tzinfo=UTC),
+                valid_until=None,
+                validity_state="CURRENT",
+                source_evidence_state="UNKNOWN",
+                evaluated_at=datetime(2026, 10, 8, 9, tzinfo=UTC),
+            ),
         )
 
     def read_assessments(self, **kwargs):
@@ -357,3 +384,100 @@ def test_collaborator_payload_rejects_financial_fields():
     )
 
     assert response.status_code == 422
+
+
+def test_legacy_assessment_stays_unknown_and_no_store():
+    response = _client().get(
+        f"/api/v1/collaborator/cases/{uuid4()}/capability-assessments",
+        params={"assignment_id": str(uuid4())},
+        headers=_headers(),
+    )
+    assert response.status_code == 200
+    assert response.headers["Cache-Control"] == "no-store"
+    assert response.json()["proposals"][0]["source_evidence_state"] == "UNKNOWN"
+    assert response.json()["proposals"][0]["source_evidence_evaluated_at"] is None
+
+
+def test_case_only_read_accepts_omitted_assignment_without_cache() -> None:
+    from unittest.mock import Mock
+
+    service = Mock()
+    service.read_assessments.return_value = SimpleNamespace(proposals=[], gaps=[])
+    case_id = uuid4()
+    response = _client(service=service).get(
+        f"/api/v1/collaborator/cases/{case_id}/capability-assessments", headers=_headers()
+    )
+    assert response.status_code == 200
+    assert response.json() == {"proposals": [], "gaps": []}
+    assert response.headers["Cache-Control"] == "no-store"
+    assert service.read_assessments.call_args.kwargs["assignment_id"] is None
+
+
+def test_capability_act_ids_are_stable_within_but_distinct_between_tenants() -> None:
+    tenant_a, tenant_b, case_id = uuid4(), uuid4(), uuid4()
+    command_id = uuid4()
+    proposal = ProposeCapabilityForCaseRequest(
+        command_id=command_id,
+        idempotency_key=uuid4(),
+        assignment_id=uuid4(),
+        capability_id=uuid4(),
+        capability_version_id=uuid4(),
+        requirement_id=uuid4(),
+        justification="Human synthetic proposal",
+    )
+    proposal_a = proposal.to_command(case_id=case_id, tenant_id=tenant_a)
+    proposal_retry = proposal.to_command(case_id=case_id, tenant_id=tenant_a)
+    proposal_b = proposal.to_command(case_id=case_id, tenant_id=tenant_b)
+    assert proposal_a.proposal_id == proposal_retry.proposal_id
+    assert proposal_a.proposal_id != proposal_b.proposal_id
+    assert proposal_a.proposal_id == uuid5(
+        NAMESPACE_URL, f"case-capability-proposal:{tenant_a}:{command_id}"
+    )
+
+    gap = ReportCapabilityGapRequest(
+        command_id=command_id,
+        idempotency_key=uuid4(),
+        assignment_id=uuid4(),
+        requirement_id=uuid4(),
+        gap_kind="MISSING",
+        severity="IMPORTANT",
+        reason="Synthetic reason",
+        recommended_action="Review source",
+    )
+    gap_a = gap.to_command(case_id=case_id, tenant_id=tenant_a)
+    gap_retry = gap.to_command(case_id=case_id, tenant_id=tenant_a)
+    gap_b = gap.to_command(case_id=case_id, tenant_id=tenant_b)
+    assert gap_a.gap_id == gap_retry.gap_id
+    assert gap_a.gap_id != gap_b.gap_id
+    assert gap_a.gap_id == uuid5(NAMESPACE_URL, f"case-capability-gap:{tenant_a}:{command_id}")
+
+
+def test_capability_candidates_resolves_case_assignment_and_uses_closed_projection() -> None:
+    service = _CapabilityService()
+    case_id = uuid4()
+    client = _client(service=service, raise_server_exceptions=True)
+
+    response = client.get(
+        f"/api/v1/collaborator/cases/{case_id}/capability-candidates",
+        headers=_headers(),
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.headers["Cache-Control"] == "no-store"
+    assert set(response.json()[0]) == {
+        "capability_id",
+        "capability_kind",
+        "name",
+        "version_id",
+        "version_number",
+        "title",
+        "valid_from",
+        "valid_until",
+        "validity_state",
+        "source_evidence_state",
+        "evaluated_at",
+    }
+    assert "assignment_id" not in response.json()[0]
+    assert service.candidate_calls == 1
+    assert service.candidate_kwargs is not None
+    assert service.candidate_kwargs["case_id"] == case_id

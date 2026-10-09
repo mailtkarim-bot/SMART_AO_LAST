@@ -14,6 +14,7 @@ const observation: BoampObservation = {
   department_codes: ["59"],
   market_types: ["TRAVAUX"],
   source_status: "EN_COURS",
+  source_captures: [],
   score_version: "BOAMP_PUBLIC_V1",
   score: 82,
   score_explanation: {
@@ -126,6 +127,51 @@ describe("BoampOpportunityPanel", () => {
     expect(onSelect).toHaveBeenCalledWith("observation-1");
     expect(onQualify).toHaveBeenCalledOnce();
     expect(onCreateCase).toHaveBeenCalledOnce();
+  });
+
+  it("labels each source run without presenting replay as live", () => {
+    const captured = {
+      ...observation,
+      source_captures: [
+        {
+          ingestion_run_id: "run-live",
+          source_mode: "LIVE" as const,
+          run_recorded_at: "2026-08-23T12:00:00Z",
+          source_contract_version: "BOAMP_EXPLORE_V2_1_ALLOWLIST_V1",
+          source_response_sha256: "a".repeat(64),
+        },
+        {
+          ingestion_run_id: "run-replay",
+          source_mode: "REPLAY" as const,
+          run_recorded_at: "2026-08-23T12:01:00Z",
+          source_contract_version: "BOAMP_EXPLORE_V2_1_ALLOWLIST_V1",
+          source_response_sha256: "b".repeat(64),
+        },
+      ],
+    };
+    renderPanel({
+      observations: [captured],
+      selectedObservationId: captured.observation_id,
+      sourceStatus: {
+        source: "BOAMP",
+        state: "UNAVAILABLE",
+        checked_at: "2026-08-23T12:02:00Z",
+        last_success_at: null,
+        retryable: true,
+        manual_entry_available: true,
+      },
+      onManualEntry: vi.fn(),
+    });
+
+    expect(screen.getByText("Captures de source (2)")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Captures de source (2)"));
+    expect(screen.getByText("LIVE")).toBeInTheDocument();
+    expect(screen.getByText("REPLAY · Rejeu synthétique")).toBeInTheDocument();
+    const captureDetails = screen.getByText("Captures de source (2)").closest("details");
+    expect(captureDetails).toHaveTextContent("Run enregistré le");
+    expect(captureDetails).toHaveTextContent("12:00 UTC");
+    expect(screen.getByText("a".repeat(64))).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Saisie manuelle" })).toBeInTheDocument();
   });
 
   it("keeps the score separate from an explicit P0 decision", () => {

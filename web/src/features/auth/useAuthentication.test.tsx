@@ -9,6 +9,26 @@ describe("useAuthentication", () => {
     document.cookie = "smart_ao_csrf=; Max-Age=0; path=/";
   });
 
+  it("changes session generation on login but preserves it during automatic token renewal", async () => {
+    document.cookie = "smart_ao_csrf=fixture-csrf; path=/";
+    const actor = { actor_id: "actor-1", identity_id: "identity-1", tenant_slug: "tenant-a", actor_kind: "PATRON_ADMIN", membership_state: "ACTIVE", mfa_verified: true, operational_profile: null };
+    const response = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
+    const access = (token: string) => ({ access_token: token, token_type: "Bearer", expires_in: 900 });
+    const fetchMock = vi.fn().mockResolvedValueOnce(response(access("restored"))).mockResolvedValueOnce(response(actor));
+    vi.stubGlobal("fetch", fetchMock);
+    const { result } = renderHook(() => useAuthentication("https://app.example.test"));
+    await waitFor(() => expect(result.current.isRestoring).toBe(false));
+    const generation = result.current.sessionGeneration;
+    expect(generation).toBeGreaterThan(0);
+    fetchMock.mockResolvedValueOnce(response({ detail: "UNAUTHENTICATED" }, 401)).mockResolvedValueOnce(response(access("renewed"))).mockResolvedValueOnce(response([]));
+    await act(async () => { await result.current.api.listAssignedCases(); });
+    expect(result.current.accessToken).toBe("renewed");
+    expect(result.current.sessionGeneration).toBe(generation);
+    fetchMock.mockResolvedValueOnce(response(access("new-login"))).mockResolvedValueOnce(response(actor));
+    await act(async () => { await result.current.login({ email: "fixture@example.test", password: "fixture-password", tenant_id: "tenant-a" }); }); // pragma: allowlist secret -- synthetic login fixture, no real credential
+    expect(result.current.sessionGeneration).toBeGreaterThan(generation);
+  });
+
   it("stores the access token only in memory and exposes the server actor after login", async () => {
     const fetchMock = vi
       .fn()

@@ -7,6 +7,52 @@ describe("api client response parsing", () => {
     vi.unstubAllGlobals();
   });
 
+  it("retries a capability proposal with the same human intent and exact candidate version", async () => {
+    const input = {
+      command_id: "command-1",
+      idempotency_key: "retry-1",
+      correlation_id: "correlation-1",
+      capability_id: "capability-1",
+      capability_version_id: "version-2",
+      requirement_id: "requirement-current",
+      justification: "Je propose cette version pour répondre à cette exigence.",
+    };
+    const receipt = { status: "SUCCEEDED", command_id: input.command_id, idempotency_key: input.idempotency_key, result_code: "CAPABILITY_PROPOSED_FOR_CASE", aggregate_refs: [], event_ids: ["event-1"], replayed: true };
+    const fetchMock = vi.fn()
+      .mockRejectedValueOnce(new TypeError("connection lost"))
+      .mockResolvedValueOnce(new Response(JSON.stringify(receipt), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const api = createApiClient("http://local.test", "synthetic-token");
+
+    await expect(api.proposeCapability("case/1", input)).rejects.toThrow("connection lost");
+    await expect(api.proposeCapability("case/1", input)).resolves.toEqual(receipt);
+
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      "http://local.test/api/v1/collaborator/cases/case%2F1/capability-proposals",
+      "http://local.test/api/v1/collaborator/cases/case%2F1/capability-proposals",
+    ]);
+    expect(fetchMock.mock.calls[0]?.[1]?.method).toBe("POST");
+    expect(fetchMock.mock.calls[0]?.[1]?.body).toBe(fetchMock.mock.calls[1]?.[1]?.body);
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual(input);
+    expect(String(fetchMock.mock.calls[0]?.[1]?.body)).not.toMatch(/assignment_id|source_locator|proof_document|storage_key/i);
+  });
+
+  it.each(["selectPricingScenario", "archivePricingScenario"] as const)("%s keeps the exact version, reason and retry identities", async (method) => {
+    const input = { command_id: "command-1", idempotency_key: "retry-1", correlation_id: "correlation-1", transition_id: "transition-1", expected_version: 2, reason_code: "HUMAN_REVIEW", tenant_id: "must-not-be-sent", target_state: "must-not-be-sent" };
+    const receipt = { status: "SUCCEEDED", command_id: input.command_id, idempotency_key: input.idempotency_key, result_code: "PRICING_SCENARIO_TRANSITIONED", scenario_id: "scenario/1", version: 3, event_ids: ["event-1"], replayed: false };
+    const fetchMock = vi.fn().mockResolvedValueOnce(new Response(JSON.stringify({ detail: "VERSION_CONFLICT" }), { status: 409 })).mockResolvedValueOnce(new Response(JSON.stringify(receipt), { status: 201 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const api = createApiClient("http://local.test", "synthetic-token");
+    expect(fetchMock).not.toHaveBeenCalled();
+    await expect(api[method]("case/1", "scenario/1", input)).rejects.toMatchObject({ status: 409, detail: "VERSION_CONFLICT" });
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(await api[method]("case/1", "scenario/1", input)).toEqual(receipt);
+    const suffix = method === "selectPricingScenario" ? "selection" : "archive";
+    expect(fetchMock.mock.calls[0][0]).toBe(`http://local.test/api/v1/patron/cases/case%2F1/pricing-scenarios/scenario%2F1/${suffix}`);
+    expect(fetchMock.mock.calls[0][1].body).toBe(fetchMock.mock.calls[1][1].body);
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ command_id: input.command_id, idempotency_key: input.idempotency_key, correlation_id: input.correlation_id, transition_id: input.transition_id, expected_version: 2, reason_code: "HUMAN_REVIEW" });
+  });
+
   it("maps a non-JSON error response to the generic status message", async () => {
     vi.stubGlobal(
       "fetch",
@@ -21,6 +67,147 @@ describe("api client response parsing", () => {
     await expect(
       createApiClient("https://app.example.test", "token").listAssignedCases(),
     ).rejects.toThrow("La requête a échoué (502).");
+  });
+});
+
+describe("C08 stable financial transport", () => {
+  afterEach(() => vi.unstubAllGlobals());
+  it("creates a scenario with exact integer inputs and identical command identities on replay", async () => {
+    const input = { command_id: "command-1", idempotency_key: "retry-1", correlation_id: "correlation-1", scenario_id: "scenario-1", source_snapshot_id: "source-1", scenario_key: "Prudent local", scenario_type: "PRUDENT" as const, sales_adjustment_bps: -100, cost_adjustment_bps: 200, penalty_reserve_minor: 0, retention_reserve_minor: 100, guarantee_reserve_minor: 300, floor_margin_rate_bps: 0, target_margin_rate_bps: 1000, assumptions: { note: "Hypothèses synthétiques", sales_adjustment_bps: -100, cost_adjustment_bps: 200 } };
+    const receipt = { status: "SUCCEEDED", command_id: input.command_id, idempotency_key: input.idempotency_key, result_code: "PRICING_SCENARIO_CREATED", scenario_id: input.scenario_id, version: 1, event_ids: ["event-1"], replayed: false };
+    const fetchMock = vi.fn().mockImplementation(async () => new Response(JSON.stringify(receipt), { status: 201 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const api = createApiClient("https://app.example.test", "token");
+    expect(await api.createPricingScenario("case/1", input)).toEqual(receipt);
+    await api.createPricingScenario("case/1", input);
+    expect(fetchMock.mock.calls[0][0]).toBe("https://app.example.test/api/v1/patron/cases/case%2F1/pricing-scenarios");
+    expect(fetchMock.mock.calls[0][1].body).toBe(fetchMock.mock.calls[1][1].body);
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual(input);
+  });
+
+  it.each([403, 404, 409])("preserves a publication refusal or conflict (%s) without returning success", async (status) => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ detail: "SYNTHETIC_REFUSAL" }), { status })));
+    await expect(createApiClient("https://app.example.test", "token").publishFinancialReport("case-1", "report-1", {
+      command_id: "command-1", idempotency_key: "retry-1", correlation_id: "correlation-1", expected_revision: 2,
+    })).rejects.toMatchObject({ status, detail: "SYNTHETIC_REFUSAL" });
+  });
+
+  it("does not fabricate a publication receipt or retry after a transport failure", async () => {
+    const fetchMock = vi.fn().mockRejectedValue(new TypeError("Synthetic network failure"));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(createApiClient("https://app.example.test", "token").publishFinancialReport("case-1", "report-1", {
+      command_id: "command-1", idempotency_key: "retry-1", correlation_id: "correlation-1", expected_revision: 2,
+    })).rejects.toThrow("Synthetic network failure");
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
+  it("publishes with stable identities and reads the exact published source without qualifying UNKNOWN", async () => {
+    const identity = { command_id: "command-1", idempotency_key: "retry-1", correlation_id: "correlation-1", expected_revision: 0 };
+    const receipt = { status: "SUCCEEDED", command_id: identity.command_id, idempotency_key: identity.idempotency_key, result_code: "FINANCIAL_REPORT_PUBLISHED", aggregate_refs: [{ aggregate_type: "FinancialReportSnapshot", aggregate_id: "report/1", aggregate_revision: 1 }], event_ids: ["event-1"], replayed: false };
+    const source = { report_id: "report/1", case_id: "case/1", status: "PUBLISHED", aggregate_revision: 1, currency_code: "EUR", calculated_at: "2026-10-07T10:00:00Z", ruleset_version: 1, summary: {}, lines: [], margin_calculation: { state: "UNKNOWN", basis: "DECLARED_BASE_CATEGORIES", missing_categories: ["SALES"], basis_line_ids: [], total_cost_minor: null, gross_margin_minor: null, gross_margin_rate_bps: null, unknown_reason: "MISSING_BASE_CATEGORY", rate_unknown_reason: null } };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify(receipt), { status: 201 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ...receipt, replayed: true }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(source), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const api = createApiClient("https://app.example.test", "token");
+    expect(await api.publishFinancialReport("case/1", "report/1", identity)).toEqual(receipt);
+    expect((await api.publishFinancialReport("case/1", "report/1", identity)).replayed).toBe(true);
+    expect(await api.getPublishedFinancialReport("case/1", "report/1")).toEqual(source);
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      "https://app.example.test/api/v1/patron/cases/case%2F1/financial-reports/report%2F1/publications",
+      "https://app.example.test/api/v1/patron/cases/case%2F1/financial-reports/report%2F1/publications",
+      "https://app.example.test/api/v1/patron/cases/case%2F1/financial-reports/report%2F1",
+    ]);
+    expect(fetchMock.mock.calls[0][1].body).toBe(fetchMock.mock.calls[1][1].body);
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual(identity);
+  });
+
+  it("reads the immutable line comparison projection for the selected case", async () => {
+    const projection = { case_id: "case-1", comparisons: [] };
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(projection), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await createApiClient("https://app.example.test", "token").listPartnerOfferLineComparisons("case/1");
+
+    expect(result).toEqual(projection);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "https://app.example.test/api/v1/patron/cases/case%2F1/partner-offer-line-comparisons",
+    );
+  });
+
+  it("records a line comparison with the caller's stable intent and exact source references", async () => {
+    const receipt = { status: "SUCCEEDED", result_code: "PARTNER_OFFER_LINE_COMPARISON_RECORDED", aggregate_refs: [], event_ids: ["event-1"], replayed: false };
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(receipt), { status: 201 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const client = createApiClient("https://app.example.test", "token");
+    const input = {
+      command_id: "command-1",
+      idempotency_key: "retry-1",
+      correlation_id: "correlation-1",
+      record_id: "record-1",
+      comparison_id: "comparison-1",
+      scope_review_id: "review-1",
+      expected_revision: 0,
+      groups: [{
+        group_id: "group-1",
+        disposition: "NEEDS_CLARIFICATION" as const,
+        rationale: "Les désignations ne suffisent pas à conclure.",
+        members: [{
+          receipt_event_id: "receipt-a",
+          line_locator_state: "UNKNOWN" as const,
+          line_locator: null,
+          item_reference_state: "UNKNOWN" as const,
+          item_reference: null,
+          designation_state: "DECLARED" as const,
+          designation: "Réseau enterré",
+          unit_state: "UNKNOWN" as const,
+          unit: null,
+          quantity_state: "UNKNOWN" as const,
+          quantity: null,
+        }, {
+          receipt_event_id: "receipt-b",
+          line_locator_state: "UNKNOWN" as const,
+          line_locator: null,
+          item_reference_state: "UNKNOWN" as const,
+          item_reference: null,
+          designation_state: "UNKNOWN" as const,
+          designation: null,
+          unit_state: "UNKNOWN" as const,
+          unit: null,
+          quantity_state: "UNKNOWN" as const,
+          quantity: null,
+        }],
+      }],
+    };
+
+    await client.recordPartnerOfferLineComparison("case/1", input);
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "https://app.example.test/api/v1/patron/cases/case%2F1/partner-offer-line-comparisons",
+    );
+    expect((fetchMock.mock.calls[0]?.[1] as RequestInit).method).toBe("POST");
+    expect(JSON.parse(String((fetchMock.mock.calls[0]?.[1] as RequestInit).body))).toEqual(input);
+    expect(input).not.toHaveProperty("tenant_id");
+    expect(input).not.toHaveProperty("actor_id");
+  });
+
+  it("keeps supplied command identities byte-identical on retry", async () => {
+    const fetchMock = vi.fn().mockImplementation(async () => new Response(JSON.stringify({ status: "SUCCEEDED" }), { status: 201 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const api = createApiClient("https://app.example.test", "token-test");
+    const identity = { command_id: crypto.randomUUID(), idempotency_key: crypto.randomUUID(), correlation_id: crypto.randomUUID() };
+    await api.createDraft("case/a", identity);
+    await api.createDraft("case/a", identity);
+    const input = { ...identity, category: "DIRECT_COST" as const, label: "Zéro déclaré", quantity_decimal: "1", unit: "forfait", amount_minor: 0, expected_revision: 2 };
+    await api.addLine("case/a", "report/1", input);
+    await api.addLine("case/a", "report/1", input);
+    expect(fetchMock.mock.calls[0][1].body).toBe(fetchMock.mock.calls[1][1].body);
+    expect(fetchMock.mock.calls[2][1].body).toBe(fetchMock.mock.calls[3][1].body);
+    expect(JSON.parse(fetchMock.mock.calls[2][1].body)).toMatchObject(identity);
+    expect(fetchMock.mock.calls[2][0]).toBe("https://app.example.test/api/v1/patron/cases/case%2Fa/financial-reports/report%2F1/lines");
   });
 });
 
@@ -436,6 +623,7 @@ describe("Preparation review transport", () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ package_id: "package-1", reviews: [] }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ package_id: "package-1", drafts: [] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ package_id: "package-1", deliveries: [] }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ result_code: "PREPARATION_REVIEW_REQUESTED" }), { status: 201 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ result_code: "PREPARATION_REVIEW_DECIDED" }), { status: 201 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ result_code: "PREPARATION_CORRECTION_ADDED" }), { status: 201 }));
@@ -444,6 +632,7 @@ describe("Preparation review transport", () => {
 
     await client.listPreparationReviews("package/1");
     await client.listPreparationResponseDrafts("package/1");
+    await client.listPreparationTransmissions("package/1");
     await client.requestPreparationReview("package/1", {
       expected_package_revision: 3,
       target_document_id: "document-1",
@@ -466,11 +655,12 @@ describe("Preparation review transport", () => {
     expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
       "https://app.example.test/api/v1/preparation/package%2F1/reviews",
       "https://app.example.test/api/v1/preparation/package%2F1/response-drafts",
+      "https://app.example.test/api/v1/preparation/package%2F1/transmissions",
       "https://app.example.test/api/v1/preparation/package%2F1/reviews",
       "https://app.example.test/api/v1/preparation/package%2F1/reviews/review%2F1/decision",
       "https://app.example.test/api/v1/preparation/package%2F1/reviews/review%2F1/corrections",
     ]);
-    const decisionBody = JSON.parse(String((fetchMock.mock.calls[3]?.[1] as RequestInit).body)) as Record<string, unknown>;
+    const decisionBody = JSON.parse(String((fetchMock.mock.calls[4]?.[1] as RequestInit).body)) as Record<string, unknown>;
     expect(decisionBody).toMatchObject({ expected_review_revision: 1, decision_code: "ACCEPTED", command_id: expect.any(String) });
   });
 });
@@ -505,6 +695,53 @@ describe("MFA TOTP transport", () => {
     for (const [, init] of fetchMock.mock.calls) {
       expect(((init as RequestInit).headers as Headers).get("X-CSRF-Token")).toBe("csrf-1");
     }
+  });
+});
+
+describe("Preparation snapshot transport", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("reuses caller-owned command IDs for snapshot and transmission retries", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ result_code: "PREPARATION_SNAPSHOT_CREATED" }), { status: 201 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ result_code: "PREPARATION_TRANSMITTED_TO_PATRON" }), { status: 201 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const client = createApiClient("https://app.example.test", "access-1");
+    await client.createPreparationSnapshot("package/1", {
+      snapshot_id: "snapshot-1",
+      expected_package_revision: 4,
+      command_id: "snapshot-command",
+      idempotency_key: "snapshot-key",
+      correlation_id: "snapshot-correlation",
+    });
+    await client.transmitPreparationSnapshot("package/1", {
+      snapshot_id: "snapshot-1",
+      transmission_id: "transmission-1",
+      expected_package_revision: 5,
+      command_id: "transmission-command",
+      idempotency_key: "transmission-key",
+      correlation_id: "transmission-correlation",
+    });
+
+    const snapshotBody = JSON.parse(String((fetchMock.mock.calls[0]?.[1] as RequestInit).body)) as Record<string, unknown>;
+    const transmissionBody = JSON.parse(String((fetchMock.mock.calls[1]?.[1] as RequestInit).body)) as Record<string, unknown>;
+    expect(snapshotBody).toMatchObject({
+      command_id: "snapshot-command",
+      idempotency_key: "snapshot-key",
+      correlation_id: "snapshot-correlation",
+      snapshot_id: "snapshot-1",
+      expected_package_revision: 4,
+    });
+    expect(transmissionBody).toMatchObject({
+      command_id: "transmission-command",
+      idempotency_key: "transmission-key",
+      correlation_id: "transmission-correlation",
+      snapshot_id: "snapshot-1",
+      transmission_id: "transmission-1",
+      expected_package_revision: 5,
+    });
   });
 });
 
@@ -1060,5 +1297,116 @@ describe("DCE opening transport", () => {
     const headers = new Headers(request.headers);
     expect(headers.get("Idempotency-Key")).toBe("idempotency-prepare-1");
     expect(headers.get("Content-Type")).not.toBe("application/json");
+  });
+});
+
+
+describe("Collaborator documentary assessments", () => {
+  afterEach(() => vi.unstubAllGlobals());
+  it("reads the encoded Case without choosing an assignment or sending a write", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({proposals: [], gaps: []}), {status: 200}));
+    vi.stubGlobal("fetch", fetchMock);
+    expect(await createApiClient("https://app.example.test", "token").getCapabilityAssessments("case/1")).toEqual({proposals: [], gaps: []});
+    expect(fetchMock.mock.calls[0][0]).toBe("https://app.example.test/api/v1/collaborator/cases/case%2F1/capability-assessments");
+    expect(fetchMock.mock.calls[0][1].body).toBeUndefined();
+  });
+});
+
+describe("Collaborator capability candidate transport", () => {
+  afterEach(() => vi.unstubAllGlobals());
+  it("reads the case-scoped allowlisted candidate list without adding client scope", async () => {
+    const candidates = [{
+      capability_id: "capability-id", capability_kind: "EQUIPMENT", name: "Synthetic equipment",
+      version_id: "version-id", version_number: 2, title: "Synthetic version",
+      valid_from: "2026-10-01T00:00:00Z", valid_until: null, validity_state: "CURRENT",
+      source_evidence_state: "UNKNOWN", evaluated_at: "2026-10-08T09:00:00Z",
+    }];
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(candidates), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const api = createApiClient("https://app.example.test", "token");
+    expect(await api.getCapabilityCandidates("case/1")).toEqual(candidates);
+    expect(fetchMock.mock.calls[0][0]).toBe("https://app.example.test/api/v1/collaborator/cases/case%2F1/capability-candidates");
+    expect(fetchMock.mock.calls[0][1].body).toBeUndefined();
+  });
+});
+
+describe("C10 response-plan transport", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("reads the plan projection from the package-scoped route", async () => {
+    const projection = {
+      package_id: "package-1",
+      plans: [{
+        plan_id: "plan-1",
+        version: 2,
+        package_id: "package-1",
+        dce_version_id: "dce-1",
+        state: "UNKNOWN",
+        plan_sha256: "a".repeat(64),
+        content: {
+          schema_version: 1,
+          case_id: "case-1",
+          package_id: "package-1",
+          dce_version_id: "dce-1",
+          items: [{ requirement_id: "requirement-1", requirement_state: "CONFIRMED", section_code: "METHOD", source_proposal_id: null, source_capability_version_id: null, source_validity_state: "UNKNOWN", source_evidence_state: "UNKNOWN" }],
+        },
+      }],
+    };
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(projection), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const api = createApiClient("https://app.example.test", "token");
+
+    await expect(api.getPreparationResponsePlans("package/1")).resolves.toEqual(projection);
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("https://app.example.test/api/v1/preparation/package%2F1/response-plans");
+    expect(fetchMock.mock.calls[0]?.[1].body).toBeUndefined();
+  });
+
+  it("replays a response-plan command with the exact same identity and item mapping", async () => {
+    const input = {
+      command_id: "command-1",
+      idempotency_key: "retry-1",
+      correlation_id: "correlation-1",
+      plan_id: "plan-1",
+      expected_package_revision: 7,
+      items: [{ requirement_id: "requirement-1", section_code: "METHOD" as const, source_proposal_id: "proposal-1" }],
+    };
+    const receipt = { status: "SUCCEEDED", command_id: input.command_id, idempotency_key: input.idempotency_key, result_code: "PREPARATION_RESPONSE_PLAN_CREATED", aggregate_refs: [], event_ids: [], replayed: false };
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify(receipt), { status: 201 })));
+    vi.stubGlobal("fetch", fetchMock);
+    const api = createApiClient("https://app.example.test", "token");
+
+    await expect(api.createPreparationResponsePlan("package/1", input)).resolves.toEqual(receipt);
+    await expect(api.createPreparationResponsePlan("package/1", input)).resolves.toEqual(receipt);
+
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      "https://app.example.test/api/v1/preparation/package%2F1/response-plans",
+      "https://app.example.test/api/v1/preparation/package%2F1/response-plans",
+    ]);
+    expect(fetchMock.mock.calls[0]?.[1].body).toBe(fetchMock.mock.calls[1]?.[1].body);
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1].body))).toEqual(input);
+  });
+
+  it("preserves caller-supplied draft identities across an unknown-result retry", async () => {
+    const input = {
+      command_id: "draft-command-1",
+      idempotency_key: "draft-retry-1",
+      correlation_id: "draft-correlation-1",
+      draft_id: "draft-1",
+      expected_package_revision: 8,
+      source_document_id: "document-1",
+      section_codes: ["METHOD"],
+      source_refs: ["proposal-1"],
+    };
+    const receipt = { status: "SUCCEEDED", command_id: input.command_id, idempotency_key: input.idempotency_key, result_code: "TECHNICAL_RESPONSE_DRAFT_CREATED", aggregate_refs: [], event_ids: [], replayed: false };
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify(receipt), { status: 201 })));
+    vi.stubGlobal("fetch", fetchMock);
+    const api = createApiClient("https://app.example.test", "token");
+
+    await expect(api.createTechnicalResponseDraft("package-1", input)).resolves.toEqual(receipt);
+    await expect(api.createTechnicalResponseDraft("package-1", input)).resolves.toEqual(receipt);
+
+    expect(fetchMock.mock.calls[0]?.[1].body).toBe(fetchMock.mock.calls[1]?.[1].body);
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1].body))).toMatchObject(input);
   });
 });

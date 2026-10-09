@@ -1,4 +1,4 @@
-"""DCE-RETENTION-01 deterministic worker for private staged-object deletion."""
+"""Deterministic DCE/C5 worker for private quarantine retention and cleanup."""
 
 from __future__ import annotations
 
@@ -16,6 +16,14 @@ from app.modules.dce.application.commands import ExpireDceStagedObjectCommand
 from app.modules.dce.application.handlers import ExpireDceStagedObjectHandler
 from app.modules.dce.infrastructure.models.dce_staging import DceStagedObjectRecord
 from app.modules.dce.infrastructure.quarantine import LocalQuarantineStorageAdapter
+from app.modules.pricing.application.case_contract_change import case_contract_change_handlers
+from app.modules.pricing.application.case_contract_change_commands import (
+    CASE_CONTRACT_CHANGE_EVIDENCE_RETENTION_TOPIC,
+    ExpireCaseContractChangeEvidenceUploadCommand,
+)
+from app.modules.pricing.infrastructure.models.case_contract_change import (
+    CaseContractChangeEvidenceObjectRecord,
+)
 from app.platform.events.dispatcher import CommandContext, CommandDispatcher, CommandExecutionError
 from app.platform.events.retry_policy import (
     DEFAULT_MAX_OUTBOX_ATTEMPTS,
@@ -50,7 +58,7 @@ class RetentionRunResult:
 
 
 class DceRetentionWorker:
-    """Expires abandoned staged objects then consumes deletion outbox messages safely."""
+    """Expires abandoned DCE/C5 uploads then consumes cleanup outbox messages safely."""
 
     def __init__(
         self,
@@ -72,10 +80,11 @@ class DceRetentionWorker:
         self._max_attempts = max_attempts
 
     async def run_once(self, *, now: datetime | None = None) -> RetentionRunResult:
-        """Run one deterministic sweep; safe to call concurrently or repeatedly."""
+        """Expire DCE/C5 uploads and consume their private-storage cleanup outboxes."""
 
         effective_now = now or datetime.now(tz=UTC)
         expired = self._expire_due_objects(now=effective_now)
+        expired += self._expire_due_c5_uploads(now=effective_now)
         claimed_message_ids = self._claim_due_messages(now=effective_now)
         result = RetentionRunResult(expired=expired)
         for message_id in claimed_message_ids:
@@ -120,6 +129,53 @@ class DceRetentionWorker:
             expired += 1
         return expired
 
+    def _expire_due_c5_uploads(self, *, now: datetime) -> int:
+        with self._session_factory.begin() as session:
+            candidates = list(
+                session.execute(
+                    sa.select(
+                        CaseContractChangeEvidenceObjectRecord.id,
+                        CaseContractChangeEvidenceObjectRecord.tenant_id,
+                        CaseContractChangeEvidenceObjectRecord.case_id,
+                        CaseContractChangeEvidenceObjectRecord.event_id,
+                        CaseContractChangeEvidenceObjectRecord.action_id,
+                    )
+                    .where(
+                        CaseContractChangeEvidenceObjectRecord.state.in_(
+                            ("AWAITING_UPLOAD", "UPLOADING")
+                        ),
+                        CaseContractChangeEvidenceObjectRecord.expires_at <= now,
+                    )
+                    .order_by(
+                        CaseContractChangeEvidenceObjectRecord.expires_at,
+                        CaseContractChangeEvidenceObjectRecord.id,
+                    )
+                    .limit(self._batch_size)
+                    .with_for_update(skip_locked=True)
+                ).all()
+            )
+
+        expired = 0
+        for evidence_id, tenant_id, case_id, event_id, action_id in candidates:
+            try:
+                result = self._dispatcher.dispatch(
+                    command=ExpireCaseContractChangeEvidenceUploadCommand(
+                        command_id=_command_id(evidence_id, "c5-expire"),
+                        idempotency_key=_command_id(evidence_id, "c5-expire-receipt"),
+                        correlation_id=evidence_id,
+                        case_id=case_id,
+                        event_id=event_id,
+                        action_id=action_id,
+                        evidence_object_id=evidence_id,
+                    ),
+                    context=_system_context(tenant_id=tenant_id, now=now),
+                )
+            except CommandExecutionError:
+                continue
+            if not result.replayed and result.result_code == "C5_EVIDENCE_UPLOAD_EXPIRED":
+                expired += 1
+        return expired
+
     def _claim_due_messages(self, *, now: datetime) -> list[UUID]:
         lease_until = now + timedelta(seconds=self._lease_seconds)
         with self._session_factory.begin() as session:
@@ -127,7 +183,9 @@ class DceRetentionWorker:
                 session.scalars(
                     sa.select(OutboxMessageRecord)
                     .where(
-                        OutboxMessageRecord.topic == RETENTION_TOPIC,
+                        OutboxMessageRecord.topic.in_(
+                            (RETENTION_TOPIC, CASE_CONTRACT_CHANGE_EVIDENCE_RETENTION_TOPIC)
+                        ),
                         OutboxMessageRecord.status.in_(("PENDING", "RETRY")),
                         sa.or_(
                             OutboxMessageRecord.next_attempt_at.is_(None),
@@ -147,33 +205,60 @@ class DceRetentionWorker:
     async def _process_message(self, *, message_id: UUID, now: datetime) -> RetentionRunResult:
         with self._session_factory() as session:
             message = session.get(OutboxMessageRecord, message_id)
-            if message is None or message.topic != RETENTION_TOPIC:
+            if message is None or message.topic not in {
+                RETENTION_TOPIC,
+                CASE_CONTRACT_CHANGE_EVIDENCE_RETENTION_TOPIC,
+            }:
                 return RetentionRunResult(skipped=1)
             payload_data = message.payload_json.get("data", {})
-            storage_object_id = _uuid_payload(payload_data, "storage_object_id")
             tenant_id = _uuid_payload(payload_data, "tenant_id")
-            if storage_object_id is None or tenant_id is None:
+            c5_evidence_id = (
+                _uuid_payload(payload_data, "evidence_object_id")
+                if message.topic == CASE_CONTRACT_CHANGE_EVIDENCE_RETENTION_TOPIC
+                else None
+            )
+            storage_object_id = (
+                _uuid_payload(payload_data, "storage_object_id")
+                if message.topic == RETENTION_TOPIC
+                else None
+            )
+            if tenant_id is None or (c5_evidence_id is None and storage_object_id is None):
                 return self._retry_message(
                     message_id=message_id,
                     now=now,
                     error_code="INVALID_RETENTION_PAYLOAD",
                 )
             with self._session_factory() as object_session:
-                staged_object = object_session.scalar(
-                    sa.select(DceStagedObjectRecord).where(
-                        DceStagedObjectRecord.id == storage_object_id,
-                        DceStagedObjectRecord.tenant_id == tenant_id,
+                if c5_evidence_id is not None:
+                    object_record = object_session.scalar(
+                        sa.select(CaseContractChangeEvidenceObjectRecord).where(
+                            CaseContractChangeEvidenceObjectRecord.id == c5_evidence_id,
+                            CaseContractChangeEvidenceObjectRecord.tenant_id == tenant_id,
+                        )
                     )
-                )
-                if staged_object is None:
-                    return self._publish_message(message_id=message_id, now=now)
-                state = staged_object.state
-                storage_key = staged_object.storage_key
+                    if object_record is None:
+                        return self._publish_message(message_id=message_id, now=now)
+                    if object_record.state != "REJECTED":
+                        return self._publish_message(message_id=message_id, now=now, skipped=True)
+                    storage_key = object_record.storage_key
+                else:
+                    staged_object = object_session.scalar(
+                        sa.select(DceStagedObjectRecord).where(
+                            DceStagedObjectRecord.id == storage_object_id,
+                            DceStagedObjectRecord.tenant_id == tenant_id,
+                        )
+                    )
+                    if staged_object is None:
+                        return self._publish_message(message_id=message_id, now=now)
+                    state = staged_object.state
+                    storage_key = staged_object.storage_key
 
-        if state not in _DELETABLE_STATES:
+        if c5_evidence_id is None and state not in _DELETABLE_STATES:
             return self._publish_message(message_id=message_id, now=now, skipped=True)
         try:
             await self._storage.delete(storage_key=storage_key)
+            if c5_evidence_id is not None:
+                await self._storage.delete_partials(storage_key=storage_key)
         except Exception:
             return self._retry_message(
                 message_id=message_id,
@@ -253,14 +338,17 @@ def _uuid_payload(payload: object, key: str) -> UUID | None:
 
 
 def build_default_worker() -> DceRetentionWorker:
-    """Build the VPS Docker worker; it has no HTTP listener and exposes no port."""
+    """Build the private-storage retention worker; no HTTP listener or exposed port."""
 
     database_url = os.environ["SMART_AO_DATABASE_URL"]
     engine = sa.create_engine(database_url)
     session_factory = sessionmaker(bind=engine, expire_on_commit=False)
     dispatcher = CommandDispatcher(
         session_factory=session_factory,
-        handlers={"ExpireDceStagedObject": ExpireDceStagedObjectHandler()},
+        handlers={
+            "ExpireDceStagedObject": ExpireDceStagedObjectHandler(),
+            **case_contract_change_handlers(),
+        },
     )
     storage = LocalQuarantineStorageAdapter(root=Path(os.environ["SMART_AO_DCE_QUARANTINE_ROOT"]))
     return DceRetentionWorker(

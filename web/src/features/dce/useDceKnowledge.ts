@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 
 import type { ApiClient } from "../../infrastructure/api";
@@ -11,31 +11,41 @@ export function useDceKnowledge(
   api: ApiClient,
   setMessage: SetMessage,
   selectedCaseId: string,
+  scopeKey = selectedCaseId,
 ) {
-  const [reading, setReading] = useState<CaseDceReading | null>(null);
+  const [readingEntry, setReadingEntry] = useState<{ key: string; value: CaseDceReading } | null>(null);
   const [results, setResults] = useState<KnowledgeSearchResult[]>([]);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [searching, setSearching] = useState(false);
+  const readingSequence = useRef(0);
+  const readingKey = scopeKey && selectedCaseId ? JSON.stringify([scopeKey, selectedCaseId]) : "";
+  const reading = readingKey && readingEntry?.key === readingKey ? readingEntry.value : null;
 
   async function loadReading(caseId = selectedCaseId) {
+    const request = ++readingSequence.current;
+    const key = scopeKey && caseId ? JSON.stringify([scopeKey, caseId]) : "";
     if (!caseId) {
-      setReading(null);
+      setReadingEntry(null);
       setResults([]);
+      setLoading(false);
       return;
     }
     setLoading(true);
     try {
-      setReading(await api.getCaseDceReading(caseId));
+      const value = await api.getCaseDceReading(caseId);
+      if (request === readingSequence.current) {
+        setReadingEntry(value.case_id === caseId ? { key, value } : null);
+      }
     } catch (error) {
-      setReading(null);
+      if (request === readingSequence.current) setReadingEntry(null);
       if ((error as { status?: number }).status === 404) return;
       setMessage({
         tone: "error",
         text: error instanceof Error ? error.message : "Impossible de charger la lecture DCE.",
       });
     } finally {
-      setLoading(false);
+      if (request === readingSequence.current) setLoading(false);
     }
   }
 

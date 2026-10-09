@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 
@@ -25,6 +26,20 @@ class OpportunityCandidate:
     department_codes: tuple[str, ...]
     market_types: tuple[str, ...]
     source_status: str | None
+    source_contract_version: str | None = None
+    source_response_sha256: str | None = None
+
+    def __post_init__(self) -> None:
+        if (self.source_contract_version is None) != (self.source_response_sha256 is None):
+            raise ValueError("BOAMP transport provenance must be complete")
+        if self.source_contract_version is not None and not re.fullmatch(
+            r"[A-Z0-9_]{1,64}", self.source_contract_version
+        ):
+            raise ValueError("BOAMP source contract version is invalid")
+        if self.source_response_sha256 is not None and not re.fullmatch(
+            r"[a-f0-9]{64}", self.source_response_sha256
+        ):
+            raise ValueError("BOAMP source response hash is invalid")
 
     def snapshot(self) -> dict[str, object]:
         return {
@@ -43,10 +58,28 @@ class OpportunityCandidate:
         }
 
     def fingerprint(self) -> str:
-        canonical = json.dumps(
-            self.snapshot(), ensure_ascii=True, sort_keys=True, separators=(",", ":")
+        return _sha256_canonical(self.snapshot())
+
+    def staging_snapshot(self) -> dict[str, object]:
+        return {
+            **self.snapshot(),
+            "source_contract_version": self.source_contract_version,
+            "source_response_sha256": self.source_response_sha256,
+        }
+
+    def transport_fingerprint(self) -> str:
+        return _sha256_canonical(
+            {
+                "candidate_fingerprint_sha256": self.fingerprint(),
+                "source_contract_version": self.source_contract_version,
+                "source_response_sha256": self.source_response_sha256,
+            }
         )
-        return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _sha256_canonical(value: dict[str, object]) -> str:
+    canonical = json.dumps(value, ensure_ascii=True, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 @dataclass(frozen=True, slots=True)
@@ -151,6 +184,8 @@ def _candidate_from_notice(notice: BoampNotice) -> OpportunityCandidate:
         department_codes=tuple(sorted({code.strip().upper() for code in notice.department_codes})),
         market_types=tuple(sorted({market.strip().upper() for market in notice.market_types})),
         source_status=" ".join(notice.status.split()) if notice.status else None,
+        source_contract_version=notice.source_contract_version,
+        source_response_sha256=notice.source_response_sha256,
     )
 
 

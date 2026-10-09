@@ -6,11 +6,15 @@ from datetime import datetime
 from uuid import UUID
 
 from app.modules.pricing.application.case_contract_change_commands import (
+    ExpireCaseContractChangeEvidenceUploadCommand,
+    PrepareCaseContractChangeEvidenceUploadCommand,
     RecordCaseContractChangeActionCommand,
+    RecordCaseContractChangeActionExecutionCommand,
     RecordCaseContractChangeActionImpactRelationCommand,
     RecordCaseContractChangeApplicabilityCommand,
     RecordCaseContractChangeEngagementLinkCommand,
     RecordCaseContractChangeEventCommand,
+    RecordCaseContractChangeExternalConfirmationCommand,
     RecordCaseContractChangeImpactDeclarationCommand,
 )
 from app.modules.pricing.application.case_contract_change_handler import (
@@ -46,11 +50,7 @@ class CaseContractChangeService:
         self._policy = policy
 
     def record(self, *, actor: ActorContext, command, now: datetime):
-        if actor.actor_kind is not ActorKind.PATRON_ADMIN or actor.membership_id is None:
-            raise PermissionError("PATRON_REQUIRED")
-        self._authorize(
-            actor=actor, case_id=command.case_id, action=Capability.PATRON_ACTION_WRITE, now=now
-        )
+        self.authorize_case_write(actor=actor, case_id=command.case_id, now=now)
         return self._dispatcher.dispatch(
             command=command,
             context=CommandContext(
@@ -64,6 +64,13 @@ class CaseContractChangeService:
                 case_id=command.case_id,
                 correlation_id=command.correlation_id,
             ),
+        )
+
+    def authorize_case_write(self, *, actor: ActorContext, case_id: UUID, now: datetime) -> None:
+        if actor.actor_kind is not ActorKind.PATRON_ADMIN or actor.membership_id is None:
+            raise PermissionError("PATRON_REQUIRED")
+        self._authorize(
+            actor=actor, case_id=case_id, action=Capability.PATRON_ACTION_WRITE, now=now
         )
 
     def list_for_case(
@@ -102,6 +109,10 @@ def case_contract_change_handlers() -> dict[str, CommandHandler]:
         RecordCaseContractChangeApplicabilityCommand.command_type: handler,
         RecordCaseContractChangeActionCommand.command_type: handler,
         RecordCaseContractChangeActionImpactRelationCommand.command_type: handler,
+        RecordCaseContractChangeActionExecutionCommand.command_type: handler,
+        ExpireCaseContractChangeEvidenceUploadCommand.command_type: handler,
+        PrepareCaseContractChangeEvidenceUploadCommand.command_type: handler,
+        RecordCaseContractChangeExternalConfirmationCommand.command_type: handler,
         RecordCaseContractChangeEngagementLinkCommand.command_type: handler,
         RecordCaseContractChangeImpactDeclarationCommand.command_type: handler,
     }

@@ -54,6 +54,8 @@ class DeclarePartnerOfferPriceHandler(CommandHandler):
         if (
             session.scalar(
                 sa.select(PartnerOfferPriceDeclarationRecord.id).where(
+                    PartnerOfferPriceDeclarationRecord.tenant_id == tenant_id,
+                    PartnerOfferPriceDeclarationRecord.case_id == command.case_id,
                     PartnerOfferPriceDeclarationRecord.id == command.declaration_id,
                 )
             )

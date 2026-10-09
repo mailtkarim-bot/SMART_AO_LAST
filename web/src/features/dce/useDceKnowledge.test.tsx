@@ -68,6 +68,16 @@ describe("useDceKnowledge", () => {
     expect(hook.current.reading?.counters.pending_human_confirmation).toBe(1);
   });
 
+  it("masks a DCE reading immediately after the authenticated scope changes", async () => {
+    const api = { getCaseDceReading: vi.fn().mockResolvedValue(reading), searchCaseKnowledge: vi.fn() } satisfies DceApi;
+    const setMessage = vi.fn() as unknown as Dispatch<SetStateAction<HookMessage | null>>;
+    const { result, rerender } = renderHook(({ scope }) => useDceKnowledge(api as unknown as ApiClient, setMessage, "case-1", scope), { initialProps: { scope: "tenant-a:session-a" } });
+    await act(async () => { await result.current.loadReading(); });
+    expect(result.current.reading?.case_id).toBe("case-1");
+    rerender({ scope: "tenant-b:session-b" });
+    expect(result.current.reading).toBeNull();
+  });
+
   it("searches the selected case and keeps the top-k bound", async () => {
     const api = {
       getCaseDceReading: vi.fn(),

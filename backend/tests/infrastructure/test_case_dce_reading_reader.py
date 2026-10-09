@@ -8,6 +8,11 @@ from app.modules.dce.application.queries import (
     CaseDceReadingAvailability,
     CaseDceReadingRequirementProjection,
 )
+from app.modules.dce.application.source_anchor_projection import (
+    DceSourceAnchorProjection,
+    DceSourceLocator,
+    DceSourceLocatorKind,
+)
 from app.modules.dce.infrastructure.case_dce_reading_reader import (
     SqlAlchemyCaseDceReadingReader,
     _positive_int,
@@ -74,6 +79,59 @@ def test_safe_document_family_exposes_only_closed_vocabulary(classification, exp
 )
 def test_source_locator_label_is_bounded_and_human_readable(locator, family, expected):
     assert _source_locator_label(document_family=family, locator_json=locator) == expected
+
+
+def test_case_reader_attaches_source_anchor_without_changing_legacy_locator_label(monkeypatch):
+    from app.modules.dce.infrastructure import case_dce_reading_reader as module
+
+    tenant_id, fragment_id = uuid4(), uuid4()
+    anchor = DceSourceAnchorProjection(
+        source_anchor_id=fragment_id,
+        dce_version_id=uuid4(),
+        dce_document_id=uuid4(),
+        extraction_id=uuid4(),
+        fragment_ordinal=1,
+        source_sha256="a" * 64,
+        extractor_id="smart-ao-native",
+        extractor_version="2",
+        fragment_sha256="b" * 64,
+        locator=DceSourceLocator(
+            kind=DceSourceLocatorKind.PDF_PAGE,
+            coordinates={"page": 2, "part": 1},
+        ),
+    )
+    row = SimpleNamespace(
+        id=uuid4(),
+        requirement_type="ADMINISTRATIVE",
+        directive_signal="REQUIRED",
+        uncertainty_status="TO_CONFIRM",
+        outcome=None,
+        revision=None,
+        classification="CCTP",
+        locator_json={"kind": "pdf_page", "page": 2},
+        source_fragment_id=fragment_id,
+    )
+
+    class Session:
+        def execute(self, _statement):
+            return SimpleNamespace(all=lambda: [row])
+
+    def get_many(self, *, session, tenant_id, fragment_ids, dce_version_id):
+        assert isinstance(session, Session)
+        assert tenant_id == tenant_id_expected
+        assert tuple(fragment_ids) == (fragment_id,)
+        assert dce_version_id == anchor.dce_version_id
+        return {fragment_id: anchor}
+
+    tenant_id_expected = tenant_id
+    monkeypatch.setattr(module.SqlAlchemyDceSourceAnchorReader, "get_many", get_many)
+    projection = module.SqlAlchemyCaseDceReadingReader(Session())._read_requirements(
+        tenant_id=tenant_id,
+        dce_version_id=anchor.dce_version_id,
+    )[0]
+
+    assert projection.source_locator_label == "CCTP · page 2"
+    assert projection.source_anchor == anchor
 
 
 @pytest.mark.parametrize("value", [1, 10, 999])

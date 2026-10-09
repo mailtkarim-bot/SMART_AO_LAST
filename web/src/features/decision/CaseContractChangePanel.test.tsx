@@ -63,6 +63,8 @@ test("keeps a sourced change UNKNOWN until Patron applicability, then records ac
         engagement_linkage_history: [],
         impact_declarations: [],
         action_impact_relations: [],
+        action_execution_acts: [],
+        evidence_objects: [],
       }];
       return { result_code: "CASE_CONTRACT_CHANGE_EVENT_RECORDED" };
     }),
@@ -227,6 +229,8 @@ test("shows the frozen A1 sources and records the Patron selection for a C1 even
     engagement_linkage_history: [],
     impact_declarations: [],
     action_impact_relations: [],
+    action_execution_acts: [],
+    evidence_objects: [],
   };
   const api = {
     listCaseHandoverSnapshots: vi.fn().mockResolvedValue({ case_id: "case-1", items: [handover] }),
@@ -307,6 +311,8 @@ test("records a human C3 impact on the current C2 source without calculation", a
     }],
     impact_declarations: [],
     action_impact_relations: [],
+    action_execution_acts: [],
+    evidence_objects: [],
   };
   const api = {
     listCaseHandoverSnapshots: vi.fn().mockResolvedValue({ case_id: "case-1", items: [handover] }),
@@ -396,7 +402,7 @@ test("links a recorded C1 action to an exact current C3 act without marking it e
     }],
     a1_engagements_state: "UNKNOWN", a1_engagements: [],
     engagement_linkage_state: "LINKED", engagement_linkage_history: [],
-    impact_declarations: [c3], action_impact_relations: [],
+    impact_declarations: [c3], action_impact_relations: [], action_execution_acts: [], evidence_objects: [],
   };
   const api = {
     listCaseHandoverSnapshots: vi.fn().mockResolvedValue({ case_id: "case-1", items: [handover] }),
@@ -423,5 +429,77 @@ test("links a recorded C1 action to an exact current C3 act without marking it e
   ));
   expect(screen.getByText(/état RECORDED/)).toBeInTheDocument();
   expect(screen.getByText(/ne prouve ni son exécution ni sa clôture/)).toBeInTheDocument();
+  vi.unstubAllGlobals();
+});
+
+test("records a C5 declaration against the exact C4 relation and keeps evidence and confirmation unknown", async () => {
+  vi.stubGlobal("crypto", { randomUUID: vi.fn(() => "c5-id") });
+  const event: CaseContractChangeEvent = {
+    event_id: "os-1", case_id: "case-1", handover_snapshot_id: "handover-1",
+    outcome_id: "won-1", lot_reference: "01", offer_package_id: "p5-1",
+    offer_package_version: 2, offer_manifest_sha256: "a".repeat(64), offer_source_locator: null,
+    change_kind: "ORDER_OF_SERVICE", issuer: "MOA", summary: "OS 14", scope_note: "Périmètre",
+    source_refs: ["os://14"], evidence_refs: ["document://os/14"],
+    declared_received_at: "2026-10-03T10:00:00Z", declared_instrument: null,
+    applicability_state: "APPLICABLE_TO_HANDOVER",
+    applicability_history: [],
+    actions: [{ action_id: "action-1", revision: 1, applicability_review_id: "review-1",
+      summary: "Vérifier le chiffrage", evidence_refs: ["devis://a"], due_at: null,
+      due_date_absence_reason: "Échéance inconnue.", state: "RECORDED",
+      recorded_at: "2026-10-03T10:00:00Z" }],
+    a1_engagements_state: "UNKNOWN", a1_engagements: [],
+    engagement_linkage_state: "UNKNOWN", engagement_linkage_history: [],
+    impact_declarations: [],
+    action_impact_relations: [{ relation_id: "c4-exact", action_id: "action-1",
+      applicability_review_id: "review-1", revision: 1, state: "UNKNOWN", declaration_ids: [],
+      rationale: "Lien à clarifier.", unknown_reason: "Impact non établi.",
+      projection_state: "CURRENT", recorded_at: "2026-10-03T10:00:00Z" }],
+    action_execution_acts: [],
+    evidence_objects: [],
+  };
+  const api = {
+    listCaseHandoverSnapshots: vi.fn().mockResolvedValue({ case_id: "case-1", items: [handover] }),
+    listCaseContractChangeEvents: vi.fn().mockResolvedValue({ case_id: "case-1", events: [event] }),
+    prepareCaseContractChangeEvidenceUpload: vi.fn().mockResolvedValue({ state: "AWAITING_UPLOAD" }),
+    uploadCaseContractChangeEvidence: vi.fn().mockResolvedValue({ state: "CLEAN", sha256: "d".repeat(64) }),
+    recordCaseContractChangeActionExecution: vi.fn(async () => ({
+      result_code: "CASE_CONTRACT_CHANGE_ACTION_EXECUTION_DECLARED",
+    })),
+  } as unknown as ApiClient;
+  render(<CaseContractChangePanel api={api} caseId="case-1" versions={[]} />);
+
+  expect(await screen.findByText(/Aucune action, notification ou transmission n’est déclenchée/)).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText("Réalisation déclarée C5 action-1"), {
+    target: { value: "DECLARED_PARTIAL" },
+  });
+  fireEvent.change(screen.getByLabelText("Résumé de la déclaration"), {
+    target: { value: "Une partie a été réalisée." },
+  });
+  fireEvent.change(screen.getByLabelText("Références de pièce déclarées (une par ligne, non vérifiées)"), {
+    target: { value: "document://report/123" },
+  });
+  fireEvent.change(screen.getByLabelText("Ou joindre une nouvelle pièce d’exécution"), {
+    target: { files: [new File(["%PDF-1.7 local test"], "execution.pdf", { type: "application/pdf" })] },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Enregistrer l’acte C5" }));
+
+  await waitFor(() => expect(api.recordCaseContractChangeActionExecution).toHaveBeenCalledWith(
+    "case-1", "os-1", "action-1", expect.objectContaining({
+      c4_relation_id: "c4-exact", expected_revision: 0,
+      declared_state: "DECLARED_PARTIAL", declared_summary: "Une partie a été réalisée.",
+      evidence_refs: ["document://report/123"],
+      evidence_object_ids: ["c5-id"],
+      external_confirmation_state: "UNKNOWN", external_confirmation_note: null,
+    }),
+  ));
+  expect(api.prepareCaseContractChangeEvidenceUpload).toHaveBeenCalledWith(
+    "case-1", "os-1", "action-1", expect.objectContaining({
+      c4_relation_id: "c4-exact", evidence_kind: "EXECUTION_EVIDENCE", expected_byte_size: 19,
+    }),
+  );
+  expect(api.uploadCaseContractChangeEvidence).toHaveBeenCalledWith(
+    "case-1", "os-1", "action-1", "c5-id", expect.any(String), expect.any(File),
+  );
+  expect(screen.getByText(/état C1 RECORDED/)).toBeInTheDocument();
   vi.unstubAllGlobals();
 });

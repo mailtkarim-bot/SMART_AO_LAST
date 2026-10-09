@@ -45,6 +45,17 @@ function formatDate(value: string | null) {
     : new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium" }).format(parsed);
 }
 
+function formatDateTime(value: string) {
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime())
+    ? "Date invalide"
+    : `${new Intl.DateTimeFormat("fr-FR", {
+        dateStyle: "medium",
+        timeStyle: "short",
+        timeZone: "UTC",
+      }).format(parsed)} UTC`;
+}
+
 function p0Label(state: BoampObservation["p0_state"]) {
   return {
     UNREVIEWED: "Non revu",
@@ -239,6 +250,26 @@ export function BoampOpportunityPanel({
                   <div><dt>Décision P0</dt><dd>{selected.p0_decision ?? "Aucune décision"}</dd></div>
                   <div><dt>Motif P0</dt><dd>{selected.p0_reason_code ?? "Non applicable"}</dd></div>
                 </dl>
+                <details className="boamp-score-details boamp-source-captures">
+                  <summary>Captures de source ({selected.source_captures.length})</summary>
+                  {selected.source_captures.length === 0 ? (
+                    <p>Aucun lien de capture enregistré.</p>
+                  ) : (
+                    <ol>
+                      {selected.source_captures.map((capture) => (
+                        <li key={capture.ingestion_run_id}>
+                          <strong>
+                            {capture.source_mode === "REPLAY" ? "REPLAY · Rejeu synthétique" : "LIVE"}
+                          </strong>
+                          <span>Run enregistré le {formatDateTime(capture.run_recorded_at)}</span>
+                          <span>Contrat adaptateur : {capture.source_contract_version ?? "Non renseigné"}</span>
+                          <code>{capture.source_response_sha256 ?? "Hash non renseigné"}</code>
+                        </li>
+                      ))}
+                    </ol>
+                  )}
+                  <p>Ces runs décrivent l’ingestion et ne certifient ni l’actualité ni l’authenticité de l’avis.</p>
+                </details>
                 {selected.unknowns.length > 0 && (
                   <div className="boamp-unknowns" aria-label="Inconnues de l’opportunité">
                     <span className="section-kicker">INCONNUES À LEVER</span>

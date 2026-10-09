@@ -29,6 +29,7 @@ from app.modules.dce.infrastructure.models.dce_extraction import (
 from app.modules.dce.infrastructure.models.dce_staging import DceStagedObjectRecord
 from app.modules.dce.infrastructure.models.dce_version import DceDocumentRecord, DceVersionRecord
 from app.modules.dce.infrastructure.quarantine import LocalQuarantineStorageAdapter
+from app.modules.dce.infrastructure.source_anchor_reader import SqlAlchemyDceSourceAnchorReader
 from app.platform.events.dispatcher import (
     CommandContext,
     CommandDispatcher,
@@ -214,6 +215,181 @@ def _failed_extraction_command(
         failure_code="TEST_FAILURE",
         fragments=[],
     )
+
+
+@pytest.mark.db
+@pytest.mark.integration
+def test_source_anchor_reader_resolves_parent_provenance_and_keeps_unknown_locators(
+    session_factory: sessionmaker[Session],
+    tmp_path: Path,
+) -> None:
+    source_bytes = b"document source"
+    tenant_id, document_id, dce_version_id = _seed_admitted_document(
+        session_factory,
+        storage=LocalQuarantineStorageAdapter(root=tmp_path),
+        source_bytes=source_bytes,
+        media_type="text/plain",
+    )
+    source_sha256 = sha256(source_bytes).hexdigest()
+    extraction_id = uuid4()
+    fragments = (
+        (uuid4(), 1, {"kind": "text_line", "line": 3, "part": 1}, "Ligne source"),
+        (uuid4(), 2, {"kind": "legacy_offset", "offset": 18}, "Ancienne source"),
+        (uuid4(), 3, {"kind": "pdf_page", "page": True}, "Locator invalide"),
+    )
+    with session_factory.begin() as session:
+        session.add(
+            DceDocumentExtractionRecord(
+                id=extraction_id,
+                tenant_id=tenant_id,
+                dce_version_id=dce_version_id,
+                dce_document_id=document_id,
+                input_sha256=source_sha256,
+                extractor_id="smart-ao-native",
+                extractor_version="2",
+                status="COMPLETED",
+                fragment_count=len(fragments),
+                extracted_char_count=sum(len(text) for _, _, _, text in fragments),
+                failure_code=None,
+            )
+        )
+        session.flush()
+        for fragment_id, ordinal, locator_json, text in fragments:
+            session.add(
+                DceDocumentExtractionFragmentRecord(
+                    id=fragment_id,
+                    tenant_id=tenant_id,
+                    extraction_id=extraction_id,
+                    ordinal=ordinal,
+                    locator_json=locator_json,
+                    text=text,
+                    text_sha256=sha256(text.encode("utf-8")).hexdigest(),
+                )
+            )
+
+    reader = SqlAlchemyDceSourceAnchorReader()
+    with session_factory() as session:
+        anchor = reader.get(
+            session=session,
+            tenant_id=tenant_id,
+            fragment_id=fragments[0][0],
+        )
+        anchors_for_version = reader.get_many(
+            session=session,
+            tenant_id=tenant_id,
+            fragment_ids=(fragments[0][0],),
+            dce_version_id=dce_version_id,
+        )
+        anchors_for_other_version = reader.get_many(
+            session=session,
+            tenant_id=tenant_id,
+            fragment_ids=(fragments[0][0],),
+            dce_version_id=uuid4(),
+        )
+        replayed_anchor = reader.get(
+            session=session,
+            tenant_id=tenant_id,
+            fragment_id=fragments[0][0],
+        )
+        unknown_anchor = reader.get(
+            session=session,
+            tenant_id=tenant_id,
+            fragment_id=fragments[1][0],
+        )
+        malformed_anchor = reader.get(
+            session=session,
+            tenant_id=tenant_id,
+            fragment_id=fragments[2][0],
+        )
+        foreign_tenant_anchor = reader.get(
+            session=session,
+            tenant_id=uuid4(),
+            fragment_id=fragments[0][0],
+        )
+        stored_unknown_locator = session.get(DceDocumentExtractionFragmentRecord, fragments[1][0])
+        stored_malformed_locator = session.get(DceDocumentExtractionFragmentRecord, fragments[2][0])
+
+    assert anchor is not None
+    assert anchors_for_version == {fragments[0][0]: anchor}
+    assert anchors_for_other_version == {}
+    assert replayed_anchor == anchor
+    assert anchor.source_anchor_id == fragments[0][0]
+    assert anchor.dce_version_id == dce_version_id
+    assert anchor.dce_document_id == document_id
+    assert anchor.extraction_id == extraction_id
+    assert anchor.source_sha256 == source_sha256
+    assert anchor.extractor_id == "smart-ao-native"
+    assert anchor.extractor_version == "2"
+    assert anchor.fragment_sha256 == sha256(fragments[0][3].encode("utf-8")).hexdigest()
+    assert anchor.locator_state.value == "RESOLVED"
+    assert anchor.locator is not None
+    assert anchor.locator.kind.value == "text_line"
+    assert dict(anchor.locator.coordinates) == {"line": 3, "part": 1}
+    assert not hasattr(anchor, "text")
+
+    assert unknown_anchor is not None
+    assert unknown_anchor.source_anchor_id == fragments[1][0]
+    assert unknown_anchor.locator_state.value == "UNKNOWN"
+    assert unknown_anchor.locator is None
+    assert malformed_anchor is not None
+    assert malformed_anchor.locator_state.value == "UNKNOWN"
+    assert foreign_tenant_anchor is None
+    assert stored_unknown_locator is not None
+    assert stored_unknown_locator.locator_json == fragments[1][2]
+    assert stored_malformed_locator is not None
+    assert stored_malformed_locator.locator_json == fragments[2][2]
+
+
+@pytest.mark.db
+@pytest.mark.integration
+def test_source_anchor_reader_rejects_document_extraction_hash_mismatch(
+    session_factory: sessionmaker[Session],
+    tmp_path: Path,
+) -> None:
+    source_bytes = b"document source"
+    tenant_id, document_id, dce_version_id = _seed_admitted_document(
+        session_factory,
+        storage=LocalQuarantineStorageAdapter(root=tmp_path),
+        source_bytes=source_bytes,
+        media_type="text/plain",
+    )
+    extraction_id, fragment_id = uuid4(), uuid4()
+    fragment_text = "Source sans concordance"
+    with session_factory.begin() as session:
+        session.add(
+            DceDocumentExtractionRecord(
+                id=extraction_id,
+                tenant_id=tenant_id,
+                dce_version_id=dce_version_id,
+                dce_document_id=document_id,
+                input_sha256="f" * 64,
+                extractor_id="synthetic",
+                extractor_version="1",
+                status="COMPLETED",
+                fragment_count=1,
+                extracted_char_count=len(fragment_text),
+                failure_code=None,
+            )
+        )
+        session.flush()
+        session.add(
+            DceDocumentExtractionFragmentRecord(
+                id=fragment_id,
+                tenant_id=tenant_id,
+                extraction_id=extraction_id,
+                ordinal=1,
+                locator_json={"kind": "text_line", "line": 1, "part": 1},
+                text=fragment_text,
+                text_sha256=sha256(fragment_text.encode("utf-8")).hexdigest(),
+            )
+        )
+
+    reader = SqlAlchemyDceSourceAnchorReader()
+    with (
+        session_factory() as session,
+        pytest.raises(ValueError, match="DCE_SOURCE_ANCHOR_SOURCE_HASH_MISMATCH"),
+    ):
+        reader.get(session=session, tenant_id=tenant_id, fragment_id=fragment_id)
 
 
 def test_extraction_fragment_validator_rejects_ordinal_locator_and_hash() -> None:

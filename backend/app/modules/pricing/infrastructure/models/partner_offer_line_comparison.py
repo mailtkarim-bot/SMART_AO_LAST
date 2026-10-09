@@ -31,6 +31,7 @@ def _source_field_constraints(name: str, _max_length: int) -> tuple[sa.CheckCons
 class PartnerOfferLineComparisonRecord(TenantScopedRecord, Base):
     __tablename__ = "partner_offer_line_comparisons"
     __table_args__ = (
+        sa.PrimaryKeyConstraint("tenant_id", "case_id", "id"),
         sa.ForeignKeyConstraint(
             ["tenant_id", "case_id"],
             ["cases.tenant_id", "cases.id"],
@@ -47,7 +48,6 @@ class PartnerOfferLineComparisonRecord(TenantScopedRecord, Base):
             name="fk_partner_offer_line_comparisons__scope_review",
             ondelete="RESTRICT",
         ),
-        sa.UniqueConstraint("tenant_id", "id", name="uq_partner_offer_line_comparisons__tenant_id"),
         sa.UniqueConstraint(
             "tenant_id", "case_id", "id", name="uq_partner_offer_line_comparisons__tenant_case_id"
         ),
@@ -68,7 +68,7 @@ class PartnerOfferLineComparisonRecord(TenantScopedRecord, Base):
         ),
     )
 
-    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     case_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     comparison_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     revision: Mapped[int] = mapped_column(sa.Integer, nullable=False)
@@ -108,9 +108,7 @@ class PartnerOfferLineGroupRecord(TenantScopedRecord, Base):
             "disposition IN ('LINKED_BY_PATRON', 'DISTINCT_POSITIONS', 'NEEDS_CLARIFICATION')",
             name="disposition_closed",
         ),
-        sa.CheckConstraint(
-            "length(trim(rationale)) > 0", name="group_rationale_required"
-        ),
+        sa.CheckConstraint("length(trim(rationale)) > 0", name="group_rationale_required"),
         sa.Index(
             "ix_partner_offer_line_groups__tenant_case_comparison",
             "tenant_id",

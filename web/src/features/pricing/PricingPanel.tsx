@@ -1,5 +1,7 @@
+import { scenarioParameterFields, type usePricingScenarios } from "./usePricingScenarios";
 import type { ChangeEvent, Dispatch, SetStateAction } from "react";
 
+import { formatBasisPoints } from "../../shared/financialFormatting";
 import type { PricingImportBatchRead, PricingScenario } from "../../shared/types";
 import type {
   PricingImportReloadState,
@@ -8,7 +10,12 @@ import type {
 } from "./usePricingImport";
 
 type PricingPanelProps = {
+  scenarioCreation: ReturnType<typeof usePricingScenarios>["creation"];
+  scenarioTransition: ReturnType<typeof usePricingScenarios>["transition"];
   scenarios: PricingScenario[];
+  scenariosLoading?: boolean;
+  scenariosError?: string | null;
+  onRefreshScenarios?: () => void;
   formatMoney: (minor: number, currency?: string) => string;
   selectedCaseId: string;
   reportId: string;
@@ -33,7 +40,12 @@ type PricingPanelProps = {
 };
 
 export function PricingPanel({
+  scenarioCreation: creation,
+  scenarioTransition: transition,
   scenarios,
+  scenariosLoading = false,
+  scenariosError = null,
+  onRefreshScenarios,
   formatMoney,
   selectedCaseId,
   reportId,
@@ -67,26 +79,83 @@ export function PricingPanel({
           {scenarios.length} scénario{scenarios.length > 1 ? "s" : ""}
         </span>
       </div>
-      {scenarios.length === 0 ? (
+      {scenariosLoading && <p role="status">Chargement des scénarios privés…</p>}
+      {scenariosError && <p role="alert">{scenariosError} <button type="button" className="secondary-button" onClick={onRefreshScenarios}>Réessayer les scénarios</button></p>}
+      {!scenariosLoading && !scenariosError && scenarios.length === 0 ? (
         <div className="empty-card">
           <strong>Aucun scénario chargé</strong>
           <p>Sélectionnez une affectation patronale pour consulter les scénarios privés autorisés.</p>
         </div>
       ) : (
         <div className="summary-grid">
-          {scenarios.slice(0, 4).map((scenario) => (
-            <div className="summary-card green" key={scenario.scenario_id}>
+          {scenarios.slice(0, 4).map((scenario) => {
+            const qualified = scenario.source_basis_state === "DECLARED_COMPLETE" && Boolean(scenario.source_snapshot_id) && Number.isSafeInteger(scenario.source_snapshot_revision) && scenario.source_snapshot_revision >= 0 && Boolean(scenario.currency_code);
+            const margin = qualified && Number.isSafeInteger(scenario.gross_margin_minor) ? formatMoney(scenario.gross_margin_minor, scenario.currency_code!) : "UNKNOWN";
+            const rate = qualified ? formatBasisPoints(scenario.gross_margin_rate_bps) : "UNKNOWN";
+            return (
+            <div className="summary-card" role="group" aria-label={`Scénario ${scenario.scenario_key}`} key={scenario.scenario_id}>
               <span>
                 {scenario.scenario_key} · v{scenario.version}
               </span>
-              <strong>{formatMoney(scenario.gross_margin_minor)}</strong>
+              <strong>{margin}</strong>
               <small>
-                Marge {(scenario.gross_margin_rate_bps / 100).toFixed(1)} % · {scenario.state}
+                Marge {rate === "UNKNOWN" ? rate : `${rate} %`} · {scenario.state}
               </small>
+              <small>{scenario.source_snapshot_id ? `Source ${scenario.source_snapshot_id} · révision ${scenario.source_snapshot_revision}` : "Source UNKNOWN"}</small>
+              <small>{qualified ? "Base déclarée complète; couverture économique globale non démontrée." : "Base source non qualifiée : UNKNOWN"}</small>
+              <div className="form-actions">
+                {scenario.state === "DRAFT" && <button type="button" className="secondary-button" disabled={!qualified || !Number.isSafeInteger(scenario.gross_margin_rate_bps) || creation.locked || transition.locked} onClick={() => transition.prepare(scenario.scenario_id, "selection")}>Préparer la sélection</button>}
+                {scenario.state !== "ARCHIVED" && <button type="button" className="secondary-button" disabled={creation.locked || transition.locked} onClick={() => transition.prepare(scenario.scenario_id, "archive")}>Préparer l’archive</button>}
+              </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
+      {transition.target && <section className="detail-panel scenario-creation" aria-label="Acte humain sur scénario privé">
+        <h3>{transition.action === "selection" ? "Sélection humaine" : "Archivage humain"}</h3>
+        <p>Scénario visé : <code>{transition.target.scenario_id}</code> · version {transition.target.version} · {transition.target.state}.</p>
+        <p>Source : <code>{transition.target.source_snapshot_id ?? "UNKNOWN"}</code> · révision {transition.target.source_snapshot_id && Number.isSafeInteger(transition.target.source_snapshot_revision) && transition.target.source_snapshot_revision >= 0 ? transition.target.source_snapshot_revision : "UNKNOWN"} · {transition.target.currency_code ?? "UNKNOWN"}. Base {transition.target.source_basis_state ?? "UNKNOWN"}.</p>
+        <p>{transition.action === "archive" ? "L’archive est terminale; la source et les actes restent historiques." : "Cette sélection ne constitue ni un engagement ni un GO P3."} FINANCIAL_PRIVATE.</p>
+        <form onSubmit={(event) => { event.preventDefault(); void transition.submit(); }}>
+          <fieldset disabled={transition.locked || transition.readingBack || transition.state === "CONFIRMED"}>
+            <label><span>Motif codifié</span><input required minLength={2} maxLength={64} pattern="[A-Z0-9_]{2,64}" value={transition.reason} onChange={(event) => transition.setReason(event.target.value)} aria-describedby="scenario-reason-hint" /></label>
+            <p id="scenario-reason-hint">2 à 64 caractères : A–Z, 0–9 ou underscore. Saisissez votre motif explicite.</p>
+          </fieldset>
+          {["IDLE", "SUBMITTING", "UNKNOWN"].includes(transition.state) && <button type="submit" className="primary-button" disabled={transition.state === "SUBMITTING"}>{transition.state === "UNKNOWN" ? "Réessayer le même acte" : transition.state === "SUBMITTING" ? "Acte en cours…" : transition.action === "selection" ? "Confirmer la sélection" : "Confirmer l’archive"}</button>}
+        </form>
+        {transition.state === "UNKNOWN" && <p role="status">UNKNOWN · intention figée. Le retry garde la version, le motif et les identifiants exacts.</p>}
+        {transition.error && <p role="alert">{transition.error}</p>}
+        {["CONFLICT", "REJECTED"].includes(transition.state) && <button type="button" className="secondary-button" disabled={transition.readingBack} onClick={() => void transition.reload()}>Relire avant une nouvelle intention</button>}
+        {transition.receipt && <p role="status">Reçu technique : <code>{transition.receipt.scenario_id}</code> · version {transition.receipt.version}. La projection GET est une preuve distincte.</p>}
+        {transition.receipt && !transition.projection && <button type="button" className="secondary-button" disabled={transition.readingBack} onClick={() => void transition.readBack()}>Relire l’acte confirmé</button>}
+        {transition.projection && <p>Scénario relu : <code>{transition.projection.scenario_id}</code> · version {transition.projection.version} · {transition.projection.state}. Base {transition.projection.source_basis_state ?? "UNKNOWN"}; aucun effet P3.</p>}
+      </section>}
+      {!transition.target && transition.error && <p role="status">{transition.error}</p>}
+      <section className="detail-panel scenario-creation" aria-label="Création humaine de scénario privé">
+        <h3>Créer un scénario</h3>
+        <p>FINANCIAL_PRIVATE · saisie humaine. Aucun engagement, sélection automatique ou effet P3.</p>
+        {creation.source && <p>Source PUBLISHED relue : <code>{creation.source.report_id}</code> · révision {creation.source.aggregate_revision} · {creation.source.currency_code}</p>}
+        {creation.sourceReason && <p role="status">{creation.sourceReason}</p>}
+        <form onSubmit={(event) => { event.preventDefault(); void creation.submit(); }}>
+          <fieldset disabled={Boolean(creation.sourceReason) || creation.locked || creation.state === "CONFIRMED"}>
+            <legend>Paramètres et hypothèses explicites</legend>
+            <div className="scenario-form-grid">
+              <label><span>Nom du scénario</span><input required maxLength={120} value={creation.form.scenario_key} onChange={(event) => creation.setForm({ ...creation.form, scenario_key: event.target.value })} /></label>
+              <label><span>Type de scénario</span><select value={creation.form.scenario_type} onChange={(event) => creation.setForm({ ...creation.form, scenario_type: event.target.value as typeof creation.form.scenario_type })}><option value="BASE">BASE</option><option value="PRUDENT">PRUDENT</option><option value="CUSTOM">CUSTOM</option></select></label>
+              {scenarioParameterFields.map((field) => <label key={field.key}><span>{field.label}</span><input type="number" required step="1" min={field.min} max={field.max} value={creation.form[field.key]} onChange={(event) => creation.setForm({ ...creation.form, [field.key]: event.target.value })} /></label>)}
+            </div>
+            <label><span>Hypothèses du Patron</span><textarea required maxLength={2000} value={creation.form.assumptions} onChange={(event) => creation.setForm({ ...creation.form, assumptions: event.target.value })} /></label>
+          </fieldset>
+          <p>100 points de base = 1 %. Réserves en unités mineures de la devise source; zéro est une valeur déclarée. Le type ne remplit aucune hypothèse.</p>
+          {creation.state !== "CONFIRMED" && <button type="submit" className="primary-button" disabled={Boolean(creation.sourceReason) || creation.state === "SUBMITTING" || transition.locked}>{creation.state === "UNKNOWN" ? "Réessayer la même création" : creation.state === "SUBMITTING" ? "Création en cours…" : "Créer ce scénario"}</button>}
+        </form>
+        {creation.state === "UNKNOWN" && <p role="status">UNKNOWN · résultat serveur inconnu. Paramètres et identité de commande conservés pour le retry.</p>}
+        {creation.error && <p role="alert">{creation.error}</p>}
+        {creation.receipt && <p role="status">Reçu serveur : <code>{creation.receipt.scenario_id}</code> · version {creation.receipt.version}. La relecture reste distincte.</p>}
+        {creation.receipt && !creation.scenario && <button type="button" className="secondary-button" disabled={creation.readingBack} onClick={() => void creation.readBack()}>{creation.readingBack ? "Relecture…" : "Relire le scénario créé"}</button>}
+        {creation.scenario && <><p>Scénario relu : <code>{creation.scenario.scenario_id}</code> · version {creation.scenario.version} · {creation.scenario.state}. Source <code>{creation.scenario.source_snapshot_id}</code> · révision {creation.scenario.source_snapshot_revision}.</p><p>Hypothèses enregistrées : {String(creation.scenario.assumptions.note)}</p><button type="button" className="secondary-button" disabled={transition.locked} onClick={creation.reset}>Préparer un autre scénario</button></>}
+      </section>
       <div className="detail-panel import-commit-panel">
         <div className="panel-heading">
           <div>

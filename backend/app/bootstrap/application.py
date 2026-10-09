@@ -483,9 +483,16 @@ from app.modules.preparation.infrastructure.document_storage import (
     GeneratedDocumentStorage,
     LocalGeneratedDocumentStorage,
 )
+from app.modules.preparation.infrastructure.response_plan_reader import (
+    SqlAlchemyPreparationResponsePlanSourceReader,
+)
 from app.modules.pricing.application.case_contract_change import (
     CaseContractChangeService,
     case_contract_change_handlers,
+)
+from app.modules.pricing.application.case_contract_change_evidence_upload import (
+    MAX_EVIDENCE_BYTES,
+    CaseContractChangeEvidenceUploadService,
 )
 from app.modules.pricing.application.contract_execution_evidence_handler import (
     contract_execution_evidence_handlers,
@@ -565,6 +572,9 @@ from app.modules.pricing.application.scenario_handler import pricing_scenario_ha
 from app.modules.pricing.application.service import PricingScenarioService
 from app.modules.pricing.application.transition_handler import pricing_scenario_transition_handlers
 from app.modules.pricing.application.transition_service import PricingScenarioTransitionService
+from app.modules.pricing.infrastructure.case_contract_change_evidence_repository import (
+    SqlAlchemyCaseContractChangeEvidenceRepository,
+)
 from app.modules.pricing.infrastructure.case_contract_change_reader import (
     SqlAlchemyCaseContractChangeReader,
 )
@@ -702,7 +712,9 @@ class AppRuntime:
                 storage=preparation_storage,
                 dce_reader=SqlAlchemyPreparationDceReader(),
             ),
-            **preparation_transmission_handlers(action_writer=PatronActionWriter()),
+            **preparation_transmission_handlers(
+                action_writer=PatronActionWriter(), storage=preparation_storage
+            ),
             **patron_action_handlers(),
             **case_outcome_handlers(),
             **case_order_handlers(),
@@ -737,7 +749,20 @@ class AppRuntime:
             **pricing_import_creation_handlers(),
             **pricing_import_handlers(),
             **opportunity_watch_profile_handlers(),
-            **preparation_review_handlers(storage=preparation_storage),
+            **preparation_review_handlers(
+                storage=preparation_storage,
+                source_reader=SqlAlchemyPreparationResponsePlanSourceReader(
+                    capability_reader=SqlAlchemyCollaboratorCapabilityReader(session_factory)
+                ),
+                source_storage=LocalQuarantineStorageAdapter(
+                    root=Path(
+                        os.getenv(
+                            "SMART_AO_DCE_QUARANTINE_ROOT",
+                            "/var/lib/smart_ao/dce-quarantine",
+                        )
+                    )
+                ),
+            ),
             **submission_handlers(
                 decision_gate_reader=SqlAlchemySubmissionDecisionGateReader(),
             ),
@@ -964,6 +989,27 @@ def _default_dce_upload_service(*, dispatcher: CommandDispatcher) -> DceUploadSe
         ),
         allowed_media_types=_ALLOWED_DCE_MEDIA_TYPES,
         max_bytes=int(os.getenv("SMART_AO_DCE_MAX_BYTES", "150000000")),
+    )
+
+
+def _default_case_contract_change_evidence_upload_service(
+    *, session_factory: sessionmaker[Session], policy
+) -> CaseContractChangeEvidenceUploadService:
+    storage = LocalQuarantineStorageAdapter(
+        root=Path(os.getenv("SMART_AO_DCE_QUARANTINE_ROOT", "/var/lib/smart_ao/dce-quarantine"))
+    )
+    return CaseContractChangeEvidenceUploadService(
+        repository=SqlAlchemyCaseContractChangeEvidenceRepository(session_factory=session_factory),
+        policy=policy,
+        storage=storage,
+        inspector=PythonMagicContentInspectionAdapter(storage=storage),
+        scanner=ClamdTcpMalwareScanAdapter(
+            storage=storage,
+            host=os.getenv("SMART_AO_CLAMD_HOST", "clamav"),
+            port=int(os.getenv("SMART_AO_CLAMD_PORT", "3310")),
+            timeout_seconds=float(os.getenv("SMART_AO_CLAMD_TIMEOUT_SECONDS", "30")),
+        ),
+        max_bytes=int(os.getenv("SMART_AO_C5_EVIDENCE_MAX_BYTES", str(MAX_EVIDENCE_BYTES))),
     )
 
 
@@ -1609,6 +1655,10 @@ def create_app(
                 service=CaseContractChangeService(
                     dispatcher=runtime.dispatcher,
                     reader=SqlAlchemyCaseContractChangeReader(runtime.session_factory),
+                    policy=security_policy,
+                ),
+                evidence_upload_service=_default_case_contract_change_evidence_upload_service(
+                    session_factory=runtime.session_factory,
                     policy=security_policy,
                 ),
                 security_runtime=security_runtime,

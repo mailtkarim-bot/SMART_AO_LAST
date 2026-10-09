@@ -59,7 +59,9 @@ class RecordPartnerOfferScopeReviewHandler(CommandHandler):
         if (
             session.scalar(
                 sa.select(PartnerOfferScopeReviewRecord.id).where(
-                    PartnerOfferScopeReviewRecord.id == command.review_id
+                    PartnerOfferScopeReviewRecord.tenant_id == tenant_id,
+                    PartnerOfferScopeReviewRecord.case_id == command.case_id,
+                    PartnerOfferScopeReviewRecord.id == command.review_id,
                 )
             )
             is not None
@@ -71,7 +73,9 @@ class RecordPartnerOfferScopeReviewHandler(CommandHandler):
         if (
             session.scalar(
                 sa.select(PartnerOfferScopeReviewRecord.id).where(
-                    PartnerOfferScopeReviewRecord.id == command.review_id
+                    PartnerOfferScopeReviewRecord.tenant_id == tenant_id,
+                    PartnerOfferScopeReviewRecord.case_id == command.case_id,
+                    PartnerOfferScopeReviewRecord.id == command.review_id,
                 )
             )
             is not None

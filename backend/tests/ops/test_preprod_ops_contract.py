@@ -18,6 +18,38 @@ def test_preprod_operations_scripts_are_executable_and_syntactically_valid() -> 
         assert result.returncode == 0, result.stderr
 
 
+def test_preflight_loads_the_protected_preproduction_environment_file() -> None:
+    preflight = (OPS / "preflight-checklist.sh").read_text(encoding="utf-8")
+    assert 'ENV_FILE="${OPS_DIR}/.env.preprod"' in preflight
+    assert '[[ -f "${ENV_FILE}" ]]' in preflight
+    assert "stat -c '%a' \"${ENV_FILE}\"" in preflight
+    assert 'docker compose --env-file "${ENV_FILE}" -f "${COMPOSE_FILE}" config' in preflight
+
+
+def test_local_preprod_simulation_is_unique_loopback_only_and_self_cleaning() -> None:
+    simulation = (ROOT / "scripts/simulate_preprod_local.sh").read_text(encoding="utf-8")
+    assert 'PROJECT="smartao-local-preprod-${WORK_ID,,}"' in simulation
+    assert 'docker compose --project-name "${PROJECT}"' in simulation
+    assert '"127.0.0.1:18080:80"' in simulation
+    assert '"127.0.0.1:18443:443"' in simulation
+    assert '"127.0.0.1:18443:443/udp"' in simulation
+    assert '"127.0.0.1:15432:5432"' not in simulation
+    assert '"127.0.0.1:13310:3310"' not in simulation
+    assert "compose down -v --remove-orphans" in simulation
+    assert 'rm -rf -- "${WORK_DIR}"' in simulation
+    assert "ClamdTcpMalwareScanAdapter" in simulation
+    assert "C5_CLAMAV_ADAPTER" in simulation
+    assert 'unavailable.verdict != "ERROR"' in simulation
+    assert "container_ip_on_internal()" in simulation
+    assert '\\"${PROJECT}_internal\\"' in simulation
+    assert "@${postgres_ip}:5432/smart_ao" in simulation
+    assert 'SMART_AO_C5_TEST_CLAMD_HOST="${clamav_ip}"' in simulation
+    assert "SMART_AO_C5_TEST_CLAMD_PORT=3310" in simulation
+    assert "docker inspect --format" in simulation
+    assert "PostgreSQL/ClamAV host ports" in simulation
+    assert "test_case_handover_http_e2e.py" in simulation
+
+
 def test_compose_runtime_images_are_digest_pinned_and_clamav_is_private() -> None:
     compose = (OPS / "docker-compose.preprod.yml").read_text(encoding="utf-8")
     image_lines = [
@@ -51,6 +83,170 @@ def test_deploy_starts_submission_notification_workers_explicitly() -> None:
         "compose up -d backend dce-retention-worker submission-export-webhook-worker "
         "submission-export-smtp-worker" in deploy_script
     )
+
+
+def test_local_preprod_simulation_archives_and_restores_quarantine_in_isolation() -> None:
+    simulator = (ROOT / "scripts" / "simulate_preprod_local.sh").read_text(encoding="utf-8")
+    e2e = (ROOT / "backend" / "tests" / "db" / "test_case_handover_http_e2e.py").read_text(
+        encoding="utf-8"
+    )
+    test_configuration = (ROOT / "backend" / "tests" / "conftest.py").read_text(encoding="utf-8")
+    assert "BACKUP_MANIFEST" in simulator
+    assert "ops/restore-preprod.sh" in simulator
+    assert "sha256sum" in simulator
+    assert "dce-quarantine" in simulator
+    assert "path-traversal quarantine archive was accepted" in simulator
+    assert "remaining_restore_volumes" in simulator
+    assert "SMART_AO_TEST_PRESERVE_C5_RESTORE_FIXTURE" in simulator
+    assert "SMART_AO_TEST_DISPOSABLE_DATABASE=1" in simulator
+    assert "C5 SHA-256 mismatch restore was accepted" in simulator
+    assert "remaining_traversal_restore_dbs" in simulator
+    assert "smart_ao_restore_%" in simulator
+    assert "verified_clean_count" in simulator
+    assert '"${verified_clean_count}" == "${clean_count}"' in simulator
+    assert 'docker cp "${C5_HOST_STORAGE_DIR}/."' in simulator
+    assert "host_object_sha256" in simulator
+    assert "SMART_AO_TEST_PRESERVE_C5_RESTORE_FIXTURE" in e2e
+    assert "SMART_AO_TEST_DISPOSABLE_DATABASE" in e2e
+    assert "SMART_AO_TEST_PRESERVE_C5_RESTORE_FIXTURE" in test_configuration
+
+
+def test_restore_verifies_c5_objects_in_a_temporary_volume_with_cleanup() -> None:
+    restore = (OPS / "restore-preprod.sh").read_text(encoding="utf-8")
+    assert "case_contract_change_evidence_objects WHERE state = 'CLEAN'" in restore
+    assert 'RESTORE_VOLUME="smart_ao_c5_restore_${RESTORE_RUN_ID}"' in restore
+    assert "--label com.smartao.purpose=quarantine-restore-verification" in restore
+    assert 'remove_owned_restore_volume "${RESTORE_VOLUME}" "${RESTORE_RUN_ID}"' in restore
+    assert 'if [[ "${RESTORE_DB_CREATED}" == "1" && -n "${RESTORE_DB}" ]]' in restore
+    assert 'if [[ "${RESTORE_VOLUME_CREATED}" == "1" && -n "${RESTORE_VOLUME}" ]]' in restore
+    assert "verify_quarantine_restore.py" in restore
+    assert "--network none --read-only" in restore
+    assert 'sha256sum -- "${required_path}"' in restore
+    assert "sha256sum --ignore-missing --check" not in restore
+
+
+def test_restore_reclaims_only_its_interrupted_run_resources_after_sigkill() -> None:
+    restore = (OPS / "restore-preprod.sh").read_text(encoding="utf-8")
+    simulator = (ROOT / "scripts" / "simulate_preprod_local.sh").read_text(encoding="utf-8")
+    assert 'RESTORE_STATE_DIR="${SMART_AO_RESTORE_STATE_DIR:-' in restore
+    assert "flock -n 8" in restore
+    assert "recover_interrupted_restores" in restore
+    assert "com.smartao.restore.run" in restore
+    assert 'created_volume="$(docker volume create \\' in restore
+    assert "com.smartao.purpose=quarantine-restore-verification" in restore
+    assert 'RESTORE_STATE_FILE="${RESTORE_STATE_DIR}/restore-${RESTORE_RUN_ID}.state"' in restore
+    assert "restore-fault-entered" in simulator
+    assert "restore recovery left a temporary database" in simulator
+    assert "restore recovery left a temporary quarantine volume" in simulator
+    assert "active quarantine volume changed during restore recovery" in simulator
+    assert "repeat restore recovery changed finalized backup bytes" in simulator
+
+
+def test_restore_refuses_to_delete_a_volume_with_a_mismatched_run_label() -> None:
+    simulator = (ROOT / "scripts" / "simulate_preprod_local.sh").read_text(encoding="utf-8")
+    assert "RESTORE_FIXTURE_VOLUME" in simulator
+    assert "restore-mismatched-label.log" in simulator
+    assert "restore accepted a mismatched volume run label" in simulator
+    assert "unowned restore volume was removed" in simulator
+    assert "mismatched-label restore changed active C5 object hashes" in simulator
+    assert "mismatched-label restore changed finalized backups" in simulator
+    assert "restore state receipt changed after ownership refusal" in simulator
+
+
+def test_restore_does_not_drop_a_sentinel_database_from_a_malformed_receipt() -> None:
+    simulator = (ROOT / "scripts" / "simulate_preprod_local.sh").read_text(encoding="utf-8")
+    assert "run_malformed_receipt_cycle" in simulator
+    assert "restore accepted a mismatched receipt database" in simulator
+    assert "malformed-receipt restore dropped sentinel database" in simulator
+    assert "malformed-receipt restore removed its volume" in simulator
+    assert "malformed-receipt restore created or removed an isolated database" in simulator
+    assert "malformed-receipt restore created or removed a temporary volume" in simulator
+    assert "malformed receipt retry changed active C5 hashes" in simulator
+    assert "malformed receipt retry changed finalized backups" in simulator
+    assert "run_malformed_receipt_cycle 2" in simulator
+
+
+def test_restore_refuses_symlinked_and_permissive_state_receipts() -> None:
+    simulator = (ROOT / "scripts" / "simulate_preprod_local.sh").read_text(encoding="utf-8")
+    assert "run_unsafe_receipt_cycle symlink" in simulator
+    assert "run_unsafe_receipt_cycle permissive" in simulator
+    assert "ln -s --" in simulator
+    assert "chmod 644" in simulator
+    assert "state receipt target changed after refusal" in simulator
+    assert "restore followed a symlinked state receipt" in simulator
+    assert "restore accepted a mode-0644 state receipt" in simulator
+    assert "unsafe-receipt refusal changed active C5 hashes" in simulator
+    assert "unsafe-receipt refusal changed finalized backups" in simulator
+
+
+def test_restore_lock_protects_an_active_restore_from_concurrent_cleanup() -> None:
+    restore = (OPS / "restore-preprod.sh").read_text(encoding="utf-8")
+    simulator = (ROOT / "scripts" / "simulate_preprod_local.sh").read_text(encoding="utf-8")
+    assert 'flock -n 8 || fail "another restore is already running' in restore
+    assert restore.index("flock -n 8") < restore.index("recover_interrupted_restores \\")
+    assert "restore-concurrency-entered" in simulator
+    assert "restore-concurrency-release" in simulator
+    assert "second restore did not fail on the active lock" in simulator
+    assert "concurrent restore modified the active receipt or resources" in simulator
+    assert "first concurrent restore did not finish after release" in simulator
+    assert "post-lock replay restore did not complete" in simulator
+
+
+def test_restore_recovers_after_temporary_volume_removal_failure() -> None:
+    restore = (OPS / "restore-preprod.sh").read_text(encoding="utf-8")
+    simulator = (ROOT / "scripts" / "simulate_preprod_local.sh").read_text(encoding="utf-8")
+    assert "restore cleanup incomplete; protected state retained for recovery" in restore
+    assert "RESTORE_FAULT_VOLUME_RM" in simulator
+    assert "restore-volume-rm-failure.log" in simulator
+    assert "volume removal failure was not attempted in both cleanup paths" in simulator
+    assert "volume removal failure did not retain its exact receipt and volume" in simulator
+    assert "retry after volume removal failure did not restore normally" in simulator
+    assert "volume removal failure recovery left stale restore resources" in simulator
+    assert "restore replay after cleanup failure left temporary resources" in simulator
+
+
+def test_restore_recovers_after_temporary_database_drop_failure() -> None:
+    restore = (OPS / "restore-preprod.sh").read_text(encoding="utf-8")
+    simulator = (ROOT / "scripts" / "simulate_preprod_local.sh").read_text(encoding="utf-8")
+    assert "restore cleanup incomplete; protected state retained for recovery" in restore
+    assert "RESTORE_FAULT_DB_DROP" in simulator
+    assert "restore-dropdb-failures" in simulator
+    assert "dropdb failure was not attempted in both cleanup paths" in simulator
+    assert "dropdb failure did not retain its exact DB and receipt" in simulator
+    assert "dropdb recovery did not remove its DB and restore normally" in simulator
+    assert "dropdb retry replay left temporary resources" in simulator
+
+
+def test_backup_script_supports_isolated_compose_and_simulation_uses_real_backup() -> None:
+    backup = (OPS / "backup-preprod.sh").read_text(encoding="utf-8")
+    restore = (OPS / "restore-preprod.sh").read_text(encoding="utf-8")
+    simulator = (ROOT / "scripts" / "simulate_preprod_local.sh").read_text(encoding="utf-8")
+    assert 'ENV_FILE="${SMART_AO_PREPROD_ENV_FILE:-${OPS_DIR}/.env.preprod}"' in backup
+    assert 'COMPOSE_PROJECT_NAME="${SMART_AO_COMPOSE_PROJECT_NAME:-}"' in backup
+    assert 'docker compose --project-name "${COMPOSE_PROJECT_NAME}"' in backup
+    assert "^[a-z0-9][a-z0-9_-]{0,62}$" in backup
+    assert "^[a-z0-9][a-z0-9_-]{0,62}$" in restore
+    assert '[[ -s "${c5_archive}" ]]' in backup
+    assert "docker run --rm --network none --read-only" in backup
+    assert '--mount "type=volume,src=${volume_name},dst=/source,readonly"' in backup
+    assert "--cap-add DAC_READ_SEARCH" in backup
+    assert "date -u +%Y%m%dT%H%M%S%NZ)_$$" in backup
+    assert 'manifest_tmp="${manifest}.tmp"' in backup
+    assert "sha256sum --check --status" in backup
+    assert "|| true" not in backup
+    assert 'cd "${BACKUP_DIR}"\n    shopt -s nullglob' in backup
+    assert "flock -n 9" in backup
+    assert backup.count('exec 9>"${lock_file}"') == 1
+    assert backup.count("flock -n 9") == 1
+    assert "-name 'smart_ao_*.tmp' -delete" in backup
+    assert "ops/backup-preprod.sh" in simulator
+    assert "pg_dump" not in simulator
+    assert "T[0-9]{15}Z_[0-9]+" in simulator
+    assert "BACKUP_FAULT_MARKER" in simulator
+    assert 'kill -KILL -- "-${BACKUP_TEST_PGID}"' in simulator
+    assert "orphan_tar_tmp" in simulator
+    assert "BACKUP_CONCURRENCY_RELEASE" in simulator
+    assert "backup lock did not reject the concurrent run" in simulator
 
 
 def test_caddy_routes_all_health_endpoints_to_backend() -> None:

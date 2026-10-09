@@ -14,6 +14,7 @@ export type LoginInput = {
 
 export type AuthenticationState = {
   accessToken: string;
+  sessionGeneration: number;
   currentActor: CurrentActor | null;
   isRestoring: boolean;
   sessionExpired: boolean;
@@ -27,14 +28,17 @@ export type AuthenticationState = {
 
 export function useAuthentication(baseUrl: string): AuthenticationState {
   const [accessToken, setAccessToken] = useState("");
+  const [sessionGeneration, setSessionGeneration] = useState(0);
   const [currentActor, setCurrentActor] = useState<CurrentActor | null>(null);
   const [isRestoring, setIsRestoring] = useState(true);
   const [sessionExpired, setSessionExpired] = useState(false);
 
+  // Renewal stays in the same session; only authentication boundaries change its generation.
   const handleTokenRefreshed = useCallback((session: AuthSession) => {
     setAccessToken(session.access_token);
   }, []);
   const handleSessionExpired = useCallback(() => {
+    setSessionGeneration((value) => value + 1);
     setAccessToken("");
     setCurrentActor(null);
     setSessionExpired(true);
@@ -68,6 +72,7 @@ export function useAuthentication(baseUrl: string): AuthenticationState {
         );
         const actor = await authenticatedApi.getCurrentActor();
         if (!cancelled) {
+          setSessionGeneration((value) => value + 1);
           setAccessToken(session.access_token);
           setCurrentActor(actor);
           setSessionExpired(false);
@@ -98,6 +103,7 @@ export function useAuthentication(baseUrl: string): AuthenticationState {
         handleSessionExpired,
       );
       const actor = await authenticatedApi.getCurrentActor();
+      setSessionGeneration((value) => value + 1);
       setAccessToken(session.access_token);
       setCurrentActor(actor);
       setSessionExpired(false);
@@ -116,6 +122,7 @@ export function useAuthentication(baseUrl: string): AuthenticationState {
     try {
       await api.logout();
     } finally {
+      setSessionGeneration((value) => value + 1);
       setAccessToken("");
       setCurrentActor(null);
       setSessionExpired(false);
@@ -124,6 +131,7 @@ export function useAuthentication(baseUrl: string): AuthenticationState {
 
   return {
     accessToken,
+    sessionGeneration,
     currentActor,
     isRestoring,
     sessionExpired,

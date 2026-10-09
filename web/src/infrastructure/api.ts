@@ -1,5 +1,8 @@
 import type {
   AssignedCase,
+  CapabilityAssessments,
+  CapabilityCandidate,
+  ProposeCapabilityInput,
   CaseResolution,
   CreateCaseInput,
   CreateCaseResponse,
@@ -10,6 +13,8 @@ import type {
   BackendReadiness,
   CommandReceipt,
   DraftReport,
+  PublishedFinancialReport,
+  FinancialReportPublicationReceipt,
   FinancialCategory,
   PatronAssignment,
   PatronAssignmentInteractions,
@@ -17,6 +22,10 @@ import type {
   PatronAction,
   PatronDecisionDossier,
   PricingScenario,
+  CreatePricingScenarioInput,
+  PricingScenarioCreationReceipt,
+  PricingScenarioStateChangeInput,
+  PricingScenarioTransitionReceipt,
   SubmissionEvidenceReceipt,
   SubmissionEvidenceProjection,
   SubmissionPackageReceipt,
@@ -34,11 +43,16 @@ import type {
   TotpEnrollment,
   TotpStepUpResponse,
   PreparationReviewList,
+  PreparationTransmissionList,
+  CreatePreparationSnapshotInput,
+  TransmitPreparationSnapshotInput,
+  PreparationResponsePlanList,
   PreparationResponseDraftList,
   RequestPreparationReviewInput,
   DecidePreparationReviewInput,
   AddPreparationCorrectionInput,
   CreateTechnicalResponseDraftInput,
+  CreatePreparationResponsePlanInput,
   PreparationPackage,
   CommitPricingImportRequest,
   PricingImportCommitReceipt,
@@ -83,6 +97,8 @@ import type {
   DeclarePartnerOfferPriceInput,
   PartnerOfferScopeReviewList,
   RecordPartnerOfferScopeReviewInput,
+  PartnerOfferLineComparisonList,
+  RecordPartnerOfferLineComparisonInput,
   RecordCaseInterviewInput,
   RecordCaseOutcomeInput,
   RecordCaseHandoverInput,
@@ -91,6 +107,11 @@ import type {
   RecordCaseContractChangeApplicabilityInput,
   RecordCaseContractChangeActionInput,
   RecordCaseContractChangeActionImpactRelationInput,
+  RecordCaseContractChangeActionExecutionInput,
+  PrepareCaseContractChangeEvidenceUploadInput,
+  PrepareCaseContractChangeEvidenceUploadResponse,
+  CaseContractChangeEvidenceUploadResponse,
+  RecordCaseContractChangeExternalConfirmationInput,
   RecordCaseContractChangeEngagementLinkInput,
   RecordCaseContractChangeImpactDeclarationInput,
   RecordCaseRexInput,
@@ -150,6 +171,7 @@ import type {
 } from "../shared/types";
 
 const makeId = () => crypto.randomUUID();
+export type FinancialCommandIdentity = { command_id: string; idempotency_key: string; correlation_id: string };
 
 function readCookie(name: string): string | undefined {
   if (typeof document === "undefined") return undefined;
@@ -423,6 +445,14 @@ export function createApiClient(
       request<CaseExecutionCommandReceipt>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-change-events/${encodeURIComponent(eventId)}/impact-declarations`, { method: "POST", body: JSON.stringify(input) }),
     recordCaseContractChangeActionImpactRelation: (caseId: string, eventId: string, actionId: string, input: RecordCaseContractChangeActionImpactRelationInput) =>
       request<CaseExecutionCommandReceipt>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-change-events/${encodeURIComponent(eventId)}/actions/${encodeURIComponent(actionId)}/impact-links`, { method: "POST", body: JSON.stringify(input) }),
+    recordCaseContractChangeActionExecution: (caseId: string, eventId: string, actionId: string, input: RecordCaseContractChangeActionExecutionInput) =>
+      request<CaseExecutionCommandReceipt>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-change-events/${encodeURIComponent(eventId)}/actions/${encodeURIComponent(actionId)}/execution-acts`, { method: "POST", body: JSON.stringify(input) }),
+    prepareCaseContractChangeEvidenceUpload: (caseId: string, eventId: string, actionId: string, input: PrepareCaseContractChangeEvidenceUploadInput) =>
+      request<PrepareCaseContractChangeEvidenceUploadResponse>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-change-events/${encodeURIComponent(eventId)}/actions/${encodeURIComponent(actionId)}/evidence-objects`, { method: "POST", body: JSON.stringify(input) }),
+    uploadCaseContractChangeEvidence: (caseId: string, eventId: string, actionId: string, evidenceObjectId: string, idempotencyKey: string, file: Blob) =>
+      request<CaseContractChangeEvidenceUploadResponse>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-change-events/${encodeURIComponent(eventId)}/actions/${encodeURIComponent(actionId)}/evidence-objects/${encodeURIComponent(evidenceObjectId)}/content`, { method: "PUT", headers: { "Idempotency-Key": idempotencyKey, "Content-Type": "application/octet-stream" }, body: file }),
+    recordCaseContractChangeExternalConfirmation: (caseId: string, eventId: string, actionId: string, actId: string, input: RecordCaseContractChangeExternalConfirmationInput) =>
+      request<CaseExecutionCommandReceipt>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-change-events/${encodeURIComponent(eventId)}/actions/${encodeURIComponent(actionId)}/execution-acts/${encodeURIComponent(actId)}/external-confirmations`, { method: "POST", body: JSON.stringify(input) }),
     listCaseRex: (caseId: string) =>
       request<CaseRexList>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/rex`),
     listCaseInterviews: (caseId: string) =>
@@ -449,6 +479,10 @@ export function createApiClient(
       request<CaseExecutionCommandReceipt>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/partner-offer-prices/${encodeURIComponent(receiptEventId)}/declarations`, { method: "POST", body: JSON.stringify(input) }),
     listPartnerOfferScopeReviews: (caseId: string) =>
       request<PartnerOfferScopeReviewList>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/partner-offer-scope-reviews`),
+    listPartnerOfferLineComparisons: (caseId: string) =>
+      request<PartnerOfferLineComparisonList>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/partner-offer-line-comparisons`),
+    recordPartnerOfferLineComparison: (caseId: string, input: RecordPartnerOfferLineComparisonInput) =>
+      request<CaseExecutionCommandReceipt>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/partner-offer-line-comparisons`, { method: "POST", body: JSON.stringify(input) }),
     recordPartnerOfferScopeReview: (caseId: string, input: RecordPartnerOfferScopeReviewInput) =>
       request<CaseExecutionCommandReceipt>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/partner-offer-scope-reviews`, { method: "POST", body: JSON.stringify(input) }),
     recordCaseRex: (p7ResultId: string, input: RecordCaseRexInput) =>
@@ -602,6 +636,15 @@ export function createApiClient(
             correlation_id: makeId(),
           }),
         },
+      ),
+    getCapabilityAssessments: (caseId: string) =>
+      request<CapabilityAssessments>(`/api/v1/collaborator/cases/${encodeURIComponent(caseId)}/capability-assessments`),
+    getCapabilityCandidates: (caseId: string) =>
+      request<CapabilityCandidate[]>(`/api/v1/collaborator/cases/${encodeURIComponent(caseId)}/capability-candidates`),
+    proposeCapability: (caseId: string, input: ProposeCapabilityInput) =>
+      request<CommandReceipt>(
+        `/api/v1/collaborator/cases/${encodeURIComponent(caseId)}/capability-proposals`,
+        { method: "POST", body: JSON.stringify(input) },
       ),
     getCaseResolution: (caseId: string) =>
       request<CaseResolution>(
@@ -813,6 +856,37 @@ export function createApiClient(
     listPricingScenarios: (caseId: string) =>
       request<PricingScenario[]>(
         `/api/v1/patron/cases/${encodeURIComponent(caseId)}/pricing-scenarios`,
+      ),
+    createPricingScenario: (caseId: string, input: CreatePricingScenarioInput) =>
+      request<PricingScenarioCreationReceipt>(
+        `/api/v1/patron/cases/${encodeURIComponent(caseId)}/pricing-scenarios`,
+        { method: "POST", body: JSON.stringify({
+          command_id: input.command_id, idempotency_key: input.idempotency_key, correlation_id: input.correlation_id,
+          scenario_id: input.scenario_id, source_snapshot_id: input.source_snapshot_id,
+          scenario_key: input.scenario_key, scenario_type: input.scenario_type,
+          sales_adjustment_bps: input.sales_adjustment_bps, cost_adjustment_bps: input.cost_adjustment_bps,
+          penalty_reserve_minor: input.penalty_reserve_minor, retention_reserve_minor: input.retention_reserve_minor,
+          guarantee_reserve_minor: input.guarantee_reserve_minor, floor_margin_rate_bps: input.floor_margin_rate_bps,
+          target_margin_rate_bps: input.target_margin_rate_bps, assumptions: input.assumptions,
+        }) },
+      ),
+    selectPricingScenario: (caseId: string, scenarioId: string, input: PricingScenarioStateChangeInput) =>
+      request<PricingScenarioTransitionReceipt>(
+        `/api/v1/patron/cases/${encodeURIComponent(caseId)}/pricing-scenarios/${encodeURIComponent(scenarioId)}/selection`,
+        { method: "POST", body: JSON.stringify({
+          command_id: input.command_id, idempotency_key: input.idempotency_key,
+          correlation_id: input.correlation_id, transition_id: input.transition_id,
+          expected_version: input.expected_version, reason_code: input.reason_code,
+        }) },
+      ),
+    archivePricingScenario: (caseId: string, scenarioId: string, input: PricingScenarioStateChangeInput) =>
+      request<PricingScenarioTransitionReceipt>(
+        `/api/v1/patron/cases/${encodeURIComponent(caseId)}/pricing-scenarios/${encodeURIComponent(scenarioId)}/archive`,
+        { method: "POST", body: JSON.stringify({
+          command_id: input.command_id, idempotency_key: input.idempotency_key,
+          correlation_id: input.correlation_id, transition_id: input.transition_id,
+          expected_version: input.expected_version, reason_code: input.reason_code,
+        }) },
       ),
     listEnterpriseCapabilities: (companyId: string) =>
       request<{ capabilities: EnterpriseCapability[] }>(
@@ -1030,9 +1104,22 @@ export function createApiClient(
       request<PreparationReviewList>(
         `/api/v1/preparation/${encodeURIComponent(packageId)}/reviews`,
       ),
+    listPreparationTransmissions: (packageId: string) =>
+      request<PreparationTransmissionList>(
+        `/api/v1/preparation/${encodeURIComponent(packageId)}/transmissions`,
+      ),
     listPreparationResponseDrafts: (packageId: string) =>
       request<PreparationResponseDraftList>(
         `/api/v1/preparation/${encodeURIComponent(packageId)}/response-drafts`,
+      ),
+    getPreparationResponsePlans: (packageId: string) =>
+      request<PreparationResponsePlanList>(
+        `/api/v1/preparation/${encodeURIComponent(packageId)}/response-plans`,
+      ),
+    createPreparationResponsePlan: (packageId: string, input: CreatePreparationResponsePlanInput) =>
+      request<CommandReceipt>(
+        `/api/v1/preparation/${encodeURIComponent(packageId)}/response-plans`,
+        { method: "POST", body: JSON.stringify(input) },
       ),
     requestPreparationReview: (packageId: string, input: RequestPreparationReviewInput) =>
       request<CommandReceipt>(
@@ -1244,15 +1331,16 @@ export function createApiClient(
       ),
     createPreparationSnapshot: (
       packageId: string,
-      input: { snapshot_id: string; expected_package_revision: number },
+      input: CreatePreparationSnapshotInput,
     ) =>
       request<CommandReceipt>(
         `/api/v1/collaborator/preparation/${encodeURIComponent(packageId)}/snapshots`,
         {
           method: "POST",
           body: JSON.stringify({
-            command_id: makeId(),
-            idempotency_key: makeId(),
+            command_id: input.command_id ?? makeId(),
+            idempotency_key: input.idempotency_key ?? makeId(),
+            correlation_id: input.correlation_id ?? makeId(),
             package_id: packageId,
             ...input,
           }),
@@ -1260,15 +1348,16 @@ export function createApiClient(
       ),
     transmitPreparationSnapshot: (
       packageId: string,
-      input: { snapshot_id: string; transmission_id: string; expected_package_revision: number },
+      input: TransmitPreparationSnapshotInput,
     ) =>
       request<CommandReceipt>(
         `/api/v1/collaborator/preparation/${encodeURIComponent(packageId)}/transmissions`,
         {
           method: "POST",
           body: JSON.stringify({
-            command_id: makeId(),
-            idempotency_key: makeId(),
+            command_id: input.command_id ?? makeId(),
+            idempotency_key: input.idempotency_key ?? makeId(),
+            correlation_id: input.correlation_id ?? makeId(),
             package_id: packageId,
             ...input,
           }),
@@ -1316,14 +1405,15 @@ export function createApiClient(
       request<SubmissionEvidenceProjection[]>(
         `/api/v1/patron/submission-packages/${encodeURIComponent(submissionPackageId)}/evidence`,
       ),
-    createDraft: (caseId: string) =>
+    createDraft: (caseId: string, identity?: FinancialCommandIdentity) =>
       request<CommandReceipt>(
         `/api/v1/patron/cases/${encodeURIComponent(caseId)}/financial-reports/drafts`,
         {
           method: "POST",
           body: JSON.stringify({
-            command_id: makeId(),
-            idempotency_key: makeId(),
+            command_id: identity?.command_id ?? makeId(),
+            idempotency_key: identity?.idempotency_key ?? makeId(),
+            correlation_id: identity?.correlation_id ?? makeId(),
             currency_code: "EUR",
             ruleset_version: 1,
           }),
@@ -1332,6 +1422,27 @@ export function createApiClient(
     getDraft: (caseId: string, reportId: string) =>
       request<DraftReport>(
         `/api/v1/patron/cases/${encodeURIComponent(caseId)}/financial-reports/${encodeURIComponent(reportId)}/draft`,
+      ),
+    getPublishedFinancialReport: (caseId: string, reportId: string) =>
+      request<PublishedFinancialReport>(
+        `/api/v1/patron/cases/${encodeURIComponent(caseId)}/financial-reports/${encodeURIComponent(reportId)}`,
+      ),
+    publishFinancialReport: (
+      caseId: string,
+      reportId: string,
+      input: FinancialCommandIdentity & { expected_revision: number },
+    ) =>
+      request<FinancialReportPublicationReceipt>(
+        `/api/v1/patron/cases/${encodeURIComponent(caseId)}/financial-reports/${encodeURIComponent(reportId)}/publications`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            command_id: input.command_id,
+            idempotency_key: input.idempotency_key,
+            correlation_id: input.correlation_id,
+            expected_revision: input.expected_revision,
+          }),
+        },
       ),
     addLine: (
       caseId: string,
@@ -1343,15 +1454,16 @@ export function createApiClient(
         unit: string;
         amount_minor: number;
         expected_revision: number;
-      },
+      } & Partial<FinancialCommandIdentity>,
     ) =>
       request<CommandReceipt>(
         `/api/v1/patron/cases/${encodeURIComponent(caseId)}/financial-reports/${encodeURIComponent(reportId)}/lines`,
         {
           method: "POST",
           body: JSON.stringify({
-            command_id: makeId(),
-            idempotency_key: makeId(),
+            command_id: input.command_id ?? makeId(),
+            idempotency_key: input.idempotency_key ?? makeId(),
+            correlation_id: input.correlation_id ?? makeId(),
             expected_revision: input.expected_revision,
             category: input.category,
             label: input.label,

@@ -10,15 +10,46 @@ from fastapi import APIRouter, Header, HTTPException, status
 from app.interfaces.http.dependencies.auth import resolve_bearer_context as _resolve_context
 from app.interfaces.http.routes.consultations import ConsultationSecurityRuntime
 from app.modules.dce.application.queries import CaseDceReadingAvailability
+from app.modules.dce.application.source_anchor_projection import DceSourceAnchorProjection
 from app.modules.dce.public.contracts import (
     CaseDceReadingCountersResponse,
     CaseDceReadingDceResponse,
     CaseDceReadingRequirementResponse,
     CaseDceReadingResponse,
+    CaseDceSourceAnchorResponse,
+    CaseDceSourceLocatorResponse,
 )
 from app.platform.security.authorization import AuthorizationRequest, AuthorizationResource
 from app.platform.security.capabilities import Capability
 from app.platform.security.context import DataClassification
+
+
+def _source_anchor_response(
+    anchor: DceSourceAnchorProjection | None,
+) -> CaseDceSourceAnchorResponse | None:
+    if anchor is None:
+        return None
+    locator = anchor.locator
+    return CaseDceSourceAnchorResponse(
+        source_anchor_id=anchor.source_anchor_id,
+        dce_version_id=anchor.dce_version_id,
+        dce_document_id=anchor.dce_document_id,
+        extraction_id=anchor.extraction_id,
+        fragment_ordinal=anchor.fragment_ordinal,
+        source_sha256=anchor.source_sha256,
+        extractor_id=anchor.extractor_id,
+        extractor_version=anchor.extractor_version,
+        fragment_sha256=anchor.fragment_sha256,
+        locator_state=anchor.locator_state.value,
+        locator=(
+            CaseDceSourceLocatorResponse(
+                kind=locator.kind.value,
+                coordinates=dict(locator.coordinates),
+            )
+            if locator is not None
+            else None
+        ),
+    )
 
 
 def build_case_dce_reading_router(
@@ -118,6 +149,7 @@ def build_case_dce_reading_router(
                     uncertainty_status=requirement.uncertainty_status,
                     document_family=requirement.document_family,
                     source_locator_label=requirement.source_locator_label,
+                    source_anchor=_source_anchor_response(requirement.source_anchor),
                 )
                 for requirement in reading.requirements
             ],

@@ -40,9 +40,12 @@ _ALLOWED_CANDIDATE_FIELDS = {
     "publication_date",
     "response_deadline",
     "source",
+    "source_contract_version",
+    "source_response_sha256",
     "source_notice_id",
     "source_status",
     "title",
+    "transport_fingerprint_sha256",
 }
 
 
@@ -172,9 +175,13 @@ def _read_candidates(payload: object) -> tuple[OpportunityCandidate, ...]:
             department_codes=_read_string_tuple(raw, "department_codes"),
             market_types=_read_string_tuple(raw, "market_types"),
             source_status=_read_optional_string(raw, "source_status"),
+            source_contract_version=_read_optional_string(raw, "source_contract_version"),
+            source_response_sha256=_read_optional_string(raw, "source_response_sha256"),
         )
         if candidate.source != "BOAMP" or raw["fingerprint_sha256"] != candidate.fingerprint():
             raise ValueError("candidate fingerprint or source is invalid")
+        if raw["transport_fingerprint_sha256"] != candidate.transport_fingerprint():
+            raise ValueError("candidate transport provenance fingerprint is invalid")
         candidates.append(candidate)
     return tuple(candidates)
 

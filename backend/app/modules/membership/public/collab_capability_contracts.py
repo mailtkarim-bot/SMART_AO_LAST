@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import TYPE_CHECKING, Literal
 from uuid import NAMESPACE_URL, UUID, uuid5
 
@@ -20,7 +21,7 @@ class ProposeCapabilityForCaseRequest(CollaboratorCapabilityPublicModel):
     command_id: UUID
     idempotency_key: UUID
     correlation_id: UUID | None = None
-    assignment_id: UUID
+    assignment_id: UUID | None = None
     capability_id: UUID
     capability_version_id: UUID
     requirement_id: UUID | None = None
@@ -28,7 +29,7 @@ class ProposeCapabilityForCaseRequest(CollaboratorCapabilityPublicModel):
     justification: str = Field(min_length=1, max_length=2_000)
     source_locator: str | None = Field(default=None, max_length=500)
 
-    def to_command(self, *, case_id: UUID) -> ProposeCapabilityForCaseCommand:
+    def to_command(self, *, case_id: UUID, tenant_id: UUID) -> ProposeCapabilityForCaseCommand:
         from app.modules.membership.application.collab_capability_commands import (
             ProposeCapabilityForCaseCommand,
         )
@@ -36,7 +37,9 @@ class ProposeCapabilityForCaseRequest(CollaboratorCapabilityPublicModel):
         return ProposeCapabilityForCaseCommand(
             **self.model_dump(),
             case_id=case_id,
-            proposal_id=uuid5(NAMESPACE_URL, f"case-capability-proposal:{self.command_id}"),
+            proposal_id=uuid5(
+                NAMESPACE_URL, f"case-capability-proposal:{tenant_id}:{self.command_id}"
+            ),
         )
 
 
@@ -54,7 +57,7 @@ class ReportCapabilityGapRequest(CollaboratorCapabilityPublicModel):
     source_locator: str | None = Field(default=None, max_length=500)
     recommended_action: str = Field(min_length=1, max_length=1_000)
 
-    def to_command(self, *, case_id: UUID) -> ReportCapabilityGapCommand:
+    def to_command(self, *, case_id: UUID, tenant_id: UUID) -> ReportCapabilityGapCommand:
         from app.modules.membership.application.collab_capability_commands import (
             ReportCapabilityGapCommand,
         )
@@ -62,8 +65,22 @@ class ReportCapabilityGapRequest(CollaboratorCapabilityPublicModel):
         return ReportCapabilityGapCommand(
             **self.model_dump(),
             case_id=case_id,
-            gap_id=uuid5(NAMESPACE_URL, f"case-capability-gap:{self.command_id}"),
+            gap_id=uuid5(NAMESPACE_URL, f"case-capability-gap:{tenant_id}:{self.command_id}"),
         )
+
+
+class CapabilityCandidateResponse(CollaboratorCapabilityPublicModel):
+    capability_id: UUID
+    capability_kind: Literal["QUALIFICATION", "REFERENCE", "EQUIPMENT", "TEAM", "METHOD"]
+    name: str
+    version_id: UUID
+    version_number: int
+    title: str
+    valid_from: datetime
+    valid_until: datetime | None
+    validity_state: Literal["CURRENT", "EXPIRED"]
+    source_evidence_state: Literal["CURRENT", "EXPIRED", "UNKNOWN"]
+    evaluated_at: datetime
 
 
 class CollaboratorCapabilityReceiptResponse(CollaboratorCapabilityPublicModel):
@@ -88,6 +105,9 @@ class CapabilityProposalResponse(CollaboratorCapabilityPublicModel):
     validity_state: Literal["CURRENT", "EXPIRED", "UNKNOWN"]
     justification: str
     source_locator: str | None
+
+    source_evidence_state: Literal["CURRENT", "EXPIRED", "UNKNOWN"] = "UNKNOWN"
+    source_evidence_evaluated_at: datetime | None = None
 
 
 class CapabilityGapResponse(CollaboratorCapabilityPublicModel):

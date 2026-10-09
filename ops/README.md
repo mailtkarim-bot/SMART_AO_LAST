@@ -17,8 +17,8 @@ Cette configuration est un **template de préproduction**. Elle ne contient aucu
 | `ops/Caddyfile` | TLS automatique, en-têtes de sécurité, reverse proxy same-origin. |
 | `ops/.env.preprod.example` | Variables documentées ; à copier puis compléter hors Git. |
 | `ops/deploy-preprod.sh` | Déploiement verrouillé : validation, backup, pull/build pinné, migration, démarrage, smoke et opérations 7b. |
-| `ops/backup-preprod.sh` | Backup PostgreSQL, quarantaine privée et volumes Caddy avec manifest SHA-256 et rétention. |
-| `ops/restore-preprod.sh` | Restauration vérifiée dans une base PostgreSQL isolée temporaire ; aucune écriture de la base active. |
+| `ops/backup-preprod.sh` | Backup PostgreSQL, quarantaine privée et volumes Caddy via helper Docker sans réseau et source en lecture seule; verrou non bloquant avant nettoyage des `.tmp`, manifeste SHA-256 atomique et rétention. Accepte `SMART_AO_PREPROD_ENV_FILE`, `SMART_AO_COMPOSE_PROJECT_NAME` et `SMART_AO_BACKUP_DIR` pour les environnements isolés. |
+| `ops/restore-preprod.sh` | Restaure et vérifie le dump dans une base PostgreSQL temporaire, puis les octets C5 dans un volume Docker anonyme et vérifie les SHA-256 des lignes CLEAN; nettoie les ressources créées sur sortie normale, mais un `SIGKILL` peut les laisser. |
 | `ops/healthcheck-preprod.sh` | Supervision HTTPS, live/ready, dépendances healthy, port ClamAV et fraîcheur backup. |
 | `ops/rotate-jwt-key-preprod.sh` | Rotation JWT manuelle, confirmée et atomique pendant une fenêtre de maintenance. |
 | `ops/run-knowledge-embeddings-preprod.sh` | Indexation BGE one-shot par tenant/Case/version DCE, avec env protégé et opt-in RAG séparé. |

@@ -31,6 +31,7 @@ from app.modules.opportunity.public.boamp_qualification_contracts import (
     BoampObservationQualificationRequest,
     BoampObservationResponse,
     BoampQualificationReceiptResponse,
+    BoampSourceCaptureResponse,
     BoampSourceStatusResponse,
 )
 from app.platform.events.dispatcher import (
@@ -308,6 +309,16 @@ def _observation_response(item) -> BoampObservationResponse:
         deadline_source_timezone=item.deadline_source_timezone,
         deadline_normalized_timezone=item.deadline_normalized_timezone,
         unknowns=[dict(unknown) for unknown in item.unknowns],
+        source_captures=[
+            BoampSourceCaptureResponse(
+                ingestion_run_id=capture.ingestion_run_id,
+                source_mode=capture.source_mode,
+                run_recorded_at=capture.run_recorded_at,
+                source_contract_version=capture.source_contract_version,
+                source_response_sha256=capture.source_response_sha256,
+            )
+            for capture in item.source_captures
+        ],
     )
 
 

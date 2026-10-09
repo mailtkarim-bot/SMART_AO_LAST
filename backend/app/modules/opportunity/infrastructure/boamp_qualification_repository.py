@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4, uuid5
@@ -21,6 +21,7 @@ from app.modules.opportunity.application.boamp_qualification_errors import (
     BoampQualificationIdempotencyConflict,
 )
 from app.modules.opportunity.infrastructure.observation_models import (
+    BoampIngestionObservationLinkRecord,
     BoampIngestionRunRecord,
     BoampOpportunityObservationRecord,
     BoampOpportunityQualificationRecord,
@@ -40,6 +41,16 @@ class BoampObservationState:
     latest_qualification: BoampOpportunityQualificationRecord | None = None
     case_id: UUID | None = None
     case_created_at: datetime | None = None
+    source_captures: tuple[BoampSourceCaptureRecord, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class BoampSourceCaptureRecord:
+    ingestion_run_id: UUID
+    source_mode: str
+    run_recorded_at: datetime
+    source_contract_version: str | None
+    source_response_sha256: str | None
 
 
 class BoampQualificationRepository:
@@ -69,6 +80,7 @@ class BoampQualificationRepository:
             .where(
                 BoampIngestionRunRecord.tenant_id == tenant_id,
                 BoampIngestionRunRecord.status == "RECORDED",
+                BoampIngestionRunRecord.source_mode == "LIVE",
             )
             .order_by(
                 BoampIngestionRunRecord.completed_at.desc(),
@@ -119,6 +131,48 @@ class BoampQualificationRepository:
                     latest_qualification=current.latest_qualification,
                     case_id=case.id,
                     case_created_at=case.created_at,
+                    source_captures=current.source_captures,
+                )
+
+        captures_by_observation: dict[UUID, list[BoampSourceCaptureRecord]] = {
+            observation_id: [] for observation_id in observation_ids
+        }
+        captures = session.execute(
+            sa.select(BoampIngestionObservationLinkRecord, BoampIngestionRunRecord)
+            .join(
+                BoampIngestionRunRecord,
+                sa.and_(
+                    BoampIngestionRunRecord.tenant_id
+                    == BoampIngestionObservationLinkRecord.tenant_id,
+                    BoampIngestionRunRecord.id
+                    == BoampIngestionObservationLinkRecord.ingestion_run_id,
+                ),
+            )
+            .where(
+                BoampIngestionObservationLinkRecord.tenant_id == tenant_id,
+                BoampIngestionObservationLinkRecord.observation_id.in_(observation_ids),
+                BoampIngestionRunRecord.status == "RECORDED",
+            )
+            .order_by(
+                BoampIngestionObservationLinkRecord.observation_id,
+                BoampIngestionRunRecord.completed_at,
+                BoampIngestionRunRecord.id,
+            )
+        )
+        for link, run in captures:
+            captures_by_observation[link.observation_id].append(
+                BoampSourceCaptureRecord(
+                    ingestion_run_id=run.id,
+                    source_mode=run.source_mode,
+                    run_recorded_at=run.completed_at,
+                    source_contract_version=link.source_contract_version,
+                    source_response_sha256=link.source_response_sha256,
+                )
+            )
+        for observation_id, source_captures in captures_by_observation.items():
+            if source_captures:
+                states[observation_id] = replace(
+                    states[observation_id], source_captures=tuple(source_captures)
                 )
         return states
 

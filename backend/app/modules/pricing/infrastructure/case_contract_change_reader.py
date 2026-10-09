@@ -12,12 +12,16 @@ from app.modules.pricing.application.case_contract_change_queries import (
     CaseContractChangeReader,
 )
 from app.modules.pricing.infrastructure.models.case_contract_change import (
+    CaseContractChangeActionExecutionEvidenceLinkRecord,
+    CaseContractChangeActionExecutionRecord,
     CaseContractChangeActionImpactLinkRecord,
     CaseContractChangeActionImpactRelationRecord,
     CaseContractChangeActionRecord,
     CaseContractChangeApplicabilityRecord,
     CaseContractChangeEngagementLinkRecord,
     CaseContractChangeEventRecord,
+    CaseContractChangeEvidenceObjectRecord,
+    CaseContractChangeExternalConfirmationRecord,
     CaseContractChangeImpactDeclarationRecord,
 )
 from app.modules.pricing.infrastructure.models.contract_instrument_version import (
@@ -166,6 +170,80 @@ class SqlAlchemyCaseContractChangeReader(CaseContractChangeReader):
                     )
                 ).all()
             )
+            action_execution_acts = tuple(
+                session.scalars(
+                    sa.select(CaseContractChangeActionExecutionRecord)
+                    .where(
+                        CaseContractChangeActionExecutionRecord.tenant_id == tenant_id,
+                        CaseContractChangeActionExecutionRecord.case_id == case_id,
+                        CaseContractChangeActionExecutionRecord.event_id.in_(event_ids),
+                    )
+                    .order_by(
+                        CaseContractChangeActionExecutionRecord.created_at,
+                        CaseContractChangeActionExecutionRecord.revision,
+                        CaseContractChangeActionExecutionRecord.id,
+                    )
+                ).all()
+            )
+            execution_act_ids = [act.id for act in action_execution_acts]
+            execution_evidence_links = (
+                tuple(
+                    session.scalars(
+                        sa.select(CaseContractChangeActionExecutionEvidenceLinkRecord)
+                        .where(
+                            CaseContractChangeActionExecutionEvidenceLinkRecord.tenant_id
+                            == tenant_id,
+                            CaseContractChangeActionExecutionEvidenceLinkRecord.case_id == case_id,
+                            CaseContractChangeActionExecutionEvidenceLinkRecord.act_id.in_(
+                                execution_act_ids
+                            ),
+                        )
+                        .order_by(
+                            CaseContractChangeActionExecutionEvidenceLinkRecord.act_id,
+                            CaseContractChangeActionExecutionEvidenceLinkRecord.position,
+                        )
+                    ).all()
+                )
+                if execution_act_ids
+                else ()
+            )
+            external_confirmations = (
+                tuple(
+                    session.scalars(
+                        sa.select(CaseContractChangeExternalConfirmationRecord)
+                        .where(
+                            CaseContractChangeExternalConfirmationRecord.tenant_id == tenant_id,
+                            CaseContractChangeExternalConfirmationRecord.case_id == case_id,
+                            CaseContractChangeExternalConfirmationRecord.event_id.in_(event_ids),
+                            CaseContractChangeExternalConfirmationRecord.act_id.in_(
+                                execution_act_ids
+                            ),
+                        )
+                        .order_by(
+                            CaseContractChangeExternalConfirmationRecord.created_at,
+                            CaseContractChangeExternalConfirmationRecord.revision,
+                            CaseContractChangeExternalConfirmationRecord.id,
+                        )
+                    ).all()
+                )
+                if execution_act_ids
+                else ()
+            )
+            evidence_objects = {
+                item.id: item
+                for item in session.scalars(
+                    sa.select(CaseContractChangeEvidenceObjectRecord)
+                    .where(
+                        CaseContractChangeEvidenceObjectRecord.tenant_id == tenant_id,
+                        CaseContractChangeEvidenceObjectRecord.case_id == case_id,
+                        CaseContractChangeEvidenceObjectRecord.event_id.in_(event_ids),
+                    )
+                    .order_by(
+                        CaseContractChangeEvidenceObjectRecord.created_at,
+                        CaseContractChangeEvidenceObjectRecord.id,
+                    )
+                ).all()
+            }
             reviews_by_event: dict[UUID, list[CaseContractChangeApplicabilityRecord]] = {}
             actions_by_event: dict[UUID, list[CaseContractChangeActionRecord]] = {}
             engagement_links_by_event: dict[UUID, list[CaseContractChangeEngagementLinkRecord]] = {}
@@ -174,6 +252,13 @@ class SqlAlchemyCaseContractChangeReader(CaseContractChangeReader):
             ] = {}
             relations_by_event: dict[UUID, list[CaseContractChangeActionImpactRelationRecord]] = {}
             links_by_relation: dict[UUID, list[CaseContractChangeActionImpactLinkRecord]] = {}
+            execution_acts_by_event: dict[UUID, list[CaseContractChangeActionExecutionRecord]] = {}
+            evidence_links_by_act: dict[
+                UUID, list[CaseContractChangeActionExecutionEvidenceLinkRecord]
+            ] = {}
+            confirmations_by_act: dict[
+                UUID, list[CaseContractChangeExternalConfirmationRecord]
+            ] = {}
             for review in reviews:
                 reviews_by_event.setdefault(review.event_id, []).append(review)
             for action in actions:
@@ -188,6 +273,12 @@ class SqlAlchemyCaseContractChangeReader(CaseContractChangeReader):
                 relations_by_event.setdefault(relation.event_id, []).append(relation)
             for link in action_impact_links:
                 links_by_relation.setdefault(link.relation_id, []).append(link)
+            for act in action_execution_acts:
+                execution_acts_by_event.setdefault(act.event_id, []).append(act)
+            for link in execution_evidence_links:
+                evidence_links_by_act.setdefault(link.act_id, []).append(link)
+            for confirmation in external_confirmations:
+                confirmations_by_act.setdefault(confirmation.act_id, []).append(confirmation)
 
             projections = []
             for event in events:
@@ -286,6 +377,54 @@ class SqlAlchemyCaseContractChangeReader(CaseContractChangeReader):
                             }
                             for relation in relations_by_event.get(event.id, [])
                         ],
+                        "action_execution_acts": [
+                            {
+                                "act_id": str(act.id),
+                                "action_id": str(act.action_id),
+                                "c4_relation_id": str(act.c4_relation_id),
+                                "revision": act.revision,
+                                "declared_state": act.declared_state,
+                                "declared_summary": act.declared_summary,
+                                "unknown_reason": act.unknown_reason,
+                                "evidence_refs": list(act.evidence_refs_json),
+                                "evidence_state": act.evidence_state,
+                                "evidence_objects": [
+                                    _evidence_object_projection(evidence_objects[link.evidence_id])
+                                    for link in evidence_links_by_act.get(act.id, [])
+                                    if link.evidence_id in evidence_objects
+                                ],
+                                "external_confirmation_state": (
+                                    "CONFIRMED"
+                                    if confirmations_by_act.get(act.id)
+                                    else act.external_confirmation_state
+                                ),
+                                "external_confirmation_note": act.external_confirmation_note,
+                                "external_confirmation_acts": [
+                                    _external_confirmation_projection(
+                                        confirmation=confirmation,
+                                        evidence=evidence_objects.get(confirmation.evidence_id),
+                                    )
+                                    for confirmation in confirmations_by_act.get(act.id, [])
+                                    if confirmation.evidence_id in evidence_objects
+                                ],
+                                "c4_projection_state": _c5_c4_projection_state(
+                                    relation_id=act.c4_relation_id,
+                                    relations=relations_by_event.get(event.id, []),
+                                    latest_review=latest_review,
+                                    latest_linkage=latest_linkage,
+                                    declarations_by_id={item.id: item for item in impact_history},
+                                    links_by_relation=links_by_relation,
+                                ),
+                                "actor_id": str(act.actor_id),
+                                "recorded_at": act.created_at.isoformat(),
+                            }
+                            for act in execution_acts_by_event.get(event.id, [])
+                        ],
+                        "evidence_objects": [
+                            _evidence_object_projection(item)
+                            for item in evidence_objects.values()
+                            if item.event_id == event.id
+                        ],
                         "offer_source_locator": award.get("source_locator"),
                         "a1_engagements_state": "KNOWN" if a1_sources else "UNKNOWN",
                         "a1_engagements": a1_sources,
@@ -369,3 +508,61 @@ def _action_impact_relation_projection_state(
         if declaration is None or declaration.linkage_id != latest_linkage.id:
             return "REVIEW_REQUIRED"
     return "CURRENT"
+
+
+def _c5_c4_projection_state(
+    *, relation_id, relations, latest_review, latest_linkage, declarations_by_id, links_by_relation
+) -> str:
+    relation = next((item for item in relations if item.id == relation_id), None)
+    if relation is None:
+        return "REVIEW_REQUIRED"
+    state = _action_impact_relation_projection_state(
+        relation=relation,
+        latest_review=latest_review,
+        latest_linkage=latest_linkage,
+        declarations_by_id=declarations_by_id,
+        links=links_by_relation.get(relation.id, []),
+    )
+    if state != "CURRENT":
+        return "REVIEW_REQUIRED"
+    latest = max(
+        (item for item in relations if item.action_id == relation.action_id),
+        key=lambda item: (item.revision, item.id),
+        default=None,
+    )
+    return "SUPERSEDED" if latest is not None and latest.id != relation.id else "CURRENT"
+
+
+def _evidence_object_projection(
+    record: CaseContractChangeEvidenceObjectRecord,
+) -> dict[str, object]:
+    return {
+        "evidence_object_id": str(record.id),
+        "action_id": str(record.action_id),
+        "c4_relation_id": str(record.c4_relation_id),
+        "version": record.version,
+        "evidence_kind": record.evidence_kind,
+        "sha256": record.sha256,
+        "actual_byte_size": record.actual_byte_size,
+        "media_type": record.media_type,
+        "state": record.state,
+        "expires_at": record.expires_at.isoformat(),
+        "recorded_at": record.scanned_at.isoformat()
+        if record.scanned_at
+        else record.created_at.isoformat(),
+    }
+
+
+def _external_confirmation_projection(*, confirmation, evidence) -> dict[str, object]:
+    return {
+        "confirmation_id": str(confirmation.id),
+        "act_id": str(confirmation.act_id),
+        "evidence_object_id": str(confirmation.evidence_id),
+        "evidence_sha256": evidence.sha256,
+        "revision": confirmation.revision,
+        "received_at": confirmation.received_at.isoformat(),
+        "external_party": confirmation.external_party,
+        "rationale": confirmation.rationale,
+        "actor_id": str(confirmation.actor_id),
+        "recorded_at": confirmation.created_at.isoformat(),
+    }

@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Header, HTTPException, status
+from fastapi import APIRouter, Header, HTTPException, Response, status
 from fastapi.responses import JSONResponse
 
 from app.interfaces.http.dependencies.auth import resolve_bearer_context as _resolve_context
@@ -15,6 +15,9 @@ from app.modules.preparation.public.contracts import (
     CreatePreparationSnapshotRequest,
     PreparationAggregateReference,
     PreparationCommandResponse,
+    PreparationStoredCommandReceipt,
+    PreparationTransmissionDeliveryProjection,
+    PreparationTransmissionListResponse,
     TransmitPreparationSnapshotRequest,
 )
 from app.platform.events.dispatcher import (
@@ -27,9 +30,11 @@ from app.platform.events.dispatcher import (
 def build_preparation_transmission_router(
     *, service: PreparationTransmissionService, security_runtime: ConsultationSecurityRuntime
 ) -> APIRouter:
-    router = APIRouter(prefix="/api/v1/collaborator", tags=["preparation-transmission"])
+    collaborator_router = APIRouter(
+        prefix="/api/v1/collaborator", tags=["preparation-transmission"]
+    )
 
-    @router.post(
+    @collaborator_router.post(
         "/preparation/{package_id}/snapshots",
         status_code=status.HTTP_201_CREATED,
         response_model=PreparationCommandResponse,
@@ -61,7 +66,7 @@ def build_preparation_transmission_router(
             ),
         )
 
-    @router.post(
+    @collaborator_router.post(
         "/preparation/{package_id}/transmissions",
         status_code=status.HTTP_201_CREATED,
         response_model=PreparationCommandResponse,
@@ -94,6 +99,61 @@ def build_preparation_transmission_router(
             ),
         )
 
+    patron_router = APIRouter(prefix="/api/v1/preparation", tags=["preparation-transmission"])
+
+    @patron_router.get(
+        "/{package_id}/transmissions",
+        response_model=PreparationTransmissionListResponse,
+    )
+    def read_transmissions(
+        package_id: UUID,
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> PreparationTransmissionListResponse:
+        actor = _resolve_context(
+            authorization=authorization,
+            context_resolver=security_runtime.context_resolver,
+        )
+        try:
+            deliveries = service.read_transmissions(
+                actor=actor, package_id=package_id, now=datetime.now(tz=UTC)
+            )
+        except PermissionError as error:
+            if str(error) == "NOT_FOUND_OR_FORBIDDEN":
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND, detail="NOT_FOUND_OR_FORBIDDEN"
+                ) from error
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="FORBIDDEN"
+            ) from error
+        except CommandExecutionError as error:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(error)
+            ) from error
+        response.headers["Cache-Control"] = "no-store"
+        return PreparationTransmissionListResponse(
+            package_id=package_id,
+            deliveries=[
+                PreparationTransmissionDeliveryProjection(
+                    snapshot_id=snapshot.id,
+                    snapshot_version=snapshot.version,
+                    snapshot_state=snapshot.state,
+                    snapshot_created_at=snapshot.created_at,
+                    snapshot_manifest_sha256=snapshot.manifest_sha256,
+                    snapshot_manifest=snapshot.manifest_json,
+                    snapshot_receipt=PreparationStoredCommandReceipt(**snapshot_receipt),
+                    transmission_id=transmission.id,
+                    transmission_state=transmission.state,
+                    transmitted_at=transmission.created_at,
+                    transmission_receipt=PreparationStoredCommandReceipt(**transmission_receipt),
+                )
+                for snapshot, transmission, snapshot_receipt, transmission_receipt in deliveries
+            ],
+        )
+
+    router = APIRouter()
+    router.include_router(collaborator_router)
+    router.include_router(patron_router)
     return router
 
 

@@ -28,20 +28,25 @@ export type CaseEconomicCoverage = {
   financing: CaseEconomicCoverageStatus;
 };
 
+export const caseResolutionItemKinds = ["REQUIREMENT", "INFORMATION_REQUEST", "TASK_BLOCKER", "CONTRADICTION", "RISK", "UNKNOWN", "CAPABILITY_GAP"] as const;
+export type CaseResolutionItemKind = typeof caseResolutionItemKinds[number];
+
+export type CaseResolutionItem = {
+  item_id: string;
+  item_kind: CaseResolutionItemKind;
+  native_state: string;
+  source_refs: string[];
+  resolution_owner: string | null;
+  next_action: string;
+  due_at: string | null;
+  impact: string | null;
+};
+
 export type CaseResolution = {
   case_id: string;
   work_label: string;
   coverage: "PARTIAL";
-  items: Array<{
-    item_id: string;
-    item_kind: string;
-    native_state: string;
-    source_refs: string[];
-    resolution_owner: string | null;
-    next_action: string;
-    due_at: string | null;
-    impact: string | null;
-  }>;
+  items: CaseResolutionItem[];
   economic_coverage: CaseEconomicCoverage | null;
 };
 
@@ -144,6 +149,17 @@ export type DraftReport = {
   ruleset_version: number;
   summary: FinancialSummary;
   lines: FinancialLine[];
+  margin_calculation?: {
+    state: "CALCULATED" | "UNKNOWN";
+    basis: "DECLARED_BASE_CATEGORIES";
+    missing_categories: Array<"SALES" | "DIRECT_COST" | "OVERHEAD" | "SUBCONTRACTING" | "CONTINGENCY">;
+    basis_line_ids: string[];
+    total_cost_minor: number | null;
+    gross_margin_minor: number | null;
+    gross_margin_rate_bps: number | null;
+    unknown_reason: "MISSING_BASE_CATEGORY" | "INVALID_BASE_AMOUNT" | null;
+    rate_unknown_reason: "ZERO_SALES" | null;
+  } | null;
 };
 
 export type CommandReceipt = {
@@ -158,6 +174,32 @@ export type CommandReceipt = {
   }>;
   event_ids: string[];
   replayed: boolean;
+};
+
+export type CreatePreparationSnapshotInput = {
+  snapshot_id: string;
+  expected_package_revision: number;
+  command_id?: string;
+  idempotency_key?: string;
+  correlation_id?: string;
+};
+
+export type TransmitPreparationSnapshotInput = {
+  snapshot_id: string;
+  transmission_id: string;
+  expected_package_revision: number;
+  command_id?: string;
+  idempotency_key?: string;
+  correlation_id?: string;
+};
+
+export type PublishedFinancialReport = Omit<DraftReport, "status" | "margin_calculation"> & {
+  status: "PUBLISHED";
+  margin_calculation: NonNullable<DraftReport["margin_calculation"]>;
+};
+
+export type FinancialReportPublicationReceipt = CommandReceipt & {
+  result_code: "FINANCIAL_REPORT_PUBLISHED";
 };
 
 export type PatronAssignment = {
@@ -536,6 +578,29 @@ export type CaseContractChangeActionImpactRelation = {
   rationale: string; unknown_reason: string | null; projection_state: "CURRENT" | "REVIEW_REQUIRED";
   recorded_at: string;
 };
+export type CaseContractChangeEvidenceObject = {
+  evidence_object_id: string; action_id: string; c4_relation_id: string; version: 1;
+  evidence_kind: "EXECUTION_EVIDENCE" | "EXTERNAL_CONFIRMATION";
+  sha256: string | null; actual_byte_size: number | null; media_type: string | null;
+  state: "AWAITING_UPLOAD" | "UPLOADING" | "CLEAN" | "REJECTED";
+  expires_at: string; recorded_at: string;
+};
+export type CaseContractChangeActionExecution = {
+  act_id: string; action_id: string; c4_relation_id: string; revision: number;
+  declared_state: "DECLARED_PERFORMED" | "DECLARED_PARTIAL" | "DECLARED_NOT_PERFORMED" | "UNKNOWN";
+  declared_summary: string | null; unknown_reason: string | null; evidence_refs: string[];
+  evidence_state: "UNKNOWN" | "REFERENCED" | "RETRIEVED";
+  evidence_objects: CaseContractChangeEvidenceObject[];
+  external_confirmation_state: "UNKNOWN" | "NOT_CONFIRMED" | "CONFIRMED";
+  external_confirmation_note: string | null;
+  external_confirmation_acts: Array<{
+    confirmation_id: string; act_id: string; evidence_object_id: string; evidence_sha256: string;
+    revision: number; received_at: string; external_party: string | null; rationale: string;
+    actor_id: string; recorded_at: string;
+  }>;
+  c4_projection_state: "CURRENT" | "REVIEW_REQUIRED" | "SUPERSEDED";
+  actor_id: string; recorded_at: string;
+};
 export type CaseContractChangeEvent = {
   event_id: string; case_id: string; handover_snapshot_id: string; outcome_id: string | null; lot_reference: string;
   offer_package_id: string | null; offer_package_version: number | null; offer_manifest_sha256: string | null; offer_source_locator: string | null;
@@ -549,6 +614,8 @@ export type CaseContractChangeEvent = {
   engagement_linkage_history: Array<{ linkage_id: string; revision: number; state: "LINKED" | "UNKNOWN"; selected_sources: A1EngagementSource[]; rationale: string; unknown_reason: string | null; recorded_at: string }>;
   impact_declarations: CaseContractChangeImpactDeclaration[];
   action_impact_relations: CaseContractChangeActionImpactRelation[];
+  action_execution_acts: CaseContractChangeActionExecution[];
+  evidence_objects: CaseContractChangeEvidenceObject[];
 };
 export type CaseContractChangeEventList = { case_id: string; events: CaseContractChangeEvent[] };
 export type RecordCaseContractChangeEventInput = { command_id: string; idempotency_key: string; correlation_id: string; event_id: string; handover_snapshot_id: string; change_kind: CaseContractChangeKind; contract_instrument_version_id: string | null; issuer: string | null; summary: string; scope_note: string; source_refs: string[]; evidence_refs: string[]; declared_received_at: string };
@@ -567,6 +634,33 @@ export type RecordCaseContractChangeActionImpactRelationInput = {
   command_id: string; idempotency_key: string; correlation_id: string; relation_id: string;
   expected_revision: number; state: "LINKED" | "UNKNOWN" | "NOT_APPLICABLE";
   declaration_ids: string[]; rationale: string; unknown_reason: string | null;
+};
+export type RecordCaseContractChangeActionExecutionInput = {
+  command_id: string; idempotency_key: string; correlation_id: string; act_id: string;
+  c4_relation_id: string; expected_revision: number;
+  declared_state: "DECLARED_PERFORMED" | "DECLARED_PARTIAL" | "DECLARED_NOT_PERFORMED" | "UNKNOWN";
+  declared_summary: string | null; unknown_reason: string | null; evidence_refs: string[];
+  evidence_object_ids: string[];
+  external_confirmation_state: "UNKNOWN" | "NOT_CONFIRMED";
+  external_confirmation_note: string | null;
+};
+export type PrepareCaseContractChangeEvidenceUploadInput = {
+  command_id: string; idempotency_key: string; correlation_id: string;
+  evidence_object_id: string; c4_relation_id: string;
+  evidence_kind: "EXECUTION_EVIDENCE" | "EXTERNAL_CONFIRMATION"; expected_byte_size: number;
+};
+export type PrepareCaseContractChangeEvidenceUploadResponse = {
+  evidence_object_id: string; state: "AWAITING_UPLOAD" | "UPLOADING" | "CLEAN" | "REJECTED";
+  expires_at: string; replayed: boolean;
+};
+export type CaseContractChangeEvidenceUploadResponse = {
+  evidence_object_id: string; version: 1; state: "CLEAN"; sha256: string;
+  actual_byte_size: number; media_type: string;
+};
+export type RecordCaseContractChangeExternalConfirmationInput = {
+  command_id: string; idempotency_key: string; correlation_id: string;
+  confirmation_id: string; c4_relation_id: string; evidence_object_id: string;
+  expected_revision: number; received_at: string; external_party: string | null; rationale: string;
 };
 export type RecordCaseOutcomeInput = { command_id: string; idempotency_key: string; correlation_id: string; outcome_id: string; case_id: string; lot_reference: string; outcome: CaseOutcomeValue; source_locator: string | null; reservations: string[]; unknown_reason: string | null };
 export type RecordCaseOrderInput = { command_id: string; idempotency_key: string; correlation_id: string; order_id: string; outcome_id: string; case_id: string; decision: "ACCEPTED" | "REJECTED"; rationale: string };
@@ -602,6 +696,41 @@ export type PartnerOfferScopeFactInput = { receipt_event_id: string; inclusion_s
 export type PartnerOfferScopeReview = { review_id: string; comparison_id: string; revision: number; decision: PartnerOfferScopeDecision; rationale: string; actor_id: string; recorded_at: string; requires_reassessment: boolean; offers: Array<PartnerOfferScopeFactInput & { partner_id: string; partner_kind: CasePartnerKind; partner_label: string; source_locator: string; source_rationale: string; validity_current: CasePartnerValidity; exclusions_state: "UNKNOWN" | "DECLARED"; exclusions: string[]; receipt_is_current: boolean }> };
 export type PartnerOfferScopeReviewList = { case_id: string; reviews: PartnerOfferScopeReview[] };
 export type RecordPartnerOfferScopeReviewInput = { command_id: string; idempotency_key: string; correlation_id: string; review_id: string; comparison_id: string; expected_revision: number; decision: PartnerOfferScopeDecision; rationale: string; offers: PartnerOfferScopeFactInput[] };
+export type PartnerOfferLineComparisonDisposition = "LINKED_BY_PATRON" | "DISTINCT_POSITIONS" | "NEEDS_CLARIFICATION";
+export type PartnerOfferLineComparisonMember = {
+  receipt_event_id: string; partner_id: string; partner_kind: CasePartnerKind; partner_label: string;
+  source_locator: string; receipt_is_current: boolean;
+  line_locator_state: "UNKNOWN" | "DECLARED"; line_locator: string | null;
+  item_reference_state: "UNKNOWN" | "DECLARED"; item_reference: string | null;
+  designation_state: "UNKNOWN" | "DECLARED"; designation: string | null;
+  unit_state: "UNKNOWN" | "DECLARED"; unit: string | null;
+  quantity_state: "UNKNOWN" | "DECLARED"; quantity: string | null;
+};
+export type PartnerOfferLineComparison = {
+  record_id: string; comparison_id: string; revision: number;
+  scope_review_id: string; scope_review_revision: number; scope_review_decision: PartnerOfferScopeDecision;
+  requires_reassessment: boolean; actor_id: string; recorded_at: string;
+  groups: Array<{ group_id: string; disposition: PartnerOfferLineComparisonDisposition; rationale: string; members: PartnerOfferLineComparisonMember[] }>;
+};
+export type PartnerOfferLineComparisonList = { case_id: string; comparisons: PartnerOfferLineComparison[] };
+export type PartnerOfferLineComparisonMemberInput = {
+  receipt_event_id: string;
+  line_locator_state: "UNKNOWN" | "DECLARED"; line_locator: string | null;
+  item_reference_state: "UNKNOWN" | "DECLARED"; item_reference: string | null;
+  designation_state: "UNKNOWN" | "DECLARED"; designation: string | null;
+  unit_state: "UNKNOWN" | "DECLARED"; unit: string | null;
+  quantity_state: "UNKNOWN" | "DECLARED"; quantity: string | null;
+};
+export type RecordPartnerOfferLineComparisonInput = {
+  command_id: string; idempotency_key: string; correlation_id: string | null;
+  record_id: string; comparison_id: string; scope_review_id: string; expected_revision: number;
+  groups: Array<{
+    group_id: string;
+    disposition: PartnerOfferLineComparisonDisposition;
+    rationale: string;
+    members: PartnerOfferLineComparisonMemberInput[];
+  }>;
+};
 export type CaseExecutionCommandReceipt = { status: "SUCCEEDED"; result_code: string; aggregate_refs: Array<{ aggregate_type: string; aggregate_id: string; aggregate_revision: number }>; event_ids: string[]; replayed?: boolean };
 export type PostReceptionObligation = {
   obligation_id: string; case_id: string; obligation_type: "OPR" | "TESTS" | "COMMISSIONING" | "TRAINING" | "DOE_DIUO" | "RESERVES_LIFTING" | "GPA" | "INITIAL_MAINTENANCE" | "SPARE_STOCK" | "ON_CALL" | "ADMIN_CLOSURE" | "GUARANTEE_RELEASE";
@@ -827,6 +956,38 @@ export type PricingScenario = {
   gross_margin_minor: number;
   gross_margin_rate_bps: number;
   source_snapshot_revision: number;
+  source_snapshot_id?: string | null;
+  source_basis_state?: "DECLARED_COMPLETE" | "UNKNOWN";
+  source_basis_reason?: string | null;
+  currency_code?: string | null;
+  penalty_reserve_minor?: number;
+  retention_reserve_minor?: number;
+  guarantee_reserve_minor?: number;
+  floor_margin_rate_bps?: number;
+  target_margin_rate_bps?: number;
+};
+
+export type CreatePricingScenarioInput = {
+  command_id: string; idempotency_key: string; correlation_id: string;
+  scenario_id: string; source_snapshot_id: string; scenario_key: string;
+  scenario_type: "BASE" | "PRUDENT" | "CUSTOM";
+  sales_adjustment_bps: number; cost_adjustment_bps: number;
+  penalty_reserve_minor: number; retention_reserve_minor: number; guarantee_reserve_minor: number;
+  floor_margin_rate_bps: number; target_margin_rate_bps: number;
+  assumptions: Record<string, unknown>;
+};
+
+export type PricingScenarioStateChangeInput = {
+  command_id: string; idempotency_key: string; correlation_id?: string;
+  transition_id: string; expected_version: number; reason_code: string;
+};
+
+export type PricingScenarioTransitionReceipt = Omit<CommandReceipt, "aggregate_refs" | "result_code"> & {
+  result_code: "PRICING_SCENARIO_TRANSITIONED"; scenario_id: string; version: number;
+};
+
+export type PricingScenarioCreationReceipt = Omit<CommandReceipt, "aggregate_refs" | "result_code"> & {
+  result_code: "PRICING_SCENARIO_CREATED"; scenario_id: string; version: number;
 };
 
 export type EnterpriseDocumentKind = "INSURANCE" | "KBIS" | "RIB";
@@ -1134,6 +1295,10 @@ export type TechnicalResponseDraft = {
   section_codes: string[];
   source_refs: string[];
   responsible_role: "COLLABORATEUR" | "PATRON_REVIEWER";
+  content_sha256?: string | null;
+  response_plan_id?: string | null;
+  response_plan_version?: number | null;
+  content?: string | null;
 };
 
 export type PreparationPackage = {
@@ -1248,6 +1413,9 @@ export type PreparationReviewCorrection = {
   review_revision: number;
   revision: number;
   target_document_id: string;
+  target_draft_id?: string | null;
+  target_draft_version?: number | null;
+  target_content_sha256?: string | null;
   correction_code: "SOURCE_MISSING" | "SOURCE_WRONG" | "SECTION_INCOMPLETE" | "WORDING_UNCLEAR";
   instruction: string;
   source_locator: string | null;
@@ -1258,6 +1426,9 @@ export type PreparationReview = {
   package_id: string;
   target_document_id: string;
   target_version: number;
+  target_draft_id?: string | null;
+  target_draft_version?: number | null;
+  target_content_sha256?: string | null;
   revision: number;
   state: "REQUESTED" | "ACCEPTED" | "RETURNED_WITH_CORRECTIONS" | "REJECTED";
   decision_code: "ACCEPTED" | "CORRECTIONS_REQUIRED" | "REJECTED" | null;
@@ -1272,29 +1443,125 @@ export type PreparationReviewList = {
 
 export type PreparationResponseDraftList = {
   package_id: string;
+  package_revision?: number;
   drafts: TechnicalResponseDraft[];
+};
+
+export type PreparationTransmissionDelivery = {
+  snapshot_id: string;
+  snapshot_version: number;
+  snapshot_state: "READY_FOR_PATRON_REVIEW";
+  snapshot_created_at: string;
+  snapshot_manifest_sha256: string;
+  snapshot_manifest: Record<string, unknown>;
+  snapshot_receipt: PreparationStoredCommandReceipt;
+  transmission_id: string;
+  transmission_state: "TRANSMITTED_TO_PATRON";
+  transmitted_at: string;
+  transmission_receipt: PreparationStoredCommandReceipt;
+};
+
+export type PreparationStoredCommandReceipt = {
+  status: "SUCCEEDED";
+  command_id: string;
+  idempotency_key: string;
+  result_code: "PREPARATION_SNAPSHOT_CREATED" | "PREPARATION_TRANSMITTED_TO_PATRON";
+  aggregate_refs: Array<{
+    aggregate_type: string;
+    aggregate_id: string;
+    aggregate_revision: number;
+  }>;
+  event_ids: string[];
+};
+
+export type PreparationTransmissionList = {
+  package_id: string;
+  deliveries: PreparationTransmissionDelivery[];
+};
+
+export type PreparationResponsePlanSection =
+  | "COVER"
+  | "UNDERSTANDING"
+  | "METHOD"
+  | "RESOURCES"
+  | "SCHEDULE"
+  | "RISKS"
+  | "SOURCES";
+
+export type PreparationResponsePlanItem = {
+  requirement_id: string;
+  requirement_state: "CONFIRMED" | "REVIEW_REQUIRED" | "NOT_APPLICABLE" | "UNKNOWN";
+  section_code: PreparationResponsePlanSection;
+  source_proposal_id: string | null;
+  source_capability_version_id: string | null;
+  source_validity_state: "CURRENT" | "EXPIRED" | "UNKNOWN";
+  source_evidence_state: "CURRENT" | "EXPIRED" | "UNKNOWN";
+};
+
+export type PreparationResponsePlan = {
+  plan_id: string;
+  version: number;
+  package_id: string;
+  dce_version_id: string;
+  state: "UNKNOWN" | "SOURCES_CURRENT";
+  plan_sha256: string;
+  content: {
+    schema_version: 1;
+    case_id: string;
+    package_id: string;
+    dce_version_id: string;
+    items: PreparationResponsePlanItem[];
+  };
+};
+
+export type PreparationResponsePlanList = {
+  package_id: string;
+  plans: PreparationResponsePlan[];
+};
+
+export type CreatePreparationResponsePlanInput = {
+  command_id: string;
+  idempotency_key: string;
+  correlation_id: string;
+  plan_id: string;
+  expected_package_revision: number;
+  items: Array<{
+    requirement_id: string;
+    section_code: PreparationResponsePlanSection;
+    source_proposal_id: string | null;
+  }>;
 };
 
 export type RequestPreparationReviewInput = {
   expected_package_revision: number;
-  target_document_id: string;
-  target_version: number;
+  target_document_id?: string | null;
+  target_version?: number | null;
+  target_draft_id?: string;
+  target_draft_version?: number;
+  target_content_sha256?: string;
 };
 
 export type DecidePreparationReviewInput = {
   expected_review_revision: number;
   review_id: string;
-  target_document_id: string;
+  target_document_id?: string | null;
+  target_draft_id?: string | null;
+  target_draft_version?: number | null;
+  target_content_sha256?: string | null;
   decision_code: PreparationReview["decision_code"] & string;
   decision_note?: string | null;
 };
 
 export type AddPreparationCorrectionInput = {
   review_id: string;
-  target_document_id: string;
+  target_document_id?: string | null;
+  target_draft_id?: string | null;
+  target_draft_version?: number | null;
+  target_content_sha256?: string | null;
   correction_code: PreparationReviewCorrection["correction_code"];
   instruction: string;
   source_locator?: string | null;
+  corrected_content?: string | null;
 };
 
 export type CreateTechnicalResponseDraftInput = {
@@ -1302,6 +1569,10 @@ export type CreateTechnicalResponseDraftInput = {
   source_document_id: string;
   section_codes: string[];
   source_refs: string[];
+  command_id?: string;
+  idempotency_key?: string;
+  correlation_id?: string;
+  draft_id?: string;
 };
 
 export type TotpEnrollment = {
@@ -1379,6 +1650,7 @@ export type BoampObservation = {
   deadline_source: string | null;
   deadline_source_timezone: string | null;
   deadline_normalized_timezone: "UTC" | null;
+  source_captures: BoampSourceCapture[];
   unknowns: Array<{
     code: "LOT_SCOPE" | "DCE_NOT_RECEIVED" | "DEADLINE_MISSING" | "DEADLINE_CONFLICT";
     missing: string;
@@ -1390,6 +1662,14 @@ export type BoampObservation = {
     state: "OPEN";
     source_ref: string;
   }>;
+};
+
+export type BoampSourceCapture = {
+  ingestion_run_id: string;
+  source_mode: "LIVE" | "REPLAY";
+  run_recorded_at: string;
+  source_contract_version: string | null;
+  source_response_sha256: string | null;
 };
 
 export type BoampSourceStatus = {
@@ -1458,7 +1738,32 @@ export type CaseDceReading = {
     uncertainty_status: string;
     document_family: string;
     source_locator_label: string;
+    source_anchor: DceSourceAnchor | null;
   }>;
+};
+
+export type DceSourceAnchor = {
+  source_anchor_id: string;
+  dce_version_id: string;
+  dce_document_id: string;
+  extraction_id: string;
+  fragment_ordinal: number;
+  source_sha256: string;
+  extractor_id: string;
+  extractor_version: string;
+  fragment_sha256: string;
+  locator_state: "RESOLVED" | "UNKNOWN";
+  locator: {
+    kind:
+      | "pdf_page"
+      | "pymupdf_block"
+      | "ocr_page"
+      | "docx_paragraph"
+      | "xlsx_cell"
+      | "text_line"
+      | "docling_markdown";
+    coordinates: Record<string, unknown>;
+  } | null;
 };
 
 export type KnowledgeSearchResult = {
@@ -1590,4 +1895,53 @@ export type RegisterDceVersionInput = {
   provenance_url?: string;
   source_received_at: string;
   documents: Array<{ document_id: string; storage_object_id: string }>;
+};
+
+
+export type CapabilityProposal = {
+  proposal_id: string;
+  case_id: string;
+  assignment_id: string;
+  capability_id: string;
+  capability_version_id: string;
+  requirement_id: string | null;
+  task_id: string | null;
+  state: "PROPOSED" | "TO_REVIEW";
+  validity_state: "CURRENT" | "EXPIRED" | "UNKNOWN";
+  justification: string;
+  source_locator: string | null;
+  source_evidence_state: "CURRENT" | "EXPIRED" | "UNKNOWN";
+  source_evidence_evaluated_at: string | null;
+};
+
+export type CapabilityAssessments = {
+  proposals: CapabilityProposal[];
+  gaps: unknown[];
+};
+
+
+export type CapabilityCandidate = {
+  capability_id: string;
+  capability_kind: "QUALIFICATION" | "REFERENCE" | "EQUIPMENT" | "TEAM" | "METHOD";
+  name: string;
+  version_id: string;
+  version_number: number;
+  title: string;
+  valid_from: string;
+  valid_until: string | null;
+  validity_state: "CURRENT" | "EXPIRED";
+  source_evidence_state: "CURRENT" | "EXPIRED" | "UNKNOWN";
+  evaluated_at: string | null;
+};
+
+export type ProposeCapabilityInput = {
+  command_id: string;
+  idempotency_key: string;
+  correlation_id: string;
+  capability_id: string;
+  capability_version_id: string;
+  requirement_id?: string | null;
+  task_id?: string | null;
+  justification: string;
+  assignment_id?: string;
 };

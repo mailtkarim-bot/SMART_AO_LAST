@@ -93,6 +93,97 @@ class RecordCaseContractChangeActionImpactRelationRequest(BaseModel):
         return self
 
 
+class PrepareCaseContractChangeEvidenceUploadRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    command_id: UUID
+    idempotency_key: UUID
+    correlation_id: UUID
+    evidence_object_id: UUID
+    c4_relation_id: UUID
+    evidence_kind: Literal["EXECUTION_EVIDENCE", "EXTERNAL_CONFIRMATION"]
+    expected_byte_size: int = Field(gt=0, le=150_000_000)
+
+
+class PrepareCaseContractChangeEvidenceUploadResponse(BaseModel):
+    evidence_object_id: UUID
+    state: Literal["AWAITING_UPLOAD", "UPLOADING", "CLEAN", "REJECTED"]
+    expires_at: str
+    replayed: bool
+
+
+class CaseContractChangeEvidenceUploadResponse(BaseModel):
+    evidence_object_id: UUID
+    version: Literal[1]
+    state: Literal["CLEAN"]
+    sha256: str
+    actual_byte_size: int
+    media_type: str
+
+
+class RecordCaseContractChangeExternalConfirmationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    command_id: UUID
+    idempotency_key: UUID
+    correlation_id: UUID
+    confirmation_id: UUID
+    c4_relation_id: UUID
+    evidence_object_id: UUID
+    expected_revision: int = Field(ge=0)
+    received_at: datetime
+    external_party: str | None = Field(default=None, max_length=240)
+    rationale: str = Field(min_length=1, max_length=2_000)
+
+    @model_validator(mode="after")
+    def received_at_must_be_aware(self):
+        if self.received_at.tzinfo is None or self.received_at.utcoffset() is None:
+            raise ValueError("C5_EXTERNAL_CONFIRMATION_RECEIVED_AT_MUST_BE_AWARE")
+        return self
+
+
+class RecordCaseContractChangeActionExecutionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    command_id: UUID
+    idempotency_key: UUID
+    correlation_id: UUID
+    act_id: UUID
+    c4_relation_id: UUID
+    expected_revision: int = Field(ge=0)
+    declared_state: Literal[
+        "DECLARED_PERFORMED", "DECLARED_PARTIAL", "DECLARED_NOT_PERFORMED", "UNKNOWN"
+    ]
+    declared_summary: str | None = Field(default=None, max_length=2_000)
+    unknown_reason: str | None = Field(default=None, max_length=1_000)
+    evidence_refs: list[str] = Field(default_factory=list, max_length=32)
+    evidence_object_ids: list[UUID] = Field(default_factory=list, max_length=16)
+    external_confirmation_state: Literal["UNKNOWN", "NOT_CONFIRMED"] = "UNKNOWN"
+    external_confirmation_note: str | None = Field(default=None, max_length=1_000)
+
+    @model_validator(mode="after")
+    def validate_declaration(self):
+        if self.declared_state == "UNKNOWN":
+            if self.declared_summary is not None or not (
+                self.unknown_reason and self.unknown_reason.strip()
+            ):
+                raise ValueError("C5_UNKNOWN_REQUIRES_REASON_ONLY")
+        elif not (self.declared_summary and self.declared_summary.strip()) or (
+            self.unknown_reason is not None
+        ):
+            raise ValueError("C5_DECLARATION_REQUIRES_SUMMARY_ONLY")
+        if self.external_confirmation_state == "NOT_CONFIRMED":
+            if not (self.external_confirmation_note and self.external_confirmation_note.strip()):
+                raise ValueError("C5_NOT_CONFIRMED_REQUIRES_NOTE")
+        elif self.external_confirmation_note is not None:
+            raise ValueError("C5_UNKNOWN_CONFIRMATION_MUST_NOT_HAVE_NOTE")
+        if any(not value.strip() for value in self.evidence_refs):
+            raise ValueError("C5_EVIDENCE_REFERENCE_MUST_NOT_BE_EMPTY")
+        if len(set(self.evidence_object_ids)) != len(self.evidence_object_ids):
+            raise ValueError("C5_EVIDENCE_OBJECT_IDS_MUST_BE_UNIQUE")
+        return self
+
+
 class RecordCaseContractChangeEngagementLinkRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -242,6 +333,56 @@ class ContractChangeActionImpactRelationResponse(BaseModel):
     recorded_at: str
 
 
+class ContractChangeEvidenceObjectResponse(BaseModel):
+    evidence_object_id: UUID
+    action_id: UUID
+    c4_relation_id: UUID
+    version: Literal[1]
+    evidence_kind: Literal["EXECUTION_EVIDENCE", "EXTERNAL_CONFIRMATION"]
+    sha256: str | None
+    actual_byte_size: int | None
+    media_type: str | None
+    state: Literal["AWAITING_UPLOAD", "UPLOADING", "CLEAN", "REJECTED"]
+    expires_at: str
+    recorded_at: str
+
+
+class ContractChangeExternalConfirmationResponse(BaseModel):
+    confirmation_id: UUID
+    act_id: UUID
+    evidence_object_id: UUID
+    evidence_sha256: str
+    revision: int
+    received_at: str
+    external_party: str | None
+    rationale: str
+    actor_id: UUID
+    recorded_at: str
+
+
+class ContractChangeActionExecutionResponse(BaseModel):
+    act_id: UUID
+    action_id: UUID
+    c4_relation_id: UUID
+    revision: int
+    declared_state: Literal[
+        "DECLARED_PERFORMED", "DECLARED_PARTIAL", "DECLARED_NOT_PERFORMED", "UNKNOWN"
+    ]
+    declared_summary: str | None
+    unknown_reason: str | None
+    evidence_refs: list[str]
+    evidence_state: Literal["UNKNOWN", "REFERENCED", "RETRIEVED"]
+    evidence_objects: list["ContractChangeEvidenceObjectResponse"] = Field(default_factory=list)
+    external_confirmation_state: Literal["UNKNOWN", "NOT_CONFIRMED", "CONFIRMED"]
+    external_confirmation_note: str | None
+    external_confirmation_acts: list["ContractChangeExternalConfirmationResponse"] = Field(
+        default_factory=list
+    )
+    c4_projection_state: Literal["CURRENT", "REVIEW_REQUIRED", "SUPERSEDED"]
+    actor_id: UUID
+    recorded_at: str
+
+
 class ContractChangeEventResponse(BaseModel):
     event_id: UUID
     case_id: UUID
@@ -271,6 +412,8 @@ class ContractChangeEventResponse(BaseModel):
     engagement_linkage_history: list[ContractChangeEngagementLinkResponse]
     impact_declarations: list[ContractChangeImpactDeclarationResponse]
     action_impact_relations: list[ContractChangeActionImpactRelationResponse]
+    action_execution_acts: list[ContractChangeActionExecutionResponse]
+    evidence_objects: list[ContractChangeEvidenceObjectResponse] = Field(default_factory=list)
 
 
 class CaseContractChangeEventListResponse(BaseModel):

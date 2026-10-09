@@ -10,8 +10,14 @@ from app.modules.pricing.application.queries import (
     project_pricing_scenario,
 )
 from app.modules.pricing.infrastructure.models import (
+    FinancialReportLineRecord,
+    FinancialReportSnapshotRecord,
     PricingScenarioRecord,
     PricingScenarioTransitionRecord,
+)
+from app.modules.pricing.public.declared_margin import (
+    BASE_MARGIN_CATEGORIES,
+    qualify_declared_scenario_source,
 )
 
 
@@ -50,7 +56,7 @@ class SqlAlchemyPricingScenarioReader:
                 .scalar_subquery()
             )
             rows = session.execute(
-                sa.select(PricingScenarioRecord)
+                sa.select(PricingScenarioRecord, FinancialReportSnapshotRecord)
                 .add_columns(
                     sa.func.coalesce(latest_version, PricingScenarioRecord.version).label(
                         "current_version"
@@ -59,12 +65,56 @@ class SqlAlchemyPricingScenarioReader:
                         "current_state"
                     ),
                 )
+                .outerjoin(
+                    FinancialReportSnapshotRecord,
+                    sa.and_(
+                        FinancialReportSnapshotRecord.tenant_id == tenant_id,
+                        FinancialReportSnapshotRecord.id
+                        == PricingScenarioRecord.source_snapshot_id,
+                        FinancialReportSnapshotRecord.case_id == case_id,
+                        FinancialReportSnapshotRecord.state == "PUBLISHED",
+                    ),
+                )
                 .where(
                     PricingScenarioRecord.tenant_id == tenant_id,
                     PricingScenarioRecord.case_id == case_id,
                 )
                 .order_by(PricingScenarioRecord.created_at.desc())
             ).all()
+            source_ids = {snapshot.id for _, snapshot, _, _ in rows if snapshot is not None}
+            lines_by_source: dict[UUID, list[tuple[str, int]]] = {
+                source_id: [] for source_id in source_ids
+            }
+            if source_ids:
+                for source_id, category, amount in session.execute(
+                    sa.select(
+                        FinancialReportLineRecord.snapshot_id,
+                        FinancialReportLineRecord.category,
+                        FinancialReportLineRecord.amount_minor,
+                    ).where(
+                        FinancialReportLineRecord.tenant_id == tenant_id,
+                        FinancialReportLineRecord.snapshot_id.in_(source_ids),
+                    )
+                ):
+                    lines_by_source[source_id].append((category, amount))
+            reasons = {}
+            for record, snapshot, _, _ in rows:
+                reason = (
+                    "SOURCE_NOT_RESOLVED"
+                    if snapshot is None
+                    else qualify_declared_scenario_source(
+                        lines_by_source[snapshot.id],
+                        {
+                            category: getattr(snapshot, f"{category.lower()}_total_minor")
+                            for category in BASE_MARGIN_CATEGORIES
+                        },
+                        source_revision=snapshot.aggregate_revision,
+                        expected_revision=record.source_snapshot_revision,
+                    )
+                )
+                reasons[record.id] = reason or (
+                    "SCENARIO_RATE_UNKNOWN" if record.sales_total_minor == 0 else None
+                )
         return tuple(
             project_pricing_scenario(
                 scenario_id=record.id,
@@ -87,6 +137,20 @@ class SqlAlchemyPricingScenarioReader:
                 floor_sales_minor=record.floor_sales_minor,
                 target_sales_minor=record.target_sales_minor,
                 source_snapshot_revision=record.source_snapshot_revision,
+                source_snapshot_id=(
+                    snapshot.id
+                    if snapshot is not None
+                    and snapshot.aggregate_revision == record.source_snapshot_revision
+                    else None
+                ),
+                currency_code=(
+                    snapshot.currency_code
+                    if snapshot is not None
+                    and snapshot.aggregate_revision == record.source_snapshot_revision
+                    else None
+                ),
+                source_basis_state="UNKNOWN" if reasons[record.id] else "DECLARED_COMPLETE",
+                source_basis_reason=reasons[record.id],
             )
-            for record, current_version, current_state in rows
+            for record, snapshot, current_version, current_state in rows
         )

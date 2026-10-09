@@ -10,7 +10,7 @@ test("affiche la chronologie et garde l’écriture hors accès délégué", () 
 
 test("déclare un impact sur l’exigence confirmée et conserve les identifiants au retry", async () => {
   const onRecord = vi.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true);
-  render(<ContractBaselineImpactsPanel caseId="case-1" items={[]} reviews={[]} requirements={[{ requirement_id: "req-1", confirmation_revision: 2, requirement_type: "CONTRACT_RISK_SIGNAL", directive_signal: "REQUIRED_SIGNAL", confirmation_outcome: "CONFIRMED", uncertainty_status: "SOURCE_SIGNAL_ONLY", document_family: "CCAP", source_locator_label: "CCAP · article 4" }]} loading={false} canManage onRefresh={() => undefined} onRecord={onRecord} />);
+  render(<ContractBaselineImpactsPanel caseId="case-1" items={[]} reviews={[]} requirements={[{ requirement_id: "req-1", confirmation_revision: 2, requirement_type: "CONTRACT_RISK_SIGNAL", directive_signal: "REQUIRED_SIGNAL", confirmation_outcome: "CONFIRMED", uncertainty_status: "SOURCE_SIGNAL_ONLY", document_family: "CCAP", source_locator_label: "CCAP · article 4", source_anchor: null }]} loading={false} canManage onRefresh={() => undefined} onRecord={onRecord} />);
   fireEvent.change(screen.getByLabelText("Localisateur exact de la source baseline"), { target: { value: "CCAP · article 4 · page 12" } });
   fireEvent.change(screen.getByLabelText("Baseline déclarée"), { target: { value: "Délai de paiement déclaré" } });
   fireEvent.change(screen.getByLabelText("Impact déclaré, sans calcul automatique"), { target: { value: "Trésorerie à examiner" } });

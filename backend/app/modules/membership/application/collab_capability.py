@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from uuid import UUID
+from uuid import NAMESPACE_URL, UUID, uuid5
 
 from app.modules.membership.application.collab_capability_commands import (
     ProposeCapabilityForCaseCommand,
@@ -12,6 +12,8 @@ from app.modules.membership.application.collab_capability_handler import (
     ReportCapabilityGapHandler,
 )
 from app.modules.membership.application.collab_capability_ports import (
+    AssignmentProjection,
+    CapabilityCandidateProjection,
     CapabilityGapProjection,
     CapabilityProposalProjection,
     CollaboratorCapabilityAssessmentProjection,
@@ -59,14 +61,23 @@ class CollaboratorCapabilityAssessmentService:
             now=now,
             action=Capability.PREPARATION_CAPABILITY_PROPOSE,
         )
-        self._preflight_assignment(
+        assignment = self._preflight_assignment(
             actor=actor,
             command=command,
             now=now,
             action=Capability.PREPARATION_CAPABILITY_PROPOSE,
         )
+        tenant_scoped_command = command.model_copy(
+            update={
+                "proposal_id": uuid5(
+                    NAMESPACE_URL,
+                    f"case-capability-proposal:{actor.tenant_id}:{command.command_id}",
+                ),
+                "assignment_id": assignment.id,
+            }
+        )
         return self._dispatcher.dispatch(
-            command=command,
+            command=tenant_scoped_command,
             context=self._context(actor=actor, now=now, case_id=command.case_id),
         )
 
@@ -89,19 +100,26 @@ class CollaboratorCapabilityAssessmentService:
             now=now,
             action=Capability.PREPARATION_CAPABILITY_GAP_REPORT,
         )
+        tenant_scoped_command = command.model_copy(
+            update={
+                "gap_id": uuid5(
+                    NAMESPACE_URL,
+                    f"case-capability-gap:{actor.tenant_id}:{command.command_id}",
+                )
+            }
+        )
         return self._dispatcher.dispatch(
-            command=command,
+            command=tenant_scoped_command,
             context=self._context(actor=actor, now=now, case_id=command.case_id),
         )
 
-    def read_assessments(
+    def read_candidates(
         self,
         *,
         actor: ActorContext,
         case_id: UUID,
-        assignment_id: UUID,
         now: datetime,
-    ) -> CollaboratorCapabilityAssessmentProjection:
+    ) -> tuple[CapabilityCandidateProjection, ...]:
         self._authorize(
             actor=actor,
             case_id=case_id,
@@ -112,6 +130,30 @@ class CollaboratorCapabilityAssessmentService:
             tenant_id=actor.tenant_id,
             membership_id=self._membership_id(actor),
             case_id=case_id,
+            assignment_id=None,
+            required_action=Capability.PREPARATION_CAPABILITY_PROPOSE.value,
+            received_at=now,
+        )
+        return self._reader.read_candidates(tenant_id=actor.tenant_id, evaluated_at=now)
+
+    def read_assessments(
+        self,
+        *,
+        actor: ActorContext,
+        case_id: UUID,
+        assignment_id: UUID | None = None,
+        now: datetime,
+    ) -> CollaboratorCapabilityAssessmentProjection:
+        self._authorize(
+            actor=actor,
+            case_id=case_id,
+            now=now,
+            action=Capability.PREPARATION_CAPABILITY_PROPOSE,
+        )
+        assignment = self._reader.require_active_assignment(
+            tenant_id=actor.tenant_id,
+            membership_id=self._membership_id(actor),
+            case_id=case_id,
             assignment_id=assignment_id,
             required_action=Capability.PREPARATION_CAPABILITY_PROPOSE.value,
             received_at=now,
@@ -119,13 +161,14 @@ class CollaboratorCapabilityAssessmentService:
         return self._reader.read_assessments(
             tenant_id=actor.tenant_id,
             case_id=case_id,
-            assignment_id=assignment_id,
+            assignment_id=assignment.id,
+            evaluated_at=now,
         )
 
     def _preflight_assignment(
         self, *, actor: ActorContext, command, now: datetime, action: Capability
-    ) -> None:
-        self._reader.require_active_assignment(
+    ) -> AssignmentProjection:
+        return self._reader.require_active_assignment(
             tenant_id=actor.tenant_id,
             membership_id=self._membership_id(actor),
             case_id=command.case_id,

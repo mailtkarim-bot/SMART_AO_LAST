@@ -76,7 +76,31 @@ export function DceKnowledgePanel({
             <div className="requirement-list">
               <div className="subheading"><span className="section-kicker">EXIGENCES STRUCTURÉES</span><span>{reading.requirements.length} affichées</span></div>
               {reading.requirements.length === 0 ? <p className="muted-copy">Aucune exigence structurée dans cette projection.</p> : reading.requirements.slice(0, 8).map((requirement) => (
-                <div className="requirement-row" key={requirement.requirement_id}><div><strong>{requirement.requirement_type}</strong><span>{requirement.document_family} · {requirement.source_locator_label}</span></div><span className={`state-badge ${requirement.confirmation_outcome === "CONFIRMED" ? "state-success" : "state-warning"}`}>{requirement.confirmation_outcome}</span></div>
+                <div className="requirement-row" key={requirement.requirement_id}>
+                  <div>
+                    <strong>{requirement.requirement_type}</strong>
+                    <span>{requirement.document_family} · {requirement.source_locator_label}</span>
+                    <details className="dce-source-anchor">
+                      <summary>Provenance de la source · {requirement.source_anchor?.locator_state ?? "UNKNOWN"}</summary>
+                      {requirement.source_anchor ? (
+                        <div>
+                          <small>Ancre {requirement.source_anchor.source_anchor_id} · fragment {requirement.source_anchor.fragment_ordinal}</small>
+                          {requirement.source_anchor.locator ? (
+                            <small>Type de localisation : {requirement.source_anchor.locator.kind}</small>
+                          ) : (
+                            <strong>Localisation source non résolue</strong>
+                          )}
+                          <small>Extracteur {requirement.source_anchor.extractor_id} · v{requirement.source_anchor.extractor_version}</small>
+                          <small>SHA-256 source <code>{requirement.source_anchor.source_sha256}</code></small>
+                          <small>SHA-256 fragment <code>{requirement.source_anchor.fragment_sha256}</code></small>
+                        </div>
+                      ) : (
+                        <small>UNKNOWN · ancre de fragment non disponible</small>
+                      )}
+                    </details>
+                  </div>
+                  <span className={`state-badge ${requirement.confirmation_outcome === "CONFIRMED" ? "state-success" : "state-warning"}`}>{requirement.confirmation_outcome}</span>
+                </div>
               ))}
             </div>
           </div>

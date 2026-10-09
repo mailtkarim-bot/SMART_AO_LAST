@@ -3,6 +3,7 @@ set -Eeuo pipefail
 
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 OPS_DIR="${ROOT_DIR}/ops"
+ENV_FILE="${OPS_DIR}/.env.preprod"
 COMPOSE_FILE="${OPS_DIR}/docker-compose.preprod.yml"
 MANIFEST_FILE="${OPS_DIR}/golden-corpus/manifest.example.json"
 
@@ -29,7 +30,11 @@ fail() {
 pass_check "required repository contracts exist"
 
 if command -v docker >/dev/null 2>&1; then
-  docker compose -f "${COMPOSE_FILE}" config >/dev/null \
+  [[ -f "${ENV_FILE}" ]] \
+    || fail "missing ${ENV_FILE}; copy .env.preprod.example and configure it locally"
+  [[ "$(stat -c '%a' "${ENV_FILE}")" == "600" ]] \
+    || fail "${ENV_FILE} must have mode 600"
+  docker compose --env-file "${ENV_FILE}" -f "${COMPOSE_FILE}" config >/dev/null \
     || fail "preproduction compose configuration is invalid"
   pass_check "docker compose configuration"
 else

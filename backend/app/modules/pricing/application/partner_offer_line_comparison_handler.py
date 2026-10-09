@@ -62,11 +62,16 @@ class RecordPartnerOfferLineComparisonHandler(CommandHandler):
             is None
         ):
             raise CommandExecutionError("CASE_NOT_FOUND_OR_FORBIDDEN")
-        if session.scalar(
-            sa.select(PartnerOfferLineComparisonRecord.id).where(
-                PartnerOfferLineComparisonRecord.id == command.record_id
+        if (
+            session.scalar(
+                sa.select(PartnerOfferLineComparisonRecord.id).where(
+                    PartnerOfferLineComparisonRecord.tenant_id == tenant_id,
+                    PartnerOfferLineComparisonRecord.case_id == command.case_id,
+                    PartnerOfferLineComparisonRecord.id == command.record_id,
+                )
             )
-        ) is not None:
+            is not None
+        ):
             raise CommandExecutionError("PARTNER_OFFER_LINE_COMPARISON_ID_REUSED")
 
         scope_review = session.scalar(
@@ -103,8 +108,9 @@ class RecordPartnerOfferLineComparisonHandler(CommandHandler):
             raise CommandExecutionError("PARTNER_SCOPE_REVIEW_NOT_FOUND_OR_FORBIDDEN")
 
         current_revision = session.scalar(
-            sa.select(sa.func.coalesce(sa.func.max(PartnerOfferLineComparisonRecord.revision), 0))
-            .where(
+            sa.select(
+                sa.func.coalesce(sa.func.max(PartnerOfferLineComparisonRecord.revision), 0)
+            ).where(
                 PartnerOfferLineComparisonRecord.tenant_id == tenant_id,
                 PartnerOfferLineComparisonRecord.case_id == command.case_id,
                 PartnerOfferLineComparisonRecord.comparison_id == command.comparison_id,
@@ -172,7 +178,8 @@ class RecordPartnerOfferLineComparisonHandler(CommandHandler):
                         PartnerOfferLineMemberRecord.tenant_id
                         == PartnerOfferLineGroupRecord.tenant_id,
                         PartnerOfferLineMemberRecord.case_id == PartnerOfferLineGroupRecord.case_id,
-                        PartnerOfferLineMemberRecord.group_record_id == PartnerOfferLineGroupRecord.id,
+                        PartnerOfferLineMemberRecord.group_record_id
+                        == PartnerOfferLineGroupRecord.id,
                     ),
                 )
                 .where(
@@ -212,7 +219,9 @@ class RecordPartnerOfferLineComparisonHandler(CommandHandler):
             .where(
                 CasePartnerEventRecord.tenant_id == tenant_id,
                 CasePartnerEventRecord.case_id == command.case_id,
-                CasePartnerEventRecord.partner_id.in_(tuple(row.partner_id for row in receipt_rows)),
+                CasePartnerEventRecord.partner_id.in_(
+                    tuple(row.partner_id for row in receipt_rows)
+                ),
                 CasePartnerEventRecord.event_type == "RECEIVED",
             )
             .group_by(CasePartnerEventRecord.partner_id)
@@ -293,10 +302,8 @@ class RecordPartnerOfferLineComparisonHandler(CommandHandler):
 
 
 def partner_offer_line_comparison_handlers() -> dict[str, CommandHandler]:
-    return {
-        RecordPartnerOfferLineComparisonCommand.command_type:
-            RecordPartnerOfferLineComparisonHandler(),
-    }
+    command_type = RecordPartnerOfferLineComparisonCommand.command_type
+    return {command_type: RecordPartnerOfferLineComparisonHandler()}
 
 
 @dataclass(frozen=True, slots=True)

@@ -9,6 +9,9 @@ import type {
   ContractInstrumentVersion,
   RecordCaseContractChangeActionInput,
   RecordCaseContractChangeActionImpactRelationInput,
+  RecordCaseContractChangeActionExecutionInput,
+  PrepareCaseContractChangeEvidenceUploadInput,
+  RecordCaseContractChangeExternalConfirmationInput,
   RecordCaseContractChangeApplicabilityInput,
   RecordCaseContractChangeEngagementLinkInput,
   RecordCaseContractChangeImpactDeclarationInput,
@@ -21,9 +24,12 @@ type IntentInput =
   | RecordCaseContractChangeApplicabilityInput
   | RecordCaseContractChangeActionInput
   | RecordCaseContractChangeActionImpactRelationInput
+  | RecordCaseContractChangeActionExecutionInput
+  | RecordCaseContractChangeExternalConfirmationInput
   | RecordCaseContractChangeEngagementLinkInput
   | RecordCaseContractChangeImpactDeclarationInput;
 type PendingIntent = { caseId: string; key: string; input: IntentInput };
+type EvidenceUploadIntent = { input: PrepareCaseContractChangeEvidenceUploadInput; file: File };
 
 const CHANGE_KINDS: Array<{ value: CaseContractChangeKind; label: string }> = [
   { value: "ORDER_OF_SERVICE", label: "Ordre de service / instruction" },
@@ -108,6 +114,21 @@ export function CaseContractChangePanel({
     state: "LINKED" | "UNKNOWN" | "NOT_APPLICABLE";
     declarationIds: string[]; rationale: string; reason: string;
   }>>({});
+  const [executionDrafts, setExecutionDrafts] = useState<Record<string, {
+    state: RecordCaseContractChangeActionExecutionInput["declared_state"];
+    summary: string; unknownReason: string; evidenceRefs: string;
+    evidenceObjectIds: string[];
+    confirmation: "UNKNOWN" | "NOT_CONFIRMED"; confirmationNote: string;
+  }>>({});
+  const [executionEvidenceFiles, setExecutionEvidenceFiles] = useState<Record<string, File | null>>({});
+  const [executionUploadIntents, setExecutionUploadIntents] = useState<Record<string, EvidenceUploadIntent>>({});
+  const [externalConfirmationDrafts, setExternalConfirmationDrafts] = useState<Record<string, {
+    evidenceObjectId: string; receivedAt: string; externalParty: string; rationale: string;
+  }>>({});
+  const [externalConfirmationFiles, setExternalConfirmationFiles] = useState<Record<string, File | null>>({});
+  const [externalConfirmationUploadIntents, setExternalConfirmationUploadIntents] = useState<Record<string, {
+    upload: EvidenceUploadIntent; confirmation: RecordCaseContractChangeExternalConfirmationInput;
+  }>>({});
   const activeCaseId = useRef(caseId);
 
   useLayoutEffect(() => {
@@ -141,6 +162,12 @@ export function CaseContractChangePanel({
     setEngagementDrafts({});
     setImpactDrafts({});
     setActionImpactDrafts({});
+    setExecutionDrafts({});
+    setExecutionEvidenceFiles({});
+    setExecutionUploadIntents({});
+    setExternalConfirmationDrafts({});
+    setExternalConfirmationFiles({});
+    setExternalConfirmationUploadIntents({});
     let active = true;
     setState("LOADING");
     void refresh(caseId).catch(() => {
@@ -372,6 +399,188 @@ export function CaseContractChangePanel({
     );
   }
 
+  function recordActionExecution(event: CaseContractChangeEvent, actionId: string) {
+    const draft = executionDrafts[actionId];
+    const c4 = event.action_impact_relations.filter((item) => item.action_id === actionId).at(-1);
+    if (!draft || !c4) return;
+    const key = "c5:" + actionId;
+    const selectedFile = executionEvidenceFiles[actionId] ?? null;
+    let uploadIntent = executionUploadIntents[actionId];
+    if (selectedFile && (!uploadIntent
+      || uploadIntent.input.c4_relation_id !== c4.relation_id
+      || uploadIntent.file.name !== selectedFile.name
+      || uploadIntent.file.size !== selectedFile.size
+      || uploadIntent.file.lastModified !== selectedFile.lastModified)) {
+      uploadIntent = {
+        input: {
+          ...ids(),
+          evidence_object_id: crypto.randomUUID(),
+          c4_relation_id: c4.relation_id,
+          evidence_kind: "EXECUTION_EVIDENCE",
+          expected_byte_size: selectedFile.size,
+        },
+        file: selectedFile,
+      };
+      setExecutionUploadIntents((current) => ({ ...current, [actionId]: uploadIntent! }));
+    }
+    const evidenceObjectIds = [...new Set([
+      ...draft.evidenceObjectIds,
+      ...(uploadIntent ? [uploadIntent.input.evidence_object_id] : []),
+    ])];
+    void submit(
+      key,
+      () => ({
+        ...ids(),
+        act_id: crypto.randomUUID(),
+        c4_relation_id: c4.relation_id,
+        expected_revision: event.action_execution_acts.filter((item) => item.action_id === actionId).length,
+        declared_state: draft.state,
+        declared_summary: draft.state === "UNKNOWN" ? null : draft.summary.trim(),
+        unknown_reason: draft.state === "UNKNOWN" ? draft.unknownReason.trim() : null,
+        evidence_refs: refs(draft.evidenceRefs),
+        evidence_object_ids: evidenceObjectIds,
+        external_confirmation_state: draft.confirmation,
+        external_confirmation_note: draft.confirmation === "NOT_CONFIRMED"
+          ? draft.confirmationNote.trim() : null,
+      }),
+      async (input) => {
+        if (uploadIntent) {
+          try {
+            await api.prepareCaseContractChangeEvidenceUpload(
+              caseId, event.event_id, actionId, uploadIntent.input
+            );
+            await api.uploadCaseContractChangeEvidence(
+              caseId,
+              event.event_id,
+              actionId,
+              uploadIntent.input.evidence_object_id,
+              uploadIntent.input.idempotency_key,
+              uploadIntent.file,
+            );
+          } catch (error) {
+            const status = (error as { status?: number })?.status;
+            if (status !== undefined && status >= 400 && status < 500 && status !== 401) {
+              setExecutionUploadIntents((current) => {
+                const next = { ...current };
+                delete next[actionId];
+                return next;
+              });
+            }
+            throw error;
+          }
+        }
+        await api.recordCaseContractChangeActionExecution(caseId, event.event_id, actionId, input);
+        setExecutionUploadIntents((current) => {
+          const next = { ...current };
+          delete next[actionId];
+          return next;
+        });
+        setExecutionEvidenceFiles((current) => ({ ...current, [actionId]: null }));
+      },
+    );
+  }
+
+  function recordExternalConfirmation(
+    event: CaseContractChangeEvent,
+    act: CaseContractChangeEvent["action_execution_acts"][number],
+  ) {
+    const draft = externalConfirmationDrafts[act.act_id];
+    if (!draft?.rationale.trim() || !draft.receivedAt) return;
+    const key = "c5-confirmation:" + act.act_id;
+    const selectedFile = externalConfirmationFiles[act.act_id] ?? null;
+    let pendingUpload = externalConfirmationUploadIntents[act.act_id];
+    let confirmation: RecordCaseContractChangeExternalConfirmationInput;
+    if (selectedFile && (!pendingUpload
+      || pendingUpload.upload.input.c4_relation_id !== act.c4_relation_id
+      || pendingUpload.upload.file.name !== selectedFile.name
+      || pendingUpload.upload.file.size !== selectedFile.size
+      || pendingUpload.upload.file.lastModified !== selectedFile.lastModified)) {
+      const upload: EvidenceUploadIntent = {
+        input: {
+          ...ids(),
+          evidence_object_id: crypto.randomUUID(),
+          c4_relation_id: act.c4_relation_id,
+          evidence_kind: "EXTERNAL_CONFIRMATION",
+          expected_byte_size: selectedFile.size,
+        },
+        file: selectedFile,
+      };
+      confirmation = {
+        ...ids(),
+        confirmation_id: crypto.randomUUID(),
+        c4_relation_id: act.c4_relation_id,
+        evidence_object_id: upload.input.evidence_object_id,
+        expected_revision: act.external_confirmation_acts.length,
+        received_at: new Date(draft.receivedAt).toISOString(),
+        external_party: draft.externalParty.trim() || null,
+        rationale: draft.rationale.trim(),
+      };
+      pendingUpload = { upload, confirmation };
+      setExternalConfirmationUploadIntents((current) => ({ ...current, [act.act_id]: pendingUpload! }));
+    } else if (pendingUpload) {
+      confirmation = pendingUpload.confirmation;
+    } else {
+      const source = event.evidence_objects.find((item) =>
+        item.evidence_object_id === draft.evidenceObjectId
+        && item.action_id === act.action_id
+        && item.c4_relation_id === act.c4_relation_id
+        && item.evidence_kind === "EXTERNAL_CONFIRMATION"
+        && item.state === "CLEAN"
+      );
+      if (!source) return;
+      confirmation = {
+        ...ids(),
+        confirmation_id: crypto.randomUUID(),
+        c4_relation_id: act.c4_relation_id,
+        evidence_object_id: source.evidence_object_id,
+        expected_revision: act.external_confirmation_acts.length,
+        received_at: new Date(draft.receivedAt).toISOString(),
+        external_party: draft.externalParty.trim() || null,
+        rationale: draft.rationale.trim(),
+      };
+    }
+    void submit(
+      key,
+      () => confirmation,
+      async (input) => {
+        if (pendingUpload) {
+          try {
+            await api.prepareCaseContractChangeEvidenceUpload(
+              caseId, event.event_id, act.action_id, pendingUpload.upload.input
+            );
+            await api.uploadCaseContractChangeEvidence(
+              caseId,
+              event.event_id,
+              act.action_id,
+              pendingUpload.upload.input.evidence_object_id,
+              pendingUpload.upload.input.idempotency_key,
+              pendingUpload.upload.file,
+            );
+          } catch (error) {
+            const status = (error as { status?: number })?.status;
+            if (status !== undefined && status >= 400 && status < 500 && status !== 401) {
+              setExternalConfirmationUploadIntents((current) => {
+                const next = { ...current };
+                delete next[act.act_id];
+                return next;
+              });
+            }
+            throw error;
+          }
+        }
+        await api.recordCaseContractChangeExternalConfirmation(
+          caseId, event.event_id, act.action_id, act.act_id, input
+        );
+        setExternalConfirmationUploadIntents((current) => {
+          const next = { ...current };
+          delete next[act.act_id];
+          return next;
+        });
+        setExternalConfirmationFiles((current) => ({ ...current, [act.act_id]: null }));
+      },
+    );
+  }
+
   const blocked = !!pending;
   return (
     <section className="section-block decision-section" aria-label="Événements contractuels C1">
@@ -571,6 +780,143 @@ export function CaseContractChangePanel({
             <button type="submit" disabled={blocked}>{submitting === "action:" + event.event_id ? "Enregistrement…" : failure?.key === "action:" + event.event_id && failure.kind === "UNCONFIRMED" ? "Réessayer la même action" : "Enregistrer l’action et la preuve"}</button>
           </form>}
           {event.actions.map((item) => <p key={item.action_id}>Action r{item.revision} · {item.state} · {item.summary} · preuves : {item.evidence_refs.join(" · ")} · échéance : {item.due_at ?? item.due_date_absence_reason}</p>)}
+          <section aria-label={"Déclarations d’exécution C5 " + event.event_id}>
+            <h4>Exécution déclarée C5</h4>
+            {event.evidence_objects.map((source) => <p key={source.evidence_object_id}>
+              Source C5 {source.evidence_kind} · {source.state} · action {source.action_id} · C4 {source.c4_relation_id}
+              {source.sha256 ? " · SHA-256 " + source.sha256 : ""}
+              {source.media_type ? " · " + source.media_type : ""}
+            </p>)}
+            {event.action_execution_acts.map((act) => {
+              const confirmationDraft = externalConfirmationDrafts[act.act_id] ?? {
+                evidenceObjectId: event.evidence_objects.find((source) =>
+                  source.action_id === act.action_id
+                  && source.c4_relation_id === act.c4_relation_id
+                  && source.evidence_kind === "EXTERNAL_CONFIRMATION"
+                  && source.state === "CLEAN"
+                )?.evidence_object_id ?? "",
+                receivedAt: new Date().toISOString().slice(0, 16),
+                externalParty: "",
+                rationale: "",
+              };
+              return <div key={act.act_id}>
+                <p>
+                  C5 r{act.revision} · {act.declared_state} · pièce {act.evidence_state}
+                  {act.evidence_refs.length ? " · références déclarées : " + act.evidence_refs.join(" · ") : " · aucune pièce déclarée"}
+                  {" · confirmation externe " + act.external_confirmation_state + " · C4 " + act.c4_projection_state}
+                  {act.declared_summary ? " · " + act.declared_summary : " · " + act.unknown_reason}
+                </p>
+                {act.evidence_objects.map((source) => <p key={source.evidence_object_id}>
+                  Pièce retrouvée C5 v{source.version} · {source.sha256} · {source.media_type} · {source.actual_byte_size} octets
+                </p>)}
+                {act.external_confirmation_acts.map((confirmation) => <p key={confirmation.confirmation_id}>
+                  Confirmation externe append-only r{confirmation.revision} · reçue le {confirmation.received_at}
+                  {confirmation.external_party ? " · " + confirmation.external_party : ""}
+                  {" · pièce " + confirmation.evidence_sha256 + " · " + confirmation.rationale}
+                </p>)}
+                {act.external_confirmation_state !== "CONFIRMED" && <form onSubmit={(formEvent) => {
+                  formEvent.preventDefault(); recordExternalConfirmation(event, act);
+                }}>
+                  <h5>Enregistrer une confirmation externe reçue</h5>
+                  <label>Pièce externe assainie déjà déposée
+                    <select aria-label={"Pièce externe C5 " + act.act_id} value={confirmationDraft.evidenceObjectId} disabled={blocked} onChange={(formEvent) => setExternalConfirmationDrafts((current) => ({
+                      ...current,
+                      [act.act_id]: { ...confirmationDraft, evidenceObjectId: formEvent.target.value },
+                    }))}>
+                      <option value="">Choisir un accusé externe ou joindre un fichier</option>
+                      {event.evidence_objects.filter((source) => source.action_id === act.action_id
+                        && source.c4_relation_id === act.c4_relation_id
+                        && source.evidence_kind === "EXTERNAL_CONFIRMATION"
+                        && source.state === "CLEAN").map((source) => <option key={source.evidence_object_id} value={source.evidence_object_id}>
+                        {source.evidence_object_id} · SHA-256 {source.sha256}
+                      </option>)}
+                    </select>
+                  </label>
+                  <label>Ou joindre la confirmation externe reçue
+                    <input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.ods,.odt,.zip,.jpg,.jpeg,.png,.tif,.tiff"
+                      disabled={blocked} onChange={(formEvent) => setExternalConfirmationFiles((current) => ({
+                        ...current, [act.act_id]: formEvent.target.files?.[0] ?? null,
+                      }))} />
+                  </label>
+                  <label>Date de réception déclarée<input type="datetime-local" required value={confirmationDraft.receivedAt} disabled={blocked} onChange={(formEvent) => setExternalConfirmationDrafts((current) => ({
+                    ...current, [act.act_id]: { ...confirmationDraft, receivedAt: formEvent.target.value },
+                  }))} /></label>
+                  <label>Émetteur externe déclaré<input maxLength={240} value={confirmationDraft.externalParty} disabled={blocked} onChange={(formEvent) => setExternalConfirmationDrafts((current) => ({
+                    ...current, [act.act_id]: { ...confirmationDraft, externalParty: formEvent.target.value },
+                  }))} /></label>
+                  <label>Justification Patron<textarea required maxLength={2000} value={confirmationDraft.rationale} disabled={blocked} onChange={(formEvent) => setExternalConfirmationDrafts((current) => ({
+                    ...current, [act.act_id]: { ...confirmationDraft, rationale: formEvent.target.value },
+                  }))} /></label>
+                  <button type="submit" disabled={blocked
+                    || (!confirmationDraft.evidenceObjectId && !externalConfirmationFiles[act.act_id])
+                    || !confirmationDraft.rationale.trim()}>
+                    {submitting === "c5-confirmation:" + act.act_id ? "Vérification et enregistrement…" : "Enregistrer l’acte de confirmation externe"}
+                  </button>
+                </form>}
+              </div>;
+            })}
+            {event.actions.map((item) => {
+              const draft = executionDrafts[item.action_id] ?? {
+                state: "UNKNOWN" as const, summary: "", unknownReason: "", evidenceRefs: "",
+                evidenceObjectIds: [],
+                confirmation: "UNKNOWN" as const, confirmationNote: "",
+              };
+              const currentC4 = event.action_impact_relations
+                .filter((relation) => relation.action_id === item.action_id).at(-1);
+              const hasC4 = !!currentC4;
+              const key = "c5:" + item.action_id;
+              return <form key={item.action_id} onSubmit={(formEvent) => {
+                formEvent.preventDefault(); recordActionExecution(event, item.action_id);
+              }}>
+                <p>Action C1 {item.action_id} · état C1 {item.state}. C5 enregistre une déclaration, sans clôturer l’action.</p>
+                <label>Réalisation déclarée
+                  <select aria-label={"Réalisation déclarée C5 " + item.action_id} value={draft.state} disabled={blocked || !hasC4} onChange={(formEvent) => setExecutionDrafts((current) => ({
+                    ...current, [item.action_id]: { ...draft, state: formEvent.target.value as typeof draft.state },
+                  }))}>
+                    <option value="UNKNOWN">UNKNOWN · état non établi</option>
+                    <option value="DECLARED_PERFORMED">Réalisation déclarée</option>
+                    <option value="DECLARED_PARTIAL">Réalisation partielle déclarée</option>
+                    <option value="DECLARED_NOT_PERFORMED">Non réalisée, déclaration humaine</option>
+                  </select>
+                </label>
+                {draft.state === "UNKNOWN"
+                  ? <label>Motif UNKNOWN<input required maxLength={1000} value={draft.unknownReason} disabled={blocked || !hasC4} onChange={(formEvent) => setExecutionDrafts((current) => ({ ...current, [item.action_id]: { ...draft, unknownReason: formEvent.target.value } }))} /></label>
+                  : <label>Résumé de la déclaration<textarea required maxLength={2000} value={draft.summary} disabled={blocked || !hasC4} onChange={(formEvent) => setExecutionDrafts((current) => ({ ...current, [item.action_id]: { ...draft, summary: formEvent.target.value } }))} /></label>}
+                <label>Références de pièce déclarées (une par ligne, non vérifiées)<textarea value={draft.evidenceRefs} disabled={blocked || !hasC4} onChange={(formEvent) => setExecutionDrafts((current) => ({ ...current, [item.action_id]: { ...draft, evidenceRefs: formEvent.target.value } }))} /></label>
+                {currentC4 && event.evidence_objects.filter((source) => source.action_id === item.action_id
+                  && source.c4_relation_id === currentC4.relation_id
+                  && source.evidence_kind === "EXECUTION_EVIDENCE"
+                  && source.state === "CLEAN").map((source) => <label key={source.evidence_object_id}>
+                    <input type="checkbox" aria-label={"Sélectionner la pièce C5 " + source.evidence_object_id}
+                      checked={draft.evidenceObjectIds.includes(source.evidence_object_id)} disabled={blocked}
+                      onChange={(formEvent) => setExecutionDrafts((current) => ({
+                        ...current,
+                        [item.action_id]: { ...draft, evidenceObjectIds: formEvent.target.checked
+                          ? [...draft.evidenceObjectIds, source.evidence_object_id]
+                          : draft.evidenceObjectIds.filter((id) => id !== source.evidence_object_id) },
+                      }))} />
+                    Pièce assainie · {source.media_type} · {source.sha256}
+                  </label>)}
+                <label>Ou joindre une nouvelle pièce d’exécution
+                  <input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.ods,.odt,.zip,.jpg,.jpeg,.png,.tif,.tiff"
+                    disabled={blocked || !hasC4} onChange={(formEvent) => setExecutionEvidenceFiles((current) => ({
+                      ...current, [item.action_id]: formEvent.target.files?.[0] ?? null,
+                    }))} />
+                </label>
+                <label>Confirmation externe
+                  <select aria-label={"Confirmation externe C5 " + item.action_id} value={draft.confirmation} disabled={blocked || !hasC4} onChange={(formEvent) => setExecutionDrafts((current) => ({ ...current, [item.action_id]: { ...draft, confirmation: formEvent.target.value as typeof draft.confirmation } }))}>
+                    <option value="UNKNOWN">UNKNOWN · aucune source externe vérifiée</option>
+                    <option value="NOT_CONFIRMED">Absence de confirmation déclarée</option>
+                  </select>
+                </label>
+                {draft.confirmation === "NOT_CONFIRMED" && <label>Motif de l’absence de confirmation<input required maxLength={1000} value={draft.confirmationNote} disabled={blocked || !hasC4} onChange={(formEvent) => setExecutionDrafts((current) => ({ ...current, [item.action_id]: { ...draft, confirmationNote: formEvent.target.value } }))} /></label>}
+                <button type="submit" disabled={blocked || !hasC4 || (draft.state === "UNKNOWN" ? !draft.unknownReason.trim() : !draft.summary.trim()) || (draft.confirmation === "NOT_CONFIRMED" && !draft.confirmationNote.trim())}>
+                  {submitting === key ? "Enregistrement…" : failure?.key === key && failure.kind === "UNCONFIRMED" ? "Réessayer la même déclaration" : "Enregistrer l’acte C5"}
+                </button>
+              </form>;
+            })}
+            <p>Une référence seule ne prouve pas qu’une pièce a été retrouvée. Un upload devient RETRIEVED uniquement après relecture et recalcul SHA-256 ; la confirmation externe se consigne dans un acte séparé. Aucune action, notification ou transmission n’est déclenchée.</p>
+          </section>
           <section aria-label={"Liaisons C4 actions et impacts " + event.event_id}>
             <h4>Lier une action Patron aux impacts déclarés</h4>
             {event.action_impact_relations.map((item) => <p key={item.relation_id}>

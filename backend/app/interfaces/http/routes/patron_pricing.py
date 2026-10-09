@@ -2,7 +2,7 @@ from dataclasses import asdict
 from datetime import UTC, datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Header, HTTPException, status
+from fastapi import APIRouter, Header, HTTPException, Response, status
 from fastapi.responses import JSONResponse
 
 from app.interfaces.http.aggregate_refs import require_aggregate_revision
@@ -41,7 +41,9 @@ def build_patron_pricing_router(
         "/cases/{case_id}/pricing-scenarios",
         response_model=list[PricingScenarioResponse],
     )
-    def list_scenarios(case_id: UUID, authorization: str | None = Header(default=None)):
+    def list_scenarios(
+        case_id: UUID, response: Response, authorization: str | None = Header(default=None)
+    ):
         actor = _resolve_context(
             authorization=authorization,
             context_resolver=security_runtime.context_resolver,
@@ -54,6 +56,7 @@ def build_patron_pricing_router(
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="FORBIDDEN"
             ) from error
+        response.headers["Cache-Control"] = "no-store"
         return [PricingScenarioResponse(**asdict(item)) for item in scenarios]
 
     def _transition_scenario(
@@ -76,6 +79,7 @@ def build_patron_pricing_router(
         try:
             result = transition_service.execute(
                 actor=actor,
+                case_id=case_id,
                 command=command_cls(
                     command_id=request.command_id,
                     idempotency_key=request.idempotency_key,

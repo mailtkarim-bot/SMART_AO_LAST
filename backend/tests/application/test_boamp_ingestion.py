@@ -46,6 +46,8 @@ def _notice(
         department_codes=(department,),
         market_types=("TRAVAUX",),
         status="EN_COURS",
+        source_contract_version="BOAMP_EXPLORE_V2_1_ALLOWLIST_V1",
+        source_response_sha256="a" * 64,
     )
 
 
@@ -138,6 +140,9 @@ def test_script_writes_closed_reproducible_report(
     payload = output.read_text(encoding="utf-8")
     assert '"schema": "SMART_AO_OPPORTUNITY_INGESTION_REPORT_V1"' in payload
     assert '"source": "BOAMP"' in payload
+    assert '"source_contract_version": "BOAMP_EXPLORE_V2_1_ALLOWLIST_V1"' in payload
+    assert '"source_response_sha256": "' + "a" * 64 + '"' in payload
+    assert '"transport_fingerprint_sha256": "' in payload
     assert "A-1" in payload
     assert "tenant_id" not in payload
     assert "financial" not in payload.lower()

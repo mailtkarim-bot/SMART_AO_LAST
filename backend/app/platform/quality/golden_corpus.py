@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import hashlib
 import json
+import os
 import re
+import stat
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -69,6 +72,32 @@ def parse_manifest(raw: Any) -> GoldenCorpusManifest:
     )
 
 
+def verify_manifest_files(manifest: GoldenCorpusManifest, corpus_dir: Path) -> None:
+    for document in manifest.documents:
+        path = corpus_dir / document.filename
+        try:
+            mode = path.lstat().st_mode
+        except OSError as error:
+            raise ValueError("GOLDEN_DOCUMENT_FILE_UNAVAILABLE") from error
+        if not stat.S_ISREG(mode):
+            raise ValueError("GOLDEN_DOCUMENT_FILE_INVALID")
+        try:
+            descriptor = os.open(
+                path,
+                os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0),
+            )
+        except OSError as error:
+            raise ValueError("GOLDEN_DOCUMENT_FILE_UNAVAILABLE") from error
+        with os.fdopen(descriptor, "rb") as source:
+            if not stat.S_ISREG(os.fstat(source.fileno()).st_mode):
+                raise ValueError("GOLDEN_DOCUMENT_FILE_INVALID")
+            digest = hashlib.sha256()
+            for chunk in iter(lambda: source.read(1024 * 1024), b""):
+                digest.update(chunk)
+        if digest.hexdigest() != document.sha256:
+            raise ValueError("GOLDEN_DOCUMENT_HASH_MISMATCH")
+
+
 def _parse_document(raw: Any) -> GoldenDocument:
     required = {
         "document_id",
@@ -130,6 +159,8 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     try:
         manifest = load_manifest(Path(arguments[0]))
+        if manifest.documents:
+            verify_manifest_files(manifest, Path(arguments[0]).parent)
     except ValueError as error:
         print(str(error), file=sys.stderr)
         return 1

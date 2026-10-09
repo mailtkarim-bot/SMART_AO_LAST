@@ -9,8 +9,13 @@ from app.interfaces.http.routes.consultations import ConsultationSecurityRuntime
 from app.interfaces.http.routes.patron_boamp_opportunities import (
     build_patron_boamp_opportunity_router,
 )
+from app.modules.market_watch.infrastructure.boamp import BoampRegistryUnavailable
 from app.modules.opportunity.application.boamp_qualification_errors import (
     BoampQualificationIdempotencyConflict,
+)
+from app.modules.opportunity.infrastructure.boamp_qualification_repository import (
+    BoampObservationState,
+    BoampSourceCaptureRecord,
 )
 from app.platform.security.authenticated_context import AuthenticationContextResolver
 from app.platform.security.authorization import AuthorizationPolicyPort
@@ -100,14 +105,19 @@ def _runtime(*values: object, repository: FakeRepository | None = None):
 
 
 class FakeRepository:
-    def __init__(self, error: Exception | None = None) -> None:
+    def __init__(
+        self,
+        error: Exception | None = None,
+        source_captures: tuple[BoampSourceCaptureRecord, ...] = (),
+    ) -> None:
         self.error = error
+        self.source_captures = source_captures
 
     def list_observations(self, *, session, tenant_id, limit, min_score):
         return (_observation(),)
 
     def states_for_observations(self, **_kwargs):
-        return {}
+        return {OBSERVATION_ID: BoampObservationState(source_captures=self.source_captures)}
 
     def persist_qualification(self, **_kwargs):
         if self.error is not None:
@@ -120,6 +130,7 @@ def _client(
     allowed: bool = True,
     session_values: tuple[object, ...] = (uuid4(),),
     repository: FakeRepository | None = None,
+    source_search=None,
 ):
     context = SimpleNamespace(
         tenant_id=TENANT_ID,
@@ -139,6 +150,7 @@ def _client(
                 context_resolver=cast(AuthenticationContextResolver, FakeResolver(context)),
                 policy=cast(AuthorizationPolicyPort, FakePolicy(allowed=allowed)),
             ),
+            source_search=source_search,
         )
     )
     return TestClient(app)
@@ -166,8 +178,63 @@ def test_read_route_requires_bearer_and_returns_closed_projection() -> None:
     assert body["lot_scope_source"] == "BOAMP"
     assert body["deadline_state"] == "EXPIRED"
     assert body["unknowns"] == []
+    assert body["source_captures"] == []
     assert "tenant_id" not in body
     assert "actor_id" not in body
+
+
+def test_read_route_denies_policy_before_projection() -> None:
+    client = _client(allowed=False)
+    response = client.get(
+        "/api/v1/patron/boamp-opportunities",
+        headers={"Authorization": "Bearer token"},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "FORBIDDEN"
+
+
+def test_read_route_preserves_source_captures_while_source_is_unavailable() -> None:
+    captures = (
+        BoampSourceCaptureRecord(
+            ingestion_run_id=uuid4(),
+            source_mode="LIVE",
+            run_recorded_at=datetime(2026, 8, 22, 12, 0, tzinfo=UTC),
+            source_contract_version="BOAMP_EXPLORE_V2_1_ALLOWLIST_V1",
+            source_response_sha256="a" * 64,
+        ),
+        BoampSourceCaptureRecord(
+            ingestion_run_id=uuid4(),
+            source_mode="REPLAY",
+            run_recorded_at=datetime(2026, 8, 23, 12, 0, tzinfo=UTC),
+            source_contract_version="BOAMP_EXPLORE_V2_1_ALLOWLIST_V1",
+            source_response_sha256="b" * 64,
+        ),
+    )
+
+    class UnavailableSource:
+        def search(self, *, text: str, limit: int, offset: int):
+            raise BoampRegistryUnavailable("synthetic outage")
+
+    client = _client(
+        repository=FakeRepository(source_captures=captures),
+        source_search=UnavailableSource(),
+    )
+    response = client.get(
+        "/api/v1/patron/boamp-opportunities",
+        headers={"Authorization": "Bearer token"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["source_status"]["state"] == "UNAVAILABLE"
+    assert body["source_status"]["manual_entry_available"] is True
+    assert [capture["source_mode"] for capture in body["observations"][0]["source_captures"]] == [
+        "LIVE",
+        "REPLAY",
+    ]
+    assert body["observations"][0]["source_captures"][1]["source_response_sha256"] == "b" * 64
+    assert "payload" not in body["observations"][0]
 
 
 def test_qualification_route_authorizes_and_returns_receipt() -> None:

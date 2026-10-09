@@ -13,8 +13,13 @@ from app.modules.pricing.domain.cost_basis import (
 )
 from app.modules.pricing.domain.scenario import calculate_pricing_scenario_amounts
 from app.modules.pricing.infrastructure.models import (
+    FinancialReportLineRecord,
     FinancialReportSnapshotRecord,
     PricingScenarioRecord,
+)
+from app.modules.pricing.public.declared_margin import (
+    BASE_MARGIN_CATEGORIES,
+    qualify_declared_scenario_source,
 )
 from app.platform.events.dispatcher import (
     CommandContext,
@@ -39,6 +44,24 @@ class PricingScenarioHandler:
         )
         if snapshot is None:
             raise CommandExecutionError("OFFICIAL_PRICE_NOT_PUBLISHED")
+        lines = session.execute(
+            sa.select(
+                FinancialReportLineRecord.category, FinancialReportLineRecord.amount_minor
+            ).where(
+                FinancialReportLineRecord.tenant_id == context.tenant_id,
+                FinancialReportLineRecord.snapshot_id == snapshot.id,
+            )
+        ).all()
+        if qualify_declared_scenario_source(
+            [(category, amount) for category, amount in lines],
+            {
+                category: getattr(snapshot, f"{category.lower()}_total_minor")
+                for category in BASE_MARGIN_CATEGORIES
+            },
+            source_revision=snapshot.aggregate_revision,
+            expected_revision=snapshot.aggregate_revision,
+        ):
+            raise CommandExecutionError("SCENARIO_SOURCE_UNKNOWN")
         version = (
             session.scalar(
                 sa.select(sa.func.coalesce(sa.func.max(PricingScenarioRecord.version), 0)).where(
@@ -58,6 +81,8 @@ class PricingScenarioHandler:
             sales_adjustment_bps=command.sales_adjustment_bps,
             cost_adjustment_bps=command.cost_adjustment_bps,
         )
+        if amounts.sales_total_minor == 0:
+            raise CommandExecutionError("SCENARIO_RATE_UNKNOWN")
         try:
             cost_basis = calculate_cost_basis(
                 CostBasisInput(

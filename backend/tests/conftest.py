@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+
 import pytest
 import sqlalchemy as sa
 from alembic import command
@@ -34,7 +36,12 @@ def database_engine() -> sa.Engine:
                 connection.execute(sa.text("TRUNCATE TABLE security_audit_events CASCADE"))
         finally:
             cleanup_engine.dispose()
-        command.downgrade(config, "base")
+        preserve_fixture = (
+            os.environ.get("SMART_AO_TEST_PRESERVE_C5_RESTORE_FIXTURE") == "1"
+            and os.environ.get("SMART_AO_TEST_DISPOSABLE_DATABASE") == "1"
+        )
+        if not preserve_fixture:
+            command.downgrade(config, "base")
 
 
 @pytest.fixture

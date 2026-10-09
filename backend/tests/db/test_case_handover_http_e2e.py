@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import asyncio
+import os
 import socket
 import time
 from dataclasses import replace
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from hashlib import sha256
+from pathlib import Path
 from threading import Thread
+from typing import cast
 from uuid import UUID, uuid4
 
 import httpx
@@ -28,10 +32,16 @@ from app.modules.dce.application.contract_baseline_handler import (
     ContractBaselineImpactWriteService,
     contract_baseline_handlers,
 )
+from app.modules.dce.application.handlers import ExpireDceStagedObjectHandler
+from app.modules.dce.application.upload import MalwareScanResult
 from app.modules.dce.infrastructure.models.contract_baseline import (
     ContractBaselineDeviationImpactRecord,
 )
 from app.modules.dce.infrastructure.models.dce_requirements import DceRequirementRecord
+from app.modules.dce.infrastructure.quarantine import (
+    ClamdTcpMalwareScanAdapter,
+    LocalQuarantineStorageAdapter,
+)
 from app.modules.decision.application.finalize import (
     PatronDecisionFinalizationService,
     decision_finalization_handlers,
@@ -91,16 +101,29 @@ from app.modules.pricing.application.case_contract_change import (
     CaseContractChangeService,
     case_contract_change_handlers,
 )
+from app.modules.pricing.application.case_contract_change_commands import (
+    CASE_CONTRACT_CHANGE_EVIDENCE_RETENTION_TOPIC,
+)
+from app.modules.pricing.application.case_contract_change_evidence_upload import (
+    CaseContractChangeEvidenceUploadService,
+)
+from app.modules.pricing.infrastructure.case_contract_change_evidence_repository import (
+    SqlAlchemyCaseContractChangeEvidenceRepository,
+)
 from app.modules.pricing.infrastructure.case_contract_change_reader import (
     SqlAlchemyCaseContractChangeReader,
 )
 from app.modules.pricing.infrastructure.models.case_contract_change import (
+    CaseContractChangeActionExecutionEvidenceLinkRecord,
+    CaseContractChangeActionExecutionRecord,
     CaseContractChangeActionImpactLinkRecord,
     CaseContractChangeActionImpactRelationRecord,
     CaseContractChangeActionRecord,
     CaseContractChangeApplicabilityRecord,
     CaseContractChangeEngagementLinkRecord,
     CaseContractChangeEventRecord,
+    CaseContractChangeEvidenceObjectRecord,
+    CaseContractChangeExternalConfirmationRecord,
     CaseContractChangeImpactDeclarationRecord,
 )
 from app.modules.pricing.infrastructure.models.contract_instrument_version import (
@@ -109,6 +132,7 @@ from app.modules.pricing.infrastructure.models.contract_instrument_version impor
 from app.modules.submission.application.commands import PrepareSubmissionPackageCommand
 from app.modules.submission.application.service import SubmissionPackageService, submission_handlers
 from app.platform.events.dispatcher import CommandDispatcher
+from app.platform.persistence.models import OutboxMessageRecord
 from app.platform.security.authorization import AuthorizationPolicy
 from app.platform.security.capabilities import Capability, capabilities_for
 from app.platform.security.context import (
@@ -118,6 +142,7 @@ from app.platform.security.context import (
     DataClassification,
     OperationalProfile,
 )
+from app.workers.dce_retention import DceRetentionWorker
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy.exc import DBAPIError
@@ -129,6 +154,7 @@ from tests.application.test_submission_package import (
     _publish_snapshot,
     _ReadySubmissionDecisionGateReader,
 )
+from tests.support.quarantine_crash import kill_local_quarantine_write
 
 
 class TokenResolver:
@@ -137,6 +163,59 @@ class TokenResolver:
 
     def resolve(self, *, access_token: str) -> ActorContext:
         return self.actors[access_token]
+
+
+class C5StaticInspector:
+    async def detect_media_type(self, *, storage_key: str) -> str:
+        return "application/pdf"
+
+
+EICAR_TEST_CONTENT = b"X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*"
+
+
+class C5StaticScanner:
+    def __init__(
+        self,
+        verdict: str = "CLEAN",
+        *,
+        real_scanner: ClamdTcpMalwareScanAdapter | None = None,
+        error_scanner: ClamdTcpMalwareScanAdapter | None = None,
+    ) -> None:
+        self.verdict = verdict
+        self.real_scanner = real_scanner
+        self.error_scanner = error_scanner
+        self.observed_verdicts: list[str] = []
+
+    async def scan(self, *, storage_key: str) -> MalwareScanResult:
+        if self.verdict == "ERROR" and self.error_scanner is not None:
+            result = await self.error_scanner.scan(storage_key=storage_key)
+        elif self.verdict == "CLEAN" and self.real_scanner is not None:
+            result = await self.real_scanner.scan(storage_key=storage_key)
+        else:
+            result = MalwareScanResult(
+                verdict=self.verdict,
+                scanner_name="test-clamd",
+                scanner_signature_version="test-signatures",
+                scanned_at=datetime.now(tz=UTC),
+            )
+        self.observed_verdicts.append(result.verdict)
+        return result
+
+
+class FailOnceC5DeleteStorage:
+    def __init__(self, *, storage: LocalQuarantineStorageAdapter, fail_storage_key: str) -> None:
+        self.storage = storage
+        self.fail_storage_key = fail_storage_key
+        self.failed = False
+
+    async def delete(self, *, storage_key: str) -> None:
+        if storage_key == self.fail_storage_key and not self.failed:
+            self.failed = True
+            raise OSError("synthetic private-storage delete failure")
+        await self.storage.delete(storage_key=storage_key)
+
+    async def delete_partials(self, *, storage_key: str) -> int:
+        return await self.storage.delete_partials(storage_key=storage_key)
 
 
 def _seed_handover_sources(session_factory: sessionmaker[Session], tmp_path):
@@ -552,6 +631,8 @@ def _seed_decision(session_factory: sessionmaker[Session], *, actor, case_id):
 def test_http_p7_handover_is_exact_append_only_and_finance_redacted(
     database_engine, session_factory, tmp_path
 ):
+    with database_engine.begin() as connection:
+        connection.execute(sa.text("TRUNCATE TABLE case_handover_snapshots CASCADE"))
     patron, case_id, package_id, dispatcher, storage = _seed_handover_sources(
         session_factory, tmp_path
     )
@@ -721,8 +802,37 @@ def test_http_p7_handover_is_exact_append_only_and_finance_redacted(
 
 
 def test_http_c1_keeps_unknown_until_patron_links_change_to_handover_and_records_action(
-    database_engine, session_factory, tmp_path
+    database_engine, session_factory, tmp_path, request: pytest.FixtureRequest
 ):
+    preserve_c5_restore_fixture = (
+        os.environ.get("SMART_AO_TEST_PRESERVE_C5_RESTORE_FIXTURE") == "1"
+        and os.environ.get("SMART_AO_TEST_DISPOSABLE_DATABASE") == "1"
+    )
+
+    def clear_c5_records() -> None:
+        if preserve_c5_restore_fixture:
+            return
+        with database_engine.begin() as connection:
+            connection.execute(
+                sa.text(
+                    "TRUNCATE TABLE case_contract_change_external_confirmations, "
+                    "case_contract_change_action_execution_evidence_links, "
+                    "case_contract_change_evidence_objects, "
+                    "case_contract_change_action_executions CASCADE"
+                )
+            )
+
+    request.addfinalizer(clear_c5_records)
+    if not preserve_c5_restore_fixture:
+        with database_engine.begin() as connection:
+            connection.execute(
+                sa.text(
+                    "TRUNCATE TABLE case_contract_change_external_confirmations, "
+                    "case_contract_change_action_execution_evidence_links, "
+                    "case_contract_change_evidence_objects, "
+                    "case_contract_change_action_executions CASCADE"
+                )
+            )
     patron, case_id, package_id, dispatcher, storage = _seed_handover_sources(
         session_factory, tmp_path
     )
@@ -854,6 +964,44 @@ def test_http_c1_keeps_unknown_until_patron_links_change_to_handover_and_records
         reader=SqlAlchemyCaseContractChangeReader(session_factory),
         policy=AuthorizationPolicy(),
     )
+    evidence_storage_root = Path(
+        os.getenv("SMART_AO_TEST_C5_QUARANTINE_ROOT", str(tmp_path / "c5-evidence"))
+    )
+    evidence_storage = LocalQuarantineStorageAdapter(root=evidence_storage_root)
+    clamd_host = os.getenv("SMART_AO_C5_TEST_CLAMD_HOST")
+    clamd_port = int(os.getenv("SMART_AO_C5_TEST_CLAMD_PORT", "3310"))
+    c5_scanner = C5StaticScanner(
+        real_scanner=(
+            ClamdTcpMalwareScanAdapter(
+                storage=evidence_storage,
+                host=clamd_host,
+                port=clamd_port,
+                timeout_seconds=5,
+            )
+            if clamd_host
+            else None
+        ),
+        error_scanner=(
+            ClamdTcpMalwareScanAdapter(
+                storage=evidence_storage,
+                host=clamd_host,
+                port=clamd_port + 1,
+                timeout_seconds=1,
+            )
+            if clamd_host
+            else None
+        ),
+    )
+    evidence_repository = SqlAlchemyCaseContractChangeEvidenceRepository(
+        session_factory=session_factory
+    )
+    evidence_upload_service = CaseContractChangeEvidenceUploadService(
+        repository=evidence_repository,
+        policy=AuthorizationPolicy(),
+        storage=evidence_storage,
+        inspector=C5StaticInspector(),
+        scanner=c5_scanner,
+    )
     foreign_patron = replace(patron, tenant_id=uuid4())
     resolver = TokenResolver({"patron": patron, "foreign": foreign_patron})
     app = FastAPI()
@@ -868,6 +1016,7 @@ def test_http_c1_keeps_unknown_until_patron_links_change_to_handover_and_records
     app.include_router(
         build_patron_case_contract_change_router(
             service=service,
+            evidence_upload_service=evidence_upload_service,
             security_runtime=ConsultationSecurityRuntime(
                 context_resolver=resolver,
                 policy=AuthorizationPolicy(),
@@ -878,7 +1027,7 @@ def test_http_c1_keeps_unknown_until_patron_links_change_to_handover_and_records
         sock.bind(("127.0.0.1", 0))
         port = sock.getsockname()[1]
     server = uvicorn.Server(
-        uvicorn.Config(app, host="127.0.0.1", port=port, log_level="critical", access_log=False)
+        uvicorn.Config(app, host="127.0.0.1", port=port, log_level="error", access_log=False)
     )
     thread = Thread(target=server.run, daemon=True)
     thread.start()
@@ -1220,6 +1369,445 @@ def test_http_c1_keeps_unknown_until_patron_links_change_to_handover_and_records
             assert c4_recorded.status_code == 201, c4_recorded.text
             assert c4_replay.status_code == 200
             assert c4_replay.json()["replayed"] is True
+            evidence_payload = {
+                "command_id": str(uuid4()),
+                "idempotency_key": str(uuid4()),
+                "correlation_id": str(uuid4()),
+                "evidence_object_id": str(uuid4()),
+                "c4_relation_id": c4_payload["relation_id"],
+                "evidence_kind": "EXECUTION_EVIDENCE",
+                "expected_byte_size": len(b"%PDF-1.7\\nexecution proof\\n"),
+            }
+            evidence_path = (
+                f"{base}/{event_id}/actions/{action_payload['action_id']}/evidence-objects"
+            )
+            evidence_intent = client.post(evidence_path, headers=headers, json=evidence_payload)
+            assert evidence_intent.status_code == 201, evidence_intent.text
+            evidence_upload = client.put(
+                f"{evidence_path}/{evidence_payload['evidence_object_id']}/content",
+                headers={
+                    **headers,
+                    "Idempotency-Key": evidence_payload["idempotency_key"],
+                    "Content-Type": "application/octet-stream",
+                },
+                content=b"%PDF-1.7\\nexecution proof\\n",
+            )
+            assert evidence_upload.status_code == 200, evidence_upload.text
+            assert evidence_upload.json()["state"] == "CLEAN"
+            assert evidence_upload.json()["version"] == 1
+            assert (
+                evidence_upload.json()["sha256"]
+                == sha256(b"%PDF-1.7\\nexecution proof\\n").hexdigest()
+            )
+            evidence_intent_replay = client.post(
+                evidence_path, headers=headers, json=evidence_payload
+            )
+            assert evidence_intent_replay.status_code == 200
+            assert evidence_intent_replay.json()["replayed"] is True
+            assert evidence_intent_replay.json()["state"] == "CLEAN"
+            evidence_upload_replay = client.put(
+                f"{evidence_path}/{evidence_payload['evidence_object_id']}/content",
+                headers={
+                    **headers,
+                    "Idempotency-Key": evidence_payload["idempotency_key"],
+                    "Content-Type": "application/octet-stream",
+                },
+                content=b"%PDF-1.7\\nexecution proof\\n",
+            )
+            assert evidence_upload_replay.status_code == 200
+            assert evidence_upload_replay.json()["sha256"] == evidence_upload.json()["sha256"]
+            changed_retry = client.put(
+                f"{evidence_path}/{evidence_payload['evidence_object_id']}/content",
+                headers={
+                    **headers,
+                    "Idempotency-Key": evidence_payload["idempotency_key"],
+                    "Content-Type": "application/octet-stream",
+                },
+                content=b"%PDF-1.7\\nother bytes\\n",
+            )
+            assert changed_retry.status_code == 409
+            assert "storage_key" not in evidence_upload.json()
+            real_clamd_enabled = c5_scanner.real_scanner is not None
+            infected_content = (
+                EICAR_TEST_CONTENT if real_clamd_enabled else b"%PDF-1.7\\ninfected proof\\n"
+            )
+            rejected_evidence_payload = {
+                **evidence_payload,
+                "command_id": str(uuid4()),
+                "idempotency_key": str(uuid4()),
+                "correlation_id": str(uuid4()),
+                "evidence_object_id": str(uuid4()),
+                "expected_byte_size": len(infected_content),
+            }
+            c5_scanner.verdict = "CLEAN" if real_clamd_enabled else "INFECTED"
+            rejected_intent = client.post(
+                evidence_path, headers=headers, json=rejected_evidence_payload
+            )
+            assert rejected_intent.status_code == 201
+            rejected_upload = client.put(
+                f"{evidence_path}/{rejected_evidence_payload['evidence_object_id']}/content",
+                headers={
+                    **headers,
+                    "Idempotency-Key": rejected_evidence_payload["idempotency_key"],
+                    "Content-Type": "application/octet-stream",
+                },
+                content=infected_content,
+            )
+            assert c5_scanner.observed_verdicts[-1] == "INFECTED"
+            assert rejected_upload.status_code == 422
+
+            rejected_scanner_error_payload = {
+                **evidence_payload,
+                "command_id": str(uuid4()),
+                "idempotency_key": str(uuid4()),
+                "correlation_id": str(uuid4()),
+                "evidence_object_id": str(uuid4()),
+                "expected_byte_size": len(b"%PDF-1.7\\nscanner unavailable\\n"),
+            }
+            c5_scanner.verdict = "ERROR"
+            scanner_error_intent = client.post(
+                evidence_path, headers=headers, json=rejected_scanner_error_payload
+            )
+            assert scanner_error_intent.status_code == 201
+            scanner_error_upload = client.put(
+                f"{evidence_path}/{rejected_scanner_error_payload['evidence_object_id']}/content",
+                headers={
+                    **headers,
+                    "Idempotency-Key": rejected_scanner_error_payload["idempotency_key"],
+                    "Content-Type": "application/octet-stream",
+                },
+                content=b"%PDF-1.7\\nscanner unavailable\\n",
+            )
+            assert c5_scanner.observed_verdicts[-1] == "ERROR"
+            assert scanner_error_upload.status_code == 422
+            assert scanner_error_upload.json()["detail"] == "UPLOAD_REJECTED"
+            c5_scanner.verdict = "CLEAN"
+            crashed_uploads = []
+            crash_bytes = b"%PDF-1.7\ncrash-recovery fixture\n"
+            for after_rename in (False, True, True):
+                crash_payload = {
+                    **evidence_payload,
+                    "command_id": str(uuid4()),
+                    "idempotency_key": str(uuid4()),
+                    "correlation_id": str(uuid4()),
+                    "evidence_object_id": str(uuid4()),
+                    "expected_byte_size": len(crash_bytes),
+                }
+                crash_intent = client.post(evidence_path, headers=headers, json=crash_payload)
+                assert crash_intent.status_code == 201, crash_intent.text
+                crash_id = UUID(crash_payload["evidence_object_id"])
+                crash_target = evidence_repository.get_target(
+                    tenant_id=patron.tenant_id,
+                    case_id=case_id,
+                    event_id=event_id,
+                    action_id=UUID(action_payload["action_id"]),
+                    evidence_object_id=crash_id,
+                )
+                assert crash_target is not None
+                assert evidence_repository.claim(evidence_object_id=crash_id)
+                kill_local_quarantine_write(
+                    root=evidence_storage_root,
+                    storage_key=crash_target.storage_key,
+                    after_rename=after_rename,
+                )
+                crash_path = asyncio.run(
+                    evidence_storage.local_path(storage_key=crash_target.storage_key)
+                )
+                if after_rename:
+                    assert crash_path.read_bytes() == crash_bytes
+                else:
+                    assert not crash_path.exists()
+                    assert list(crash_path.parent.glob(f".{crash_path.name}.*.part"))
+                crashed_uploads.append(crash_target)
+
+            recovery_dispatcher = CommandDispatcher(
+                session_factory=session_factory,
+                handlers={
+                    "ExpireDceStagedObject": ExpireDceStagedObjectHandler(),
+                    **case_contract_change_handlers(),
+                },
+            )
+            retry_storage = FailOnceC5DeleteStorage(
+                storage=evidence_storage,
+                fail_storage_key=crashed_uploads[-1].storage_key,
+            )
+            recovery_worker = DceRetentionWorker(
+                session_factory=session_factory,
+                dispatcher=recovery_dispatcher,
+                storage=cast(LocalQuarantineStorageAdapter, retry_storage),
+            )
+            recovery_now = max(item.expires_at for item in crashed_uploads) + timedelta(seconds=1)
+            recovery_result = asyncio.run(recovery_worker.run_once(now=recovery_now))
+            assert recovery_result.expired == len(crashed_uploads)
+            assert recovery_result.published == len(crashed_uploads) - 1
+            assert recovery_result.retried == 1
+            for crash_target in crashed_uploads[:-1]:
+                crash_path = asyncio.run(
+                    evidence_storage.local_path(storage_key=crash_target.storage_key)
+                )
+                assert not crash_path.exists()
+                assert not list(crash_path.parent.glob(f".{crash_path.name}.*.part"))
+                with session_factory() as session:
+                    recovered_record = session.get(
+                        CaseContractChangeEvidenceObjectRecord,
+                        crash_target.evidence_object_id,
+                    )
+                assert recovered_record is not None
+                assert recovered_record.state == "REJECTED"
+            failed_delete_target = crashed_uploads[-1]
+            failed_delete_path = asyncio.run(
+                evidence_storage.local_path(storage_key=failed_delete_target.storage_key)
+            )
+            assert failed_delete_path.exists()
+            with session_factory() as session:
+                retry_messages = list(
+                    session.scalars(
+                        sa.select(OutboxMessageRecord).where(
+                            OutboxMessageRecord.topic
+                            == CASE_CONTRACT_CHANGE_EVIDENCE_RETENTION_TOPIC
+                        )
+                    )
+                )
+            failed_delete_message = next(
+                message
+                for message in retry_messages
+                if message.payload_json["data"]["evidence_object_id"]
+                == str(failed_delete_target.evidence_object_id)
+            )
+            assert failed_delete_message.status == "RETRY"
+            assert failed_delete_message.attempt_count == 1
+            retry_result = asyncio.run(
+                recovery_worker.run_once(now=recovery_now + timedelta(seconds=31))
+            )
+            assert retry_result.published == 1
+            assert retry_result.retried == 0
+            for crash_target in crashed_uploads:
+                crash_path = asyncio.run(
+                    evidence_storage.local_path(storage_key=crash_target.storage_key)
+                )
+                assert not crash_path.exists()
+                assert not list(crash_path.parent.glob(f".{crash_path.name}.*.part"))
+                with session_factory() as session:
+                    recovered_record = session.get(
+                        CaseContractChangeEvidenceObjectRecord,
+                        crash_target.evidence_object_id,
+                    )
+                assert recovered_record is not None
+                assert recovered_record.state == "REJECTED"
+            clean_evidence_record = evidence_repository.get_target(
+                tenant_id=patron.tenant_id,
+                case_id=case_id,
+                event_id=event_id,
+                action_id=UUID(action_payload["action_id"]),
+                evidence_object_id=UUID(str(evidence_payload["evidence_object_id"])),
+            )
+            assert clean_evidence_record is not None
+            assert clean_evidence_record.state == "CLEAN"
+            clean_evidence_path = asyncio.run(
+                evidence_storage.local_path(storage_key=clean_evidence_record.storage_key)
+            )
+            assert clean_evidence_path.read_bytes() == b"%PDF-1.7\\nexecution proof\\n"
+            with session_factory() as session:
+                c5_cleanup_events_before_replay = session.scalar(
+                    sa.select(sa.func.count())
+                    .select_from(OutboxMessageRecord)
+                    .where(
+                        OutboxMessageRecord.topic == CASE_CONTRACT_CHANGE_EVIDENCE_RETENTION_TOPIC
+                    )
+                )
+            asyncio.run(recovery_worker.run_once(now=recovery_now + timedelta(minutes=1)))
+            with session_factory() as session:
+                c5_cleanup_events_after_replay = session.scalar(
+                    sa.select(sa.func.count())
+                    .select_from(OutboxMessageRecord)
+                    .where(
+                        OutboxMessageRecord.topic == CASE_CONTRACT_CHANGE_EVIDENCE_RETENTION_TOPIC
+                    )
+                )
+            assert c5_cleanup_events_after_replay == c5_cleanup_events_before_replay == 3
+
+            c5_path = f"{base}/{event_id}/actions/{action_payload['action_id']}/execution-acts"
+            c5_payload = {
+                "command_id": str(uuid4()),
+                "idempotency_key": str(uuid4()),
+                "correlation_id": str(uuid4()),
+                "act_id": str(uuid4()),
+                "c4_relation_id": c4_payload["relation_id"],
+                "expected_revision": 0,
+                "declared_state": "DECLARED_PARTIAL",
+                "declared_summary": "Une partie de l’action a été réalisée.",
+                "unknown_reason": None,
+                "evidence_refs": [],
+                "evidence_object_ids": [evidence_payload["evidence_object_id"]],
+                "external_confirmation_state": "UNKNOWN",
+                "external_confirmation_note": None,
+            }
+            with session_factory() as session:
+                evidence_record = session.get(
+                    CaseContractChangeEvidenceObjectRecord,
+                    UUID(str(evidence_payload["evidence_object_id"])),
+                )
+                assert evidence_record is not None
+                evidence_storage_key = evidence_record.storage_key
+            evidence_path_on_disk = asyncio.run(
+                evidence_storage.local_path(storage_key=evidence_storage_key)
+            )
+            original_evidence_bytes = evidence_path_on_disk.read_bytes()
+            evidence_path_on_disk.write_bytes(b"corrupted evidence bytes")
+            hash_mismatch = client.post(
+                c5_path,
+                headers=headers,
+                json={
+                    **c5_payload,
+                    "command_id": str(uuid4()),
+                    "idempotency_key": str(uuid4()),
+                    "act_id": str(uuid4()),
+                },
+            )
+            assert hash_mismatch.status_code == 422
+            assert hash_mismatch.json()["detail"] == "C5_EVIDENCE_SOURCE_NOT_VERIFIED"
+            evidence_path_on_disk.write_bytes(original_evidence_bytes)
+            c5_recorded = client.post(c5_path, headers=headers, json=c5_payload)
+            assert c5_recorded.status_code == 201, c5_recorded.text
+            c5_unverified_confirmation = client.post(
+                c5_path,
+                headers=headers,
+                json={
+                    **c5_payload,
+                    "command_id": str(uuid4()),
+                    "idempotency_key": str(uuid4()),
+                    "act_id": str(uuid4()),
+                    "external_confirmation_state": "CONFIRMED",
+                },
+            )
+            assert c5_unverified_confirmation.status_code == 422
+            c5_replay = client.post(c5_path, headers=headers, json=c5_payload)
+            assert c5_replay.status_code == 200
+            assert c5_replay.json()["replayed"] is True
+            external_evidence_payload = {
+                **evidence_payload,
+                "command_id": str(uuid4()),
+                "idempotency_key": str(uuid4()),
+                "correlation_id": str(uuid4()),
+                "evidence_object_id": str(uuid4()),
+                "evidence_kind": "EXTERNAL_CONFIRMATION",
+                "expected_byte_size": len(b"%PDF-1.7\\nexternal acknowledgement\\n"),
+            }
+            external_intent = client.post(
+                evidence_path, headers=headers, json=external_evidence_payload
+            )
+            assert external_intent.status_code == 201, external_intent.text
+            external_upload = client.put(
+                f"{evidence_path}/{external_evidence_payload['evidence_object_id']}/content",
+                headers={
+                    **headers,
+                    "Idempotency-Key": external_evidence_payload["idempotency_key"],
+                    "Content-Type": "application/octet-stream",
+                },
+                content=b"%PDF-1.7\\nexternal acknowledgement\\n",
+            )
+            assert external_upload.status_code == 200, external_upload.text
+            external_confirmation_path = f"{c5_path}/{c5_payload['act_id']}/external-confirmations"
+            external_confirmation_payload = {
+                "command_id": str(uuid4()),
+                "idempotency_key": str(uuid4()),
+                "correlation_id": str(uuid4()),
+                "confirmation_id": str(uuid4()),
+                "c4_relation_id": c4_payload["relation_id"],
+                "evidence_object_id": external_evidence_payload["evidence_object_id"],
+                "expected_revision": 0,
+                "received_at": "2026-10-03T16:00:00Z",
+                "external_party": "Maîtrise d’œuvre",
+                "rationale": "Le Patron relie l’accusé externe reçu à cette action.",
+            }
+            external_confirmation = client.post(
+                external_confirmation_path,
+                headers=headers,
+                json=external_confirmation_payload,
+            )
+            assert external_confirmation.status_code == 201, external_confirmation.text
+            external_confirmation_replay = client.post(
+                external_confirmation_path,
+                headers=headers,
+                json=external_confirmation_payload,
+            )
+            assert external_confirmation_replay.status_code == 200
+            assert external_confirmation_replay.json()["replayed"] is True
+            external_confirmation_conflict = client.post(
+                external_confirmation_path,
+                headers=headers,
+                json={
+                    **external_confirmation_payload,
+                    "command_id": str(uuid4()),
+                    "idempotency_key": str(uuid4()),
+                    "confirmation_id": str(uuid4()),
+                },
+            )
+            assert external_confirmation_conflict.status_code == 422
+            assert external_confirmation_conflict.json()["detail"] == (
+                "C5_EXTERNAL_CONFIRMATION_VERSION_CONFLICT"
+            )
+            external_confirmation_wrong_kind = client.post(
+                external_confirmation_path,
+                headers=headers,
+                json={
+                    **external_confirmation_payload,
+                    "command_id": str(uuid4()),
+                    "idempotency_key": str(uuid4()),
+                    "confirmation_id": str(uuid4()),
+                    "evidence_object_id": evidence_payload["evidence_object_id"],
+                    "expected_revision": 1,
+                },
+            )
+            assert external_confirmation_wrong_kind.status_code == 422
+            assert external_confirmation_wrong_kind.json()["detail"] == (
+                "C5_EXTERNAL_CONFIRMATION_SOURCE_NOT_VERIFIED"
+            )
+            c5_bad_parent = client.post(
+                c5_path,
+                headers=headers,
+                json={
+                    **c5_payload,
+                    "command_id": str(uuid4()),
+                    "idempotency_key": str(uuid4()),
+                    "act_id": str(uuid4()),
+                    "c4_relation_id": str(uuid4()),
+                    "evidence_object_ids": [],
+                },
+            )
+            assert c5_bad_parent.status_code == 422
+            assert c5_bad_parent.json()["detail"] == (
+                "C5_ACTION_OR_EXACT_C4_RELATION_NOT_FOUND_OR_FORBIDDEN"
+            )
+            c5_reference_payload = {
+                **c5_payload,
+                "command_id": str(uuid4()),
+                "idempotency_key": str(uuid4()),
+                "act_id": str(uuid4()),
+                "expected_revision": 1,
+                "declared_state": "UNKNOWN",
+                "declared_summary": None,
+                "unknown_reason": "La réalisation n’est pas établie.",
+                "evidence_refs": ["document://declared/not-verified"],
+                "evidence_object_ids": [],
+                "external_confirmation_state": "NOT_CONFIRMED",
+                "external_confirmation_note": "Aucun accusé externe reçu à cette date.",
+            }
+            c5_reference = client.post(c5_path, headers=headers, json=c5_reference_payload)
+            assert c5_reference.status_code == 201, c5_reference.text
+            c5_revision_conflict = client.post(
+                c5_path,
+                headers=headers,
+                json={
+                    **c5_reference_payload,
+                    "command_id": str(uuid4()),
+                    "idempotency_key": str(uuid4()),
+                    "act_id": str(uuid4()),
+                    "expected_revision": 1,
+                },
+            )
+            assert c5_revision_conflict.status_code == 422
+            assert c5_revision_conflict.json()["detail"] == "C5_ACTION_EXECUTION_VERSION_CONFLICT"
             c4_unknown_payload = {
                 **c4_payload,
                 "command_id": str(uuid4()),
@@ -1276,6 +1864,43 @@ def test_http_c1_keeps_unknown_until_patron_links_change_to_handover_and_records
             assert c4_history[1]["unknown_reason"] == c4_unknown_payload["unknown_reason"]
             assert c4_history[2]["declaration_ids"] == []
             assert c4_history[2]["unknown_reason"] == c4_not_applicable_payload["unknown_reason"]
+            c5_history = final_event["action_execution_acts"]
+            assert [item["evidence_state"] for item in c5_history] == ["RETRIEVED", "REFERENCED"]
+            assert [item["external_confirmation_state"] for item in c5_history] == [
+                "CONFIRMED",
+                "NOT_CONFIRMED",
+            ]
+            assert all(item["c4_relation_id"] == c4_payload["relation_id"] for item in c5_history)
+            assert all(item["c4_projection_state"] == "SUPERSEDED" for item in c5_history)
+            assert c5_history[0]["declared_state"] == "DECLARED_PARTIAL"
+            assert c5_history[1]["declared_state"] == "UNKNOWN"
+            assert (
+                c5_history[0]["evidence_objects"][0]["evidence_object_id"]
+                == (evidence_payload["evidence_object_id"])
+            )
+            assert (
+                c5_history[0]["evidence_objects"][0]["sha256"] == evidence_upload.json()["sha256"]
+            )
+            assert c5_history[1]["evidence_objects"] == []
+            assert len(c5_history[0]["external_confirmation_acts"]) == 1
+            assert (
+                c5_history[0]["external_confirmation_acts"][0]["confirmation_id"]
+                == (external_confirmation_payload["confirmation_id"])
+            )
+            assert (
+                c5_history[0]["evidence_objects"][0]["evidence_object_id"]
+                == (evidence_payload["evidence_object_id"])
+            )
+            assert (
+                c5_history[0]["evidence_objects"][0]["sha256"] == evidence_upload.json()["sha256"]
+            )
+            assert c5_history[1]["evidence_objects"] == []
+            assert len(c5_history[0]["external_confirmation_acts"]) == 1
+            assert (
+                c5_history[0]["external_confirmation_acts"][0]["confirmation_id"]
+                == (external_confirmation_payload["confirmation_id"])
+            )
+            assert final_event["actions"][0]["state"] == "RECORDED"
             assert final_event["a1_engagements"] == condition_sources
             assert final_event["engagement_linkage_state"] == "LINKED"
             assert [item["state"] for item in final_event["engagement_linkage_history"]] == [
@@ -1453,6 +2078,61 @@ def test_http_c1_keeps_unknown_until_patron_links_change_to_handover_and_records
                 },
             )
             assert collaborator_c4.status_code == 403
+            collaborator_c5 = client.post(
+                c5_path,
+                headers={"Authorization": "Bearer collaborator"},
+                json={
+                    **c5_payload,
+                    "command_id": str(uuid4()),
+                    "idempotency_key": str(uuid4()),
+                    "act_id": str(uuid4()),
+                },
+            )
+            assert collaborator_c5.status_code == 403
+            collaborator_evidence = client.post(
+                evidence_path,
+                headers={"Authorization": "Bearer collaborator"},
+                json={
+                    **evidence_payload,
+                    "command_id": str(uuid4()),
+                    "idempotency_key": str(uuid4()),
+                    "evidence_object_id": str(uuid4()),
+                },
+            )
+            assert collaborator_evidence.status_code == 403
+            collaborator_confirmation = client.post(
+                external_confirmation_path,
+                headers={"Authorization": "Bearer collaborator"},
+                json={
+                    **external_confirmation_payload,
+                    "command_id": str(uuid4()),
+                    "idempotency_key": str(uuid4()),
+                    "confirmation_id": str(uuid4()),
+                },
+            )
+            assert collaborator_confirmation.status_code == 403
+            collaborator_evidence_intent = client.post(
+                evidence_path,
+                headers={"Authorization": "Bearer collaborator"},
+                json={
+                    **evidence_payload,
+                    "command_id": str(uuid4()),
+                    "idempotency_key": str(uuid4()),
+                    "evidence_object_id": str(uuid4()),
+                },
+            )
+            assert collaborator_evidence_intent.status_code == 403
+            collaborator_external_confirmation = client.post(
+                external_confirmation_path,
+                headers={"Authorization": "Bearer collaborator"},
+                json={
+                    **external_confirmation_payload,
+                    "command_id": str(uuid4()),
+                    "idempotency_key": str(uuid4()),
+                    "confirmation_id": str(uuid4()),
+                },
+            )
+            assert collaborator_external_confirmation.status_code == 403
             foreign_read = client.get(base, headers={"Authorization": "Bearer foreign"})
             assert foreign_read.status_code == 200
             assert foreign_read.json() == {"case_id": str(case_id), "events": []}
@@ -1466,6 +2146,61 @@ def test_http_c1_keeps_unknown_until_patron_links_change_to_handover_and_records
                 },
             )
             assert foreign_write.status_code == 422
+            foreign_c5 = client.post(
+                c5_path,
+                headers={"Authorization": "Bearer foreign"},
+                json={
+                    **c5_payload,
+                    "command_id": str(uuid4()),
+                    "idempotency_key": str(uuid4()),
+                    "act_id": str(uuid4()),
+                },
+            )
+            assert foreign_c5.status_code == 422
+            foreign_evidence = client.post(
+                evidence_path,
+                headers={"Authorization": "Bearer foreign"},
+                json={
+                    **evidence_payload,
+                    "command_id": str(uuid4()),
+                    "idempotency_key": str(uuid4()),
+                    "evidence_object_id": str(uuid4()),
+                },
+            )
+            assert foreign_evidence.status_code == 422
+            foreign_confirmation = client.post(
+                external_confirmation_path,
+                headers={"Authorization": "Bearer foreign"},
+                json={
+                    **external_confirmation_payload,
+                    "command_id": str(uuid4()),
+                    "idempotency_key": str(uuid4()),
+                    "confirmation_id": str(uuid4()),
+                },
+            )
+            assert foreign_confirmation.status_code == 422
+            foreign_evidence_intent = client.post(
+                evidence_path,
+                headers={"Authorization": "Bearer foreign"},
+                json={
+                    **evidence_payload,
+                    "command_id": str(uuid4()),
+                    "idempotency_key": str(uuid4()),
+                    "evidence_object_id": str(uuid4()),
+                },
+            )
+            assert foreign_evidence_intent.status_code == 422
+            foreign_external_confirmation = client.post(
+                external_confirmation_path,
+                headers={"Authorization": "Bearer foreign"},
+                json={
+                    **external_confirmation_payload,
+                    "command_id": str(uuid4()),
+                    "idempotency_key": str(uuid4()),
+                    "confirmation_id": str(uuid4()),
+                },
+            )
+            assert foreign_external_confirmation.status_code == 422
             foreign_c3 = client.post(
                 impact_path,
                 headers={"Authorization": "Bearer foreign"},
@@ -1552,7 +2287,7 @@ def test_http_c1_keeps_unknown_until_patron_links_change_to_handover_and_records
                 .select_from(CaseContractChangeActionImpactLinkRecord)
                 .where(
                     CaseContractChangeActionImpactLinkRecord.relation_id
-                    == UUID(c4_payload["relation_id"])
+                    == UUID(str(c4_payload["relation_id"]))
                 )
             )
             == 2
@@ -1631,7 +2366,8 @@ def test_http_c1_keeps_unknown_until_patron_links_change_to_handover_and_records
         session.execute(
             sa.update(CaseContractChangeActionImpactRelationRecord)
             .where(
-                CaseContractChangeActionImpactRelationRecord.id == UUID(c4_payload["relation_id"])
+                CaseContractChangeActionImpactRelationRecord.id
+                == UUID(str(c4_payload["relation_id"]))
             )
             .values(rationale="Réécriture interdite")
         )
@@ -1643,7 +2379,99 @@ def test_http_c1_keeps_unknown_until_patron_links_change_to_handover_and_records
         session.execute(
             sa.delete(CaseContractChangeActionImpactRelationRecord).where(
                 CaseContractChangeActionImpactRelationRecord.id
-                == UUID(c4_payload["relation_id"])
+                == UUID(str(c4_payload["relation_id"]))
+            )
+        )
+    with (
+        Session(database_engine) as session,
+        pytest.raises(sa.exc.DBAPIError),
+        session.begin_nested(),
+    ):
+        session.execute(
+            sa.update(CaseContractChangeActionExecutionRecord)
+            .where(CaseContractChangeActionExecutionRecord.id == UUID(str(c5_payload["act_id"])))
+            .values(declared_summary="Réécriture interdite")
+        )
+    with (
+        Session(database_engine) as session,
+        pytest.raises(sa.exc.DBAPIError),
+        session.begin_nested(),
+    ):
+        session.execute(
+            sa.delete(CaseContractChangeActionExecutionRecord).where(
+                CaseContractChangeActionExecutionRecord.id == UUID(str(c5_payload["act_id"]))
+            )
+        )
+    with (
+        Session(database_engine) as session,
+        pytest.raises(sa.exc.DBAPIError),
+        session.begin_nested(),
+    ):
+        session.execute(
+            sa.update(CaseContractChangeEvidenceObjectRecord)
+            .where(
+                CaseContractChangeEvidenceObjectRecord.id
+                == UUID(str(evidence_payload["evidence_object_id"]))
+            )
+            .values(sha256="0" * 64)
+        )
+    with (
+        Session(database_engine) as session,
+        pytest.raises(sa.exc.DBAPIError),
+        session.begin_nested(),
+    ):
+        session.execute(
+            sa.delete(CaseContractChangeEvidenceObjectRecord).where(
+                CaseContractChangeEvidenceObjectRecord.id
+                == UUID(str(evidence_payload["evidence_object_id"]))
+            )
+        )
+    with (
+        Session(database_engine) as session,
+        pytest.raises(sa.exc.DBAPIError),
+        session.begin_nested(),
+    ):
+        session.execute(
+            sa.delete(CaseContractChangeExternalConfirmationRecord).where(
+                CaseContractChangeExternalConfirmationRecord.id
+                == UUID(str(external_confirmation_payload["confirmation_id"]))
+            )
+        )
+    with (
+        Session(database_engine) as session,
+        pytest.raises(sa.exc.DBAPIError),
+        session.begin_nested(),
+    ):
+        session.execute(
+            sa.update(CaseContractChangeExternalConfirmationRecord)
+            .where(
+                CaseContractChangeExternalConfirmationRecord.id
+                == UUID(str(external_confirmation_payload["confirmation_id"]))
+            )
+            .values(rationale="Réécriture interdite")
+        )
+    with (
+        Session(database_engine) as session,
+        pytest.raises(sa.exc.DBAPIError),
+        session.begin_nested(),
+    ):
+        session.execute(
+            sa.update(CaseContractChangeActionExecutionEvidenceLinkRecord)
+            .where(
+                CaseContractChangeActionExecutionEvidenceLinkRecord.act_id
+                == UUID(str(c5_payload["act_id"]))
+            )
+            .values(position=4)
+        )
+    with (
+        Session(database_engine) as session,
+        pytest.raises(sa.exc.DBAPIError),
+        session.begin_nested(),
+    ):
+        session.execute(
+            sa.delete(CaseContractChangeActionExecutionEvidenceLinkRecord).where(
+                CaseContractChangeActionExecutionEvidenceLinkRecord.act_id
+                == UUID(str(c5_payload["act_id"]))
             )
         )
     with (
@@ -1654,7 +2482,7 @@ def test_http_c1_keeps_unknown_until_patron_links_change_to_handover_and_records
         session.execute(
             sa.delete(CaseContractChangeActionImpactLinkRecord).where(
                 CaseContractChangeActionImpactLinkRecord.relation_id
-                == UUID(c4_payload["relation_id"])
+                == UUID(str(c4_payload["relation_id"]))
             )
         )
     with (
@@ -1669,40 +2497,171 @@ def test_http_c1_keeps_unknown_until_patron_links_change_to_handover_and_records
         )
     with Session(database_engine) as session:
         assert (
-            session.scalar(sa.select(sa.func.count()).select_from(CaseContractChangeEventRecord))
+            session.scalar(
+                sa.select(sa.func.count())
+                .select_from(CaseContractChangeEventRecord)
+                .where(
+                    CaseContractChangeEventRecord.tenant_id == patron.tenant_id,
+                    CaseContractChangeEventRecord.case_id == case_id,
+                    CaseContractChangeEventRecord.id == event_id,
+                )
+            )
             == 1
         )
         assert (
             session.scalar(
-                sa.select(sa.func.count()).select_from(CaseContractChangeApplicabilityRecord)
+                sa.select(sa.func.count())
+                .select_from(CaseContractChangeApplicabilityRecord)
+                .where(
+                    CaseContractChangeApplicabilityRecord.tenant_id == patron.tenant_id,
+                    CaseContractChangeApplicabilityRecord.case_id == case_id,
+                    CaseContractChangeApplicabilityRecord.event_id == event_id,
+                )
             )
             == 2
         )
         assert (
-            session.scalar(sa.select(sa.func.count()).select_from(CaseContractChangeActionRecord))
+            session.scalar(
+                sa.select(sa.func.count())
+                .select_from(CaseContractChangeActionRecord)
+                .where(
+                    CaseContractChangeActionRecord.tenant_id == patron.tenant_id,
+                    CaseContractChangeActionRecord.case_id == case_id,
+                    CaseContractChangeActionRecord.event_id == event_id,
+                )
+            )
             == 1
         )
         assert (
             session.scalar(
-                sa.select(sa.func.count()).select_from(CaseContractChangeEngagementLinkRecord)
+                sa.select(sa.func.count())
+                .select_from(CaseContractChangeEngagementLinkRecord)
+                .where(
+                    CaseContractChangeEngagementLinkRecord.tenant_id == patron.tenant_id,
+                    CaseContractChangeEngagementLinkRecord.case_id == case_id,
+                    CaseContractChangeEngagementLinkRecord.event_id == event_id,
+                )
             )
             == 3
         )
         assert (
             session.scalar(
-                sa.select(sa.func.count()).select_from(CaseContractChangeImpactDeclarationRecord)
+                sa.select(sa.func.count())
+                .select_from(CaseContractChangeImpactDeclarationRecord)
+                .where(
+                    CaseContractChangeImpactDeclarationRecord.tenant_id == patron.tenant_id,
+                    CaseContractChangeImpactDeclarationRecord.case_id == case_id,
+                    CaseContractChangeImpactDeclarationRecord.event_id == event_id,
+                )
             )
             == 3
         )
         assert (
             session.scalar(
-                sa.select(sa.func.count()).select_from(CaseContractChangeActionImpactRelationRecord)
+                sa.select(sa.func.count())
+                .select_from(CaseContractChangeActionImpactRelationRecord)
+                .where(
+                    CaseContractChangeActionImpactRelationRecord.tenant_id == patron.tenant_id,
+                    CaseContractChangeActionImpactRelationRecord.case_id == case_id,
+                    CaseContractChangeActionImpactRelationRecord.event_id == event_id,
+                )
             )
             == 3
         )
         assert (
             session.scalar(
-                sa.select(sa.func.count()).select_from(CaseContractChangeActionImpactLinkRecord)
+                sa.select(sa.func.count())
+                .select_from(CaseContractChangeActionExecutionRecord)
+                .where(
+                    CaseContractChangeActionExecutionRecord.tenant_id == patron.tenant_id,
+                    CaseContractChangeActionExecutionRecord.case_id == case_id,
+                    CaseContractChangeActionExecutionRecord.event_id == event_id,
+                )
             )
             == 2
         )
+        assert (
+            session.scalar(
+                sa.select(sa.func.count())
+                .select_from(CaseContractChangeEvidenceObjectRecord)
+                .where(
+                    CaseContractChangeEvidenceObjectRecord.tenant_id == patron.tenant_id,
+                    CaseContractChangeEvidenceObjectRecord.case_id == case_id,
+                    CaseContractChangeEvidenceObjectRecord.event_id == event_id,
+                )
+            )
+            == 7
+        )
+        assert (
+            session.scalar(
+                sa.select(sa.func.count())
+                .select_from(CaseContractChangeEvidenceObjectRecord)
+                .where(
+                    CaseContractChangeEvidenceObjectRecord.tenant_id == patron.tenant_id,
+                    CaseContractChangeEvidenceObjectRecord.case_id == case_id,
+                    CaseContractChangeEvidenceObjectRecord.event_id == event_id,
+                    CaseContractChangeEvidenceObjectRecord.state == "REJECTED",
+                )
+            )
+            == 5
+        )
+        assert (
+            session.scalar(
+                sa.select(sa.func.count())
+                .select_from(CaseContractChangeActionExecutionEvidenceLinkRecord)
+                .where(
+                    CaseContractChangeActionExecutionEvidenceLinkRecord.tenant_id
+                    == patron.tenant_id,
+                    CaseContractChangeActionExecutionEvidenceLinkRecord.case_id == case_id,
+                    CaseContractChangeActionExecutionEvidenceLinkRecord.event_id == event_id,
+                )
+            )
+            == 1
+        )
+        assert (
+            session.scalar(
+                sa.select(sa.func.count())
+                .select_from(CaseContractChangeExternalConfirmationRecord)
+                .where(
+                    CaseContractChangeExternalConfirmationRecord.tenant_id == patron.tenant_id,
+                    CaseContractChangeExternalConfirmationRecord.case_id == case_id,
+                    CaseContractChangeExternalConfirmationRecord.event_id == event_id,
+                )
+            )
+            == 1
+        )
+        assert (
+            session.scalar(
+                sa.select(sa.func.count())
+                .select_from(CaseContractChangeActionImpactLinkRecord)
+                .where(
+                    CaseContractChangeActionImpactLinkRecord.tenant_id == patron.tenant_id,
+                    CaseContractChangeActionImpactLinkRecord.case_id == case_id,
+                    CaseContractChangeActionImpactLinkRecord.event_id == event_id,
+                    CaseContractChangeActionImpactLinkRecord.relation_id
+                    == UUID(str(c4_payload["relation_id"])),
+                )
+            )
+            == 2
+        )
+    if preserve_c5_restore_fixture:
+        with session_factory() as session:
+            preserved_clean = session.get(
+                CaseContractChangeEvidenceObjectRecord,
+                UUID(str(evidence_payload["evidence_object_id"])),
+            )
+        assert preserved_clean is not None and preserved_clean.state == "CLEAN"
+        preserved_path = asyncio.run(
+            evidence_storage.local_path(storage_key=preserved_clean.storage_key)
+        )
+        assert sha256(preserved_path.read_bytes()).hexdigest() == preserved_clean.sha256
+    else:
+        with database_engine.begin() as connection:
+            connection.execute(
+                sa.text(
+                    "TRUNCATE TABLE case_contract_change_external_confirmations, "
+                    "case_contract_change_action_execution_evidence_links, "
+                    "case_contract_change_evidence_objects, "
+                    "case_contract_change_action_executions CASCADE"
+                )
+            )
