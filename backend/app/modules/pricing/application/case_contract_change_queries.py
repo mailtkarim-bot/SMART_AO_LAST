@@ -7,6 +7,4 @@ from uuid import UUID
 
 
 class CaseContractChangeReader(Protocol):
-    def list_for_case(
-        self, *, tenant_id: UUID, case_id: UUID
-    ) -> tuple[dict[str, object], ...]: ...
+    def list_for_case(self, *, tenant_id: UUID, case_id: UUID) -> tuple[dict[str, object], ...]: ...

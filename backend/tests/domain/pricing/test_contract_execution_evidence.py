@@ -1,4 +1,5 @@
 from datetime import date
+from typing import Any
 from uuid import uuid4
 
 import pytest
@@ -43,7 +44,7 @@ def test_preserves_declared_act_sources_proofs_and_event_date_without_deriving_d
     ],
 )
 def test_rejects_an_act_without_its_declared_summary_source_or_proof(field, value, error) -> None:
-    values = {
+    values: dict[str, Any] = {
         "case_id": uuid4(),
         "act_kind": ContractExecutionActKind.WORK_RECEPTION,
         "summary": "PV de réception transmis",

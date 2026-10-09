@@ -15,9 +15,14 @@ class PaymentPostReceptionCycleRecord(TenantScopedRecord, Base):
     __tablename__ = "payment_post_reception_cycles"
     __table_args__ = (
         sa.ForeignKeyConstraint(["tenant_id"], ["tenants.id"], ondelete="RESTRICT"),
-        sa.ForeignKeyConstraint(["tenant_id", "case_id"], ["cases.tenant_id", "cases.id"], ondelete="RESTRICT"),
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "case_id"], ["cases.tenant_id", "cases.id"], ondelete="RESTRICT"
+        ),
         sa.UniqueConstraint("tenant_id", "id", name="uq_payment_post_reception_cycles__tenant_id"),
-        sa.CheckConstraint("status IN ('SOURCE_SIGNAL_ONLY', 'REVIEW_REQUIRED', 'UNKNOWN')", name="payment_cycle_status_closed"),
+        sa.CheckConstraint(
+            "status IN ('SOURCE_SIGNAL_ONLY', 'REVIEW_REQUIRED', 'UNKNOWN')",
+            name="payment_cycle_status_closed",
+        ),
     )
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
     case_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
@@ -27,4 +32,3 @@ class PaymentPostReceptionCycleRecord(TenantScopedRecord, Base):
     cash_assumption: Mapped[str | None] = mapped_column(sa.Text)
     post_reception_cost_note: Mapped[str | None] = mapped_column(sa.Text)
     actor_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
-

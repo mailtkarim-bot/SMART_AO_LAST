@@ -48,9 +48,7 @@ def upgrade() -> None:
             ondelete="RESTRICT",
         ),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint(
-            "tenant_id", "id", name="uq_submission_signatures__tenant_id"
-        ),
+        sa.UniqueConstraint("tenant_id", "id", name="uq_submission_signatures__tenant_id"),
         sa.UniqueConstraint(
             "tenant_id", "command_id", name="uq_submission_signatures__tenant_command"
         ),
@@ -65,9 +63,7 @@ def upgrade() -> None:
             name="signature_sha256",
         ),
     )
-    op.create_index(
-        "ix_submission_signatures_tenant_id", "submission_signatures", ["tenant_id"]
-    )
+    op.create_index("ix_submission_signatures_tenant_id", "submission_signatures", ["tenant_id"])
     op.create_index(
         "ix_submission_signatures__tenant_package",
         "submission_signatures",
@@ -97,8 +93,6 @@ def downgrade() -> None:
         "DROP TRIGGER IF EXISTS trg_submission_signature_append_only ON submission_signatures"
     )
     op.execute("DROP FUNCTION IF EXISTS prevent_submission_signature_mutation()")
-    op.execute(
-        "DROP INDEX IF EXISTS ix_submission_signatures__tenant_package"
-    )
+    op.execute("DROP INDEX IF EXISTS ix_submission_signatures__tenant_package")
     op.execute("DROP INDEX IF EXISTS ix_submission_signatures_tenant_id")
     op.drop_table("submission_signatures")

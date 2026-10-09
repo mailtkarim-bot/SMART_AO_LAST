@@ -39,7 +39,8 @@ def main() -> None:
     repository_root = Path(__file__).resolve().parents[1]
     output_path = repository_root / "docs/reference/SMART_AO_V8_ASSIGNMENT_OPENAPI.json"
     clock = ExportClock()
-    engine = sa.create_engine("postgresql+psycopg://smart_ao:smart_ao@127.0.0.1:5432/smart_ao")
+    # Schema generation never needs a database connection; avoid any network destination.
+    engine = sa.create_engine("sqlite://")
     sessions = sessionmaker(bind=engine, expire_on_commit=False)
     tokens = JwtAccessTokenCodec(
         signing_key="openapi-export-signing-key-at-least-32-bytes",
@@ -74,6 +75,7 @@ def main() -> None:
         "paths": assignment_paths,
         "components": app.openapi()["components"],
     }
+    output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",

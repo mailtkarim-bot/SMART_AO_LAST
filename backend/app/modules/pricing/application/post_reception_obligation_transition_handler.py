@@ -6,13 +6,19 @@ from uuid import UUID
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
-from app.modules.pricing.application.post_reception_obligation_transition_commands import TransitionPostReceptionObligationCommand
+from app.modules.pricing.application.post_reception_obligation_transition_commands import (
+    TransitionPostReceptionObligationCommand,
+)
 from app.modules.pricing.domain.post_reception_obligation_transition import (
     PostReceptionObligationStatus,
     build_post_reception_obligation_transition,
 )
-from app.modules.pricing.infrastructure.models.post_reception_obligation import PostReceptionObligationRecord
-from app.modules.pricing.infrastructure.models.post_reception_obligation_transition import PostReceptionObligationTransitionRecord
+from app.modules.pricing.infrastructure.models.post_reception_obligation import (
+    PostReceptionObligationRecord,
+)
+from app.modules.pricing.infrastructure.models.post_reception_obligation_transition import (
+    PostReceptionObligationTransitionRecord,
+)
 from app.platform.events.dispatcher import (
     CommandContext,
     CommandExecutionError,
@@ -23,7 +29,13 @@ from app.platform.events.dispatcher import (
 
 
 class TransitionPostReceptionObligationHandler(CommandHandler):
-    def execute(self, *, session: Session, command: TransitionPostReceptionObligationCommand, context: CommandContext) -> HandlerOutcome:
+    def execute(
+        self,
+        *,
+        session: Session,
+        command: TransitionPostReceptionObligationCommand,
+        context: CommandContext,
+    ) -> HandlerOutcome:
         tenant_id = UUID(str(context.tenant_id))
         obligation = session.scalar(
             sa.select(PostReceptionObligationRecord)
@@ -36,12 +48,15 @@ class TransitionPostReceptionObligationHandler(CommandHandler):
         )
         if obligation is None:
             raise CommandExecutionError("POST_RECEPTION_OBLIGATION_NOT_FOUND_OR_FORBIDDEN")
-        if session.scalar(
-            sa.select(PostReceptionObligationTransitionRecord.id).where(
-                PostReceptionObligationTransitionRecord.tenant_id == tenant_id,
-                PostReceptionObligationTransitionRecord.id == command.transition_id,
+        if (
+            session.scalar(
+                sa.select(PostReceptionObligationTransitionRecord.id).where(
+                    PostReceptionObligationTransitionRecord.tenant_id == tenant_id,
+                    PostReceptionObligationTransitionRecord.id == command.transition_id,
+                )
             )
-        ) is not None:
+            is not None
+        ):
             raise CommandExecutionError("POST_RECEPTION_OBLIGATION_TRANSITION_ID_REUSED")
         latest = session.scalar(
             sa.select(PostReceptionObligationTransitionRecord)
@@ -52,7 +67,9 @@ class TransitionPostReceptionObligationHandler(CommandHandler):
             .order_by(PostReceptionObligationTransitionRecord.revision.desc())
             .limit(1)
         )
-        current_status = PostReceptionObligationStatus(latest.resulting_status if latest else obligation.status)
+        current_status = PostReceptionObligationStatus(
+            latest.resulting_status if latest else obligation.status
+        )
         current_revision = latest.revision if latest else 0
         if command.expected_revision != current_revision:
             raise CommandExecutionError("POST_RECEPTION_OBLIGATION_REVISION_CONFLICT")
@@ -81,16 +98,33 @@ class TransitionPostReceptionObligationHandler(CommandHandler):
         )
         return HandlerOutcome(
             result_code="POST_RECEPTION_OBLIGATION_TRANSITION_RECORDED",
-            aggregate_refs=({"aggregate_type": "POST_RECEPTION_OBLIGATION", "aggregate_id": str(command.obligation_id), "aggregate_revision": revision},),
-            events=(PendingDomainEvent(
-                aggregate_type="POST_RECEPTION_OBLIGATION",
-                aggregate_id=command.obligation_id,
-                aggregate_revision=revision,
-                event_type="POST_RECEPTION_OBLIGATION_TRANSITION_RECORDED",
-                payload={"case_id": str(command.case_id), "previous_status": transition.previous_status.value, "resulting_status": transition.resulting_status.value, "evidence_refs": list(transition.evidence_refs)},
-            ),),
+            aggregate_refs=(
+                {
+                    "aggregate_type": "POST_RECEPTION_OBLIGATION",
+                    "aggregate_id": str(command.obligation_id),
+                    "aggregate_revision": revision,
+                },
+            ),
+            events=(
+                PendingDomainEvent(
+                    aggregate_type="POST_RECEPTION_OBLIGATION",
+                    aggregate_id=command.obligation_id,
+                    aggregate_revision=revision,
+                    event_type="POST_RECEPTION_OBLIGATION_TRANSITION_RECORDED",
+                    payload={
+                        "case_id": str(command.case_id),
+                        "previous_status": transition.previous_status.value,
+                        "resulting_status": transition.resulting_status.value,
+                        "evidence_refs": list(transition.evidence_refs),
+                    },
+                ),
+            ),
         )
 
 
-def post_reception_obligation_transition_handlers() -> dict[str, TransitionPostReceptionObligationHandler]:
-    return {TransitionPostReceptionObligationCommand.command_type: TransitionPostReceptionObligationHandler()}
+def post_reception_obligation_transition_handlers() -> dict[
+    str, TransitionPostReceptionObligationHandler
+]:
+    return {
+        TransitionPostReceptionObligationCommand.command_type: TransitionPostReceptionObligationHandler()
+    }

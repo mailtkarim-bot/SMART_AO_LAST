@@ -79,9 +79,7 @@ def upgrade() -> None:
             "tenant_id", "idempotency_key", name="uq_decision_risks__idempotency_key"
         ),
         sa.CheckConstraint("category IN ('CCAP', 'CCTP')", name="category"),
-        sa.CheckConstraint(
-            "severity IN ('LOW', 'MEDIUM', 'HIGH', 'CRITICAL')", name="severity"
-        ),
+        sa.CheckConstraint("severity IN ('LOW', 'MEDIUM', 'HIGH', 'CRITICAL')", name="severity"),
         sa.CheckConstraint(
             "likelihood IN ('RARE', 'POSSIBLE', 'LIKELY', 'ALMOST_CERTAIN')", name="likelihood"
         ),

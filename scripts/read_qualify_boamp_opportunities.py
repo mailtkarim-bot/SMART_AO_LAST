@@ -65,9 +65,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         engine = sa.create_engine(database_url, pool_pre_ping=True)
         try:
             sessions = sessionmaker(bind=engine, expire_on_commit=False)
-            service = PatronBoampObservationService(
-                repository=BoampQualificationRepository()
-            )
+            service = PatronBoampObservationService(repository=BoampQualificationRepository())
             if args.decision is None:
                 if any(
                     value is not None

@@ -93,9 +93,7 @@ def upgrade() -> None:
         sa.CheckConstraint("version > 0", name="version_positive"),
         sa.CheckConstraint("state IN ('READY_FOR_PATRON_REVIEW')", name="state"),
     )
-    op.create_index(
-        "ix_preparation_snapshots_tenant_id", "preparation_snapshots", ["tenant_id"]
-    )
+    op.create_index("ix_preparation_snapshots_tenant_id", "preparation_snapshots", ["tenant_id"])
     op.create_index(
         "ix_prep_snapshots__tenant_package_version",
         "preparation_snapshots",

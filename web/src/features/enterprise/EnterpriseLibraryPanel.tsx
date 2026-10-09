@@ -74,7 +74,7 @@ export function EnterpriseLibraryPanel({
       <div className="section-heading">
         <div>
           <span className="section-kicker">ESPACE ENTREPRISE</span>
-          <h2>Entreprise & prix privés</h2>
+          <h2>Entreprise &amp; prix privés</h2>
         </div>
         <span className="count-pill">
           {enterpriseCompany?.documents.length ?? 0} pièce
@@ -274,7 +274,7 @@ export function EnterpriseLibraryPanel({
           <div className="detail-panel enterprise-capability-panel">
             <div className="panel-heading">
               <div>
-                <h3>Passeport capacités & références</h3>
+                <h3>Passeport capacités &amp; références</h3>
                 <p>Qualifications, références, équipes et moyens restent dans le périmètre patronal.</p>
               </div>
               <span className="rule-tag">

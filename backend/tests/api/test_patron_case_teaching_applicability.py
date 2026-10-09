@@ -1,9 +1,15 @@
 from datetime import UTC, date, datetime
 from types import SimpleNamespace
+from typing import cast
 from uuid import uuid4
 
 import pytest
-from app.interfaces.http.routes.patron_actions import build_patron_action_router
+from app.interfaces.http.routes.consultations import ConsultationSecurityRuntime
+from app.interfaces.http.routes.patron_actions import (
+    PatronActionService,
+    PatronActionTransitionService,
+    build_patron_action_router,
+)
 from app.modules.patron_action.public.contracts import RecordCaseTeachingApplicabilityRequest
 from app.platform.events.dispatcher import CommandInProgressError, IdempotencyKeyReusedError
 from app.platform.security.context import ActorContext, ActorKind, MembershipState
@@ -99,9 +105,11 @@ class Service:
 
 def _router(service):
     return build_patron_action_router(
-        service=object(),
-        transition_service=object(),
-        security_runtime=SimpleNamespace(context_resolver=Resolver()),
+        service=cast(PatronActionService, object()),
+        transition_service=cast(PatronActionTransitionService, object()),
+        security_runtime=cast(
+            ConsultationSecurityRuntime, SimpleNamespace(context_resolver=Resolver())
+        ),
         teaching_applicability_service=service,
     )
 
@@ -138,6 +146,7 @@ def test_patron_can_record_explicit_case_teaching_applicability() -> None:
     assert response.status_code == 201
     assert response.body is not None
     assert b"CASE_TEACHING_APPLICABILITY_RECORDED" in response.body
+    assert service.command is not None
     assert service.command.target_case_id == target_case_id
 
 
@@ -202,7 +211,8 @@ def test_patron_reads_target_scoped_source_and_applicability_projection() -> Non
 )
 def test_idempotency_conflicts_are_409_and_keep_the_same_command_available(error, detail) -> None:
     route = next(
-        r for r in _router(Service(error=error)).routes
+        r
+        for r in _router(Service(error=error)).routes
         if getattr(r, "path", "").endswith("/teaching-applicabilities") and "POST" in r.methods
     )
     target_case_id = uuid4()

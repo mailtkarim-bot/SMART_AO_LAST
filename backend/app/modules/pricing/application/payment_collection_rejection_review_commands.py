@@ -4,6 +4,7 @@ from typing import Literal
 from pydantic import Field
 from app.platform.events.command_contracts import ApplicationCommand
 
+
 class RecordPaymentCollectionRejectionReviewCommand(ApplicationCommand):
     command_type = "RecordPaymentCollectionRejectionReview"
     review_id: UUID

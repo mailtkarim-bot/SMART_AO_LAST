@@ -276,9 +276,7 @@ def test_published_profile_and_adoption_rows_are_append_only(database_engine, se
     with pytest.raises(DBAPIError), Session(database_engine) as session, session.begin():
         session.execute(
             update(EnterpriseBusinessMethodProfileVersionRecord)
-            .where(
-                EnterpriseBusinessMethodProfileVersionRecord.id == command.profile_version_id
-            )
+            .where(EnterpriseBusinessMethodProfileVersionRecord.id == command.profile_version_id)
             .values(version_number=2)
         )
     with pytest.raises(DBAPIError), Session(database_engine) as session, session.begin():

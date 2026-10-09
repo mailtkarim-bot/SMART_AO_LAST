@@ -2,10 +2,14 @@ from __future__ import annotations
 
 from dataclasses import replace
 from datetime import UTC, datetime
+from typing import cast
 from uuid import UUID, uuid4
 
 import pytest
-from app.interfaces.http.routes.consultations import ConsultationSecurityRuntime
+from app.interfaces.http.routes.consultations import (
+    AuthenticationContextResolver,
+    ConsultationSecurityRuntime,
+)
 from app.interfaces.http.routes.patron_contract_baseline_impacts import (
     build_patron_contract_baseline_impact_router,
 )
@@ -124,7 +128,7 @@ def _run_a1_on_second_profile(
                 {
                     "aggregate_type": "BUSINESS_METHOD_PROFILE",
                     "aggregate_id": str(profile_ref["aggregate_id"]),
-                    "aggregate_revision": int(profile_ref["aggregate_revision"]),
+                    "aggregate_revision": int(str(profile_ref["aggregate_revision"])),
                     "content_hash": str(profile_ref["content_hash"]),
                     "reference_role": "ADOPTED_METHOD",
                 },
@@ -273,7 +277,9 @@ def test_a1_http_postgres_chain_is_idempotent_tenant_scoped_and_does_not_promote
     }
     dispatcher = CommandDispatcher(session_factory=session_factory, handlers=handlers)
     resolver = Resolver(actor)
-    security_runtime = ConsultationSecurityRuntime(context_resolver=resolver, policy=policy)
+    security_runtime = ConsultationSecurityRuntime(
+        context_resolver=cast(AuthenticationContextResolver, resolver), policy=policy
+    )
     app = FastAPI()
     app.include_router(
         build_patron_contract_baseline_impact_router(

@@ -2,12 +2,11 @@
 import sqlalchemy as sa
 
 
-def test_post_reception_obligation_table_is_tenant_scoped_and_constrained(database_engine: sa.Engine) -> None:
+def test_post_reception_obligation_table_is_tenant_scoped_and_constrained(
+    database_engine: sa.Engine,
+) -> None:
     inspector = sa.inspect(database_engine)
-    columns = {
-        column["name"]
-        for column in inspector.get_columns("post_reception_obligations")
-    }
+    columns = {column["name"] for column in inspector.get_columns("post_reception_obligations")}
     assert {
         "tenant_id",
         "case_id",

@@ -72,9 +72,7 @@ def main() -> int:
         "--cov-fail-under=0",
     ]
     result = subprocess.run(command, cwd=root, check=False)
-    (output_dir / "pytest-exit-code.txt").write_text(
-        f"{result.returncode}\n", encoding="utf-8"
-    )
+    (output_dir / "pytest-exit-code.txt").write_text(f"{result.returncode}\n", encoding="utf-8")
     return result.returncode
 
 

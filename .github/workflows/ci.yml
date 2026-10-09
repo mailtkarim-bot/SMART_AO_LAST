@@ -15,8 +15,11 @@ concurrency:
 
 jobs:
   backend:
-    timeout-minutes: 30
+    timeout-minutes: 45
     runs-on: ubuntu-latest
+    env:
+      SMART_AO_TEST_DATABASE_URL: postgresql+psycopg://smart_ao:smart_ao@127.0.0.1:5432/smart_ao # pragma: allowlist secret -- disposable CI service
+      SMART_AO_TEST_DISPOSABLE_DATABASE: "1"
     services:
       postgres:
         image: postgres:16-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685
@@ -56,7 +59,8 @@ jobs:
         run: >-
           uv export --all-extras --no-emit-project --no-dev --format requirements-txt
           -o /tmp/smart_ao_requirements.txt
-          && uv run pip-audit --strict -r /tmp/smart_ao_requirements.txt
+          && uv run pip-audit --strict --require-hashes --disable-pip
+          -r /tmp/smart_ao_requirements.txt
       - name: Python SAST
         run: uv run bandit -q -r backend/app -ll
       - name: Tests and coverage gate
@@ -98,6 +102,9 @@ jobs:
       - name: Lint cockpit
         working-directory: web
         run: pnpm lint
+      - name: Audit cockpit dependencies
+        working-directory: web
+        run: pnpm audit --registry=https://registry.npmjs.org
       - name: Test cockpit
         working-directory: web
         run: pnpm test

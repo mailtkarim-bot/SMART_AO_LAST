@@ -118,7 +118,5 @@ def downgrade() -> None:
         "ix_assignment_interaction_validation__tenant_assignment",
         table_name="assignment_interaction_patron_validations",
     )
-    op.execute(
-        "DROP INDEX IF EXISTS ix_assignment_interaction_patron_validations_tenant_id"
-    )
+    op.execute("DROP INDEX IF EXISTS ix_assignment_interaction_patron_validations_tenant_id")
     op.drop_table("assignment_interaction_patron_validations")

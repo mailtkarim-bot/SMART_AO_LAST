@@ -32,8 +32,10 @@ def upgrade() -> None:
             "updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
         ),
         sa.ForeignKeyConstraint(
-            ["tenant_id", "case_id"], ["cases.tenant_id", "cases.id"],
-            name="fk_partner_offer_line_comparisons__case", ondelete="RESTRICT",
+            ["tenant_id", "case_id"],
+            ["cases.tenant_id", "cases.id"],
+            name="fk_partner_offer_line_comparisons__case",
+            ondelete="RESTRICT",
         ),
         sa.ForeignKeyConstraint(
             ["tenant_id", "case_id", "scope_review_id"],
@@ -110,9 +112,7 @@ def upgrade() -> None:
             "disposition IN ('LINKED_BY_PATRON', 'DISTINCT_POSITIONS', 'NEEDS_CLARIFICATION')",
             name="disposition_closed",
         ),
-        sa.CheckConstraint(
-            "length(trim(rationale)) > 0", name="group_rationale_required"
-        ),
+        sa.CheckConstraint("length(trim(rationale)) > 0", name="group_rationale_required"),
     )
     op.create_index(
         "ix_partner_offer_line_groups__tenant_case_comparison",

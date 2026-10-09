@@ -32,9 +32,7 @@ def test_profile_hash_is_stable_across_object_key_order() -> None:
 def test_profile_rejects_duplicate_checks_and_unknown_configuration_keys() -> None:
     check = {"key": "access_site", "label": "Accès du site", "axis": "CONTRACT"}
     with pytest.raises(ValidationError, match="additional check keys must be unique"):
-        BusinessMethodProfileContent.model_validate(
-            {"additional_checks": [check, check]}
-        )
+        BusinessMethodProfileContent.model_validate({"additional_checks": [check, check]})
 
     with pytest.raises(ValidationError):
         BusinessMethodProfileContent.model_validate(

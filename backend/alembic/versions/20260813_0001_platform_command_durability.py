@@ -83,8 +83,7 @@ def upgrade() -> None:
             name="uq_command_receipts__tenant_command_id",
         ),
         sa.CheckConstraint(
-            "status IN ('PROCESSING', 'SUCCEEDED', 'REJECTED', "
-            "'FAILED_RETRYABLE', 'EXPIRED')",
+            "status IN ('PROCESSING', 'SUCCEEDED', 'REJECTED', 'FAILED_RETRYABLE', 'EXPIRED')",
             name="status",
         ),
     )

@@ -49,15 +49,11 @@ def upgrade() -> None:
             name="fk_pricing_import_transitions__batch",
             ondelete="RESTRICT",
         ),
-        sa.UniqueConstraint(
-            "tenant_id", "id", name="uq_pricing_import_transitions__tenant_id"
-        ),
+        sa.UniqueConstraint("tenant_id", "id", name="uq_pricing_import_transitions__tenant_id"),
         sa.UniqueConstraint(
             "tenant_id", "batch_id", "version", name="uq_pricing_import_transition_version"
         ),
-        sa.UniqueConstraint(
-            "tenant_id", "command_id", name="uq_pricing_import_transition_command"
-        ),
+        sa.UniqueConstraint("tenant_id", "command_id", name="uq_pricing_import_transition_command"),
         sa.CheckConstraint("version > 1", name="version_positive"),
         sa.CheckConstraint("from_state = 'PREVIEWED'", name="from_state"),
         sa.CheckConstraint("to_state = 'COMMITTED'", name="to_state"),

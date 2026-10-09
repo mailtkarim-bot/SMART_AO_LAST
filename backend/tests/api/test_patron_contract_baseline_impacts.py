@@ -1,8 +1,11 @@
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from typing import cast
 from uuid import uuid4
 
+from app.interfaces.http.routes.consultations import ConsultationSecurityRuntime
 from app.interfaces.http.routes.patron_contract_baseline_impacts import (
+    ContractBaselineImpactReadService,
     build_patron_contract_baseline_impact_router,
 )
 from app.platform.security.context import ActorContext, ActorKind, MembershipState
@@ -54,8 +57,10 @@ def test_patron_contract_baseline_impact_projection_is_closed_and_read_only() ->
         status="HUMAN_REVIEW_REQUIRED",
     )
     router = build_patron_contract_baseline_impact_router(
-        service=Reader((row,)),
-        security_runtime=SimpleNamespace(context_resolver=Resolver()),
+        service=cast(ContractBaselineImpactReadService, Reader((row,))),
+        security_runtime=cast(
+            ConsultationSecurityRuntime, SimpleNamespace(context_resolver=Resolver())
+        ),
     )
     response = router.routes[0].endpoint(case_id, "Bearer session-token")
     assert response.items[0].status == "HUMAN_REVIEW_REQUIRED"

@@ -67,9 +67,7 @@ def upgrade() -> None:
         ),
         sa.CheckConstraint("version > 0", name="version_positive"),
         sa.CheckConstraint("state IN ('DRAFT', 'SELECTED', 'ARCHIVED')", name="state"),
-        sa.CheckConstraint(
-            "scenario_type IN ('BASE', 'PRUDENT', 'CUSTOM')", name="scenario_type"
-        ),
+        sa.CheckConstraint("scenario_type IN ('BASE', 'PRUDENT', 'CUSTOM')", name="scenario_type"),
     )
     op.create_index("ix_pricing_scenarios_tenant_id", "pricing_scenarios", ["tenant_id"])
     op.create_index(

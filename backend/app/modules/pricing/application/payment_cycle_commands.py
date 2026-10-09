@@ -16,6 +16,7 @@ class RecordPaymentPostReceptionCycleCommand(ApplicationCommand):
     cash_assumption: str | None = None
     post_reception_cost_note: str | None = None
 
+
 class QualifyPaymentPostReceptionCycleCommand(ApplicationCommand):
     command_type = "QualifyPaymentPostReceptionCycle"
     cycle_id: UUID

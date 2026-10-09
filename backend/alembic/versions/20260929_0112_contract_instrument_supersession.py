@@ -129,9 +129,7 @@ def downgrade() -> None:
         "DROP TRIGGER IF EXISTS contract_instrument_supersessions_append_only "
         "ON contract_instrument_supersessions"
     )
-    op.execute(
-        "DROP FUNCTION IF EXISTS reject_contract_instrument_supersession_mutation()"
-    )
+    op.execute("DROP FUNCTION IF EXISTS reject_contract_instrument_supersession_mutation()")
     op.execute(
         "DROP TRIGGER IF EXISTS contract_instrument_supersessions_require_amendment "
         "ON contract_instrument_supersessions"

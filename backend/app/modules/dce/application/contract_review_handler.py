@@ -21,15 +21,64 @@ from app.platform.events.dispatcher import (
 
 
 class RecordContractProofReviewHandler(CommandHandler):
-    def execute(self, *, session: Session, command: RecordContractProofReviewCommand, context: CommandContext) -> HandlerOutcome:
+    def execute(
+        self,
+        *,
+        session: Session,
+        command: RecordContractProofReviewCommand,
+        context: CommandContext,
+    ) -> HandlerOutcome:
         tenant_id = UUID(str(context.tenant_id))
-        proof = session.scalar(sa.select(ContractBaselineDeviationImpactRecord).where(ContractBaselineDeviationImpactRecord.tenant_id == tenant_id, ContractBaselineDeviationImpactRecord.id == command.proof_id, ContractBaselineDeviationImpactRecord.proof_revision == command.reviewed_revision))
+        proof = session.scalar(
+            sa.select(ContractBaselineDeviationImpactRecord).where(
+                ContractBaselineDeviationImpactRecord.tenant_id == tenant_id,
+                ContractBaselineDeviationImpactRecord.id == command.proof_id,
+                ContractBaselineDeviationImpactRecord.proof_revision == command.reviewed_revision,
+            )
+        )
         if proof is None:
             raise CommandExecutionError("CONTRACT_PROOF_NOT_FOUND_OR_FORBIDDEN")
-        if session.scalar(sa.select(ContractProofReviewRecord.id).where(ContractProofReviewRecord.tenant_id == tenant_id, ContractProofReviewRecord.id == command.review_id)) is not None:
+        if (
+            session.scalar(
+                sa.select(ContractProofReviewRecord.id).where(
+                    ContractProofReviewRecord.tenant_id == tenant_id,
+                    ContractProofReviewRecord.id == command.review_id,
+                )
+            )
+            is not None
+        ):
             raise CommandExecutionError("CONTRACT_REVIEW_ID_REUSED")
-        session.add(ContractProofReviewRecord(id=command.review_id, tenant_id=tenant_id, proof_id=command.proof_id, reviewer_id=UUID(str(context.actor_id)), reviewed_revision=command.reviewed_revision, decision=command.decision, rationale=command.rationale))
-        return HandlerOutcome(result_code="CONTRACT_PROOF_REVIEW_RECORDED", aggregate_refs=({"aggregate_type": "CONTRACT_PROOF_REVIEW", "aggregate_id": str(command.review_id), "aggregate_revision": command.reviewed_revision},), events=(PendingDomainEvent(aggregate_type="CONTRACT_PROOF_REVIEW", aggregate_id=command.review_id, aggregate_revision=command.reviewed_revision, event_type="CONTRACT_PROOF_REVIEW_RECORDED", payload={"proof_id": str(command.proof_id), "decision": command.decision}),))
+        session.add(
+            ContractProofReviewRecord(
+                id=command.review_id,
+                tenant_id=tenant_id,
+                proof_id=command.proof_id,
+                reviewer_id=UUID(str(context.actor_id)),
+                reviewed_revision=command.reviewed_revision,
+                decision=command.decision,
+                rationale=command.rationale,
+            )
+        )
+        return HandlerOutcome(
+            result_code="CONTRACT_PROOF_REVIEW_RECORDED",
+            aggregate_refs=(
+                {
+                    "aggregate_type": "CONTRACT_PROOF_REVIEW",
+                    "aggregate_id": str(command.review_id),
+                    "aggregate_revision": command.reviewed_revision,
+                },
+            ),
+            events=(
+                PendingDomainEvent(
+                    aggregate_type="CONTRACT_PROOF_REVIEW",
+                    aggregate_id=command.review_id,
+                    aggregate_revision=command.reviewed_revision,
+                    event_type="CONTRACT_PROOF_REVIEW_RECORDED",
+                    payload={"proof_id": str(command.proof_id), "decision": command.decision},
+                ),
+            ),
+        )
+
 
 def contract_review_handlers() -> dict[str, RecordContractProofReviewHandler]:
     return {RecordContractProofReviewCommand.command_type: RecordContractProofReviewHandler()}
@@ -43,13 +92,45 @@ class ContractProofReviewReadService:
         from app.platform.security.authorization import AuthorizationRequest, AuthorizationResource
         from app.platform.security.capabilities import Capability
         from app.platform.security.context import ActorKind, DataClassification
+
         if actor.actor_kind is not ActorKind.PATRON_ADMIN or actor.membership_id is None:
             raise PermissionError("PATRON_REQUIRED")
-        decision = self._policy.authorize(context=actor, request=AuthorizationRequest(action=Capability.CASE_DCE_READ, resource=AuthorizationResource(resource_type="CONTRACT_PROOF_REVIEW", resource_id=case_id, tenant_id=actor.tenant_id, classification=DataClassification.INTERNAL_OPERATIONAL, case_id=case_id), evaluated_at=now))
+        decision = self._policy.authorize(
+            context=actor,
+            request=AuthorizationRequest(
+                action=Capability.CASE_DCE_READ,
+                resource=AuthorizationResource(
+                    resource_type="CONTRACT_PROOF_REVIEW",
+                    resource_id=case_id,
+                    tenant_id=actor.tenant_id,
+                    classification=DataClassification.INTERNAL_OPERATIONAL,
+                    case_id=case_id,
+                ),
+                evaluated_at=now,
+            ),
+        )
         if not decision.allowed:
             raise PermissionError(decision.code)
         with self._session_factory() as session:
-            return tuple(session.scalars(sa.select(ContractProofReviewRecord).join(ContractBaselineDeviationImpactRecord, sa.and_(ContractBaselineDeviationImpactRecord.id == ContractProofReviewRecord.proof_id, ContractBaselineDeviationImpactRecord.tenant_id == ContractProofReviewRecord.tenant_id)).where(ContractProofReviewRecord.tenant_id == actor.tenant_id, ContractBaselineDeviationImpactRecord.case_id == case_id).order_by(ContractProofReviewRecord.created_at.desc())).all())
+            return tuple(
+                session.scalars(
+                    sa.select(ContractProofReviewRecord)
+                    .join(
+                        ContractBaselineDeviationImpactRecord,
+                        sa.and_(
+                            ContractBaselineDeviationImpactRecord.id
+                            == ContractProofReviewRecord.proof_id,
+                            ContractBaselineDeviationImpactRecord.tenant_id
+                            == ContractProofReviewRecord.tenant_id,
+                        ),
+                    )
+                    .where(
+                        ContractProofReviewRecord.tenant_id == actor.tenant_id,
+                        ContractBaselineDeviationImpactRecord.case_id == case_id,
+                    )
+                    .order_by(ContractProofReviewRecord.created_at.desc())
+                ).all()
+            )
 
     def latest_for_case(self, *, actor, case_id, now):
         rows = self.list_for_case(actor=actor, case_id=case_id, now=now)
@@ -60,15 +141,34 @@ class ContractProofReviewReadService:
                 latest[key] = row
         return tuple(latest.values())
 
-    def timeline_for_case(self, *, actor, case_id, now, revision=None, status=None, source_ref=None, limit=50, offset=0):
+    def timeline_for_case(
+        self,
+        *,
+        actor,
+        case_id,
+        now,
+        revision=None,
+        status=None,
+        source_ref=None,
+        limit=50,
+        offset=0,
+    ):
         rows = self.list_for_case(actor=actor, case_id=case_id, now=now)
         if revision is not None:
             rows = tuple(row for row in rows if row.reviewed_revision == revision)
         if status is not None:
             rows = tuple(row for row in rows if row.decision == status)
         return tuple(
-            {"event_type": "REVIEW", "event_id": row.id, "proof_id": row.proof_id,
-             "revision": row.reviewed_revision, "status": row.decision,
-             "rationale": row.rationale, "created_at": row.created_at}
-            for row in sorted(rows, key=lambda item: (item.reviewed_revision, item.created_at))[offset : offset + limit]
+            {
+                "event_type": "REVIEW",
+                "event_id": row.id,
+                "proof_id": row.proof_id,
+                "revision": row.reviewed_revision,
+                "status": row.decision,
+                "rationale": row.rationale,
+                "created_at": row.created_at,
+            }
+            for row in sorted(rows, key=lambda item: (item.reviewed_revision, item.created_at))[
+                offset : offset + limit
+            ]
         )

@@ -25,6 +25,9 @@ Le cahier actif comprend le cadrage V3.1 et les chapitres détaillés intégrés
 
 ## CT31-01 — AS-IS, risques et insertion
 
+**Qualification technique locale du 09/10.** Fermeture demandée par l’Owner avant toute reprise du cahier codable : lint/format globaux verts sur 1180 fichiers, mypy sur 1025 sources, backend final 2193/2193, couverture de l’application 87,92 % (seuil 85,50 % conservé), Web 513/513 et typecheck/lint/build verts. Les avis connus Python et Node sont fermés par mises à jour des locks et bornes directes; audits complets zéro, Semgrep/Bandit/secrets zéro. Les scripts de diagnostic n’infèrent plus une base PostgreSQL locale : benchmark destructif protégé par URL/flag jetable/moteur exact, export OpenAPI en mémoire; HTTP(S) borné sans redirection bearer. Revue ciblée sans finding bloquant. Le [plan actif](../00_Pilotage_et_audits/SMART_AO_PLAN_GLOBAL_CONCEPTION_REALISATION_CHECKLIST_v0.1.md) porte les commandes, preuves, avertissements et checkpoints exacts; cet état ne qualifie ni corpus réel, ni exploitation/VPS, ni GO public. Direction visuelle ultérieure obligatoire : PF31-11 du Product Freeze, design Cytd adapté avec captures et typographies Owner.
+
+
 Stack conservée : modular monolith Python/FastAPI, React/TypeScript, PostgreSQL/Alembic, ports/adapters existants. Ni Rust ni graph DB ni framework ajouté pour ce réalignement.
 
 Le [code map T0](../../Archive/02_Audits/T0_Realignement_V3/T0_DEEP_CORE_CODE_MAP_2026-09-30.md) établit la couverture au HEAD `1c8ac62` et distingue le WIP local. La preuve `ContractBaselineDeviationImpact` existe déjà dans DCE : ce n'est pas une baseline signée complète. Les documents/versions/locators DCE existent. Contrats/avenants, réception, requalification et paiement existent dans Pricing ; leurs références sont souvent des chaînes. P0–P7 et REX sont réels. Il manque les relations longitudinales complètes et un flux OS dédié.

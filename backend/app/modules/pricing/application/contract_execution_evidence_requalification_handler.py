@@ -45,19 +45,25 @@ class RecordContractExecutionEvidenceRequalificationHandler(CommandHandler):
         tenant_id = UUID(str(context.tenant_id))
         if context.actor_kind != "PATRON_ADMIN" or context.membership_id is None:
             raise CommandExecutionError("PATRON_REQUIRED")
-        if session.scalar(
-            sa.select(CaseRecord.id).where(
-                CaseRecord.tenant_id == tenant_id,
-                CaseRecord.id == command.case_id,
+        if (
+            session.scalar(
+                sa.select(CaseRecord.id).where(
+                    CaseRecord.tenant_id == tenant_id,
+                    CaseRecord.id == command.case_id,
+                )
             )
-        ) is None:
+            is None
+        ):
             raise CommandExecutionError("CASE_NOT_FOUND_OR_FORBIDDEN")
-        if session.scalar(
-            sa.select(ContractExecutionEvidenceRequalificationRecord.id).where(
-                ContractExecutionEvidenceRequalificationRecord.tenant_id == tenant_id,
-                ContractExecutionEvidenceRequalificationRecord.id == command.requalification_id,
+        if (
+            session.scalar(
+                sa.select(ContractExecutionEvidenceRequalificationRecord.id).where(
+                    ContractExecutionEvidenceRequalificationRecord.tenant_id == tenant_id,
+                    ContractExecutionEvidenceRequalificationRecord.id == command.requalification_id,
+                )
             )
-        ) is not None:
+            is not None
+        ):
             raise CommandExecutionError("CONTRACT_EXECUTION_REQUALIFICATION_ID_REUSED")
 
         act = session.scalar(
@@ -85,15 +91,20 @@ class RecordContractExecutionEvidenceRequalificationHandler(CommandHandler):
         ):
             raise CommandExecutionError("CONTRACT_EXECUTION_EVIDENCE_NOT_REVIEW_REQUIRED")
 
-        latest_revision = session.scalar(
-            sa.select(sa.func.max(ContractExecutionEvidenceRequalificationRecord.revision)).where(
-                ContractExecutionEvidenceRequalificationRecord.tenant_id == tenant_id,
-                ContractExecutionEvidenceRequalificationRecord.case_id == command.case_id,
-                ContractExecutionEvidenceRequalificationRecord.act_id == command.act_id,
-                ContractExecutionEvidenceRequalificationRecord.supersession_id
-                == command.supersession_id,
+        latest_revision = (
+            session.scalar(
+                sa.select(
+                    sa.func.max(ContractExecutionEvidenceRequalificationRecord.revision)
+                ).where(
+                    ContractExecutionEvidenceRequalificationRecord.tenant_id == tenant_id,
+                    ContractExecutionEvidenceRequalificationRecord.case_id == command.case_id,
+                    ContractExecutionEvidenceRequalificationRecord.act_id == command.act_id,
+                    ContractExecutionEvidenceRequalificationRecord.supersession_id
+                    == command.supersession_id,
+                )
             )
-        ) or 0
+            or 0
+        )
         if command.expected_revision != latest_revision:
             raise CommandExecutionError("CONTRACT_EXECUTION_REQUALIFICATION_REVISION_CONFLICT")
 
@@ -115,13 +126,16 @@ class RecordContractExecutionEvidenceRequalificationHandler(CommandHandler):
                 raise CommandExecutionError(
                     "CONTRACT_EXECUTION_REQUALIFICATION_RESULT_VERSION_REQUIRED"
                 )
-            if session.scalar(
-                sa.select(ContractInstrumentVersionRecord.id).where(
-                    ContractInstrumentVersionRecord.tenant_id == tenant_id,
-                    ContractInstrumentVersionRecord.case_id == command.case_id,
-                    ContractInstrumentVersionRecord.id == resulting_version_id,
+            if (
+                session.scalar(
+                    sa.select(ContractInstrumentVersionRecord.id).where(
+                        ContractInstrumentVersionRecord.tenant_id == tenant_id,
+                        ContractInstrumentVersionRecord.case_id == command.case_id,
+                        ContractInstrumentVersionRecord.id == resulting_version_id,
+                    )
                 )
-            ) is None:
+                is None
+            ):
                 raise CommandExecutionError("CONTRACT_INSTRUMENT_VERSION_NOT_FOUND_OR_FORBIDDEN")
 
         requalification = ContractExecutionEvidenceRequalification(

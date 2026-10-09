@@ -7,8 +7,12 @@ from typing import cast
 from uuid import uuid4
 
 import pytest
-from app.interfaces.http.routes.consultations import ConsultationSecurityRuntime
+from app.interfaces.http.routes.consultations import (
+    AuthenticationContextResolver,
+    ConsultationSecurityRuntime,
+)
 from app.interfaces.http.routes.patron_business_method_profiles import (
+    BusinessMethodProfileService,
     build_patron_business_method_profile_router,
 )
 from app.modules.enterprise.application.business_method_profile_handler import (
@@ -49,6 +53,8 @@ class _Resolver:
 
 
 class _Service:
+    replay: bool = False
+
     def publish(self, *, actor, command, now):
         self.company_id = command.company_id
         self.profile = command.profile
@@ -93,9 +99,9 @@ def _result(*, replayed: bool = False):
 
 def _routes(service):
     router = build_patron_business_method_profile_router(
-        service=cast(object, service),
+        service=cast(BusinessMethodProfileService, cast(object, service)),
         security_runtime=ConsultationSecurityRuntime(
-            context_resolver=cast(object, _Resolver()),
+            context_resolver=cast(AuthenticationContextResolver, cast(object, _Resolver())),
             policy=cast(AuthorizationPolicyPort, object()),
         ),
     )

@@ -63,9 +63,7 @@ def upgrade() -> None:
             ondelete="RESTRICT",
         ),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint(
-            "tenant_id", "id", name="uq_case_change_engagement_links__tenant_id"
-        ),
+        sa.UniqueConstraint("tenant_id", "id", name="uq_case_change_engagement_links__tenant_id"),
         sa.UniqueConstraint(
             "tenant_id", "command_id", name="uq_case_change_engagement_links__command"
         ),
