@@ -7,6 +7,7 @@ from datetime import date
 from uuid import UUID
 from app.platform.persistence.base import Base, TenantScopedRecord
 
+
 class CaseInterviewRecord(TenantScopedRecord, Base):
     __tablename__ = "case_interviews"
     __table_args__ = (

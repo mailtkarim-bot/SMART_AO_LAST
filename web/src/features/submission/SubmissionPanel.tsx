@@ -93,7 +93,7 @@ export function SubmissionPanel({
     <section className="section-block submission-section" id="submission-section">
       <div className="section-heading">
         <div>
-          <span className="section-kicker">PRÉPARATION & DÉPÔT</span>
+          <span className="section-kicker">PRÉPARATION &amp; DÉPÔT</span>
           <h2>Contrôler le paquet et conserver la preuve</h2>
         </div>
         <span className="secure-pill">

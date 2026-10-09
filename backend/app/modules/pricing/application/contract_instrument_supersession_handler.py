@@ -38,12 +38,15 @@ class DeclareContractInstrumentSupersessionHandler(CommandHandler):
         tenant_id = UUID(str(context.tenant_id))
         if context.actor_kind != "PATRON_ADMIN" or context.membership_id is None:
             raise CommandExecutionError("PATRON_REQUIRED")
-        if session.scalar(
-            sa.select(CaseRecord.id).where(
-                CaseRecord.tenant_id == tenant_id,
-                CaseRecord.id == command.case_id,
+        if (
+            session.scalar(
+                sa.select(CaseRecord.id).where(
+                    CaseRecord.tenant_id == tenant_id,
+                    CaseRecord.id == command.case_id,
+                )
             )
-        ) is None:
+            is None
+        ):
             raise CommandExecutionError("CASE_NOT_FOUND_OR_FORBIDDEN")
         if (
             command.replacing_contract_instrument_version_id
@@ -73,16 +76,19 @@ class DeclareContractInstrumentSupersessionHandler(CommandHandler):
             raise CommandExecutionError("CONTRACT_INSTRUMENT_VERSION_NOT_FOUND_OR_FORBIDDEN")
         if replacing.instrument_kind != "AMENDMENT":
             raise CommandExecutionError("CONTRACT_INSTRUMENT_REPLACING_VERSION_MUST_BE_AMENDMENT")
-        if session.scalar(
-            sa.select(ContractInstrumentSupersessionRecord.id).where(
-                ContractInstrumentSupersessionRecord.tenant_id == tenant_id,
-                ContractInstrumentSupersessionRecord.case_id == command.case_id,
-                ContractInstrumentSupersessionRecord.replacing_contract_instrument_version_id
-                == command.replacing_contract_instrument_version_id,
-                ContractInstrumentSupersessionRecord.replaced_contract_instrument_version_id
-                == command.replaced_contract_instrument_version_id,
+        if (
+            session.scalar(
+                sa.select(ContractInstrumentSupersessionRecord.id).where(
+                    ContractInstrumentSupersessionRecord.tenant_id == tenant_id,
+                    ContractInstrumentSupersessionRecord.case_id == command.case_id,
+                    ContractInstrumentSupersessionRecord.replacing_contract_instrument_version_id
+                    == command.replacing_contract_instrument_version_id,
+                    ContractInstrumentSupersessionRecord.replaced_contract_instrument_version_id
+                    == command.replaced_contract_instrument_version_id,
+                )
             )
-        ) is not None:
+            is not None
+        ):
             raise CommandExecutionError("CONTRACT_INSTRUMENT_SUPERSESSION_ALREADY_RECORDED")
         try:
             declaration = ContractInstrumentSupersession(

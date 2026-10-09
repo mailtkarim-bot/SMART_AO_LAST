@@ -34,9 +34,7 @@ def upgrade() -> None:
         sa.Column("currency_code", sa.CHAR(length=3), nullable=True),
         sa.Column("unit", sa.String(32), nullable=True),
         sa.Column("measurement_unknown_reason", sa.Text(), nullable=True),
-        sa.Column(
-            "assumptions_json", postgresql.JSONB(astext_type=sa.Text()), nullable=False
-        ),
+        sa.Column("assumptions_json", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
         sa.Column("source_refs_json", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
         sa.Column("evidence_refs_json", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
         sa.Column("rationale", sa.Text(), nullable=False),
@@ -89,9 +87,7 @@ def upgrade() -> None:
             name="uq_case_change_impact__source_axis_revision",
         ),
         sa.CheckConstraint("revision > 0", name="ck_case_change_impacts__revision"),
-        sa.CheckConstraint(
-            "impact_revision > 0", name="ck_case_change_impacts__impact_revision"
-        ),
+        sa.CheckConstraint("impact_revision > 0", name="ck_case_change_impacts__impact_revision"),
         sa.CheckConstraint(
             "axis IN ('SCOPE', 'COST', 'CASH', 'SCHEDULE', 'CAPACITY')",
             name="ck_case_change_impacts__axis",
@@ -134,9 +130,7 @@ def upgrade() -> None:
             "AND NULLIF(BTRIM(measurement_unknown_reason), '') IS NOT NULL)",
             name="ck_case_change_impacts__measurement_matches_axis_state",
         ),
-        sa.CheckConstraint(
-            "length(trim(rationale)) > 0", name="ck_case_change_impacts__rationale"
-        ),
+        sa.CheckConstraint("length(trim(rationale)) > 0", name="ck_case_change_impacts__rationale"),
         sa.CheckConstraint(
             "jsonb_array_length(source_refs_json) > 0", name="ck_case_change_impacts__sources"
         ),

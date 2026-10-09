@@ -293,14 +293,20 @@ def test_partner_write_needs_case_scope_and_partner_engagement_is_patron_only() 
         classification=DataClassification.INTERNAL_OPERATIONAL,
     )
 
-    assert policy.authorize(
-        context=collaborator,
-        request=AuthorizationRequest(action=Capability.CASE_PARTNER_READ, resource=resource),
-    ).allowed is True
-    assert policy.authorize(
-        context=collaborator,
-        request=AuthorizationRequest(action=Capability.CASE_PARTNER_WRITE, resource=resource),
-    ).allowed is False
+    assert (
+        policy.authorize(
+            context=collaborator,
+            request=AuthorizationRequest(action=Capability.CASE_PARTNER_READ, resource=resource),
+        ).allowed
+        is True
+    )
+    assert (
+        policy.authorize(
+            context=collaborator,
+            request=AuthorizationRequest(action=Capability.CASE_PARTNER_WRITE, resource=resource),
+        ).allowed
+        is False
+    )
     assert Capability.CASE_PARTNER_ENGAGE not in collaborator.capabilities
 
     delegated = capabilities_for(

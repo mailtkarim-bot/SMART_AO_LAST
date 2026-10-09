@@ -34,12 +34,15 @@ class ContractExecutionEvidenceRequalificationReadService:
         if actor.actor_kind is not ActorKind.PATRON_ADMIN or actor.membership_id is None:
             raise PermissionError("PATRON_REQUIRED")
         with self._session_factory() as session:
-            if session.scalar(
-                sa.select(CaseRecord.id).where(
-                    CaseRecord.tenant_id == actor.tenant_id,
-                    CaseRecord.id == case_id,
+            if (
+                session.scalar(
+                    sa.select(CaseRecord.id).where(
+                        CaseRecord.tenant_id == actor.tenant_id,
+                        CaseRecord.id == case_id,
+                    )
                 )
-            ) is None:
+                is None
+            ):
                 return ()
             rows = tuple(
                 session.scalars(
@@ -105,9 +108,7 @@ class ContractExecutionEvidenceRequalificationReadService:
                     record=row,
                     act=acts[row.act_id],
                     supersession=supersessions[row.supersession_id],
-                    resulting_version=versions.get(
-                        row.resulting_contract_instrument_version_id
-                    ),
+                    resulting_version=versions.get(row.resulting_contract_instrument_version_id),
                 )
                 for row in rows
             )

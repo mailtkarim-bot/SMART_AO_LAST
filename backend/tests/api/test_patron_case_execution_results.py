@@ -7,7 +7,11 @@ from typing import cast
 from uuid import uuid4
 
 from app.interfaces.http.routes.consultations import ConsultationSecurityRuntime
-from app.interfaces.http.routes.patron_actions import build_patron_action_router
+from app.interfaces.http.routes.patron_actions import (
+    PatronActionService,
+    PatronActionTransitionService,
+    build_patron_action_router,
+)
 from app.modules.patron_action.application.order import CaseOrderService
 from app.platform.security.authenticated_context import AuthenticationContextResolver
 from app.platform.security.authorization import AuthorizationPolicyPort
@@ -69,8 +73,8 @@ class OrderReadService:
 
 def router_for(actor_kind: ActorKind):
     return build_patron_action_router(
-        service=SimpleNamespace(),
-        transition_service=SimpleNamespace(),
+        service=cast(PatronActionService, SimpleNamespace()),
+        transition_service=cast(PatronActionTransitionService, SimpleNamespace()),
         outcome_service=None,
         order_service=cast(CaseOrderService, OrderReadService()),
         security_runtime=ConsultationSecurityRuntime(

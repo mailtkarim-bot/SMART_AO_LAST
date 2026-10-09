@@ -22,6 +22,8 @@ def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
 @pytest.fixture(scope="module")
 def database_engine() -> sa.Engine:
     """Create one isolated Alembic schema per test module."""
+    if not DATABASE_URL:
+        raise RuntimeError("Explicit SMART_AO_TEST_DATABASE_URL is required for database tests")
     config = Config(str(ALEMBIC_INI))
     config.set_main_option("sqlalchemy.url", DATABASE_URL)
     command.upgrade(config, "head")

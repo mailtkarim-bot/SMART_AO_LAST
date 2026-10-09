@@ -4,12 +4,20 @@ import socket
 import time
 from datetime import UTC, datetime
 from threading import Thread
+from typing import cast
 from uuid import uuid4
 
 import httpx
 import uvicorn
-from app.interfaces.http.routes.consultations import ConsultationSecurityRuntime
-from app.interfaces.http.routes.patron_actions import build_patron_action_router
+from app.interfaces.http.routes.consultations import (
+    AuthenticationContextResolver,
+    ConsultationSecurityRuntime,
+)
+from app.interfaces.http.routes.patron_actions import (
+    PatronActionService,
+    PatronActionTransitionService,
+    build_patron_action_router,
+)
 from app.modules.patron_action.application.order import CaseOrderService, case_order_handlers
 from app.modules.patron_action.application.outcome import CaseOutcomeService, case_outcome_handlers
 from app.platform.events.dispatcher import CommandDispatcher
@@ -124,12 +132,12 @@ def test_http_result_order_p6_p7_unknown_retry_and_role_tenant_refusals(
     app = FastAPI()
     app.include_router(
         build_patron_action_router(
-            service=object(),
-            transition_service=object(),
+            service=cast(PatronActionService, object()),
+            transition_service=cast(PatronActionTransitionService, object()),
             outcome_service=outcome_service,
             order_service=order_service,
             security_runtime=ConsultationSecurityRuntime(
-                context_resolver=resolver,
+                context_resolver=cast(AuthenticationContextResolver, resolver),
                 policy=policy,
             ),
         )

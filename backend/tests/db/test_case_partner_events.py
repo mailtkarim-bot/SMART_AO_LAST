@@ -1,11 +1,15 @@
 from dataclasses import replace
 from datetime import UTC, date, datetime
 from types import SimpleNamespace
+from typing import cast
 from uuid import uuid4
 
 import pytest
 import sqlalchemy as sa
-from app.interfaces.http.routes.case_partners import build_case_partner_router
+from app.interfaces.http.routes.case_partners import (
+    ConsultationSecurityRuntime,
+    build_case_partner_router,
+)
 from app.modules.partner.application.commands import (
     DeclareCasePartnerEngagementCommand,
     RecordCasePartnerReceiptCommand,
@@ -301,7 +305,9 @@ def test_http_to_postgres_partner_lifecycle_keeps_receipt_and_engagement_distinc
     app.include_router(
         build_case_partner_router(
             service=service,
-            security_runtime=SimpleNamespace(context_resolver=ActorResolver()),
+            security_runtime=cast(
+                ConsultationSecurityRuntime, SimpleNamespace(context_resolver=ActorResolver())
+            ),
         )
     )
     client = TestClient(app)

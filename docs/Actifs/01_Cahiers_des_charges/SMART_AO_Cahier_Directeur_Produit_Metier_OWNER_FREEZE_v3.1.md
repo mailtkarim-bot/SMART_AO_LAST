@@ -120,6 +120,16 @@ Veille concurrentielle avant chaque grande phase, sans automatisation hebdomadai
 Le propriétaire délègue les arbitrages de conception courants ; ils sont documentés avec limites. Cela ne permet pas d'inventer une validation client/juriste, une preuve de test ou une décision Patron dans les données métier. Toute évolution des droits, invariants ou promesses réclame une révision explicite de ce Freeze et les preuves correspondantes.
 
 
+<a id="pf31-11"></a>
+
+## PF31-11 — Direction visuelle Owner obligatoire — 9 octobre 2026
+
+**Décision directe du propriétaire :** prendre le design de [Cytd](https://www.cytd.ai/) et l’adapter au logiciel SMART_AO. Les captures Owner dark et light conservées dans `docs/Actifs/02_Produit_et_UX/Assets/` (`Screenshot from 2026-10-09 19-14-09.png`, `Screenshot from 2026-10-09 19-15-31.png`) sont les références précises : reprendre la trame, les couleurs, les polices, leurs graisses/italiques, la hiérarchie, les tailles et les couleurs des textes. Le contenu, l’identité SMART_AO et les parcours métier sont adaptés; ne pas remplacer cette direction par un thème générique ou une police simplement ressemblante.
+
+Ressources identifiées dans la page originale : **Schibsted Grotesk**, **Instrument Serif**, **IBM Plex Mono**. Les captures Owner priment sur une évolution ultérieure du site pour la palette; le plan actif consigne les mesures PNG et les ressources lues. Qualifier le mapping précis des composants/états responsive au prochain travail UI substantiel avec OpenDesign Local Codex, Impeccable et preuves navigateur.
+
+Cette règle s’applique aux sessions ultérieures. La fermeture technique demandée reste prioritaire; aucune refonte ni recette de cette direction n’est déclarée effectuée. Conserver les surfaces C00–C16, permissions, séparation Patron/Collaborateur, FINANCIAL_PRIVATE, UNKNOWN/PARTIAL/REVIEW_REQUIRED et actes humains; la direction visuelle n’autorise aucune écriture automatique, dépôt, confirmation externe ou GO public.
+
 ## Contrats produit complets conservés — PF2
 
 Ces chapitres font partie du présent cahier actif : **il n'est pas nécessaire d'ouvrir les archives pour disposer de ce détail**. Les identifiants PF2-xxx donnent des ancres uniques. Les exigences métier/techniques sont conservées ; les titres, dates, mentions de promotion et références de version du texte intégré indiquent sa provenance. Ils ne rétablissent pas une ancienne autorité. Les dispositions de consolidation V3.1 en tête gouvernent les conflits et l'ordre de livraison. « À valider », candidat, validation externe ou report ne signifient jamais capacité livrée.

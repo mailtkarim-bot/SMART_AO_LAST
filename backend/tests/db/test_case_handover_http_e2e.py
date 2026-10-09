@@ -17,7 +17,10 @@ import pytest
 import sqlalchemy as sa
 import uvicorn
 from app.interfaces.http.routes.case_handover import build_case_handover_routers
-from app.interfaces.http.routes.consultations import ConsultationSecurityRuntime
+from app.interfaces.http.routes.consultations import (
+    AuthenticationContextResolver,
+    ConsultationSecurityRuntime,
+)
 from app.interfaces.http.routes.patron_actions import build_patron_action_router
 from app.interfaces.http.routes.patron_case_contract_changes import (
     build_patron_case_contract_change_router,
@@ -367,7 +370,9 @@ def _record_a1_source_condition(session_factory, *, actor: ActorContext, case_id
     )
 
     resolver = TokenResolver({"patron": actor})
-    security_runtime = ConsultationSecurityRuntime(context_resolver=resolver, policy=policy)
+    security_runtime = ConsultationSecurityRuntime(
+        context_resolver=cast(AuthenticationContextResolver, resolver), policy=policy
+    )
     app = FastAPI()
     app.include_router(
         build_patron_contract_baseline_impact_router(
@@ -455,7 +460,7 @@ def _record_a1_source_condition(session_factory, *, actor: ActorContext, case_id
                     {
                         "aggregate_type": "BUSINESS_METHOD_PROFILE",
                         "aggregate_id": str(profile_ref["aggregate_id"]),
-                        "aggregate_revision": int(profile_ref["aggregate_revision"]),
+                        "aggregate_revision": int(str(profile_ref["aggregate_revision"])),
                         "content_hash": str(profile_ref["content_hash"]),
                         "reference_role": "ADOPTED_METHOD",
                     },
@@ -550,7 +555,7 @@ def _record_a1_source_condition(session_factory, *, actor: ActorContext, case_id
             "decision_id": str(decision_id),
             "condition_id": str(condition_id),
             "profile_version_id": str(profile_ref["aggregate_id"]),
-            "profile_version": int(profile_ref["aggregate_revision"]),
+            "profile_version": int(str(profile_ref["aggregate_revision"])),
             "profile_hash": str(profile_ref["content_hash"]),
             "dossier": dossier.json(),
         }
@@ -685,7 +690,7 @@ def test_http_p7_handover_is_exact_append_only_and_finance_redacted(
     for router in build_case_handover_routers(
         service=service,
         security_runtime=ConsultationSecurityRuntime(
-            context_resolver=resolver,
+            context_resolver=cast(AuthenticationContextResolver, resolver),
             policy=AuthorizationPolicy(),
         ),
     ):
@@ -838,7 +843,7 @@ def test_http_c1_keeps_unknown_until_patron_links_change_to_handover_and_records
     )
     a1 = _record_a1_source_condition(session_factory, actor=patron, case_id=case_id)
     with session_factory() as session:
-        a1_decision = session.get(DecisionRecord, UUID(a1["decision_id"]))
+        a1_decision = session.get(DecisionRecord, UUID(str(a1["decision_id"])))
         assert a1_decision is not None
         assert a1_decision.case_id == case_id
         assert a1_decision.validity == "CURRENT"
@@ -859,7 +864,8 @@ def test_http_c1_keeps_unknown_until_patron_links_change_to_handover_and_records
     )
     b1_resolver = TokenResolver({"patron": patron})
     b1_security = ConsultationSecurityRuntime(
-        context_resolver=b1_resolver, policy=AuthorizationPolicy()
+        context_resolver=cast(AuthenticationContextResolver, b1_resolver),
+        policy=AuthorizationPolicy(),
     )
     b1_app = FastAPI()
     for router in build_case_handover_routers(
@@ -1008,7 +1014,7 @@ def test_http_c1_keeps_unknown_until_patron_links_change_to_handover_and_records
     for router in build_case_handover_routers(
         service=handover_service,
         security_runtime=ConsultationSecurityRuntime(
-            context_resolver=resolver,
+            context_resolver=cast(AuthenticationContextResolver, resolver),
             policy=AuthorizationPolicy(),
         ),
     ):
@@ -1018,7 +1024,7 @@ def test_http_c1_keeps_unknown_until_patron_links_change_to_handover_and_records
             service=service,
             evidence_upload_service=evidence_upload_service,
             security_runtime=ConsultationSecurityRuntime(
-                context_resolver=resolver,
+                context_resolver=cast(AuthenticationContextResolver, resolver),
                 policy=AuthorizationPolicy(),
             ),
         )
@@ -1270,9 +1276,9 @@ def test_http_c1_keeps_unknown_until_patron_links_change_to_handover_and_records
                         tenant_id=patron.tenant_id,
                         case_id=case_id,
                         event_id=event_id,
-                        linkage_id=UUID(linkage_payload["linkage_id"]),
-                        condition_id=UUID(selected_source["condition_id"]),
-                        impact_id=UUID(selected_source["impact_id"]),
+                        linkage_id=UUID(str(linkage_payload["linkage_id"])),
+                        condition_id=UUID(str(selected_source["condition_id"])),
+                        impact_id=UUID(str(selected_source["impact_id"])),
                         impact_revision=selected_source["impact_revision"],
                         source_a1_json={**selected_source, "requirement_revision": 2},
                         axis="COST",
@@ -1495,12 +1501,12 @@ def test_http_c1_keeps_unknown_until_patron_links_change_to_handover_and_records
                 }
                 crash_intent = client.post(evidence_path, headers=headers, json=crash_payload)
                 assert crash_intent.status_code == 201, crash_intent.text
-                crash_id = UUID(crash_payload["evidence_object_id"])
+                crash_id = UUID(str(crash_payload["evidence_object_id"]))
                 crash_target = evidence_repository.get_target(
                     tenant_id=patron.tenant_id,
                     case_id=case_id,
                     event_id=event_id,
-                    action_id=UUID(action_payload["action_id"]),
+                    action_id=UUID(str(action_payload["action_id"])),
                     evidence_object_id=crash_id,
                 )
                 assert crash_target is not None
@@ -1598,7 +1604,7 @@ def test_http_c1_keeps_unknown_until_patron_links_change_to_handover_and_records
                 tenant_id=patron.tenant_id,
                 case_id=case_id,
                 event_id=event_id,
-                action_id=UUID(action_payload["action_id"]),
+                action_id=UUID(str(action_payload["action_id"])),
                 evidence_object_id=UUID(str(evidence_payload["evidence_object_id"])),
             )
             assert clean_evidence_record is not None
@@ -2228,9 +2234,9 @@ def test_http_c1_keeps_unknown_until_patron_links_change_to_handover_and_records
         thread.join(timeout=5)
 
     with Session(database_engine) as session:
-        decision = session.get(DecisionRecord, UUID(a1["decision_id"]))
-        condition = session.get(DecisionConditionRecord, UUID(a1["condition_id"]))
-        impact = session.get(ContractBaselineDeviationImpactRecord, UUID(a1["impact_id"]))
+        decision = session.get(DecisionRecord, UUID(str(a1["decision_id"])))
+        condition = session.get(DecisionConditionRecord, UUID(str(a1["condition_id"])))
+        impact = session.get(ContractBaselineDeviationImpactRecord, UUID(str(a1["impact_id"])))
         assert decision is not None and decision.outcome == "CONDITIONAL_GO"
         assert condition is not None and condition.status == "OPEN"
         assert impact is not None and impact.status == "HUMAN_REVIEW_REQUIRED"

@@ -50,9 +50,7 @@ class EnterpriseBusinessMethodProfileVersionRecord(TenantScopedRecord, Base):
         ),
         sa.CheckConstraint("version_number > 0", name="vnum"),
         sa.CheckConstraint("schema_version = 1", name="schema"),
-        sa.CheckConstraint(
-            "content_sha256 ~ '^[0-9a-f]{64}$'", name="hash"
-        ),
+        sa.CheckConstraint("content_sha256 ~ '^[0-9a-f]{64}$'", name="hash"),
         sa.CheckConstraint(
             "jsonb_typeof(profile_json) = 'object' "
             "AND profile_json ? 'schema_version' "

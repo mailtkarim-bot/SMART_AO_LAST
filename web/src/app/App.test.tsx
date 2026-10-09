@@ -519,6 +519,7 @@ describe("App readiness integration", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Partenaires C09/ }));
 
+    await waitFor(() => expect(listCasePartnerEvents).toHaveBeenCalledWith("case-1"), { timeout: 10000 });
     expect(await screen.findByText(/RECEIVED · preuve reçue/)).toBeVisible();
     expect(screen.getByText(/Mandat : NOT_APPLICABLE/)).toBeVisible();
     expect(screen.getByText(/reçu ≠ engagé/)).toBeVisible();

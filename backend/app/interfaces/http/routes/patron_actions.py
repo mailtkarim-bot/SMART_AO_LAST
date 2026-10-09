@@ -566,9 +566,7 @@ def build_patron_action_router(
         }
 
     @router.get("/cases/{case_id}/teaching-sources")
-    def list_case_teaching_sources(
-        case_id: UUID, authorization: str | None = Header(default=None)
-    ):
+    def list_case_teaching_sources(case_id: UUID, authorization: str | None = Header(default=None)):
         if teaching_applicability_service is None:
             raise HTTPException(status_code=503, detail="UNAVAILABLE")
         actor = _resolve_context(

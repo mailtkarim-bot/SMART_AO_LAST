@@ -1,4 +1,5 @@
 """Append human post-reception obligation transitions with proof on completion."""
+
 # ruff: noqa: E501
 from collections.abc import Sequence
 
@@ -24,17 +25,45 @@ def upgrade() -> None:
         sa.Column("evidence_refs_json", JSONB(), nullable=False, server_default="[]"),
         sa.Column("rationale", sa.Text(), nullable=False),
         sa.Column("actor_id", sa.UUID(), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
         sa.ForeignKeyConstraint(["tenant_id"], ["tenants.id"], ondelete="RESTRICT"),
-        sa.ForeignKeyConstraint(["tenant_id", "obligation_id"], ["post_reception_obligations.tenant_id", "post_reception_obligations.id"], ondelete="RESTRICT"),
-        sa.UniqueConstraint("tenant_id", "id", name="uq_post_reception_obligation_transitions__tenant_id"),
-        sa.UniqueConstraint("tenant_id", "obligation_id", "revision", name="uq_post_reception_obligation_transitions__revision"),
-        sa.CheckConstraint("revision > 0", name="post_reception_obligation_transition_revision_positive"),
-        sa.CheckConstraint("previous_status IN ('REVIEW_REQUIRED', 'IN_PROGRESS', 'FOLLOW_UP_REQUIRED', 'UNKNOWN')", name="post_reception_obligation_transition_previous_closed"),
-        sa.CheckConstraint("resulting_status IN ('IN_PROGRESS', 'FOLLOW_UP_REQUIRED', 'UNKNOWN', 'COMPLETED')", name="post_reception_obligation_transition_result_closed"),
-        sa.CheckConstraint("resulting_status != 'COMPLETED' OR jsonb_array_length(evidence_refs_json) > 0", name="post_reception_obligation_completion_requires_proof"),
-        sa.Index("ix_post_rec_obl_tenant_obligation_revision", "tenant_id", "obligation_id", "revision"),
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "obligation_id"],
+            ["post_reception_obligations.tenant_id", "post_reception_obligations.id"],
+            ondelete="RESTRICT",
+        ),
+        sa.UniqueConstraint(
+            "tenant_id", "id", name="uq_post_reception_obligation_transitions__tenant_id"
+        ),
+        sa.UniqueConstraint(
+            "tenant_id",
+            "obligation_id",
+            "revision",
+            name="uq_post_reception_obligation_transitions__revision",
+        ),
+        sa.CheckConstraint(
+            "revision > 0", name="post_reception_obligation_transition_revision_positive"
+        ),
+        sa.CheckConstraint(
+            "previous_status IN ('REVIEW_REQUIRED', 'IN_PROGRESS', 'FOLLOW_UP_REQUIRED', 'UNKNOWN')",
+            name="post_reception_obligation_transition_previous_closed",
+        ),
+        sa.CheckConstraint(
+            "resulting_status IN ('IN_PROGRESS', 'FOLLOW_UP_REQUIRED', 'UNKNOWN', 'COMPLETED')",
+            name="post_reception_obligation_transition_result_closed",
+        ),
+        sa.CheckConstraint(
+            "resulting_status != 'COMPLETED' OR jsonb_array_length(evidence_refs_json) > 0",
+            name="post_reception_obligation_completion_requires_proof",
+        ),
+        sa.Index(
+            "ix_post_rec_obl_tenant_obligation_revision", "tenant_id", "obligation_id", "revision"
+        ),
     )
     op.execute(
         """
@@ -55,6 +84,8 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.execute("DROP TRIGGER IF EXISTS post_reception_obligation_transitions_append_only ON post_reception_obligation_transitions")
+    op.execute(
+        "DROP TRIGGER IF EXISTS post_reception_obligation_transitions_append_only ON post_reception_obligation_transitions"
+    )
     op.execute("DROP FUNCTION IF EXISTS reject_post_reception_obligation_transition_mutation()")
     op.drop_table("post_reception_obligation_transitions")

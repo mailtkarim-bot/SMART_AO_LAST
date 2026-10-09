@@ -244,12 +244,17 @@ class PublishBusinessMethodProfileHandler(CommandHandler):
         )
         if company is None:
             raise CommandExecutionError("NOT_FOUND_OR_FORBIDDEN")
-        latest_version = session.scalar(
-            sa.select(sa.func.max(EnterpriseBusinessMethodProfileVersionRecord.version_number)).where(
-                EnterpriseBusinessMethodProfileVersionRecord.tenant_id == context.tenant_id,
-                EnterpriseBusinessMethodProfileVersionRecord.company_id == company.id,
+        latest_version = (
+            session.scalar(
+                sa.select(
+                    sa.func.max(EnterpriseBusinessMethodProfileVersionRecord.version_number)
+                ).where(
+                    EnterpriseBusinessMethodProfileVersionRecord.tenant_id == context.tenant_id,
+                    EnterpriseBusinessMethodProfileVersionRecord.company_id == company.id,
+                )
             )
-        ) or 0
+            or 0
+        )
         if command.expected_version != latest_version:
             raise CommandExecutionError("STALE_PROFILE_VERSION")
         version = latest_version + 1
@@ -326,12 +331,17 @@ class AdoptBusinessMethodProfileHandler(CommandHandler):
         )
         if profile is None:
             raise CommandExecutionError("PROFILE_VERSION_NOT_FOUND_OR_FORBIDDEN")
-        latest_revision = session.scalar(
-            sa.select(sa.func.max(CaseBusinessMethodProfileAdoptionRecord.adoption_revision)).where(
-                CaseBusinessMethodProfileAdoptionRecord.tenant_id == context.tenant_id,
-                CaseBusinessMethodProfileAdoptionRecord.case_id == case.id,
+        latest_revision = (
+            session.scalar(
+                sa.select(
+                    sa.func.max(CaseBusinessMethodProfileAdoptionRecord.adoption_revision)
+                ).where(
+                    CaseBusinessMethodProfileAdoptionRecord.tenant_id == context.tenant_id,
+                    CaseBusinessMethodProfileAdoptionRecord.case_id == case.id,
+                )
             )
-        ) or 0
+            or 0
+        )
         if command.expected_adoption_revision != latest_revision:
             raise CommandExecutionError("STALE_PROFILE_ADOPTION")
         revision = latest_revision + 1

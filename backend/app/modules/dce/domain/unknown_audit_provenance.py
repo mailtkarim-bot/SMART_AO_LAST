@@ -3,10 +3,12 @@ from datetime import datetime
 from enum import StrEnum
 from uuid import UUID
 
+
 class UnknownAuditSource(StrEnum):
     TRANSITION = "TRANSITION"
     HUMAN_RESUMPTION = "HUMAN_RESUMPTION"
     VERIFICATION = "VERIFICATION"
+
 
 @dataclass(frozen=True, slots=True)
 class UnknownAuditProvenance:

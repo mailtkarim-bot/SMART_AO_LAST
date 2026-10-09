@@ -45,9 +45,7 @@ class SqlAlchemyCaseHandoverReader:
             latest: dict[UUID, CaseHandoverSnapshotRecord] = {}
             for row in rows:
                 latest.setdefault(row.outcome_id, row)
-            selected = sorted(
-                latest.values(), key=lambda item: (item.lot_reference, item.revision)
-            )
+            selected = sorted(latest.values(), key=lambda item: (item.lot_reference, item.revision))
             return tuple(
                 CaseHandoverSnapshotProjection(
                     id=row.id,
@@ -92,8 +90,7 @@ class SqlAlchemyCaseHandoverReader:
                     SubmissionPackageAuthorizationRecord.tenant_id == tenant_id,
                     SubmissionPackageAuthorizationRecord.submission_package_id == package.id,
                     SubmissionPackageAuthorizationRecord.package_version == package.version,
-                    SubmissionPackageAuthorizationRecord.manifest_sha256
-                    == package.manifest_sha256,
+                    SubmissionPackageAuthorizationRecord.manifest_sha256 == package.manifest_sha256,
                     SubmissionPackageAuthorizationRecord.state == "AUTHORIZED",
                 )
                 .limit(1)

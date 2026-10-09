@@ -28,8 +28,12 @@ def upgrade() -> None:
         sa.Column("command_id", sa.UUID(), nullable=False),
         sa.Column("idempotency_key", sa.UUID(), nullable=False),
         sa.Column("correlation_id", sa.UUID(), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
         sa.ForeignKeyConstraint(
             ["tenant_id", "case_id"],
             ["cases.tenant_id", "cases.id"],

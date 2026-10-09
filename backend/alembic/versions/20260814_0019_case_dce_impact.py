@@ -88,9 +88,7 @@ def upgrade() -> None:
         "case_dce_impact_runs",
         ["tenant_id", "case_id", "created_at"],
     )
-    op.create_index(
-        "ix_case_dce_impact_runs_tenant_id", "case_dce_impact_runs", ["tenant_id"]
-    )
+    op.create_index("ix_case_dce_impact_runs_tenant_id", "case_dce_impact_runs", ["tenant_id"])
 
     op.create_table(
         "case_dce_impact_items",
@@ -180,9 +178,7 @@ def upgrade() -> None:
         "case_dce_impact_items",
         ["tenant_id", "case_id"],
     )
-    op.create_index(
-        "ix_case_dce_impact_items_tenant_id", "case_dce_impact_items", ["tenant_id"]
-    )
+    op.create_index("ix_case_dce_impact_items_tenant_id", "case_dce_impact_items", ["tenant_id"])
 
     op.execute(
         "CREATE FUNCTION prevent_case_dce_impact_mutation() RETURNS trigger AS $$ "

@@ -72,8 +72,7 @@ def upgrade() -> None:
         sa.CheckConstraint("aggregate_revision >= 0", name="aggregate_revision"),
         sa.CheckConstraint("priority IN ('LOW', 'NORMAL', 'HIGH', 'CRITICAL')", name="priority"),
     )
-    op.create_index(        "ix_collaborator_tasks_tenant_id", "collaborator_tasks", ["tenant_id"]
-)
+    op.create_index("ix_collaborator_tasks_tenant_id", "collaborator_tasks", ["tenant_id"])
     op.create_index(
         "ix_collab_tasks__tenant_assignment_state",
         "collaborator_tasks",

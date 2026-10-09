@@ -105,9 +105,9 @@ class ContractExecutionEvidenceReadService:
                 declared_version_id = row.case_dce_version_id_at_recording
                 version = versions.get(declared_version_id)
                 if declared_version_id is None:
-                    relation: Literal[
-                        "MATCHES_CASE_CURRENT", "REVIEW_REQUIRED", "UNKNOWN"
-                    ] = "UNKNOWN"
+                    relation: Literal["MATCHES_CASE_CURRENT", "REVIEW_REQUIRED", "UNKNOWN"] = (
+                        "UNKNOWN"
+                    )
                 elif (
                     declared_version_id != case.applicable_dce_version_id
                     or version is None
@@ -119,9 +119,9 @@ class ContractExecutionEvidenceReadService:
                     relation = "MATCHES_CASE_CURRENT"
                 linked_instrument_id = row.contract_instrument_version_id
                 if linked_instrument_id is None or linked_instrument_id not in instrument_versions:
-                    instrument_relation: Literal[
-                        "DECLARED", "REVIEW_REQUIRED", "UNKNOWN"
-                    ] = "UNKNOWN"
+                    instrument_relation: Literal["DECLARED", "REVIEW_REQUIRED", "UNKNOWN"] = (
+                        "UNKNOWN"
+                    )
                 elif linked_instrument_id in superseded_instrument_version_ids:
                     instrument_relation = "REVIEW_REQUIRED"
                 else:
