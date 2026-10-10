@@ -486,6 +486,9 @@ from app.modules.preparation.infrastructure.document_storage import (
 from app.modules.preparation.infrastructure.response_plan_reader import (
     SqlAlchemyPreparationResponsePlanSourceReader,
 )
+from app.modules.preparation.infrastructure.submission_source_reader import (
+    PreparationSubmissionSourceReader,
+)
 from app.modules.pricing.application.case_contract_change import (
     CaseContractChangeService,
     case_contract_change_handlers,
@@ -656,6 +659,20 @@ class AppRuntime:
         submission_export_notifier = _build_submission_export_notifier()
         submission_deadline_calendar = _build_submission_deadline_calendar()
         public_notice_search = _build_public_notice_search()
+        review_handlers = preparation_review_handlers(
+            storage=preparation_storage,
+            source_reader=SqlAlchemyPreparationResponsePlanSourceReader(
+                capability_reader=SqlAlchemyCollaboratorCapabilityReader(session_factory)
+            ),
+            source_storage=LocalQuarantineStorageAdapter(
+                root=Path(
+                    os.getenv(
+                        "SMART_AO_DCE_QUARANTINE_ROOT",
+                        "/var/lib/smart_ao/dce-quarantine",
+                    )
+                )
+            ),
+        )
         handlers: dict[str, CommandHandler] = {
             **enterprise_upload_handlers(),
             "ClaimDceStagedObjectUpload": ClaimDceStagedObjectUploadHandler(),
@@ -749,22 +766,15 @@ class AppRuntime:
             **pricing_import_creation_handlers(),
             **pricing_import_handlers(),
             **opportunity_watch_profile_handlers(),
-            **preparation_review_handlers(
-                storage=preparation_storage,
-                source_reader=SqlAlchemyPreparationResponsePlanSourceReader(
-                    capability_reader=SqlAlchemyCollaboratorCapabilityReader(session_factory)
-                ),
-                source_storage=LocalQuarantineStorageAdapter(
-                    root=Path(
-                        os.getenv(
-                            "SMART_AO_DCE_QUARANTINE_ROOT",
-                            "/var/lib/smart_ao/dce-quarantine",
-                        )
-                    )
-                ),
-            ),
+            **review_handlers,
             **submission_handlers(
                 decision_gate_reader=SqlAlchemySubmissionDecisionGateReader(),
+                preparation_source_reader=PreparationSubmissionSourceReader(
+                    review_handler=review_handlers["CreateTechnicalResponseDraft"],
+                    transmission_handler=preparation_transmission_handlers(
+                        storage=preparation_storage
+                    )["CreatePreparationSnapshot"],
+                ),
             ),
             **submission_evidence_handlers(),
             **submission_signature_handlers(),

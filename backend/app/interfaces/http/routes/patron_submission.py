@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Header, HTTPException, status
+from fastapi import APIRouter, Header, HTTPException, Response, status
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from app.interfaces.http.dependencies.auth import resolve_bearer_context as _resolve_context
@@ -152,6 +152,7 @@ def build_patron_submission_router(
     )
     def read_submission_manifest(
         submission_package_id: UUID,
+        response: Response,
         authorization: str | None = Header(default=None),
     ) -> SubmissionPackageManifestResponse:
         context = _resolve_context(
@@ -170,6 +171,7 @@ def build_patron_submission_router(
             raise HTTPException(status_code=403, detail="FORBIDDEN") from error
         except CommandExecutionError as error:
             raise HTTPException(status_code=422, detail=str(error)) from error
+        response.headers["Cache-Control"] = "no-store"
         return SubmissionPackageManifestResponse.model_validate(manifest)
 
     @router.get(

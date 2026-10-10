@@ -972,7 +972,7 @@ class PreparationReviewHandler:
             )
             sections = list(source_draft.section_codes_json)
             refs = [UUID(item) for item in source_draft.source_refs_json]
-            plan, source_facts = self._current_response_plan(
+            plan, source_facts = self.current_response_plan(
                 session=session,
                 package=package,
                 command=cast(
@@ -986,7 +986,7 @@ class PreparationReviewHandler:
                 source_draft.response_plan_version,
             ):
                 raise CommandExecutionError("RESPONSE_PLAN_UNKNOWN")
-            self._reread_response_plan_sources(
+            self.reread_response_plan_sources(
                 session=session,
                 plan=plan,
                 source_facts=source_facts,
@@ -1163,12 +1163,12 @@ class PreparationReviewHandler:
             result_code="PREPARATION_CORRECTION_ADDED",
         )
 
-    def _current_response_plan(
+    def current_response_plan(
         self,
         *,
         session: Session,
         package: PreparationPackageRecord,
-        command: _ResponsePlanFields,
+        command: _ResponsePlanFields | None,
         context: CommandContext,
     ) -> tuple[PreparationResponsePlanRecord, dict[UUID, PreparationResponsePlanFact]]:
         plan = session.scalar(
@@ -1196,9 +1196,11 @@ class PreparationReviewHandler:
             if item.get("source_proposal_id") is not None
         }
         sections = {item["section_code"] for item in plan_items}
-        if set(command.section_codes) != sections or {str(ref) for ref in command.source_refs} != {
-            str(proposal_id) for proposal_id in proposal_ids
-        }:
+        if command is not None and (
+            set(command.section_codes) != sections
+            or {str(ref) for ref in command.source_refs}
+            != {str(proposal_id) for proposal_id in proposal_ids}
+        ):
             raise CommandExecutionError("RESPONSE_PLAN_MISMATCH")
         sources = self._source_reader.read(
             session=session,
@@ -1309,13 +1311,13 @@ class PreparationReviewHandler:
         )
         refs = sorted({str(ref) for ref in command.source_refs})
         sections = sorted(set(command.section_codes))
-        response_plan, source_facts = self._current_response_plan(
+        response_plan, source_facts = self.current_response_plan(
             session=session,
             package=package,
             command=command,
             context=context,
         )
-        proof_counts = self._reread_response_plan_sources(
+        proof_counts = self.reread_response_plan_sources(
             session=session,
             plan=response_plan,
             source_facts=source_facts,
@@ -1377,7 +1379,7 @@ class PreparationReviewHandler:
             result_code="TECHNICAL_RESPONSE_DRAFT_CREATED",
         )
 
-    def _reread_response_plan_sources(
+    def reread_response_plan_sources(
         self,
         *,
         session: Session,

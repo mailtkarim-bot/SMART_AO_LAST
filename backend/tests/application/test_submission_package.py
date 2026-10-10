@@ -467,6 +467,7 @@ def test_submission_manifest_preview_is_bounded_and_reflects_p5_status(
     package_id = UUID(prepared.aggregate_refs[0]["aggregate_id"])
 
     before = submission.read_manifest(actor=actor, submission_package_id=package_id, now=NOW)
+    assert before["source_origin_state"] == "UNKNOWN"
     assert before["authorization_status"] == "NOT_AUTHORIZED"
     assert before["external_submission"] == "NOT_PERFORMED"
     assert "storage_key" not in str(before["manifest"])

@@ -26,6 +26,11 @@ from app.modules.enterprise.infrastructure.models import (
     EnterpriseDocumentUploadRecord,
 )
 from app.modules.membership.infrastructure.records import CaseAssignmentRecord
+from app.modules.preparation.application.review import PreparationReviewHandler
+from app.modules.preparation.application.transmission import (
+    PreparationTransmissionHandler,
+    PreparationTransmissionService,
+)
 from app.modules.preparation.infrastructure.models import (
     GeneratedTechnicalDocumentRecord,
     PreparationPackageRecord,
@@ -33,9 +38,21 @@ from app.modules.preparation.infrastructure.models import (
     PreparationResponsePlanRecord,
     TechnicalResponseDraftRecord,
 )
-from app.platform.persistence.models import DomainEventRecord
+from app.modules.preparation.infrastructure.submission_source_reader import (
+    PreparationSubmissionSourceReader,
+)
+from app.modules.submission.infrastructure.models import (
+    SubmissionPackageAuthorizationRecord,
+    SubmissionPackageRecord,
+)
+from app.platform.events.dispatcher import CommandContext, CommandExecutionError
+from app.platform.persistence.models import CommandReceiptRecord, DomainEventRecord
 from app.platform.security.capabilities import Capability
-from app.platform.security.models import PreparationSnapshotRecord, TenantMembershipRecord
+from app.platform.security.models import (
+    AuthSessionRecord,
+    PreparationSnapshotRecord,
+    TenantMembershipRecord,
+)
 from sqlalchemy.exc import IntegrityError, ProgrammingError
 from tests.api.test_collaborator_capability_api import (
     NOW,
@@ -617,9 +634,300 @@ def test_response_plan_is_versioned_scope_checked_and_preserves_unknown(
     assert delivery["transmission_receipt"]["result_code"] == ("PREPARATION_TRANSMITTED_TO_PATRON")
     assert deliveries.headers["Cache-Control"] == "no-store"
     assert "external_submission" not in deliveries.text
+    # Decision is a named synthetic gate; this proof does not qualify P3.
+    from app.modules.submission.infrastructure.decision_gate_reader import (
+        SqlAlchemySubmissionDecisionGateReader,
+    )
+    from tests.application.test_submission_package import _ReadySubmissionDecisionGateReader
+
+    monkeypatch.setattr(
+        SqlAlchemySubmissionDecisionGateReader,
+        "read",
+        _ReadySubmissionDecisionGateReader.read,
+    )
+
+    class SubmissionClock:
+        @staticmethod
+        def now(*, tz):
+            return NOW
+
+    monkeypatch.setattr("app.interfaces.http.routes.patron_submission.datetime", SubmissionClock)
+    candidate_path = f"/api/v1/patron/preparation/{package_id}/submission-packages"
+    missing_source_command_id = uuid4()
+    missing_source = receipt_client.post(
+        candidate_path,
+        json={
+            "command_id": str(missing_source_command_id),
+            "idempotency_key": str(uuid4()),
+            "expected_preparation_revision": 9,
+            "submission_mode": "CANDIDATURE_ONLY",
+            "candidature_only_reason": "Synthetic C10 origin qualification only.",
+        },
+        headers=receipt_headers,
+    )
+    assert missing_source.status_code == 422, missing_source.text
+    with session_factory() as session:
+        assert (
+            session.scalar(
+                sa.select(CommandReceiptRecord.id).where(
+                    CommandReceiptRecord.tenant_id == actor.tenant_id,
+                    CommandReceiptRecord.command_id == missing_source_command_id,
+                )
+            )
+            is None
+        )
+    source_ref = {
+        "snapshot_id": str(snapshot_id),
+        "snapshot_version": 1,
+        "manifest_sha256": delivery["snapshot_manifest_sha256"],
+    }
+    candidate_body = {
+        "command_id": str(uuid4()),
+        "idempotency_key": str(uuid4()),
+        "expected_preparation_revision": 9,
+        "submission_mode": "CANDIDATURE_ONLY",
+        "candidature_only_reason": "Synthetic C10 origin qualification only.",
+        "preparation_snapshot_source": source_ref,
+    }
+
+    expected_candidates = 0
+
+    def assert_candidate_refused(body, expected_status=422):
+        response = receipt_client.post(candidate_path, json=body, headers=receipt_headers)
+        assert response.status_code == expected_status, response.text
+        with session_factory() as session:
+            assert (
+                session.scalar(sa.select(sa.func.count()).select_from(SubmissionPackageRecord))
+                == expected_candidates
+            )
+            assert (
+                session.scalar(
+                    sa.select(sa.func.count()).select_from(SubmissionPackageAuthorizationRecord)
+                )
+                == 0
+            )
+            assert (
+                session.scalar(
+                    sa.select(CommandReceiptRecord.id).where(
+                        CommandReceiptRecord.command_id == body["command_id"],
+                        CommandReceiptRecord.tenant_id == actor.tenant_id,
+                    )
+                )
+                is None
+            )
+            assert (
+                session.scalar(
+                    sa.select(DomainEventRecord.id).where(
+                        DomainEventRecord.command_id == body["command_id"],
+                        DomainEventRecord.tenant_id == actor.tenant_id,
+                    )
+                )
+                is None
+            )
+        return response.json()
+
+    for changed_ref in (
+        {**source_ref, "snapshot_id": str(uuid4())},
+        {**source_ref, "snapshot_version": 2},
+        {**source_ref, "manifest_sha256": "0" * 64},
+        {**source_ref, "storage_key": "never accepted"},
+    ):
+        assert_candidate_refused(
+            {
+                **candidate_body,
+                "command_id": str(uuid4()),
+                "idempotency_key": str(uuid4()),
+                "preparation_snapshot_source": changed_ref,
+            }
+        )
+    assert_candidate_refused({**candidate_body, "expected_preparation_revision": 8}, 409)
+
+    def unavailable_receipt(**kwargs):
+        raise CommandExecutionError("PREPARATION_RECEIPT_UNKNOWN")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(
+            PreparationTransmissionService,
+            "read_command_receipt",
+            staticmethod(unavailable_receipt),
+        )
+        assert_candidate_refused(candidate_body)
+    # Missing/altered private source and generated C10 bytes fail before any effect.
+    for contents in (b"tampered", None):
+        if contents is None:
+            source_path.unlink()
+        else:
+            source_path.write_bytes(contents)
+        assert_candidate_refused(candidate_body)
+        source_path.write_bytes(source_bytes)
+    with session_factory() as session:
+        draft_record = session.scalar(
+            sa.select(TechnicalResponseDraftRecord).where(
+                TechnicalResponseDraftRecord.draft_id == patron_draft["draft_id"],
+                TechnicalResponseDraftRecord.version == 2,
+            )
+        )
+        from app.bootstrap.application import _build_preparation_storage
+
+        draft_storage = _build_preparation_storage()
+        original_draft = draft_storage.read(storage_key=draft_record.storage_key)
+        storage_key = draft_record.storage_key
+    with monkeypatch.context() as patch:
+        patch.setattr(type(draft_storage), "read", lambda self, **kwargs: b"altered draft")
+        assert_candidate_refused(candidate_body)
+    assert original_draft and storage_key
+    with session_factory.begin() as session:
+        auth = session.get(AuthSessionRecord, actor.session_id)
+        auth.mfa_verified_at = NOW - timedelta(minutes=16)
+    assert_candidate_refused(candidate_body, 403)
+    with session_factory.begin() as session:
+        session.get(AuthSessionRecord, actor.session_id).mfa_verified_at = NOW
+    from concurrent.futures import ThreadPoolExecutor
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        concurrent = list(
+            executor.map(
+                lambda _: receipt_client.post(
+                    candidate_path, json=candidate_body, headers=receipt_headers
+                ),
+                range(2),
+            )
+        )
+    assert sorted(response.status_code for response in concurrent) == [200, 201], [
+        r.text for r in concurrent
+    ]
+    candidate = next(response for response in concurrent if response.status_code == 201)
+    candidate_id = candidate.json()["aggregate_refs"][0]["aggregate_id"]
+    retry = receipt_client.post(candidate_path, json=candidate_body, headers=receipt_headers)
+    assert retry.status_code == 200 and retry.json()["replayed"] is True
+    assert retry.json()["aggregate_refs"] == candidate.json()["aggregate_refs"]
+    conflicting = receipt_client.post(
+        candidate_path,
+        json={
+            **candidate_body,
+            "preparation_snapshot_source": {**source_ref, "manifest_sha256": "0" * 64},
+        },
+        headers=receipt_headers,
+    )
+    assert conflicting.status_code == 409
+    new_runtime_client, new_runtime_tokens = _client(session_factory)
+    candidate_manifest = new_runtime_client.get(
+        f"/api/v1/patron/submission-packages/{candidate_id}/manifest",
+        headers=_headers(new_runtime_tokens, actor),
+    )
+    assert candidate_manifest.status_code == 200, candidate_manifest.text
+    candidate_read = candidate_manifest.json()
+    assert candidate_read["source_origin_state"] == "RECORDED"
+    assert candidate_read["manifest_sha256"] != source_ref["manifest_sha256"]
+    assert candidate_read["authorization_status"] == "NOT_AUTHORIZED"
+    assert candidate_read["external_submission"] == "NOT_PERFORMED"
+    origin = candidate_read["manifest"]["preparation_source"]
+    assert origin == {
+        **source_ref,
+        "transmission_id": str(transmission_id),
+        "technical_document_id": str(generated_document_id),
+        "technical_document_version": 1,
+        "readiness": delivery["snapshot_manifest"]["readiness"],
+        "response_drafts": delivery["snapshot_manifest"]["response_drafts"],
+    }
+    assert "storage_key" not in candidate_manifest.text
+    assert candidate_manifest.headers["Cache-Control"] == "no-store"
+    assert (
+        candidate_read["manifest_sha256"]
+        == hashlib.sha256(
+            json.dumps(
+                candidate_read["manifest"],
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode()
+        ).hexdigest()
+    )
+    denied_authorization = receipt_client.post(
+        f"/api/v1/patron/submission-packages/{candidate_id}/authorize",
+        json={
+            "command_id": str(uuid4()),
+            "idempotency_key": str(uuid4()),
+            "authorization_id": str(uuid4()),
+            "expected_package_version": 1,
+            "rationale": "Synthetic guard qualification.",
+        },
+        headers=receipt_headers,
+    )
+    assert denied_authorization.status_code == 422, denied_authorization.text
+    assert denied_authorization.json()["detail"] == "C10_SUBMISSION_AUTHORIZATION_NOT_QUALIFIED"
+    denied_export = receipt_client.get(
+        f"/api/v1/patron/submission-packages/{candidate_id}/export", headers=receipt_headers
+    )
+    assert denied_export.status_code == 422, denied_export.text
+    with session_factory() as session:
+        assert session.scalar(sa.select(sa.func.count()).select_from(SubmissionPackageRecord)) == 1
+        assert (
+            session.scalar(
+                sa.select(sa.func.count()).select_from(SubmissionPackageAuthorizationRecord)
+            )
+            == 0
+        )
+    expected_candidates = 1
+    # A newer source snapshot with no transmission cannot replace the delivered one.
+    with session_factory.begin() as session:
+        previous = session.get(PreparationSnapshotRecord, snapshot_id)
+        newer_id = uuid4()
+        session.add(
+            PreparationSnapshotRecord(
+                **{
+                    column.key: getattr(previous, column.key)
+                    for column in previous.__table__.columns
+                    if column.key
+                    not in {
+                        "id",
+                        "version",
+                        "created_at",
+                        "updated_at",
+                        "command_id",
+                        "idempotency_key",
+                    }
+                },
+                id=newer_id,
+                version=2,
+                command_id=uuid4(),
+                idempotency_key=uuid4(),
+            )
+        )
+    assert_candidate_refused(
+        {
+            **candidate_body,
+            "command_id": str(uuid4()),
+            "idempotency_key": str(uuid4()),
+        }
+    )
+    assert_candidate_refused(
+        {
+            **candidate_body,
+            "command_id": str(uuid4()),
+            "idempotency_key": str(uuid4()),
+            "preparation_snapshot_source": {
+                **source_ref,
+                "snapshot_id": str(newer_id),
+                "snapshot_version": 2,
+            },
+        }
+    )
     with session_factory.begin() as session:
         membership = session.get(TenantMembershipRecord, actor.membership_id)
         membership.role = "COLLABORATEUR"
+    assert (
+        receipt_client.post(
+            candidate_path, json=candidate_body, headers=receipt_headers
+        ).status_code
+        == 403
+    )
+    assert (
+        receipt_client.get(
+            f"/api/v1/patron/submission-packages/{candidate_id}/manifest", headers=receipt_headers
+        ).status_code
+        == 403
+    )
     collaborator_receipt_read = receipt_client.get(
         f"/api/v1/preparation/{package_id}/transmissions", headers=receipt_headers
     )
@@ -873,6 +1181,71 @@ def test_response_plan_is_versioned_scope_checked_and_preserves_unknown(
     )
     with session_factory.begin() as session:
         session.add(foreign_proposal)
+    foreign_package_id = uuid4()
+    with session_factory.begin() as session:
+        foreign_dce = session.scalar(
+            sa.select(CaseRecord.applicable_dce_version_id).where(
+                CaseRecord.tenant_id == foreign_actor.tenant_id,
+                CaseRecord.id == foreign_case,
+            )
+        )
+        session.add(
+            PreparationPackageRecord(
+                id=foreign_package_id,
+                tenant_id=foreign_actor.tenant_id,
+                case_id=foreign_case,
+                assignment_id=foreign_assignment,
+                dce_version_id=foreign_dce,
+                state="IN_PREPARATION",
+                aggregate_revision=0,
+                created_by_actor_id=foreign_actor.actor_id,
+                membership_id=foreign_actor.membership_id,
+            )
+        )
+        session.flush()
+        session.add(
+            PreparationResponsePlanRecord(
+                id=uuid4(),
+                plan_id=uuid4(),
+                package_id=foreign_package_id,
+                tenant_id=foreign_actor.tenant_id,
+                dce_version_id=foreign_dce,
+                version=1,
+                state="UNKNOWN",
+                content_json={},
+                plan_sha256=hashlib.sha256(b"{}").hexdigest(),
+                source_evidence_json=[],
+                source_evidence_sha256=hashlib.sha256(b"[]").hexdigest(),
+                actor_id=foreign_actor.actor_id,
+                membership_id=foreign_actor.membership_id,
+                command_id=uuid4(),
+                idempotency_key=uuid4(),
+                correlation_id=None,
+            )
+        )
+    from app.bootstrap.application import _build_preparation_storage
+
+    private_storage = _build_preparation_storage()
+    source_reader = PreparationSubmissionSourceReader(
+        review_handler=PreparationReviewHandler(storage=private_storage),
+        transmission_handler=PreparationTransmissionHandler(storage=private_storage),
+    )
+    with session_factory() as session:
+        foreign_context = CommandContext(
+            tenant_id=foreign_actor.tenant_id,
+            actor_id=foreign_actor.actor_id,
+            actor_kind="PATRON_ADMIN",
+            membership_id=foreign_actor.membership_id,
+            received_at=NOW,
+        )
+        for proposed_id in (snapshot_id, uuid4()):
+            with pytest.raises(CommandExecutionError, match="PREPARATION_SOURCE_UNKNOWN"):
+                source_reader.read(
+                    session=session,
+                    preparation_package_id=foreign_package_id,
+                    source={**source_ref, "snapshot_id": str(proposed_id)},
+                    context=foreign_context,
+                )
     _auth_session(session_factory, foreign_actor)
     foreign_client, foreign_tokens = _client(session_factory)
     foreign_headers = _headers(foreign_tokens, foreign_actor)
@@ -953,7 +1326,7 @@ def test_response_plan_is_versioned_scope_checked_and_preserves_unknown(
     with session_factory() as session:
         assert (
             session.scalar(sa.select(sa.func.count()).select_from(PreparationResponsePlanRecord))
-            == 3
+            == 4
         )
         assert (
             session.scalar(

@@ -170,7 +170,7 @@ class PreparationTransmissionService:
                     or manifest.get("case_id") != str(package.case_id)
                 ):
                     raise CommandExecutionError("PREPARATION_RECEIPT_UNKNOWN")
-                snapshot_receipt = self._read_command_receipt(
+                snapshot_receipt = self.read_command_receipt(
                     session=session,
                     tenant_id=actor.tenant_id,
                     command_id=snapshot.command_id,
@@ -180,7 +180,7 @@ class PreparationTransmissionService:
                     expected_aggregate_id=snapshot.id,
                     expected_aggregate_revision=snapshot.version,
                 )
-                transmission_receipt = self._read_command_receipt(
+                transmission_receipt = self.read_command_receipt(
                     session=session,
                     tenant_id=actor.tenant_id,
                     command_id=transmission.command_id,
@@ -193,7 +193,7 @@ class PreparationTransmissionService:
             return tuple(deliveries)
 
     @staticmethod
-    def _read_command_receipt(
+    def read_command_receipt(
         *,
         session: Session,
         tenant_id: UUID,
@@ -298,7 +298,7 @@ class PreparationTransmissionHandler:
         if Capability.WORK_TASK_WRITE.value not in assignment.scope_actions_json:
             raise CommandExecutionError("ASSIGNMENT_SCOPE_FORBIDDEN")
 
-    def _current_c10_review_manifest(
+    def current_c10_review_manifest(
         self, *, session: Session, package: PreparationPackageRecord, tenant_id: UUID
     ) -> list[dict[str, object]] | None:
         plan = session.scalar(
@@ -437,7 +437,7 @@ class PreparationTransmissionHandler:
         )
         if not documents:
             raise CommandExecutionError("TECHNICAL_DOCUMENT_REQUIRED")
-        c10_review_manifest = self._current_c10_review_manifest(
+        c10_review_manifest = self.current_c10_review_manifest(
             session=session, package=package, tenant_id=package.tenant_id
         )
         if package.state not in {"GENERATED", "A_REVIEW", "READY"}:
@@ -578,7 +578,7 @@ class PreparationTransmissionHandler:
         )
         if snapshot is None:
             raise CommandExecutionError("SNAPSHOT_NOT_FOUND_OR_FORBIDDEN")
-        current_c10_review_manifest = self._current_c10_review_manifest(
+        current_c10_review_manifest = self.current_c10_review_manifest(
             session=session, package=package, tenant_id=package.tenant_id
         )
         if (

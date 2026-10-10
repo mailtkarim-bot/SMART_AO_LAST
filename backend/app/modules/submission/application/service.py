@@ -23,6 +23,7 @@ from app.modules.preparation.infrastructure.models import (
     GeneratedTechnicalDocumentRecord,
     PreparationPackageRecord,
     PreparationReadinessRecord,
+    PreparationResponsePlanRecord,
 )
 from app.modules.pricing.infrastructure.models import FinancialReportSnapshotRecord
 from app.modules.submission.application.commands import (
@@ -30,7 +31,10 @@ from app.modules.submission.application.commands import (
     PrepareSubmissionPackageCommand,
 )
 from app.modules.submission.application.notifications import SUBMISSION_EXPORT_EMAIL_TOPIC
-from app.modules.submission.application.ports import SubmissionDecisionGateReader
+from app.modules.submission.application.ports import (
+    SubmissionDecisionGateReader,
+    SubmissionPreparationSourceReader,
+)
 from app.modules.submission.infrastructure.models import (
     SubmissionPackageAuthorizationRecord,
     SubmissionPackageRecord,
@@ -117,6 +121,8 @@ class SubmissionPackageService:
             ).encode("utf-8")
             if hashlib.sha256(manifest_bytes).hexdigest() != record.manifest_sha256:
                 raise CommandExecutionError("SUBMISSION_MANIFEST_INTEGRITY_FAILED")
+            if record.manifest_json.get("preparation_source") is not None:
+                raise CommandExecutionError("C10_SUBMISSION_AUTHORIZATION_NOT_QUALIFIED")
             document = session.scalar(
                 sa.select(GeneratedTechnicalDocumentRecord).where(
                     GeneratedTechnicalDocumentRecord.tenant_id == actor.tenant_id,
@@ -337,6 +343,9 @@ class SubmissionPackageService:
                 "state": package.state,
                 "manifest_sha256": package.manifest_sha256,
                 "manifest": package.manifest_json,
+                "source_origin_state": "RECORDED"
+                if package.manifest_json.get("preparation_source")
+                else "UNKNOWN",
                 "authorization_status": "AUTHORIZED"
                 if authorization is not None
                 else "NOT_AUTHORIZED",
@@ -393,6 +402,7 @@ class SubmissionPackageService:
                     classification=DataClassification.FINANCIAL_PRIVATE,
                 ),
                 evaluated_at=now,
+                mfa_required=command.preparation_snapshot_source is not None,
             ),
         )
         if not decision.allowed:
@@ -415,8 +425,14 @@ class SubmissionPackageService:
 class PrepareSubmissionPackageHandler:
     """Freeze server-resolved references; never claim external submission success."""
 
-    def __init__(self, *, decision_gate_reader: SubmissionDecisionGateReader | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        decision_gate_reader: SubmissionDecisionGateReader | None = None,
+        preparation_source_reader: SubmissionPreparationSourceReader | None = None,
+    ) -> None:
         self._decision_gate_reader = decision_gate_reader
+        self._preparation_source_reader = preparation_source_reader
 
     def execute(
         self,
@@ -504,6 +520,45 @@ class PrepareSubmissionPackageHandler:
         )
         if case is None:
             raise CommandExecutionError("NOT_FOUND_OR_FORBIDDEN")
+        source_ref = command.preparation_snapshot_source
+        if self._preparation_source_reader is None:
+            has_c10 = session.scalar(
+                sa.select(PreparationResponsePlanRecord.id)
+                .where(
+                    PreparationResponsePlanRecord.tenant_id == context.tenant_id,
+                    PreparationResponsePlanRecord.package_id == preparation.id,
+                )
+                .limit(1)
+            )
+            if source_ref is not None or has_c10 is not None:
+                raise CommandExecutionError("PREPARATION_SOURCE_UNKNOWN")
+            origin = None
+        else:
+            origin = self._preparation_source_reader.read(
+                session=session,
+                preparation_package_id=preparation.id,
+                source=source_ref.model_dump(mode="json") if source_ref is not None else None,
+                context=context,
+            )
+        if origin is not None:
+            document = session.scalar(
+                sa.select(GeneratedTechnicalDocumentRecord).where(
+                    GeneratedTechnicalDocumentRecord.tenant_id == context.tenant_id,
+                    GeneratedTechnicalDocumentRecord.package_id == preparation.id,
+                    GeneratedTechnicalDocumentRecord.id
+                    == UUID(str(origin["technical_document_id"])),
+                    GeneratedTechnicalDocumentRecord.version
+                    == origin["technical_document_version"],
+                    GeneratedTechnicalDocumentRecord.state == "GENERATED",
+                )
+            )
+            if document is None or origin["readiness"] != {
+                "revision": readiness.revision,
+                "state": readiness.state,
+                "blocker_codes": sorted(readiness.blocker_codes_json),
+                "warning_codes": sorted(readiness.warning_codes_json),
+            }:
+                raise CommandExecutionError("PREPARATION_SOURCE_UNKNOWN")
         enterprise_entries = self._validated_enterprise_entries(
             session=session,
             preparation=preparation,
@@ -553,6 +608,9 @@ class PrepareSubmissionPackageHandler:
             "exclusions": ["private_storage", "financial_amounts", "external_submission_result"],
             "external_submission": "NOT_PERFORMED",
         }
+        if origin is not None:
+            manifest["schema_version"] = 3
+            manifest["preparation_source"] = origin
         serialized = json.dumps(
             manifest, ensure_ascii=False, sort_keys=True, separators=(",", ":")
         ).encode("utf-8")
@@ -736,6 +794,8 @@ class AuthorizeSubmissionPackageHandler:
         ).encode("utf-8")
         if hashlib.sha256(manifest_bytes).hexdigest() != package.manifest_sha256:
             raise CommandExecutionError("SUBMISSION_MANIFEST_INTEGRITY_FAILED")
+        if package.manifest_json.get("preparation_source") is not None:
+            raise CommandExecutionError("C10_SUBMISSION_AUTHORIZATION_NOT_QUALIFIED")
         existing = session.scalar(
             sa.select(SubmissionPackageAuthorizationRecord).where(
                 SubmissionPackageAuthorizationRecord.tenant_id == context.tenant_id,
@@ -795,9 +855,14 @@ class AuthorizeSubmissionPackageHandler:
 
 
 def submission_handlers(
-    *, decision_gate_reader: SubmissionDecisionGateReader | None = None
+    *,
+    decision_gate_reader: SubmissionDecisionGateReader | None = None,
+    preparation_source_reader: SubmissionPreparationSourceReader | None = None,
 ) -> dict[str, CommandHandler]:
-    handler = PrepareSubmissionPackageHandler(decision_gate_reader=decision_gate_reader)
+    handler = PrepareSubmissionPackageHandler(
+        decision_gate_reader=decision_gate_reader,
+        preparation_source_reader=preparation_source_reader,
+    )
     authorization_handler = AuthorizeSubmissionPackageHandler(
         decision_gate_reader=decision_gate_reader
     )

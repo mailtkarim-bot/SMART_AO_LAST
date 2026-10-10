@@ -3,8 +3,9 @@ from __future__ import annotations
 from typing import Literal
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import Field, SerializerFunctionWrapHandler, model_serializer
 
+from app.modules.submission.public.contracts import PreparationSnapshotSource
 from app.platform.events.command_contracts import ApplicationCommand
 
 
@@ -17,6 +18,15 @@ class PrepareSubmissionPackageCommand(ApplicationCommand):
     expected_preparation_revision: int = Field(ge=0)
     submission_mode: Literal["FULL", "CANDIDATURE_ONLY"] = "FULL"
     candidature_only_reason: str | None = Field(default=None, min_length=1, max_length=1_000)
+
+    preparation_snapshot_source: PreparationSnapshotSource | None = None
+
+    @model_serializer(mode="wrap")
+    def preserve_legacy_intent_hash(self, handler: SerializerFunctionWrapHandler) -> dict:
+        serialized = handler(self)
+        if self.preparation_snapshot_source is None:
+            serialized.pop("preparation_snapshot_source", None)
+        return serialized
 
 
 class AuthorizeSubmissionPackageCommand(ApplicationCommand):
