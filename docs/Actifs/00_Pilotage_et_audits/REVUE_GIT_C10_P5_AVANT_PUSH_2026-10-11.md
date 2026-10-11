@@ -39,7 +39,7 @@ CT31-41 prouve des écritures legacy émulées et l’inspection statique de `d1
 
 Commit logiciel vérifié : `2800bbda398027662a911deb11cdb24f809d6add`. Le commit documentaire qui suit contient la réconciliation du plan, du cahier technique, du runbook et de ce dossier.
 
-L’Owner a explicitement demandé ce push GitHub le 11 octobre. Les changements sont répartis en commits logiciels et documentaires cohérents sur `codex/reconcile-smartao-20261009`, puis publiés avec un push normal et un upstream, sans force-push ni réécriture de l’histoire. La présence du commit distant et la propreté du checkout sont vérifiées après le push; le SHA courant se résout par `git rev-parse origin/codex/reconcile-smartao-20261009`.
+L’Owner a explicitement demandé ce push GitHub le 11 octobre. Les changements sont répartis en commits logiciels et documentaires cohérents sur `codex/reconcile-smartao-20261009`, avec checkout propre. Le push normal avec upstream a été rejeté par la revue automatique d’approbation : elle exige une confirmation explicite de l’exposition des commits au dépôt public `mailtkarim-bot/SMART_AO_LAST`. Aucun push n’a eu lieu, aucune ref distante n’a été créée et aucun contournement n’a été tenté. Après confirmation, vérifier le SHA distant égal au HEAD et la propreté du checkout; aucune fusion main, force-push ou réécriture de l’histoire.
 
 La publication du code dans le dépôt GitHub ne vaut pas GO produit. Aucun VPS, déploiement, effet P3, dépôt métier externe ou ouverture publique de l’application. Le workflow CI existant écoute les pushes main, les PR et workflow_dispatch; un simple push de cette branche ne constitue pas une exécution CI GitHub.
 
