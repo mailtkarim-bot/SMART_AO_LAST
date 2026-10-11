@@ -45,6 +45,7 @@ class AuthorizeSubmissionPackageRequest(BaseModel):
     correlation_id: UUID | None = None
     authorization_id: UUID
     expected_package_version: int = Field(ge=1)
+    expected_manifest_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     rationale: str = Field(min_length=1, max_length=2_000)
 
     def to_command(self, *, submission_package_id: UUID):
@@ -57,6 +58,7 @@ class AuthorizeSubmissionPackageRequest(BaseModel):
             authorization_id=self.authorization_id,
             submission_package_id=submission_package_id,
             expected_package_version=self.expected_package_version,
+            expected_manifest_sha256=self.expected_manifest_sha256,
             rationale=self.rationale,
         )
 

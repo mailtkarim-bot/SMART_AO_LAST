@@ -843,6 +843,7 @@ def _service_with_session(values: list[object], *, policy: object) -> Submission
     session.scalar.side_effect = values
     factory = MagicMock()
     factory.return_value.__enter__.return_value = session
+    factory.begin.return_value.__enter__.return_value = session
     storage = SimpleNamespace(read=lambda **_kwargs: b"technical")
     return SubmissionPackageService(
         session_factory=factory,

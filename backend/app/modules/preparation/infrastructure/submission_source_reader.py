@@ -10,6 +10,12 @@ from uuid import UUID
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
+from app.modules.case.infrastructure.models.case import CaseRecord
+from app.modules.dce.infrastructure.models.dce_requirement_confirmations import (
+    DceRequirementConfirmationCurrentRecord,
+)
+from app.modules.dce.infrastructure.models.dce_requirements import DceRequirementRecord
+from app.modules.dce.infrastructure.models.dce_version import DceVersionRecord
 from app.modules.preparation.application.review import PreparationReviewHandler
 from app.modules.preparation.application.transmission import (
     PreparationTransmissionHandler,
@@ -49,25 +55,68 @@ class PreparationSubmissionSourceReader:
     ) -> dict[str, object] | None:
         db = cast(Session, session)
         package = db.scalar(
-            sa.select(PreparationPackageRecord).where(
+            sa.select(PreparationPackageRecord)
+            .where(
                 PreparationPackageRecord.tenant_id == context.tenant_id,
                 PreparationPackageRecord.id == preparation_package_id,
             )
+            .with_for_update()
         )
         if package is None:
             raise CommandExecutionError("NOT_FOUND_OR_FORBIDDEN")
-        has_plan = db.scalar(
-            sa.select(PreparationResponsePlanRecord.id)
+        plan = db.scalar(
+            sa.select(PreparationResponsePlanRecord)
             .where(
                 PreparationResponsePlanRecord.tenant_id == context.tenant_id,
                 PreparationResponsePlanRecord.package_id == package.id,
             )
+            .order_by(PreparationResponsePlanRecord.version.desc())
             .limit(1)
         )
-        if has_plan is None and source is None:
+        if plan is None and source is None:
             return None
-        if has_plan is None or source is None:
+        if plan is None or source is None:
             raise CommandExecutionError("PREPARATION_SOURCE_UNKNOWN")
+        # Match the real source writers' lock order through the P5/export commit.
+        for model, record_id in (
+            (CaseRecord, package.case_id),
+            (DceVersionRecord, package.dce_version_id),
+        ):
+            if (
+                db.scalar(
+                    sa.select(model)
+                    .where(model.tenant_id == context.tenant_id, model.id == record_id)
+                    .with_for_update()
+                    .execution_options(populate_existing=True)
+                )
+                is None
+            ):
+                raise CommandExecutionError("PREPARATION_SOURCE_UNKNOWN")
+        try:
+            requirement_ids = {UUID(item["requirement_id"]) for item in plan.content_json["items"]}
+        except (KeyError, TypeError, ValueError) as error:
+            raise CommandExecutionError("PREPARATION_SOURCE_UNKNOWN") from error
+        db.scalars(
+            sa.select(DceRequirementRecord)
+            .where(
+                DceRequirementRecord.tenant_id == context.tenant_id,
+                DceRequirementRecord.dce_version_id == package.dce_version_id,
+                DceRequirementRecord.id.in_(requirement_ids),
+            )
+            .order_by(DceRequirementRecord.id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        ).all()
+        db.scalars(
+            sa.select(DceRequirementConfirmationCurrentRecord)
+            .where(
+                DceRequirementConfirmationCurrentRecord.tenant_id == context.tenant_id,
+                DceRequirementConfirmationCurrentRecord.requirement_id.in_(requirement_ids),
+            )
+            .order_by(DceRequirementConfirmationCurrentRecord.requirement_id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        ).all()
         snapshot_id = UUID(str(source["snapshot_id"]))
         row = db.execute(
             sa.select(PreparationSnapshotRecord, PreparationTransmissionRecord)

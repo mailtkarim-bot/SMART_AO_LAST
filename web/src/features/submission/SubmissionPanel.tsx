@@ -1,9 +1,28 @@
 import type { Dispatch, SetStateAction } from "react";
+import { useSubmissionActions } from "./useSubmissionActions";
 import type {
   SubmissionEvidenceProjection,
   SubmissionMode,
   SubmissionPackageManifestProjection,
 } from "../../shared/types";
+
+export function SubmissionWorkspace({ api, setMessage }: {
+  api: Parameters<typeof useSubmissionActions>[0];
+  setMessage: Parameters<typeof useSubmissionActions>[1];
+}) {
+  const actions = useSubmissionActions(api, setMessage);
+  return <SubmissionPanel
+    {...actions}
+    onPrepare={() => void actions.prepareSubmissionPackage()}
+    onAuthorize={() => void actions.authorizeSubmissionPackage()}
+    onLoadManifest={() => void actions.loadSubmissionPackageManifest()}
+    onLoadEvidence={() => void actions.loadSubmissionEvidence()}
+    onRequestSignature={() => void actions.requestSignature()}
+    onLoadSignature={() => void actions.loadSignature()}
+    onExport={() => void actions.exportSubmissionPackage()}
+    onRecordEvidence={() => void actions.recordSubmissionEvidence()}
+  />;
+}
 
 export type SubmissionEvidenceForm = {
   evidence_type: "MANUAL_RECEIPT" | "MANUAL_PORTAL_REFERENCE" | "HUMAN_DEPOSIT_ATTEMPT";

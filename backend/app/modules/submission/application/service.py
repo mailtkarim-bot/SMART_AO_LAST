@@ -65,6 +65,15 @@ from app.platform.security.capabilities import Capability
 from app.platform.security.context import ActorContext, ActorKind, DataClassification
 from app.platform.storage.ports import GeneratedDocumentStorage
 
+_C10_CANDIDATE_QUALIFIED = "smartao.c10_candidate_qualified"
+_C10_P5_QUALIFIED = "smartao.c10_p5_qualified"
+_C10_EXPORT_QUALIFIED = "smartao.c10_export_qualified"
+
+
+def _mark_c10_transaction_qualified(session: Session, setting_name: str) -> None:
+    # Transaction-local markers let the migration reject writes from pre-C10 binaries.
+    session.execute(sa.select(sa.func.set_config(setting_name, "1", True)))
+
 
 class SubmissionPackageService:
     """Patron-only orchestration for an immutable package ready for human submission."""
@@ -78,6 +87,7 @@ class SubmissionPackageService:
         storage: GeneratedDocumentStorage | None = None,
         audit_writer: SecurityAuditWriter | None = None,
         decision_gate_reader: SubmissionDecisionGateReader | None = None,
+        preparation_source_reader: SubmissionPreparationSourceReader | None = None,
     ) -> None:
         self._session_factory = session_factory
         self._dispatcher = dispatcher
@@ -85,6 +95,7 @@ class SubmissionPackageService:
         self._storage = storage
         self._audit_writer = audit_writer or SecurityAuditWriter()
         self._decision_gate_reader = decision_gate_reader
+        self._preparation_source_reader = preparation_source_reader
 
     def export(self, *, actor: ActorContext, submission_package_id: UUID, now: datetime) -> bytes:
         if actor.actor_kind is not ActorKind.PATRON_ADMIN or actor.membership_id is None:
@@ -107,7 +118,7 @@ class SubmissionPackageService:
         )
         if not decision.allowed:
             raise PermissionError(decision.code)
-        with self._session_factory() as session:
+        with self._session_factory.begin() as session:
             record = session.scalar(
                 sa.select(SubmissionPackageRecord).where(
                     SubmissionPackageRecord.tenant_id == actor.tenant_id,
@@ -121,8 +132,40 @@ class SubmissionPackageService:
             ).encode("utf-8")
             if hashlib.sha256(manifest_bytes).hexdigest() != record.manifest_sha256:
                 raise CommandExecutionError("SUBMISSION_MANIFEST_INTEGRITY_FAILED")
-            if record.manifest_json.get("preparation_source") is not None:
-                raise CommandExecutionError("C10_SUBMISSION_AUTHORIZATION_NOT_QUALIFIED")
+            schema_version = record.manifest_json.get("schema_version")
+            preparation_source = record.manifest_json.get("preparation_source")
+            if schema_version not in {2, 3} or (schema_version == 3) != (
+                preparation_source is not None
+            ):
+                raise CommandExecutionError("SUBMISSION_MANIFEST_INTEGRITY_FAILED")
+            if preparation_source is not None:
+                if (
+                    self._preparation_source_reader is None
+                    or not isinstance(preparation_source, dict)
+                    or record.preparation_package_id is None
+                ):
+                    raise CommandExecutionError("PREPARATION_SOURCE_UNKNOWN")
+                try:
+                    current_source = self._preparation_source_reader.read(
+                        session=session,
+                        preparation_package_id=record.preparation_package_id,
+                        source=preparation_source,
+                        context=CommandContext(
+                            tenant_id=actor.tenant_id,
+                            actor_id=actor.actor_id,
+                            actor_kind=actor.actor_kind.value,
+                            received_at=now,
+                            identity_id=actor.identity_id,
+                            membership_id=actor.membership_id,
+                            session_id=actor.session_id,
+                            case_id=record.case_id,
+                            correlation_id=actor.correlation_id,
+                        ),
+                    )
+                except CommandExecutionError as error:
+                    raise CommandExecutionError("PREPARATION_SOURCE_UNKNOWN") from error
+                if current_source is None or current_source != preparation_source:
+                    raise CommandExecutionError("PREPARATION_SOURCE_UNKNOWN")
             document = session.scalar(
                 sa.select(GeneratedTechnicalDocumentRecord).where(
                     GeneratedTechnicalDocumentRecord.tenant_id == actor.tenant_id,
@@ -141,37 +184,64 @@ class SubmissionPackageService:
                 tenant_id=actor.tenant_id,
                 package=record,
             )
-            technical_bytes = self._storage.read(storage_key=document.storage_key)
-        with tempfile.SpooledTemporaryFile(max_size=8 * 1024 * 1024, mode="w+b") as archive:
-            with zipfile.ZipFile(
-                archive,
-                "w",
-                compression=zipfile.ZIP_DEFLATED,
-                compresslevel=6,
-            ) as bundle:
-                for name, content in (
-                    ("manifest.json", manifest_bytes),
-                    ("technical-response.md", technical_bytes),
+            try:
+                technical_bytes = self._storage.read(storage_key=document.storage_key)
+            except OSError as error:
+                if preparation_source is None:
+                    raise
+                raise CommandExecutionError("SUBMISSION_DOCUMENT_UNKNOWN") from error
+            if preparation_source is not None:
+                entries = record.manifest_json.get("entries")
+                matching_entries = (
+                    [
+                        entry
+                        for entry in entries
+                        if isinstance(entry, dict)
+                        and entry.get("kind") == document.document_kind
+                        and entry.get("document_id") == str(document.id)
+                        and entry.get("version") == document.version
+                    ]
+                    if isinstance(entries, list)
+                    else []
+                )
+                content_sha256 = hashlib.sha256(technical_bytes).hexdigest()
+                if (
+                    len(matching_entries) != 1
+                    or document.content_sha256 != content_sha256
+                    or matching_entries[0].get("sha256") != content_sha256
                 ):
-                    info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
-                    info.compress_type = zipfile.ZIP_DEFLATED
-                    info.external_attr = 0o600 << 16
-                    bundle.writestr(info, content)
-            archive.seek(0)
-            archive_bytes = archive.read()
-        archive_sha256 = hashlib.sha256(archive_bytes).hexdigest()
-        event_id = uuid4()
-        payload = {
-            "submission_package_id": str(submission_package_id),
-            "manifest_sha256": record.manifest_sha256,
-            "archive_sha256": archive_sha256,
-            "delivery": "DOWNLOAD",
-        }
-        email_payload = {
-            "submission_package_id": str(submission_package_id),
-            "delivery": "EXPORT_READY",
-        }
-        with self._session_factory.begin() as session:
+                    raise CommandExecutionError("SUBMISSION_DOCUMENT_UNKNOWN")
+            with tempfile.SpooledTemporaryFile(max_size=8 * 1024 * 1024, mode="w+b") as archive:
+                with zipfile.ZipFile(
+                    archive,
+                    "w",
+                    compression=zipfile.ZIP_DEFLATED,
+                    compresslevel=6,
+                ) as bundle:
+                    for name, content in (
+                        ("manifest.json", manifest_bytes),
+                        ("technical-response.md", technical_bytes),
+                    ):
+                        info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
+                        info.compress_type = zipfile.ZIP_DEFLATED
+                        info.external_attr = 0o600 << 16
+                        bundle.writestr(info, content)
+                archive.seek(0)
+                archive_bytes = archive.read()
+            archive_sha256 = hashlib.sha256(archive_bytes).hexdigest()
+            event_id = uuid4()
+            payload = {
+                "submission_package_id": str(submission_package_id),
+                "manifest_sha256": record.manifest_sha256,
+                "archive_sha256": archive_sha256,
+                "delivery": "DOWNLOAD",
+            }
+            email_payload = {
+                "submission_package_id": str(submission_package_id),
+                "delivery": "EXPORT_READY",
+            }
+            if preparation_source is not None:
+                _mark_c10_transaction_qualified(session, _C10_EXPORT_QUALIFIED)
             self._audit_writer.record(
                 session=session,
                 entry=SecurityAuditEntry(
@@ -637,6 +707,8 @@ class PrepareSubmissionPackageHandler:
             idempotency_key=command.idempotency_key,
             correlation_id=command.correlation_id,
         )
+        if origin is not None:
+            _mark_c10_transaction_qualified(session, _C10_CANDIDATE_QUALIFIED)
         session.add(record)
         return HandlerOutcome(
             result_code="SUBMISSION_PACKAGE_PREPARED",
@@ -761,8 +833,14 @@ class PrepareSubmissionPackageHandler:
 class AuthorizeSubmissionPackageHandler:
     """Append a Patron P5 authorization without mutating the immutable package."""
 
-    def __init__(self, *, decision_gate_reader: SubmissionDecisionGateReader | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        decision_gate_reader: SubmissionDecisionGateReader | None = None,
+        preparation_source_reader: SubmissionPreparationSourceReader | None = None,
+    ) -> None:
         self._decision_gate_reader = decision_gate_reader
+        self._preparation_source_reader = preparation_source_reader
 
     def execute(
         self,
@@ -794,8 +872,27 @@ class AuthorizeSubmissionPackageHandler:
         ).encode("utf-8")
         if hashlib.sha256(manifest_bytes).hexdigest() != package.manifest_sha256:
             raise CommandExecutionError("SUBMISSION_MANIFEST_INTEGRITY_FAILED")
-        if package.manifest_json.get("preparation_source") is not None:
-            raise CommandExecutionError("C10_SUBMISSION_AUTHORIZATION_NOT_QUALIFIED")
+        preparation_source = package.manifest_json.get("preparation_source")
+        if command.expected_manifest_sha256 is not None and (
+            command.expected_manifest_sha256 != package.manifest_sha256
+        ):
+            raise CommandExecutionError("SUBMISSION_MANIFEST_HASH_MISMATCH")
+        if preparation_source is not None:
+            if command.expected_manifest_sha256 is None:
+                raise CommandExecutionError("C10_SUBMISSION_MANIFEST_SHA256_REQUIRED")
+            if self._preparation_source_reader is None or not isinstance(preparation_source, dict):
+                raise CommandExecutionError("C10_SUBMISSION_AUTHORIZATION_NOT_QUALIFIED")
+            try:
+                current_origin = self._preparation_source_reader.read(
+                    session=session,
+                    preparation_package_id=package.preparation_package_id,
+                    source=preparation_source,
+                    context=context,
+                )
+            except CommandExecutionError as error:
+                raise CommandExecutionError("PREPARATION_SOURCE_UNKNOWN") from error
+            if current_origin is None or current_origin != preparation_source:
+                raise CommandExecutionError("PREPARATION_SOURCE_UNKNOWN")
         existing = session.scalar(
             sa.select(SubmissionPackageAuthorizationRecord).where(
                 SubmissionPackageAuthorizationRecord.tenant_id == context.tenant_id,
@@ -825,6 +922,8 @@ class AuthorizeSubmissionPackageHandler:
             idempotency_key=command.idempotency_key,
             correlation_id=command.correlation_id,
         )
+        if preparation_source is not None:
+            _mark_c10_transaction_qualified(session, _C10_P5_QUALIFIED)
         session.add(authorization)
         return HandlerOutcome(
             result_code="SUBMISSION_PACKAGE_AUTHORIZED",
@@ -864,7 +963,8 @@ def submission_handlers(
         preparation_source_reader=preparation_source_reader,
     )
     authorization_handler = AuthorizeSubmissionPackageHandler(
-        decision_gate_reader=decision_gate_reader
+        decision_gate_reader=decision_gate_reader,
+        preparation_source_reader=preparation_source_reader,
     )
     return {
         PrepareSubmissionPackageCommand.command_type: handler,

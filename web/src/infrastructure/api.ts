@@ -1076,6 +1076,7 @@ export function createApiClient(
       expectedPackageVersion: number,
       rationale: string,
       metadata: CommandMetadata = {},
+      expectedManifestSha256?: string,
     ) =>
       request<SubmissionPackageAuthorizationReceipt>(
         `/api/v1/patron/submission-packages/${encodeURIComponent(submissionPackageId)}/authorize`,
@@ -1087,6 +1088,7 @@ export function createApiClient(
             authorization_id: metadata.authorization_id ?? makeId(),
             ...(metadata.correlation_id ? { correlation_id: metadata.correlation_id } : {}),
             expected_package_version: expectedPackageVersion,
+            ...(expectedManifestSha256 ? { expected_manifest_sha256: expectedManifestSha256 } : {}),
             rationale,
           }),
         },

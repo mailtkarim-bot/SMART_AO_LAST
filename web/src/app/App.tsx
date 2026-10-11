@@ -3,7 +3,7 @@ import { useCapabilityCandidates } from "../features/cases/useCapabilityCandidat
 import { CapabilityAssessmentsPanel } from "../features/cases/CapabilityAssessmentsPanel";
 import { useCapabilityAssessments } from "../features/cases/useCapabilityAssessments";
 import { useCapabilityProposal } from "../features/cases/useCapabilityProposal";
-import { Suspense, lazy, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
+import { Suspense, lazy, useEffect, useLayoutEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { usePricingScenarios } from "../features/pricing/usePricingScenarios";
 import { PricingPanel } from "../features/pricing/PricingPanel";
 import { CaseResolutionPanel } from "../features/cases/CaseResolutionPanel";
@@ -30,8 +30,7 @@ import { usePostReceptionObligations } from "../features/pricing/usePostReceptio
 import { useContractExecutionEvidence } from "../features/pricing/useContractExecutionEvidence";
 import { useContractInstrumentVersions } from "../features/pricing/useContractInstrumentVersions";
 import { usePricingImport } from "../features/pricing/usePricingImport";
-import { SubmissionPanel } from "../features/submission/SubmissionPanel";
-import { useSubmissionActions } from "../features/submission/useSubmissionActions";
+import { SubmissionWorkspace } from "../features/submission/SubmissionPanel";
 import { EnterpriseLibraryPanel } from "../features/enterprise/EnterpriseLibraryPanel";
 import { BusinessMethodProfilePanel } from "../features/enterprise/BusinessMethodProfilePanel";
 import { CaseInterviewsPanel } from "../features/enterprise/CaseInterviewsPanel";
@@ -185,6 +184,9 @@ function App() {
   const dceReadingScopeKey = businessReady && currentActor
     ? JSON.stringify([baseUrl, sessionGeneration, currentActor.identity_id, currentActor.tenant_slug, currentActor.actor_id, currentActor.actor_kind, currentActor.operational_profile, currentActor.membership_state])
     : "";
+  useLayoutEffect(() => {
+    setMessage(null);
+  }, [dceReadingScopeKey]);
   const resolutionScopeKey = businessReady && currentActor && (
     currentActor.actor_kind === "PATRON_ADMIN" || currentActor.actor_kind === "COLLABORATEUR"
   ) ? JSON.stringify([baseUrl, sessionGeneration, currentActor.identity_id, currentActor.tenant_slug, currentActor.actor_id, currentActor.actor_kind, currentActor.operational_profile, currentActor.membership_state]) : "";
@@ -415,7 +417,6 @@ function App() {
     loadDraft,
     submitLine,
   } = financialDraft;
-  const submissionActions = useSubmissionActions(api, setMessage);
   const selectedCase = cases.find((item) => item.case_id === selectedCaseId) ?? cases[0];
   const dceOpening = useDceOpening(api, setMessage, selectedCase, async () => {
     await refreshCases();
@@ -1322,43 +1323,10 @@ function App() {
         )}
 
         {isPatron && (
-          <SubmissionPanel
-          preparationPackageId={submissionActions.preparationPackageId}
-          preparationRevision={submissionActions.preparationRevision}
-          submissionPackageId={submissionActions.submissionPackageId}
-          submissionPackageVersion={submissionActions.submissionPackageVersion}
-          submissionAuthorizationRationale={submissionActions.submissionAuthorizationRationale}
-          submissionMode={submissionActions.submissionMode}
-          candidatureOnlyReason={submissionActions.candidatureOnlyReason}
-          submissionAuthorized={submissionActions.submissionAuthorized}
-          submissionManifest={submissionActions.submissionManifest}
-          submissionEvidence={submissionActions.submissionEvidence}
-          submissionExported={submissionActions.submissionExported}
-          submissionExportState={submissionActions.submissionExportState}
-          signatureId={submissionActions.signatureId}
-          signaturePackageVersion={submissionActions.signaturePackageVersion}
-          signatureStatus={submissionActions.signatureStatus}
-          signatureProvider={submissionActions.signatureProvider}
-          signatureRevision={submissionActions.signatureRevision}
-          evidenceForm={submissionActions.evidenceForm}
-          setPreparationPackageId={submissionActions.setPreparationPackageId}
-          setPreparationRevision={submissionActions.setPreparationRevision}
-          setSubmissionPackageId={submissionActions.setSubmissionPackageId}
-          setSubmissionPackageVersion={submissionActions.setSubmissionPackageVersion}
-          setSubmissionAuthorizationRationale={submissionActions.setSubmissionAuthorizationRationale}
-          setSubmissionMode={submissionActions.setSubmissionMode}
-          setCandidatureOnlyReason={submissionActions.setCandidatureOnlyReason}
-          setSignatureId={submissionActions.setSignatureId}
-          setSignaturePackageVersion={submissionActions.setSignaturePackageVersion}
-          setEvidenceForm={submissionActions.setEvidenceForm}
-          onPrepare={() => void submissionActions.prepareSubmissionPackage()}
-          onAuthorize={() => void submissionActions.authorizeSubmissionPackage()}
-          onLoadManifest={() => void submissionActions.loadSubmissionPackageManifest()}
-          onLoadEvidence={() => void submissionActions.loadSubmissionEvidence()}
-          onRequestSignature={() => void submissionActions.requestSignature()}
-          onLoadSignature={() => void submissionActions.loadSignature()}
-          onExport={() => void submissionActions.exportSubmissionPackage()}
-            onRecordEvidence={() => void submissionActions.recordSubmissionEvidence()}
+          <SubmissionWorkspace
+            key={JSON.stringify([dceReadingScopeKey, selectedCaseId])}
+            api={api}
+            setMessage={setMessage}
           />
         )}
 

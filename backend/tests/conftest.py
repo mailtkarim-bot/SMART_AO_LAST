@@ -32,16 +32,21 @@ def database_engine() -> sa.Engine:
         yield engine
     finally:
         engine.dispose()
-        cleanup_engine = sa.create_engine(DATABASE_URL)
-        try:
-            with cleanup_engine.begin() as connection:
-                connection.execute(sa.text("TRUNCATE TABLE security_audit_events CASCADE"))
-        finally:
-            cleanup_engine.dispose()
         preserve_fixture = (
             os.environ.get("SMART_AO_TEST_PRESERVE_C5_RESTORE_FIXTURE") == "1"
             and os.environ.get("SMART_AO_TEST_DISPOSABLE_DATABASE") == "1"
         )
+        cleanup_engine = sa.create_engine(DATABASE_URL)
+        try:
+            with cleanup_engine.begin() as connection:
+                if (
+                    not preserve_fixture
+                    and os.environ.get("SMART_AO_TEST_DISPOSABLE_DATABASE") == "1"
+                ):
+                    connection.execute(sa.text("TRUNCATE TABLE tenants, identities CASCADE"))
+                connection.execute(sa.text("TRUNCATE TABLE security_audit_events CASCADE"))
+        finally:
+            cleanup_engine.dispose()
         if not preserve_fixture:
             command.downgrade(config, "base")
 

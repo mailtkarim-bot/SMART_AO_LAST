@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import type { ApiClient } from "../../infrastructure/api";
 import type {
@@ -10,6 +10,13 @@ import type { SubmissionEvidenceForm } from "./SubmissionPanel";
 
 type Message = { tone: "success" | "error" | "warning"; text: string };
 type SetMessage = Dispatch<SetStateAction<Message | null>>;
+type SubmissionAuthorizationIntent = {
+  submissionPackageId: string;
+  expectedPackageVersion: number;
+  rationale: string;
+  expectedManifestSha256: string;
+  metadata: { command_id: string; idempotency_key: string; authorization_id: string };
+};
 
 type SubmissionActions = {
   preparationPackageId: string;
@@ -50,10 +57,25 @@ type SubmissionActions = {
   recordSubmissionEvidence: () => Promise<void>;
 };
 
-export function useSubmissionActions(api: ApiClient, setMessage: SetMessage): SubmissionActions {
+export function useSubmissionActions(api: ApiClient, publishMessage: SetMessage): SubmissionActions {
+  const activeScopeRef = useRef(true);
+  useLayoutEffect(() => {
+    activeScopeRef.current = true;
+    return () => { activeScopeRef.current = false; };
+  }, []);
+  const setMessage: SetMessage = (message) => {
+    if (activeScopeRef.current) publishMessage(message);
+  };
+  const manifestReadGenerationRef = useRef(0);
   const [preparationPackageId, setPreparationPackageId] = useState("");
   const [preparationRevision, setPreparationRevision] = useState("1");
-  const [submissionPackageId, setSubmissionPackageId] = useState("");
+  const [submissionPackageId, setSubmissionPackageIdState] = useState("");
+  const submissionPackageIdRef = useRef("");
+  const setSubmissionPackageId: Dispatch<SetStateAction<string>> = (action) => {
+    const next = typeof action === "function" ? action(submissionPackageIdRef.current) : action;
+    submissionPackageIdRef.current = next;
+    setSubmissionPackageIdState(next);
+  };
   const [submissionPackageVersion, setSubmissionPackageVersion] = useState("1");
   const [submissionAuthorizationRationale, setSubmissionAuthorizationRationale] = useState(
     "Paquet relu et autorisé pour la remise humaine.",
@@ -63,11 +85,9 @@ export function useSubmissionActions(api: ApiClient, setMessage: SetMessage): Su
   const [submissionAuthorized, setSubmissionAuthorized] = useState(false);
   const [submissionManifest, setSubmissionManifest] = useState<SubmissionPackageManifestProjection | null>(null);
   const [submissionEvidence, setSubmissionEvidence] = useState<SubmissionEvidenceProjection[]>([]);
-  const [authorizationMetadata, setAuthorizationMetadata] = useState<{
-    command_id: string;
-    idempotency_key: string;
-    authorization_id: string;
-  } | null>(null);
+  const [authorizationIntent, setAuthorizationIntent] = useState<SubmissionAuthorizationIntent | null>(null);
+  const authorizationIntentRef = useRef<SubmissionAuthorizationIntent | null>(null);
+  const authorizationInFlightRef = useRef(false);
   const [submissionExported, setSubmissionExported] = useState(false);
   const [submissionExportState, setSubmissionExportState] = useState<"IDLE" | "EXPORTED" | "UNKNOWN">("IDLE");
   const [signatureId, setSignatureId] = useState("");
@@ -83,6 +103,13 @@ export function useSubmissionActions(api: ApiClient, setMessage: SetMessage): Su
   });
 
   async function prepareSubmissionPackage() {
+    if (authorizationIntentRef.current !== null) {
+      setMessage({
+        tone: "warning",
+        text: "Une autorisation P5 reste à confirmer. Rejouez-la avant de préparer un autre candidat.",
+      });
+      return;
+    }
     if (!preparationPackageId.trim()) {
       setMessage({ tone: "error", text: "Renseignez l’identifiant de la préparation à déposer." });
       return;
@@ -101,13 +128,20 @@ export function useSubmissionActions(api: ApiClient, setMessage: SetMessage): Su
           candidature_only_reason: submissionMode === "CANDIDATURE_ONLY" ? reason : undefined,
         },
       );
+      if (!activeScopeRef.current) return;
+      if (authorizationIntentRef.current !== null) {
+        setMessage({
+          tone: "warning",
+          text: "Une autorisation P5 reste à confirmer. Le candidat sélectionné est conservé.",
+        });
+        return;
+      }
       const packageId = receipt.aggregate_refs[0]?.aggregate_id;
       if (packageId) {
         if (packageId !== submissionPackageId.trim()) {
           setSubmissionAuthorized(false);
           setSubmissionManifest(null);
           setSubmissionEvidence([]);
-          setAuthorizationMetadata(null);
           setSubmissionExported(false);
           setSubmissionExportState("IDLE");
         }
@@ -125,12 +159,22 @@ export function useSubmissionActions(api: ApiClient, setMessage: SetMessage): Su
   }
 
   async function loadSubmissionPackageManifest() {
+    if (authorizationIntentRef.current !== null) {
+      setMessage({
+        tone: "warning",
+        text: "Une autorisation P5 reste à confirmer. Rejouez la même intention ou attendez un reçu ou un conflit.",
+      });
+      return;
+    }
     if (!submissionPackageId.trim()) {
       setMessage({ tone: "error", text: "Préparez ou renseignez un paquet avant de prévisualiser son manifeste." });
       return;
     }
+    const requestedPackageId = submissionPackageId.trim();
+    const readGeneration = ++manifestReadGenerationRef.current;
     try {
-      const projection = await api.getSubmissionPackageManifest(submissionPackageId.trim());
+      const projection = await api.getSubmissionPackageManifest(requestedPackageId);
+      if (!activeScopeRef.current || manifestReadGenerationRef.current !== readGeneration || authorizationIntentRef.current !== null || submissionPackageIdRef.current.trim() !== requestedPackageId) return;
       setSubmissionManifest(projection);
       setSubmissionPackageVersion(String(projection.package_version));
       setSubmissionAuthorized(projection.authorization_status === "AUTHORIZED");
@@ -141,6 +185,7 @@ export function useSubmissionActions(api: ApiClient, setMessage: SetMessage): Su
   }
 
   async function authorizeSubmissionPackage() {
+    if (authorizationInFlightRef.current) return;
     if (!submissionPackageId.trim()) {
       setMessage({ tone: "error", text: "Préparez ou renseignez un paquet avant de l’autoriser." });
       return;
@@ -155,20 +200,60 @@ export function useSubmissionActions(api: ApiClient, setMessage: SetMessage): Su
       setMessage({ tone: "error", text: "Saisissez la justification de l’autorisation P5." });
       return;
     }
-    const metadata = authorizationMetadata ?? {
-      command_id: crypto.randomUUID(),
-      idempotency_key: crypto.randomUUID(),
-      authorization_id: crypto.randomUUID(),
+    const manifest = submissionManifest;
+    if (
+      manifest === null
+      || manifest.submission_package_id !== submissionPackageId.trim()
+      || manifest.package_version !== expectedVersion
+      || !/^[0-9a-f]{64}$/.test(manifest.manifest_sha256)
+    ) {
+      setMessage({ tone: "error", text: "Relisez le manifeste exact du candidat C10 avant l’autorisation P5." });
+      return;
+    }
+    const pendingIntent = authorizationIntentRef.current ?? authorizationIntent;
+    if (
+      pendingIntent !== null
+      && (pendingIntent.submissionPackageId !== submissionPackageId.trim()
+        || pendingIntent.expectedPackageVersion !== expectedVersion
+        || pendingIntent.rationale !== rationale
+        || pendingIntent.expectedManifestSha256 !== manifest.manifest_sha256)
+    ) {
+      setMessage({
+        tone: "warning",
+        text: "Une autorisation P5 reste à confirmer pour le candidat relu. Restaurez cette intention exacte pour la rejouer.",
+      });
+      return;
+    }
+    const intent = pendingIntent ?? {
+      submissionPackageId: submissionPackageId.trim(),
+      expectedPackageVersion: expectedVersion,
+      rationale,
+      expectedManifestSha256: manifest.manifest_sha256,
+      metadata: {
+        command_id: crypto.randomUUID(),
+        idempotency_key: crypto.randomUUID(),
+        authorization_id: crypto.randomUUID(),
+      },
     };
-    if (authorizationMetadata === null) setAuthorizationMetadata(metadata);
+    if (pendingIntent === null) {
+      authorizationIntentRef.current = intent;
+      setAuthorizationIntent(intent);
+    }
+    authorizationInFlightRef.current = true;
+    manifestReadGenerationRef.current += 1;
     try {
       const receipt = await api.authorizeSubmissionPackage(
-        submissionPackageId.trim(),
-        expectedVersion,
-        rationale,
-        metadata,
+        intent.submissionPackageId,
+        intent.expectedPackageVersion,
+        intent.rationale,
+        intent.metadata,
+        intent.expectedManifestSha256,
       );
-      setSubmissionAuthorized(true);
+      if (!activeScopeRef.current) return;
+      if (submissionPackageIdRef.current.trim() === intent.submissionPackageId) {
+        setSubmissionAuthorized(true);
+      }
+      releaseAuthorizationIntent(intent);
       setMessage({
         tone: "success",
         text: receipt.replayed
@@ -176,8 +261,34 @@ export function useSubmissionActions(api: ApiClient, setMessage: SetMessage): Su
           : "Paquet autorisé pour remise humaine. Aucun dépôt externe n’a été effectué.",
       });
     } catch (error) {
+      if (!activeScopeRef.current) return;
+      const status = error instanceof Error ? (error as Error & { status?: number }).status : undefined;
+      if (status === 409) {
+        try {
+          const projection = await api.getSubmissionPackageManifest(intent.submissionPackageId);
+          if (!activeScopeRef.current) return;
+          if (submissionPackageIdRef.current.trim() === intent.submissionPackageId) {
+            setSubmissionManifest(projection);
+            setSubmissionPackageVersion(String(projection.package_version));
+            setSubmissionAuthorized(projection.authorization_status === "AUTHORIZED");
+          }
+          releaseAuthorizationIntent(intent);
+        } catch {
+          // The original intent remains frozen until a manifest read succeeds.
+        }
+      } else if (status !== undefined && status >= 400 && status < 500) {
+        releaseAuthorizationIntent(intent);
+      }
       setMessage({ tone: "error", text: error instanceof Error ? error.message : "Impossible d’autoriser le paquet." });
+    } finally {
+      authorizationInFlightRef.current = false;
     }
+  }
+
+  function releaseAuthorizationIntent(intent: SubmissionAuthorizationIntent) {
+    if (authorizationIntentRef.current !== intent) return;
+    authorizationIntentRef.current = null;
+    setAuthorizationIntent(null);
   }
 
   async function loadSubmissionEvidence() {
@@ -187,6 +298,7 @@ export function useSubmissionActions(api: ApiClient, setMessage: SetMessage): Su
     }
     try {
       const projection = await api.getSubmissionEvidence(submissionPackageId.trim());
+      if (!activeScopeRef.current) return;
       setSubmissionEvidence(projection);
       setMessage({ tone: "success", text: "Preuves de réception rechargées. Le rapprochement reste explicitement partiel." });
     } catch (error) {
@@ -201,6 +313,7 @@ export function useSubmissionActions(api: ApiClient, setMessage: SetMessage): Su
     }
     try {
       const archive = await api.downloadSubmissionPackage(submissionPackageId.trim());
+      if (!activeScopeRef.current) return;
       const url = URL.createObjectURL(archive);
       const anchor = document.createElement("a");
       anchor.href = url;
@@ -236,6 +349,7 @@ export function useSubmissionActions(api: ApiClient, setMessage: SetMessage): Su
     }
     try {
       const receipt = await api.requestSubmissionSignature(submissionPackageId.trim(), expectedVersion);
+      if (!activeScopeRef.current) return;
       const nextSignatureId = receipt.aggregate_refs[0]?.aggregate_id;
       if (nextSignatureId) setSignatureId(nextSignatureId);
       setSignatureStatus("REQUESTED");
@@ -258,6 +372,7 @@ export function useSubmissionActions(api: ApiClient, setMessage: SetMessage): Su
     }
     try {
       const projection = await api.getSubmissionSignature(signatureId.trim());
+      if (!activeScopeRef.current) return;
       setSignatureId(projection.signature_id);
       setSignatureStatus(projection.status);
       setSignatureProvider(projection.provider);
@@ -279,6 +394,7 @@ export function useSubmissionActions(api: ApiClient, setMessage: SetMessage): Su
         ...evidenceForm,
         notes_redacted: evidenceForm.notes_redacted || undefined,
       });
+      if (!activeScopeRef.current) return;
       setMessage({
         tone: "success",
         text: receipt.external_submission === "NOT_PERFORMED"

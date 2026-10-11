@@ -641,6 +641,7 @@ class AppRuntime:
     dispatcher: CommandDispatcher
     dce_upload_service: DceUploadService
     preparation_storage: GeneratedDocumentStorage
+    submission_preparation_source_reader: PreparationSubmissionSourceReader
     company_registry: CompanyRegistryPort | None = None
     submission_export_notifier: SubmissionExportNotificationPort | None = None
     submission_deadline_calendar: SubmissionDeadlineCalendarPort | None = None
@@ -672,6 +673,13 @@ class AppRuntime:
                     )
                 )
             ),
+        )
+        preparation_transmission_handler = preparation_transmission_handlers(
+            storage=preparation_storage
+        )["CreatePreparationSnapshot"]
+        submission_preparation_source_reader = PreparationSubmissionSourceReader(
+            review_handler=review_handlers["CreateTechnicalResponseDraft"],
+            transmission_handler=preparation_transmission_handler,
         )
         handlers: dict[str, CommandHandler] = {
             **enterprise_upload_handlers(),
@@ -769,12 +777,7 @@ class AppRuntime:
             **review_handlers,
             **submission_handlers(
                 decision_gate_reader=SqlAlchemySubmissionDecisionGateReader(),
-                preparation_source_reader=PreparationSubmissionSourceReader(
-                    review_handler=review_handlers["CreateTechnicalResponseDraft"],
-                    transmission_handler=preparation_transmission_handlers(
-                        storage=preparation_storage
-                    )["CreatePreparationSnapshot"],
-                ),
+                preparation_source_reader=submission_preparation_source_reader,
             ),
             **submission_evidence_handlers(),
             **submission_signature_handlers(),
@@ -790,6 +793,7 @@ class AppRuntime:
             dispatcher=dispatcher,
             dce_upload_service=upload_service,
             preparation_storage=preparation_storage,
+            submission_preparation_source_reader=submission_preparation_source_reader,
             company_registry=company_registry,
             submission_export_notifier=submission_export_notifier,
             submission_deadline_calendar=submission_deadline_calendar,
@@ -1532,6 +1536,7 @@ def create_app(
             policy=security_policy,
             storage=runtime.preparation_storage,
             decision_gate_reader=SqlAlchemySubmissionDecisionGateReader(),
+            preparation_source_reader=runtime.submission_preparation_source_reader,
         )
         app.include_router(
             build_case_dce_reading_router(

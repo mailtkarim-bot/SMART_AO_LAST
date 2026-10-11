@@ -15,8 +15,9 @@ import type {
   PricingScenario,
 } from "../shared/types";
 
-const { authSessionGenerationRef, authAccessTokenRef, authMfaRef, authProfileRef, authRoleRef, authSessionExpiredRef, authSessionRef, overridesRef } = vi.hoisted(() => ({
+const { authSessionGenerationRef, authTenantRef, authAccessTokenRef, authMfaRef, authProfileRef, authRoleRef, authSessionExpiredRef, authSessionRef, overridesRef } = vi.hoisted(() => ({
   authSessionGenerationRef: { current: 1 },
+  authTenantRef: { current: "entreprise-test" },
   authAccessTokenRef: { current: "token-test" },
   authMfaRef: { current: true },
   authProfileRef: { current: null as "RESPONSABLE" | "EXPERT" | null },
@@ -71,7 +72,7 @@ vi.mock("../features/auth/useAuthentication", () => {
       currentActor: authSessionRef.current ? {
         actor_id: "actor-1",
         identity_id: "identity-1",
-        tenant_slug: "entreprise-test",
+        tenant_slug: authTenantRef.current,
         actor_kind: authRoleRef.current,
         operational_profile: authProfileRef.current,
         membership_state: "ACTIVE",
@@ -168,7 +169,68 @@ describe("App readiness integration", () => {
     authSessionRef.current = true;
     authAccessTokenRef.current = "token-test";
     authSessionGenerationRef.current = 1;
+    authTenantRef.current = "entreprise-test";
     overridesRef.current = {};
+  });
+
+  it("clears the submission manifest when the authenticated tenant changes", async () => {
+    const hash = "d".repeat(64);
+    overridesRef.current = {
+      ...baseOverrides(),
+      getSubmissionPackageManifest: () => Promise.resolve({ submission_package_id: "package-private", package_version: 1, state: "PRET_CONTROLE", manifest_sha256: hash, manifest: {}, authorization_status: "NOT_AUTHORIZED", external_submission: "NOT_PERFORMED" }),
+    };
+    const view = await renderApp();
+    fireEvent.change(screen.getByLabelText("Identifiant du paquet"), { target: { value: "package-private" } });
+    fireEvent.click(screen.getByRole("button", { name: /Prévisualiser le manifeste/ }));
+    expect(await screen.findByText(new RegExp(hash))).toBeVisible();
+    authTenantRef.current = "entreprise-autre";
+    authSessionGenerationRef.current += 1;
+    await act(async () => { view.rerender(<App />); });
+    expect(screen.queryByText(new RegExp(hash))).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Identifiant du paquet")).toHaveValue("");
+  });
+
+  it("does not publish a late P5 error into a different tenant session", async () => {
+    let failAuthorization: ((error: Error) => void) | undefined;
+    const authorize = vi.fn().mockImplementation(() => new Promise((_resolve, reject) => { failAuthorization = reject; }));
+    overridesRef.current = {
+      ...baseOverrides(),
+      authorizeSubmissionPackage: authorize,
+      getSubmissionPackageManifest: () => Promise.resolve({ submission_package_id: "package-private", package_version: 1, state: "PRET_CONTROLE", manifest_sha256: "d".repeat(64), manifest: {}, authorization_status: "NOT_AUTHORIZED", external_submission: "NOT_PERFORMED" }),
+    };
+    const view = await renderApp();
+    fireEvent.change(screen.getByLabelText("Identifiant du paquet"), { target: { value: "package-private" } });
+    fireEvent.click(screen.getByRole("button", { name: /Prévisualiser le manifeste/ }));
+    await screen.findByText(new RegExp("d".repeat(64)));
+    fireEvent.click(screen.getByRole("button", { name: /Autoriser la remise humaine/ }));
+    expect(authorize).toHaveBeenCalledOnce();
+    authTenantRef.current = "entreprise-autre";
+    authSessionGenerationRef.current += 1;
+    await act(async () => { view.rerender(<App />); });
+    await act(async () => { failAuthorization?.(new Error("PRIVATE_RESPONSE_FROM_PREVIOUS_TENANT")); });
+    expect(screen.queryByText("PRIVATE_RESPONSE_FROM_PREVIOUS_TENANT")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Identifiant du paquet")).toHaveValue("");
+  });
+
+  it("clears an already published P5 message when the authenticated scope changes", async () => {
+    const marker = "PRIVATE_STORED_FOR_PREVIOUS_TENANT";
+    overridesRef.current = {
+      ...baseOverrides(),
+      listAssignedCases: () => Promise.resolve([{ ...CASE, consultation_id: "consultation-1" }]),
+      getConsultation: () => new Promise(() => {}),
+      authorizeSubmissionPackage: vi.fn().mockRejectedValue(new Error(marker)),
+      getSubmissionPackageManifest: () => Promise.resolve({ submission_package_id: "package-private", package_version: 1, state: "PRET_CONTROLE", manifest_sha256: "d".repeat(64), manifest: {}, authorization_status: "NOT_AUTHORIZED", external_submission: "NOT_PERFORMED" }),
+    };
+    const view = await renderApp();
+    fireEvent.change(screen.getByLabelText("Identifiant du paquet"), { target: { value: "package-private" } });
+    fireEvent.click(screen.getByRole("button", { name: /Prévisualiser le manifeste/ }));
+    await screen.findByText(new RegExp("d".repeat(64)));
+    fireEvent.click(screen.getByRole("button", { name: /Autoriser la remise humaine/ }));
+    expect(await screen.findByText(marker)).toBeVisible();
+    authTenantRef.current = "entreprise-autre";
+    authSessionGenerationRef.current += 1;
+    await act(async () => { view.rerender(<App />); });
+    expect(screen.queryByText(marker)).not.toBeInTheDocument();
   });
 
   it("affiche l’état backend et les dépendances dans la configuration API", async () => {

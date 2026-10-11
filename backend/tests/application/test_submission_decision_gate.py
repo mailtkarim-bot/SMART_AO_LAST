@@ -128,7 +128,7 @@ def test_export_blocks_before_storage_read_when_decision_is_not_ready() -> None:
     session.scalar.side_effect = [record, document]
     session_factory = MagicMock()
     session_factory.return_value.__enter__.return_value = session
-    session_factory.begin.return_value.__enter__.return_value = MagicMock()
+    session_factory.begin.return_value.__enter__.return_value = session
     storage = MagicMock()
     reader = _Reader(
         DecisionSubmissionGateSnapshot(

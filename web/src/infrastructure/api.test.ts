@@ -1015,6 +1015,7 @@ describe("browser authentication transport", () => {
           authorization_id: "authorization-1",
           correlation_id: "correlation-1",
         },
+        "c".repeat(64),
       ),
     ).resolves.toMatchObject({ result_code: "SUBMISSION_PACKAGE_AUTHORIZED" });
 
@@ -1028,6 +1029,7 @@ describe("browser authentication transport", () => {
       authorization_id: "authorization-1",
       correlation_id: "correlation-1",
       expected_package_version: 3,
+      expected_manifest_sha256: "c".repeat(64),
       rationale: "Contrôle P5 validé.",
     });
   });

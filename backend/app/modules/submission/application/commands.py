@@ -37,4 +37,12 @@ class AuthorizeSubmissionPackageCommand(ApplicationCommand):
     authorization_id: UUID
     submission_package_id: UUID
     expected_package_version: int = Field(ge=1)
+    expected_manifest_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     rationale: str = Field(min_length=1, max_length=2_000)
+
+    @model_serializer(mode="wrap")
+    def preserve_legacy_intent_hash(self, handler: SerializerFunctionWrapHandler) -> dict:
+        serialized = handler(self)
+        if self.expected_manifest_sha256 is None:
+            serialized.pop("expected_manifest_sha256", None)
+        return serialized

@@ -5,8 +5,14 @@ import json
 from uuid import uuid4
 
 import pytest
-from app.modules.submission.application.commands import PrepareSubmissionPackageCommand
-from app.modules.submission.public.contracts import PrepareSubmissionPackageRequest
+from app.modules.submission.application.commands import (
+    AuthorizeSubmissionPackageCommand,
+    PrepareSubmissionPackageCommand,
+)
+from app.modules.submission.public.contracts import (
+    AuthorizeSubmissionPackageRequest,
+    PrepareSubmissionPackageRequest,
+)
 from app.platform.events.dispatcher import canonical_request_hash
 from pydantic import ValidationError
 
@@ -85,3 +91,50 @@ def test_c10_source_is_part_of_the_retry_intent():
         }
     )
     assert canonical_request_hash(command) != canonical_request_hash(changed)
+
+
+def test_legacy_p5_hash_remains_byte_compatible():
+    body = {
+        "command_id": str(uuid4()),
+        "idempotency_key": str(uuid4()),
+        "authorization_id": str(uuid4()),
+        "expected_package_version": 3,
+        "rationale": "Revue P5 effectuée.",
+    }
+    package_id = uuid4()
+    command = AuthorizeSubmissionPackageRequest.model_validate(body).to_command(
+        submission_package_id=package_id
+    )
+    payload = {
+        "authorization_id": body["authorization_id"],
+        "submission_package_id": str(package_id),
+        "expected_package_version": 3,
+        "rationale": body["rationale"],
+    }
+    old_canonical = json.dumps(
+        {"command_type": "AuthorizeSubmissionPackage", "payload": payload},
+        ensure_ascii=True,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode()
+    assert canonical_request_hash(command) == hashlib.sha256(old_canonical).hexdigest()
+    assert "expected_manifest_sha256" not in command.model_dump(mode="json")
+    explicit_null = AuthorizeSubmissionPackageCommand.model_validate(
+        {**command.model_dump(), "expected_manifest_sha256": None}
+    )
+    assert canonical_request_hash(explicit_null) == canonical_request_hash(command)
+
+
+@pytest.mark.parametrize("manifest_sha256", ["0" * 63, "A" * 64, "g" * 64, "0" * 64 + "\n"])
+def test_expected_p5_manifest_hash_requires_lowercase_sha256(manifest_sha256):
+    with pytest.raises(ValidationError):
+        AuthorizeSubmissionPackageRequest.model_validate(
+            {
+                "command_id": str(uuid4()),
+                "idempotency_key": str(uuid4()),
+                "authorization_id": str(uuid4()),
+                "expected_package_version": 1,
+                "expected_manifest_sha256": manifest_sha256,
+                "rationale": "Revue P5 effectuée.",
+            }
+        )

@@ -7,11 +7,16 @@ import json
 import os
 from datetime import timedelta
 from pathlib import Path
-from uuid import uuid4
+from threading import Event, Thread
+from uuid import UUID, uuid4
 
 import pytest
 import sqlalchemy as sa
+from app.modules.case.application.commands import LinkCaseDceVersionCommand
+from app.modules.case.application.link_dce_version_handler import LinkCaseDceVersionHandler
 from app.modules.case.infrastructure.models.case import CaseRecord
+from app.modules.dce.application.commands import RecordDceRequirementConfirmationCommand
+from app.modules.dce.application.handlers import RecordDceRequirementConfirmationHandler
 from app.modules.dce.infrastructure.models.dce_requirement_confirmations import (
     DceRequirementConfirmationCurrentRecord,
     DceRequirementConfirmationRecord,
@@ -41,19 +46,26 @@ from app.modules.preparation.infrastructure.models import (
 from app.modules.preparation.infrastructure.submission_source_reader import (
     PreparationSubmissionSourceReader,
 )
+from app.modules.submission.application.notifications import SUBMISSION_EXPORT_EMAIL_TOPIC
 from app.modules.submission.infrastructure.models import (
     SubmissionPackageAuthorizationRecord,
     SubmissionPackageRecord,
 )
 from app.platform.events.dispatcher import CommandContext, CommandExecutionError
-from app.platform.persistence.models import CommandReceiptRecord, DomainEventRecord
+from app.platform.persistence.models import (
+    CommandReceiptRecord,
+    DomainEventRecord,
+    OutboxMessageRecord,
+)
 from app.platform.security.capabilities import Capability
 from app.platform.security.models import (
     AuthSessionRecord,
     PreparationSnapshotRecord,
+    SecurityAuditEventRecord,
     TenantMembershipRecord,
 )
 from sqlalchemy.exc import IntegrityError, ProgrammingError
+from sqlalchemy.orm import Session
 from tests.api.test_collaborator_capability_api import (
     NOW,
     _auth_session,
@@ -96,11 +108,13 @@ def _proposal(
     )
 
 
+@pytest.mark.parametrize("source_writer", ["PACKAGE", "DCE", "CONFIRMATION"])
 def test_response_plan_is_versioned_scope_checked_and_preserves_unknown(
     database_engine,
     session_factory,
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
+    source_writer: str,
 ) -> None:
     with database_engine.begin() as connection:
         connection.execute(sa.text("TRUNCATE TABLE tenants, identities CASCADE"))
@@ -110,6 +124,8 @@ def test_response_plan_is_versioned_scope_checked_and_preserves_unknown(
     package_id, plan_id = uuid4(), uuid4()
     source_bytes = b"synthetic authorized evidence used only for C10 hash verification\n"
     source_sha256 = hashlib.sha256(source_bytes).hexdigest()
+    generated_document_bytes = b"# Synthetic C10 technical response\n"
+    generated_document_sha256 = hashlib.sha256(generated_document_bytes).hexdigest()
     quarantine_root = tmp_path / "private-quarantine"
     monkeypatch.setenv("SMART_AO_DCE_QUARANTINE_ROOT", str(quarantine_root))
     source = _proposal(
@@ -243,7 +259,7 @@ def test_response_plan_is_versioned_scope_checked_and_preserves_unknown(
                 version=1,
                 document_kind="TECHNICAL_RESPONSE",
                 state="GENERATED",
-                content_sha256="d" * 64,
+                content_sha256=generated_document_sha256,
                 storage_key=f"generated-documents/{actor.tenant_id}/{package_id}/{generated_document_id}.md",
                 actor_id=actor.actor_id,
                 membership_id=actor.membership_id,
@@ -257,6 +273,14 @@ def test_response_plan_is_versioned_scope_checked_and_preserves_unknown(
     os.chmod(source_path.parent, 0o700)
     source_path.write_bytes(source_bytes)
     os.chmod(source_path, 0o600)
+    from app.bootstrap.application import _build_preparation_storage
+
+    _build_preparation_storage().write(
+        storage_key=(
+            f"generated-documents/{actor.tenant_id}/{package_id}/{generated_document_id}.md"
+        ),
+        content=generated_document_bytes,
+    )
 
     _auth_session(session_factory, actor)
     client, tokens = _client(session_factory)
@@ -691,6 +715,7 @@ def test_response_plan_is_versioned_scope_checked_and_preserves_unknown(
     }
 
     expected_candidates = 0
+    expected_authorizations = 0
 
     def assert_candidate_refused(body, expected_status=422):
         response = receipt_client.post(candidate_path, json=body, headers=receipt_headers)
@@ -704,7 +729,7 @@ def test_response_plan_is_versioned_scope_checked_and_preserves_unknown(
                 session.scalar(
                     sa.select(sa.func.count()).select_from(SubmissionPackageAuthorizationRecord)
                 )
-                == 0
+                == expected_authorizations
             )
             assert (
                 session.scalar(
@@ -843,6 +868,65 @@ def test_response_plan_is_versioned_scope_checked_and_preserves_unknown(
             ).encode()
         ).hexdigest()
     )
+    legacy_manifest = dict(candidate_read["manifest"])
+    legacy_manifest.pop("preparation_source")
+    legacy_manifest["schema_version"] = 2
+    legacy_manifest_sha256 = hashlib.sha256(
+        json.dumps(
+            legacy_manifest,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode()
+    ).hexdigest()
+    legacy_candidate = SubmissionPackageRecord(
+        id=uuid4(),
+        tenant_id=actor.tenant_id,
+        preparation_package_id=package_id,
+        case_id=case_id,
+        dce_version_id=UUID(str(legacy_manifest["dce_version_id"])),
+        technical_document_id=generated_document_id,
+        technical_document_version=1,
+        financial_snapshot_id=None,
+        financial_snapshot_revision=None,
+        version=2,
+        state="PRET_CONTROLE",
+        manifest_sha256=legacy_manifest_sha256,
+        manifest_json=legacy_manifest,
+        actor_id=actor.actor_id,
+        membership_id=actor.membership_id,
+        command_id=uuid4(),
+        idempotency_key=uuid4(),
+        correlation_id=uuid4(),
+    )
+    with (
+        session_factory() as session,
+        pytest.raises(sa.exc.DBAPIError, match="C10_SUBMISSION_ROLLBACK_BLOCKED"),
+        session.begin_nested(),
+    ):
+        session.add(legacy_candidate)
+        session.flush()
+    old_binary_authorization = SubmissionPackageAuthorizationRecord(
+        id=uuid4(),
+        tenant_id=actor.tenant_id,
+        submission_package_id=UUID(candidate_id),
+        package_version=1,
+        manifest_sha256=candidate_read["manifest_sha256"],
+        state="AUTHORIZED",
+        rationale="Synthetic old-binary P5 attempt.",
+        actor_id=actor.actor_id,
+        membership_id=actor.membership_id,
+        command_id=uuid4(),
+        idempotency_key=uuid4(),
+        correlation_id=uuid4(),
+    )
+    with (
+        session_factory() as session,
+        pytest.raises(sa.exc.DBAPIError, match="C10_SUBMISSION_ROLLBACK_BLOCKED"),
+        session.begin_nested(),
+    ):
+        session.add(old_binary_authorization)
+        session.flush()
     denied_authorization = receipt_client.post(
         f"/api/v1/patron/submission-packages/{candidate_id}/authorize",
         json={
@@ -855,19 +939,336 @@ def test_response_plan_is_versioned_scope_checked_and_preserves_unknown(
         headers=receipt_headers,
     )
     assert denied_authorization.status_code == 422, denied_authorization.text
-    assert denied_authorization.json()["detail"] == "C10_SUBMISSION_AUTHORIZATION_NOT_QUALIFIED"
-    denied_export = receipt_client.get(
+    assert denied_authorization.json()["detail"] == "C10_SUBMISSION_MANIFEST_SHA256_REQUIRED"
+    authorization_path = f"/api/v1/patron/submission-packages/{candidate_id}/authorize"
+    authorization_body = {
+        "command_id": str(uuid4()),
+        "idempotency_key": str(uuid4()),
+        "authorization_id": str(uuid4()),
+        "expected_package_version": 1,
+        "expected_manifest_sha256": candidate_read["manifest_sha256"],
+        "rationale": "Candidat C10 exact relu et autorisé pour remise humaine.",
+    }
+    foreign_actor, *_ = _seed(session_factory)
+    with session_factory.begin() as session:
+        session.get(TenantMembershipRecord, foreign_actor.membership_id).role = "PATRON_ADMIN"
+    _auth_session(session_factory, foreign_actor)
+    foreign_tenant_attempt = receipt_client.post(
+        authorization_path,
+        json=authorization_body,
+        headers=_headers(receipt_tokens, foreign_actor),
+    )
+    assert foreign_tenant_attempt.status_code == 404, foreign_tenant_attempt.text
+    with session_factory.begin() as session:
+        session.get(TenantMembershipRecord, actor.membership_id).role = "COLLABORATEUR"
+    collaborator_attempt = receipt_client.post(
+        authorization_path, json=authorization_body, headers=receipt_headers
+    )
+    assert collaborator_attempt.status_code == 403, collaborator_attempt.text
+    with session_factory.begin() as session:
+        session.get(TenantMembershipRecord, actor.membership_id).role = "PATRON_ADMIN"
+        session.get(AuthSessionRecord, actor.session_id).mfa_verified_at = NOW - timedelta(
+            minutes=16
+        )
+    stale_mfa_attempt = receipt_client.post(
+        authorization_path, json=authorization_body, headers=receipt_headers
+    )
+    assert stale_mfa_attempt.status_code == 403, stale_mfa_attempt.text
+    with session_factory.begin() as session:
+        session.get(AuthSessionRecord, actor.session_id).mfa_verified_at = NOW
+    missing_manifest_hash = receipt_client.post(
+        authorization_path,
+        json={**authorization_body, "expected_manifest_sha256": None},
+        headers=receipt_headers,
+    )
+    assert missing_manifest_hash.status_code == 422, missing_manifest_hash.text
+    assert missing_manifest_hash.json()["detail"] == "C10_SUBMISSION_MANIFEST_SHA256_REQUIRED"
+    wrong_manifest_hash = receipt_client.post(
+        authorization_path,
+        json={**authorization_body, "expected_manifest_sha256": "0" * 64},
+        headers=receipt_headers,
+    )
+    assert wrong_manifest_hash.status_code == 422, wrong_manifest_hash.text
+    assert wrong_manifest_hash.json()["detail"] == "SUBMISSION_MANIFEST_HASH_MISMATCH"
+
+    source_path.write_bytes(b"altered after candidate review")
+    altered_origin = receipt_client.post(
+        authorization_path, json=authorization_body, headers=receipt_headers
+    )
+    assert altered_origin.status_code == 422, altered_origin.text
+    assert altered_origin.json()["detail"] == "PREPARATION_SOURCE_UNKNOWN"
+    source_path.write_bytes(source_bytes)
+
+    authorization = receipt_client.post(
+        authorization_path, json=authorization_body, headers=receipt_headers
+    )
+    assert authorization.status_code == 201, authorization.text
+    assert authorization.json()["result_code"] == "SUBMISSION_PACKAGE_AUTHORIZED"
+    authorization_replay = receipt_client.post(
+        authorization_path, json=authorization_body, headers=receipt_headers
+    )
+    assert authorization_replay.status_code == 200, authorization_replay.text
+    assert authorization_replay.json()["replayed"] is True
+    assert authorization_replay.json()["aggregate_refs"] == authorization.json()["aggregate_refs"]
+    conflicting_authorization = receipt_client.post(
+        authorization_path,
+        json={**authorization_body, "expected_manifest_sha256": "1" * 64},
+        headers=receipt_headers,
+    )
+    assert conflicting_authorization.status_code == 409, conflicting_authorization.text
+    with session_factory() as session:
+        authorization_record = session.scalar(
+            sa.select(SubmissionPackageAuthorizationRecord).where(
+                SubmissionPackageAuthorizationRecord.submission_package_id == UUID(candidate_id)
+            )
+        )
+        assert authorization_record is not None
+        assert authorization_record.manifest_sha256 == candidate_read["manifest_sha256"]
+        assert authorization_record.rationale == authorization_body["rationale"]
+        assert authorization_record.state == "AUTHORIZED"
+        assert (
+            session.scalar(
+                sa.select(sa.func.count()).select_from(SubmissionPackageAuthorizationRecord)
+            )
+            == 1
+        )
+        assert (
+            session.scalar(
+                sa.select(sa.func.count()).where(
+                    DomainEventRecord.command_id == authorization_body["command_id"],
+                    DomainEventRecord.event_type == "SubmissionPackageAuthorized",
+                )
+            )
+            == 1
+        )
+    expected_authorizations = 1
+
+    old_binary_export_event = DomainEventRecord(
+        id=uuid4(),
+        tenant_id=actor.tenant_id,
+        aggregate_type="SubmissionPackage",
+        aggregate_id=UUID(candidate_id),
+        aggregate_revision=1,
+        event_type="SubmissionPackageExported",
+        payload_version=1,
+        payload_json={"submission_package_id": candidate_id, "delivery": "DOWNLOAD"},
+        actor_id=actor.actor_id,
+        command_id=None,
+        correlation_id=actor.correlation_id,
+        causation_id=None,
+        occurred_at=NOW,
+    )
+    with (
+        session_factory() as session,
+        pytest.raises(sa.exc.DBAPIError, match="C10_SUBMISSION_ROLLBACK_BLOCKED"),
+        session.begin_nested(),
+    ):
+        session.add(old_binary_export_event)
+        session.flush()
+
+    def export_side_effect_counts() -> tuple[int, int, int]:
+        with session_factory() as session:
+            exported_events = sa.select(DomainEventRecord.id).where(
+                DomainEventRecord.tenant_id == actor.tenant_id,
+                DomainEventRecord.aggregate_id == UUID(candidate_id),
+                DomainEventRecord.event_type == "SubmissionPackageExported",
+            )
+            return (
+                session.scalar(
+                    sa.select(sa.func.count()).where(
+                        SecurityAuditEventRecord.tenant_id == actor.tenant_id,
+                        SecurityAuditEventRecord.resource_id == UUID(candidate_id),
+                        SecurityAuditEventRecord.event_type == "SUBMISSION_PACKAGE_EXPORTED",
+                    )
+                ),
+                session.scalar(sa.select(sa.func.count()).where(exported_events.exists())),
+                session.scalar(
+                    sa.select(sa.func.count()).where(
+                        OutboxMessageRecord.tenant_id == actor.tenant_id,
+                        OutboxMessageRecord.event_id.in_(exported_events),
+                        OutboxMessageRecord.topic.in_(
+                            {"submission.package.exported", SUBMISSION_EXPORT_EMAIL_TOPIC}
+                        ),
+                    )
+                ),
+            )
+
+    refused_export_side_effects = export_side_effect_counts()
+    assert refused_export_side_effects == (0, 0, 0)
+    reviewed_draft_bytes_path = quarantine_root / storage_key
+    reviewed_draft_bytes_path.write_bytes(b"altered reviewed C10 draft after P5")
+    refused_draft_export = receipt_client.get(
         f"/api/v1/patron/submission-packages/{candidate_id}/export", headers=receipt_headers
     )
-    assert denied_export.status_code == 422, denied_export.text
+    assert refused_draft_export.status_code == 422, refused_draft_export.text
+    assert export_side_effect_counts() == refused_export_side_effects
+    reviewed_draft_bytes_path.write_bytes(original_draft)
+    generated_document_path = quarantine_root / (
+        f"generated-documents/{actor.tenant_id}/{package_id}/{generated_document_id}.md"
+    )
+    generated_document_path.write_bytes(b"altered generated document after P5")
+    refused_document_export = receipt_client.get(
+        f"/api/v1/patron/submission-packages/{candidate_id}/export", headers=receipt_headers
+    )
+    assert refused_document_export.status_code == 422, refused_document_export.text
+    assert export_side_effect_counts() == refused_export_side_effects
+    generated_document_path.write_bytes(generated_document_bytes)
+    source_path.write_bytes(b"altered after exact P5 authorization")
+    refused_export = receipt_client.get(
+        f"/api/v1/patron/submission-packages/{candidate_id}/export", headers=receipt_headers
+    )
+    assert refused_export.status_code == 422, refused_export.text
+    assert export_side_effect_counts() == refused_export_side_effects
+    source_path.write_bytes(source_bytes)
+
+    writer_started = Event()
+    writer_finished = Event()
+    writer_errors: list[BaseException] = []
+
+    writer_context = CommandContext(
+        tenant_id=actor.tenant_id,
+        actor_id=actor.actor_id,
+        actor_kind="PATRON_ADMIN",
+        received_at=NOW,
+        membership_id=actor.membership_id,
+        identity_id=actor.identity_id,
+        session_id=actor.session_id,
+        case_id=case_id,
+    )
+    with session_factory.begin() as session:
+        current_dce = session.get(
+            DceVersionRecord, UUID(candidate_read["manifest"]["dce_version_id"])
+        )
+        assert current_dce is not None
+        original_dce_id = current_dce.id
+        replacement_dce_id = uuid4()
+        session.add(
+            DceVersionRecord(
+                **{
+                    column.key: getattr(current_dce, column.key)
+                    for column in current_dce.__table__.columns
+                    if column.key not in {"id", "corpus_hash", "predecessor_dce_version_id"}
+                },
+                id=replacement_dce_id,
+                corpus_hash="e" * 64,
+                predecessor_dce_version_id=original_dce_id,
+            )
+        )
+
+    def link_dce(session: Session, dce_id: UUID) -> None:
+        LinkCaseDceVersionHandler().execute(
+            session=session,
+            command=LinkCaseDceVersionCommand(
+                command_id=uuid4(),
+                idempotency_key=uuid4(),
+                case_id=case_id,
+                dce_version_id=dce_id,
+                reason="Rectificatif synthétique concurrent à l’export C10.",
+            ),
+            context=writer_context,
+        )
+
+    def confirm_requirement(session: Session, outcome: str, revision: int) -> None:
+        RecordDceRequirementConfirmationHandler().execute(
+            session=session,
+            command=RecordDceRequirementConfirmationCommand(
+                command_id=uuid4(),
+                idempotency_key=uuid4(),
+                confirmation_id=uuid4(),
+                requirement_id=requirement_id,
+                expected_confirmation_revision=revision,
+                outcome=outcome,
+                reason_code="SOURCE_REVIEWED" if outcome == "CONFIRMED" else "AMBIGUOUS_SOURCE",
+            ),
+            context=writer_context,
+        )
+
+    def write_preparation_package() -> None:
+        try:
+            with session_factory.begin() as session:
+                writer_started.set()
+                if source_writer == "DCE":
+                    link_dce(session, replacement_dce_id)
+                elif source_writer == "CONFIRMATION":
+                    confirm_requirement(session, "REVIEW_REQUIRED", 1)
+                else:
+                    session.execute(
+                        sa.update(PreparationPackageRecord)
+                        .where(
+                            PreparationPackageRecord.tenant_id == actor.tenant_id,
+                            PreparationPackageRecord.id == package_id,
+                        )
+                        .values(state=PreparationPackageRecord.state)
+                    )
+        except BaseException as error:
+            writer_errors.append(error)
+        finally:
+            writer_finished.set()
+
+    import zipfile
+
+    writer_thread = Thread(target=write_preparation_package)
+
+    class _ExportBarrierZipFile(zipfile.ZipFile):
+        def close(self) -> None:
+            super().close()
+            if self.mode == "w" and not writer_started.is_set():
+                writer_thread.start()
+                assert writer_started.wait(2)
+                assert not writer_finished.wait(0.25), (
+                    "source writer committed between C10 revalidation and export receipt"
+                )
+
+    from app.modules.submission.application import service as submission_service_module
+
+    monkeypatch.setattr(submission_service_module.zipfile, "ZipFile", _ExportBarrierZipFile)
+    exported = receipt_client.get(
+        f"/api/v1/patron/submission-packages/{candidate_id}/export", headers=receipt_headers
+    )
+    assert exported.status_code == 200, exported.text
+    writer_thread.join(timeout=3)
+    assert writer_finished.is_set()
+    assert writer_errors == []
+    import io
+    import zipfile
+
+    with zipfile.ZipFile(io.BytesIO(exported.content)) as bundle:
+        assert sorted(bundle.namelist()) == ["manifest.json", "technical-response.md"]
+        exported_manifest_bytes = bundle.read("manifest.json")
+        assert json.loads(exported_manifest_bytes) == candidate_read["manifest"]
+        assert bundle.read("technical-response.md") == generated_document_bytes
+    assert b"storage_key" not in exported_manifest_bytes
+    assert b"sales_total_minor" not in exported_manifest_bytes
     with session_factory() as session:
         assert session.scalar(sa.select(sa.func.count()).select_from(SubmissionPackageRecord)) == 1
         assert (
             session.scalar(
                 sa.select(sa.func.count()).select_from(SubmissionPackageAuthorizationRecord)
             )
-            == 0
+            == 1
         )
+        assert (
+            session.scalar(
+                sa.select(sa.func.count()).where(
+                    DomainEventRecord.aggregate_id == UUID(candidate_id),
+                    DomainEventRecord.event_type == "SubmissionPackageExported",
+                )
+            )
+            == 1
+        )
+    assert export_side_effect_counts() == (1, 1, 2)
+    if source_writer != "PACKAGE":
+        stale_export = receipt_client.get(
+            f"/api/v1/patron/submission-packages/{candidate_id}/export", headers=receipt_headers
+        )
+        assert stale_export.status_code == 422, stale_export.text
+        assert stale_export.json()["detail"] == "EXPORT_REJECTED"
+        assert export_side_effect_counts() == (1, 1, 2)
+        with session_factory.begin() as session:
+            if source_writer == "DCE":
+                link_dce(session, original_dce_id)
+            else:
+                confirm_requirement(session, "CONFIRMED", 2)
     expected_candidates = 1
     # A newer source snapshot with no transmission cannot replace the delivered one.
     with session_factory.begin() as session:
