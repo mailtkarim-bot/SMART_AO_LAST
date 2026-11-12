@@ -58,3 +58,8 @@ Branches historiques : trois branches documentaires restent conservées avec leu
 
 
 Audit npm après correctifs : zéro avis connu (323 dépendances, outils compris). ESLint conserve exactement231 fichiers et les mêmes compteurs de diagnostics avant/après minimatch. Audit Python du verrouillage corrigé : zéro avis connu. Le scan Semgrep global a exécuté117 règles sur1641 fichiers suivis : une alerte `python.lang.security.use-defused-xml.use-defused-xml` à `pricing/application/import_preview.py:6`, triée comme faux positif sur import de l’exception ParseError, sans appel au parseur XML standard dans ce module. Quatre timeouts de règles sur trois fichiers UI sont repris séparément ; les fichiers ignorés et deux fichiers >1 Mo ne sont pas couverts par ce scan. Aucun résultat Semgrep global exhaustif n’est présumé.
+
+
+Régressions avec dépendances corrigées :75 tests documentaires hors DB passent ;15 setups ont d’abord refusé une variable de base absente (erreur de commande, pas une régression produit), puis les15 tests PostgreSQL passent après fourniture explicite de la base jetable. Frontend corrigé :93 fichiers/805 tests passent,4 ignorés, build vert. Semgrep sur les trois fichiers repris : zéro finding/erreur avec un worker et timeout30 s.
+
+Une régression de contrat Docker supplémentaire a été observée rouge : `pnpm-workspace.yaml` absent des entrées copiées avant l’installation figée. Le Dockerfile frontend le copie désormais avec les deux manifestes existants ; les contrats ops et mypy sont revérifiés avant publication. Le job frontend CI43309678081 est vert. Son pipeline est remplacé par le SHA incluant ce correctif d’image ; les résultats backend/image doivent être confirmés sur ce dernier SHA.

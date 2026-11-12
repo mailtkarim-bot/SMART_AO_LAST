@@ -361,6 +361,9 @@ def test_dev_compose_is_loopback_bound_and_not_repurposable_as_preprod() -> None
 
 def test_frontend_image_and_service_run_non_root_with_healthcheck() -> None:
     dockerfile = (OPS / "docker/frontend.Dockerfile").read_text(encoding="utf-8")
+    install_inputs = dockerfile.split("RUN corepack enable", maxsplit=1)[0]
+    for manifest in ("package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml"):
+        assert f"web/{manifest}" in install_inputs
     compose = (OPS / "docker-compose.preprod.yml").read_text(encoding="utf-8")
     caddyfile = (OPS / "Caddyfile").read_text(encoding="utf-8")
     assert "USER nginx" in dockerfile
