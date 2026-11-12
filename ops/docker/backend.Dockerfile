@@ -28,7 +28,7 @@ ARG SMART_AO_INSTALL_CONNECTORS=0
 ARG SMART_AO_INSTALL_NOTIFICATIONS=0
 ARG SMART_AO_INSTALL_CALENDAR=0
 RUN python -m pip install --no-cache-dir --upgrade pip==26.1.2 \
-    && python -m pip install --no-cache-dir uv==0.12.1 \
+    && python -m pip install --no-cache-dir uv==0.13.4 \
     && set -- \
     && if [ "$SMART_AO_INSTALL_RAG" = "1" ]; then \
         set -- "$@" --extra rag; \

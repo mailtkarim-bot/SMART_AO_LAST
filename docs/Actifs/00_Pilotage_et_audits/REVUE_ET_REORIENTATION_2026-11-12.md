@@ -40,3 +40,21 @@ Limiter les lectures au contrat affecté et aux derniers résultats ; regrouper 
 
 
 **Vérification avant commit :** scan statique de tous les fichiers source versionnables (mêmes exclusions docs/lock frontend que la CI), comparaison avec la baseline : zéro alerte non triée hors de la baseline elle-même. Le fichier de baseline contient des empreintes de détection et n’est pas une source de credentials ; ses auto-détections ne sont pas ajoutées comme nouvelles exceptions. Le hook direct a dépassé le budget local d’attente ; son passage CI n’est pas revendiqué. Whitespace indexé propre, CRLF CSV et sauts Markdown explicitement reconnus par attributs Git. Les212 diagnostics mypy restent bloquants pour une intégration finale main.
+
+
+## R0 — intégration et contrôles effectifs
+
+Le socle `c2474dd` et le correctif `0179552` sont publiés sur `codex/reconcile-smartao-20261009`. La [PR #1](https://github.com/mailtkarim-bot/SMART_AO_LAST/pull/1) cible main ; elle n’est pas encore fusionnée. Les constats de push bloqué ci-dessus sont historiques et ont été levés par l’instruction Owner renouvelée de publication R0.
+
+Le contrôle mypy complet passe sur1282 fichiers, Ruff et format passent. Les595 tests ciblés passent. La campagne PostgreSQL complète atteint89,16 % de couverture (seuil85,50 % conservé), avec4236 réussites et3 échecs en9151 s. Les trois échecs ont été reproduits avant correction : le plan ne respectait plus son contrat de marqueur unique, le runbook citait une ancienne tête Alembic, et une attente DOCX gardait UNKNOWN malgré des noms complets explicites sans espaces. Corrections documentaires et attente de test seulement, comparateur métier inchangé ;50 tests des modules concernés et37 tests noms/tailles repassent. Ce relevé ne transforme pas cette campagne globale en succès total.
+
+CI GitHub43257881486 : types/lint/format/secrets verts ; jobs bloqués sur les audits Python, npm et image. Audit Python initial :71 avis/5 paquets ; correctifs verrouillés pour certifi, filelock, setuptools, pypdf6.21.4, Pillow13 avec Docling2.150 compatible. Audit du nouveau verrouillage : aucun avis connu. Image : uv0.12.1 également signalé ; passage au correctif0.13.4 vérifié dans les métadonnées PyPI.
+
+Frontend avant correction des dépendances :805 tests passent,4 ignorés, build et types verts ; avertissement de dépendance React Hook préexistant dans App.tsx et taille de bundle à traiter si impact utilisateur mesuré. Audit npm initial :18 avis ; mises à jour ciblées de Vite/Vitest, ESLint/jsdom et Zod. Minimatch11.0.1 remplace10 seulement sous les deux parents ESLint : les appels installés utilisent Minimatch.match, pas les API retirées ([changelog officiel](https://github.com/isaacs/minimatch/blob/v11.0.1/changelog.md)). Vérifier le même inventaire de fichiers/diagnostics ESLint puis les tests/build ; retirer ces overrides lorsque les parents adoptent la version corrigée. Aucun avis n’est ignoré pour obtenir une CI verte.
+
+Semgrep1.185.0 :79 règles de security-audit sur44 tests modifiés, zéro finding/erreur ; Bandit applicatif sans finding bloquant. Ces analyses statiques ne démontrent ni absence universelle de vulnérabilité ni recette utilisateur.
+
+Branches historiques : trois branches documentaires restent conservées avec leurs anciens chemins. `codex/phase-a0-execution` contient en plus un banc golden DCE de830 lignes absent du socle actuel ; conservé pour examen R2, non réintroduit dans R0 sans besoin de recette. Les dix worktrees sont conservés, leurs sept WIP sauvegardés et committés localement. Pas de suppression, reset, clean, stash ni force-push.
+
+
+Audit npm après correctifs : zéro avis connu (323 dépendances, outils compris). ESLint conserve exactement231 fichiers et les mêmes compteurs de diagnostics avant/après minimatch. Audit Python du verrouillage corrigé : zéro avis connu. Le scan Semgrep global a exécuté117 règles sur1641 fichiers suivis : une alerte `python.lang.security.use-defused-xml.use-defused-xml` à `pricing/application/import_preview.py:6`, triée comme faux positif sur import de l’exception ParseError, sans appel au parseur XML standard dans ce module. Quatre timeouts de règles sur trois fichiers UI sont repris séparément ; les fichiers ignorés et deux fichiers >1 Mo ne sont pas couverts par ce scan. Aucun résultat Semgrep global exhaustif n’est présumé.

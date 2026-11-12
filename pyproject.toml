@@ -19,7 +19,7 @@ dependencies = [
   "argon2-cffi>=23.1,<26.0",
   "pyjwt>=2.15.1,<3.0",
   "python-magic>=0.4.27,<1.0",
-  "pypdf>=6.20.0",
+  "pypdf>=6.21.4",
   "fonttools>=4.66.1,<5.0",
   "python-docx>=1.2.0",
   "openpyxl>=3.1.5",
@@ -33,7 +33,7 @@ rag = [
   "sentence-transformers>=3.0,<6.0",
 ]
 document-advanced = [
-  "docling>=2.137.0,<3.0",
+  "docling>=2.150.0,<3.0",
   "pymupdf>=1.24,<2.0",
 ]
 document-ocr = [

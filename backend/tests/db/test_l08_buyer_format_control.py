@@ -173,9 +173,7 @@ def test_native_source_formats_compare_exact_files_without_an_act(
         for r in name_sizes
     )
     assert any(
-        r["criterion"] == "NO_WHITESPACE"
-        and r["state"] == ("UNKNOWN" if docx else "OBSERVED_MATCH")
-        for r in name_sizes
+        r["criterion"] == "NO_WHITESPACE" and r["state"] == "OBSERVED_MATCH" for r in name_sizes
     )
     assert all(r["conformity"] == r["applicability"] == "UNKNOWN" for r in name_sizes)
     assert all(r["source_anchor"]["dce_version_id"] == report["dce_version_id"] for r in name_sizes)
