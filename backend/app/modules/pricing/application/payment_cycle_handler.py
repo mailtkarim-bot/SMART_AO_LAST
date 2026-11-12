@@ -36,9 +36,9 @@ class RecordPaymentPostReceptionCycleHandler(CommandHandler):
         tenant_id = UUID(str(context.tenant_id))
         if (
             session.scalar(
-                sa.select(CaseRecord.id).where(
-                    CaseRecord.tenant_id == tenant_id, CaseRecord.id == command.case_id
-                )
+                sa.select(CaseRecord.id)
+                .where(CaseRecord.tenant_id == tenant_id, CaseRecord.id == command.case_id)
+                .with_for_update()
             )
             is None
         ):
@@ -103,6 +103,15 @@ class QualifyPaymentPostReceptionCycleHandler(CommandHandler):
         context: CommandContext,
     ) -> HandlerOutcome:
         tenant_id = UUID(str(context.tenant_id))
+        if (
+            session.scalar(
+                sa.select(CaseRecord.id)
+                .where(CaseRecord.tenant_id == tenant_id, CaseRecord.id == command.case_id)
+                .with_for_update()
+            )
+            is None
+        ):
+            raise CommandExecutionError("PAYMENT_CYCLE_NOT_FOUND")
         record = session.scalar(
             sa.select(PaymentPostReceptionCycleRecord).where(
                 PaymentPostReceptionCycleRecord.tenant_id == tenant_id,

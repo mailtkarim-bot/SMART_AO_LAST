@@ -3,8 +3,9 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Header, HTTPException, Query, status
+from fastapi import APIRouter, Header, HTTPException, Query, Response, status
 from fastapi.responses import JSONResponse
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from app.interfaces.http.aggregate_refs import require_aggregate_revision
 from app.interfaces.http.dependencies.auth import resolve_bearer_context as _resolve_context
@@ -60,10 +61,12 @@ def build_patron_boamp_opportunity_router(
 
     @router.get("", response_model=BoampObservationListResponse)
     def read_observations(
+        response: Response,
         authorization: str | None = Header(default=None),
         limit: int = Query(default=50, ge=1, le=200),
         min_score: int = Query(default=0, ge=0, le=100),
     ) -> BoampObservationListResponse:
+        response.headers["Cache-Control"] = "no-store"
         context = _resolve_context(
             authorization=authorization,
             context_resolver=security_runtime.context_resolver,
@@ -168,6 +171,10 @@ def build_patron_boamp_opportunity_router(
             raise HTTPException(status_code=422, detail="INVALID_QUALIFICATION") from error
         except BoampQualificationIdempotencyConflict as error:
             raise HTTPException(status_code=409, detail="IDEMPOTENCY_CONFLICT") from error
+        except IntegrityError as error:
+            raise HTTPException(status_code=409, detail="IDEMPOTENCY_CONFLICT") from error
+        except SQLAlchemyError as error:
+            raise HTTPException(status_code=503, detail="RESULT_UNKNOWN") from error
         response = BoampQualificationReceiptResponse(
             qualification_id=result.qualification_id,
             event_id=result.event_id,
@@ -175,6 +182,7 @@ def build_patron_boamp_opportunity_router(
         )
         return JSONResponse(
             status_code=status.HTTP_200_OK if result.replayed else status.HTTP_201_CREATED,
+            headers={"Cache-Control": "no-store"},
             content=response.model_dump(mode="json"),
         )
 
@@ -235,7 +243,11 @@ def build_patron_boamp_opportunity_router(
             raise HTTPException(status_code=403, detail="FORBIDDEN") from error
         except (IdempotencyKeyReusedError, CommandInProgressError) as error:
             raise HTTPException(status_code=409, detail="IDEMPOTENCY_CONFLICT") from error
+        except SQLAlchemyError as error:
+            raise HTTPException(status_code=503, detail="RESULT_UNKNOWN") from error
         except CommandExecutionError as error:
+            if isinstance(error.__cause__, SQLAlchemyError):
+                raise HTTPException(status_code=503, detail="RESULT_UNKNOWN") from error
             code = str(error.__cause__) if isinstance(error.__cause__, ValueError) else str(error)
             http_status = (
                 409 if code in {"DUPLICATE_FUNCTIONAL_IDENTITY", "VERSION_CONFLICT"} else 422
@@ -254,6 +266,7 @@ def build_patron_boamp_opportunity_router(
         )
         return JSONResponse(
             status_code=status.HTTP_200_OK if result.replayed else status.HTTP_201_CREATED,
+            headers={"Cache-Control": "no-store"},
             content=response.model_dump(mode="json"),
         )
 

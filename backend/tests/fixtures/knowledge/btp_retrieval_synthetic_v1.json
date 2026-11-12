@@ -1,0 +1,508 @@
+{
+  "schema_version": 1,
+  "synthetic": true,
+  "tenant_id": "00000000-0000-0000-0000-000000000001",
+  "case_id": "00000000-0000-0000-0000-000000000002",
+  "version_id": "00000000-0000-0000-0000-000000000003",
+  "documents": [
+    {
+      "id": "00000000-0000-0000-0000-000000000064",
+      "tenant_id": "00000000-0000-0000-0000-000000000001",
+      "case_id": "00000000-0000-0000-0000-000000000002",
+      "version_id": "00000000-0000-0000-0000-000000000003",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 1,
+      "family": "RC",
+      "text": "La remise des offres est fixée au 21 novembre 2034 à 10h30 UTC pour le lot 2."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000065",
+      "tenant_id": "00000000-0000-0000-0000-000000000001",
+      "case_id": "00000000-0000-0000-0000-000000000002",
+      "version_id": "00000000-0000-0000-0000-000000000003",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 2,
+      "family": "RC",
+      "text": "Lot 2 : la visite des installations est obligatoire. Une attestation de visite doit être jointe au pli."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000066",
+      "tenant_id": "00000000-0000-0000-0000-000000000001",
+      "case_id": "00000000-0000-0000-0000-000000000002",
+      "version_id": "00000000-0000-0000-0000-000000000003",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 3,
+      "family": "RC",
+      "text": "Lot 3 : aucune visite obligatoire. La visite est facultative et aucun certificat de visite n’est exigé."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000067",
+      "tenant_id": "00000000-0000-0000-0000-000000000001",
+      "case_id": "00000000-0000-0000-0000-000000000002",
+      "version_id": "00000000-0000-0000-0000-000000000003",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 4,
+      "family": "RC",
+      "text": "Le candidat remet un DC1, un DC2 et les attestations de capacités du cotraitant pour le lot 2."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000068",
+      "tenant_id": "00000000-0000-0000-0000-000000000001",
+      "case_id": "00000000-0000-0000-0000-000000000002",
+      "version_id": "00000000-0000-0000-0000-000000000003",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 5,
+      "family": "CCTP",
+      "text": "Lot 2 : la ventilation mécanique double flux nécessite une récupération de chaleur à rendement supérieur à 80 pour cent."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000069",
+      "tenant_id": "00000000-0000-0000-0000-000000000001",
+      "case_id": "00000000-0000-0000-0000-000000000002",
+      "version_id": "00000000-0000-0000-0000-000000000003",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 6,
+      "family": "CCTP",
+      "text": "La grue ne peut accéder que par le portail nord. Les livraisons sont interdites entre 8h00 et 9h00."
+    },
+    {
+      "id": "00000000-0000-0000-0000-00000000006a",
+      "tenant_id": "00000000-0000-0000-0000-000000000001",
+      "case_id": "00000000-0000-0000-0000-000000000002",
+      "version_id": "00000000-0000-0000-0000-000000000003",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 7,
+      "family": "CCAP",
+      "text": "Le sous-traitant est déclaré avant intervention. L’agrément de ses conditions de paiement reste soumis au maître d’ouvrage."
+    },
+    {
+      "id": "00000000-0000-0000-0000-00000000006b",
+      "tenant_id": "00000000-0000-0000-0000-000000000001",
+      "case_id": "00000000-0000-0000-0000-000000000002",
+      "version_id": "00000000-0000-0000-0000-000000000003",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 8,
+      "family": "CCAP",
+      "text": "Le solde est instruit après réception et remise du dossier des ouvrages exécutés. Le règlement peut être suspendu si ce dossier manque."
+    },
+    {
+      "id": "00000000-0000-0000-0000-00000000006c",
+      "tenant_id": "00000000-0000-0000-0000-000000000001",
+      "case_id": "00000000-0000-0000-0000-000000000002",
+      "version_id": "00000000-0000-0000-0000-000000000003",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 9,
+      "family": "PLANNING",
+      "text": "Deux équipes distinctes doivent travailler en parallèle : une pour la couverture et une pour les réseaux, pendant la fermeture estivale."
+    },
+    {
+      "id": "00000000-0000-0000-0000-00000000006d",
+      "tenant_id": "00000000-0000-0000-0000-000000000001",
+      "case_id": "00000000-0000-0000-0000-000000000002",
+      "version_id": "00000000-0000-0000-0000-000000000003",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 10,
+      "family": "CCTP",
+      "text": "Le fabricant des centrales doit fournir une note de sélection et participer à la mise en service avec le titulaire."
+    },
+    {
+      "id": "00000000-0000-0000-0000-00000000006e",
+      "tenant_id": "00000000-0000-0000-0000-000000000001",
+      "case_id": "00000000-0000-0000-0000-000000000002",
+      "version_id": "00000000-0000-0000-0000-000000000003",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 11,
+      "family": "PGC",
+      "text": "Les percements en hauteur requièrent une protection collective. Le plan de retrait amiante est transmis avant toute intervention dans la zone repérée."
+    },
+    {
+      "id": "00000000-0000-0000-0000-00000000006f",
+      "tenant_id": "00000000-0000-0000-0000-000000000001",
+      "case_id": "00000000-0000-0000-0000-000000000002",
+      "version_id": "00000000-0000-0000-0000-000000000003",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 12,
+      "family": "RC",
+      "text": "Le mémoire technique expose les moyens, les interfaces et la méthode d’exécution. Il ne remplace pas le planning détaillé, pièce distincte."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000070",
+      "tenant_id": "00000000-0000-0000-0000-000000000001",
+      "case_id": "00000000-0000-0000-0000-000000000002",
+      "version_id": "00000000-0000-0000-0000-000000000003",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 13,
+      "family": "CCAP",
+      "text": "Les réserves de réception font l’objet d’un suivi jusqu’à leur levée. Le titulaire conserve les preuves datées de transmission des corrections."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000071",
+      "tenant_id": "00000000-0000-0000-0000-000000000001",
+      "case_id": "00000000-0000-0000-0000-000000000002",
+      "version_id": "00000000-0000-0000-0000-000000000003",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 14,
+      "family": "RC",
+      "text": "La variante du lot 4 est autorisée seulement si une offre de base est également remise. Pour le lot 2, aucune variante n’est admise."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000072",
+      "tenant_id": "00000000-0000-0000-0000-000000000001",
+      "case_id": "00000000-0000-0000-0000-000000000002",
+      "version_id": "00000000-0000-0000-0000-000000000003",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 15,
+      "family": "RC",
+      "text": "Le délai du lot 3 ne vaut pas pour le lot 2. Les travaux du lot 2 durent seize semaines après notification."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000073",
+      "tenant_id": "00000000-0000-0000-0000-000000000001",
+      "case_id": "00000000-0000-0000-0000-000000000002",
+      "version_id": "00000000-0000-0000-0000-000000000003",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 16,
+      "family": "RC",
+      "text": "Le critère de valeur technique reçoit une pondération de 60 pour cent. La performance environnementale reçoit 15 pour cent."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000074",
+      "tenant_id": "00000000-0000-0000-0000-000000000001",
+      "case_id": "00000000-0000-0000-0000-000000000002",
+      "version_id": "00000000-0000-0000-0000-000000000003",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 17,
+      "family": "CCAP",
+      "text": "La révision contractuelle s’appuie sur l’indice BT01. Une provision pour variation des approvisionnements doit être distinguée des quantités du bordereau."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000075",
+      "tenant_id": "00000000-0000-0000-0000-000000000001",
+      "case_id": "00000000-0000-0000-0000-000000000002",
+      "version_id": "00000000-0000-0000-0000-000000000003",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 18,
+      "family": "RC",
+      "text": "La date de dépôt précédente est annulée par le rectificatif version 3 : remise le 25 novembre 2034 à 12h00 UTC."
+    },
+    {
+      "id": "00000000-0000-0000-0000-0000000000c8",
+      "tenant_id": "00000000-0000-0000-0000-000000000001",
+      "case_id": "00000000-0000-0000-0000-000000000002",
+      "version_id": "00000000-0000-0000-0000-000000000003",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 30,
+      "family": "CCTP",
+      "text": "Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation. Les installations sont repérées sur les plans de consultation. Les accès et les surfaces sont vérifiés pendant la préparation.  La livraison des filtres HEPA H14 est obligatoire avant la remise en service du bloc stérile."
+    },
+    {
+      "id": "00000000-0000-0000-0000-00000000012c",
+      "tenant_id": "00000000-0000-0000-0000-000000000063",
+      "case_id": "00000000-0000-0000-0000-000000000002",
+      "version_id": "00000000-0000-0000-0000-000000000003",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 2,
+      "family": "RC",
+      "text": "La visite est obligatoire pour le lot 2. CODE_CANARI_INTERDIT_300"
+    },
+    {
+      "id": "00000000-0000-0000-0000-00000000012d",
+      "tenant_id": "00000000-0000-0000-0000-000000000001",
+      "case_id": "00000000-0000-0000-0000-000000000063",
+      "version_id": "00000000-0000-0000-0000-000000000003",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 2,
+      "family": "RC",
+      "text": "La visite est obligatoire pour le lot 2. CODE_CANARI_INTERDIT_301"
+    },
+    {
+      "id": "00000000-0000-0000-0000-00000000012e",
+      "tenant_id": "00000000-0000-0000-0000-000000000001",
+      "case_id": "00000000-0000-0000-0000-000000000002",
+      "version_id": "00000000-0000-0000-0000-000000000063",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 2,
+      "family": "RC",
+      "text": "La visite est obligatoire pour le lot 2. CODE_CANARI_INTERDIT_302"
+    },
+    {
+      "id": "00000000-0000-0000-0000-00000000012f",
+      "tenant_id": "00000000-0000-0000-0000-000000000001",
+      "case_id": "00000000-0000-0000-0000-000000000002",
+      "version_id": "00000000-0000-0000-0000-000000000003",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": false,
+      "extraction_status": "COMPLETED",
+      "page": 2,
+      "family": "RC",
+      "text": "La visite est obligatoire pour le lot 2. CODE_CANARI_INTERDIT_303"
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000130",
+      "tenant_id": "00000000-0000-0000-0000-000000000001",
+      "case_id": "00000000-0000-0000-0000-000000000002",
+      "version_id": "00000000-0000-0000-0000-000000000003",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "REVIEW_REQUIRED",
+      "page": 2,
+      "family": "RC",
+      "text": "La visite est obligatoire pour le lot 2. CODE_CANARI_INTERDIT_304"
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000131",
+      "tenant_id": "00000000-0000-0000-0000-000000000001",
+      "case_id": "00000000-0000-0000-0000-000000000002",
+      "version_id": "00000000-0000-0000-0000-000000000003",
+      "classification": "FINANCIAL_PRIVATE",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 2,
+      "family": "RC",
+      "text": "La visite est obligatoire pour le lot 2. CODE_CANARI_INTERDIT_305"
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000132",
+      "tenant_id": "00000000-0000-0000-0000-000000000001",
+      "case_id": "00000000-0000-0000-0000-000000000002",
+      "version_id": "00000000-0000-0000-0000-000000000003",
+      "classification": "PERSONAL_DATA",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 2,
+      "family": "RC",
+      "text": "La visite est obligatoire pour le lot 2. CODE_CANARI_INTERDIT_306"
+    }
+  ],
+  "queries": [
+    {
+      "id": "q-100",
+      "text": "Quand déposer le pli du lot 2 et dans quel fuseau ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000000064",
+        "00000000-0000-0000-0000-000000000075"
+      ],
+      "critical": true,
+      "conflict_semantics": "Retrieve both original and rectificatif evidence; never assert the original is the operative deadline."
+    },
+    {
+      "id": "q-101",
+      "text": "Pour le lot 2, faut-il visiter le site et fournir un justificatif ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000000065"
+      ],
+      "critical": true
+    },
+    {
+      "id": "q-102",
+      "text": "Pour le lot 3, une visite ou un certificat sont-ils imposés ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000000066"
+      ],
+      "critical": true
+    },
+    {
+      "id": "q-103",
+      "text": "Quels formulaires de candidature et capacités tierces sont demandés pour le lot 2 ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000000067"
+      ],
+      "critical": true
+    },
+    {
+      "id": "q-104",
+      "text": "Quel système de renouvellement d’air et de récupération de chaleur est prescrit ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000000068"
+      ],
+      "critical": false
+    },
+    {
+      "id": "q-105",
+      "text": "Par où accéder au chantier pour les levages et quand les livraisons sont-elles interdites ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000000069"
+      ],
+      "critical": true
+    },
+    {
+      "id": "q-106",
+      "text": "Que faut-il obtenir avant de faire intervenir une entreprise sous-traitante ?",
+      "expected": [
+        "00000000-0000-0000-0000-00000000006a"
+      ],
+      "critical": false
+    },
+    {
+      "id": "q-107",
+      "text": "Quel document conditionne le règlement du solde après réception ?",
+      "expected": [
+        "00000000-0000-0000-0000-00000000006b"
+      ],
+      "critical": true
+    },
+    {
+      "id": "q-108",
+      "text": "Quelles ressources simultanées faut-il prévoir durant les vacances d’été ?",
+      "expected": [
+        "00000000-0000-0000-0000-00000000006c"
+      ],
+      "critical": false
+    },
+    {
+      "id": "q-109",
+      "text": "Quelles contributions sont attendues du fournisseur de centrales lors de la mise en service ?",
+      "expected": [
+        "00000000-0000-0000-0000-00000000006d"
+      ],
+      "critical": false
+    },
+    {
+      "id": "q-110",
+      "text": "Quelles protections et démarches sont requises pour intervenir en hauteur et dans la zone amiante ?",
+      "expected": [
+        "00000000-0000-0000-0000-00000000006e"
+      ],
+      "critical": true
+    },
+    {
+      "id": "q-111",
+      "text": "Le planning est-il inclus dans le mémoire ou constitue-t-il un livrable séparé ?",
+      "expected": [
+        "00000000-0000-0000-0000-00000000006f"
+      ],
+      "critical": true
+    },
+    {
+      "id": "q-112",
+      "text": "Comment préserver la preuve des corrections et suivre les réserves après réception ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000000070"
+      ],
+      "critical": false
+    },
+    {
+      "id": "q-113",
+      "text": "Peut-on déposer une variante seule pour le lot 4 et est-elle permise au lot 2 ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000000071"
+      ],
+      "critical": true
+    },
+    {
+      "id": "q-114",
+      "text": "Quelle durée est explicitement prévue pour le lot 2 ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000000072"
+      ],
+      "critical": true
+    },
+    {
+      "id": "q-115",
+      "text": "Quel poids est donné à la qualité technique et à l’environnement dans la notation ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000000073"
+      ],
+      "critical": false
+    },
+    {
+      "id": "q-116",
+      "text": "Quel indice sert à actualiser les conditions économiques du contrat ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000000074"
+      ],
+      "critical": false
+    },
+    {
+      "id": "q-117",
+      "text": "Quelle nouvelle date de remise figure dans le rectificatif version 3 ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000000075"
+      ],
+      "critical": true
+    },
+    {
+      "id": "q-tail",
+      "text": "Quelle classe de filtration faut-il livrer avant de remettre le bloc stérile en service ?",
+      "expected": [
+        "00000000-0000-0000-0000-0000000000c8"
+      ],
+      "critical": true,
+      "expected_regions": [
+        {
+          "source_fragment_id": "00000000-0000-0000-0000-0000000000c8",
+          "start_byte": 9311,
+          "end_byte": 9405
+        }
+      ]
+    },
+    {
+      "id": "q-absent-color",
+      "text": "Quelle couleur RAL est imposée aux garde-corps du dernier étage ?",
+      "expected": [],
+      "critical": false
+    },
+    {
+      "id": "q-absent-guarantee",
+      "text": "Quelle est la durée de garantie spécifique des batteries photovoltaïques ?",
+      "expected": [],
+      "critical": false
+    },
+    {
+      "id": "q-financial-refused",
+      "text": "Quel est le prix confidentiel du lot 2 ?",
+      "expected": [],
+      "critical": false
+    },
+    {
+      "id": "q-private-canary",
+      "text": "CODE_CANARI_INTERDIT_305",
+      "expected": [],
+      "critical": false
+    }
+  ]
+}

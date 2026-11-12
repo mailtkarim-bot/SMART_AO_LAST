@@ -43,6 +43,9 @@ def _technical_document_source(manifest: dict[str, object], package) -> dict[str
 
 
 class CaseHandoverHandler(CommandHandler):
+    def __init__(self, storage=None):
+        self._storage = storage
+
     def execute(
         self,
         *,
@@ -71,6 +74,23 @@ class CaseHandoverHandler(CommandHandler):
         )
         if case is None or outcome is None or package is None:
             raise CommandExecutionError("HANDOVER_SOURCE_NOT_FOUND_OR_FORBIDDEN")
+        if (
+            case.applicable_dce_version_id is not None
+            and package.dce_version_id != case.applicable_dce_version_id
+        ):
+            raise CommandExecutionError("HANDOVER_OFFER_VERSION_CONFLICT")
+        latest_outcome = session.scalar(
+            sa.select(CaseOutcomeRecord.id)
+            .where(
+                CaseOutcomeRecord.tenant_id == context.tenant_id,
+                CaseOutcomeRecord.case_id == case.id,
+                CaseOutcomeRecord.lot_reference == outcome.lot_reference,
+            )
+            .order_by(CaseOutcomeRecord.created_at.desc(), CaseOutcomeRecord.id.desc())
+            .limit(1)
+        )
+        if latest_outcome != outcome.id:
+            raise CommandExecutionError("HANDOVER_OUTCOME_STALE")
         if outcome.outcome != "WON":
             raise CommandExecutionError("HANDOVER_REQUIRES_WON_OUTCOME")
         manifest_bytes = json.dumps(
@@ -105,7 +125,9 @@ class CaseHandoverHandler(CommandHandler):
                 DecisionRecord.tenant_id == context.tenant_id,
                 DecisionRecord.case_id == command.case_id,
                 DecisionRecord.validity == "CURRENT",
+                DecisionRecord.decision_type == "GO_NO_GO",
             )
+            .with_for_update(nowait=True)
             .order_by(DecisionRecord.cycle_number.desc(), DecisionRecord.updated_at.desc())
             .limit(1)
         )
@@ -229,6 +251,39 @@ class CaseHandoverHandler(CommandHandler):
             },
             "excluded": ["DONNEES_FINANCIERES_PRIVEES", "TEXTES_LIBRES_PATRON"],
         }
+        if command.operational_review is not None:
+            from app.modules.patron_action.infrastructure.operational_handover import (
+                enrich_operational_handover,
+            )
+
+            all_conditions = (
+                set(
+                    session.scalars(
+                        sa.select(DecisionConditionRecord.id).where(
+                            DecisionConditionRecord.tenant_id == context.tenant_id,
+                            DecisionConditionRecord.decision_id == decision.id,
+                        )
+                    )
+                )
+                if decision is not None
+                else set()
+            )
+            snapshot = enrich_operational_handover(
+                session,
+                snapshot=snapshot,
+                case=case,
+                package=package,
+                review=command.operational_review,
+                revision=revision,
+                condition_ids=all_conditions,
+                context=context,
+                storage=self._storage,
+            )
+        from app.modules.patron_action.application.operational_handover import (
+            public_handover_snapshot,
+        )
+
+        snapshot = public_handover_snapshot(snapshot)
         record = CaseHandoverSnapshotRecord(
             id=command.snapshot_id,
             tenant_id=context.tenant_id,

@@ -1,0 +1,1070 @@
+{
+  "schema_version": 1,
+  "synthetic": true,
+  "held_out": true,
+  "tenant_id": "00000000-0000-0000-0000-000000004a39",
+  "case_id": "00000000-0000-0000-0000-000000004a3a",
+  "version_id": "00000000-0000-0000-0000-000000004a3b",
+  "documents": [
+    {
+      "id": "00000000-0000-0000-0000-000000004a9c",
+      "tenant_id": "00000000-0000-0000-0000-000000004a39",
+      "case_id": "00000000-0000-0000-0000-000000004a3a",
+      "version_id": "00000000-0000-0000-0000-000000004a3b",
+      "text": "Lot n° 811 : joindre le DC2 si le dossier est retenu.",
+      "page": 1,
+      "family": "RC",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED"
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000004a9d",
+      "tenant_id": "00000000-0000-0000-0000-000000004a39",
+      "case_id": "00000000-0000-0000-0000-000000004a3a",
+      "version_id": "00000000-0000-0000-0000-000000004a3b",
+      "text": "Pour le lot 812, fournir le DC2 sauf dispense du pouvoir adjudicateur.",
+      "page": 2,
+      "family": "RC",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED"
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000004a9e",
+      "tenant_id": "00000000-0000-0000-0000-000000004a39",
+      "case_id": "00000000-0000-0000-0000-000000004a3a",
+      "version_id": "00000000-0000-0000-0000-000000004a3b",
+      "text": "Lot no 813 : remettre le DC1 si le candidat n'est pas exempté.",
+      "page": 3,
+      "family": "RC",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED"
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000004a9f",
+      "tenant_id": "00000000-0000-0000-0000-000000004a39",
+      "case_id": "00000000-0000-0000-0000-000000004a3a",
+      "version_id": "00000000-0000-0000-0000-000000004a3b",
+      "text": "Lot 814 : réaliser la visite de site.",
+      "page": 4,
+      "family": "RC",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED"
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000004aa0",
+      "tenant_id": "00000000-0000-0000-0000-000000004a39",
+      "case_id": "00000000-0000-0000-0000-000000004a3a",
+      "version_id": "00000000-0000-0000-0000-000000004a3b",
+      "text": "Lot n° 815 : présenter le mémoire technique lorsque la candidature est admise.",
+      "page": 5,
+      "family": "RC",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED"
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000004aa1",
+      "tenant_id": "00000000-0000-0000-0000-000000004a39",
+      "case_id": "00000000-0000-0000-0000-000000004a3a",
+      "version_id": "00000000-0000-0000-0000-000000004a3b",
+      "text": "Lot 816 : le DC2 est requis.",
+      "page": 6,
+      "family": "RC",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED"
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000004aa2",
+      "tenant_id": "00000000-0000-0000-0000-000000004a39",
+      "case_id": "00000000-0000-0000-0000-000000004a3a",
+      "version_id": "00000000-0000-0000-0000-000000004a3b",
+      "text": "Lot 817 : joindre le DC1 et le DC2.",
+      "page": 7,
+      "family": "RC",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED"
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000004aa3",
+      "tenant_id": "00000000-0000-0000-0000-000000004a39",
+      "case_id": "00000000-0000-0000-0000-000000004a3a",
+      "version_id": "00000000-0000-0000-0000-000000004a3b",
+      "text": "Lot 818 : joindre le DC2 si.",
+      "page": 8,
+      "family": "RC",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED"
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000004aa4",
+      "tenant_id": "00000000-0000-0000-0000-000000004a39",
+      "case_id": "00000000-0000-0000-0000-000000004a3a",
+      "version_id": "00000000-0000-0000-0000-000000004a3b",
+      "text": "Exemple non applicable. Lot n° 819 : joindre le DC2 si le dossier est retenu.",
+      "page": 9,
+      "family": "RC",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED"
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000004aa5",
+      "tenant_id": "00000000-0000-0000-0000-000000004a3c",
+      "case_id": "00000000-0000-0000-0000-000000004a3d",
+      "version_id": "00000000-0000-0000-0000-000000004a3e",
+      "text": "Lot n° 820 : joindre le DC2 si le dossier est retenu.",
+      "page": 10,
+      "family": "RC",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED"
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000004aa6",
+      "tenant_id": "00000000-0000-0000-0000-000000004a39",
+      "case_id": "00000000-0000-0000-0000-000000004a3f",
+      "version_id": "00000000-0000-0000-0000-000000004a40",
+      "text": "Lot n° 821 : joindre le DC2 si le dossier est retenu.",
+      "page": 11,
+      "family": "RC",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED"
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000004aa7",
+      "tenant_id": "00000000-0000-0000-0000-000000004a39",
+      "case_id": "00000000-0000-0000-0000-000000004a3a",
+      "version_id": "00000000-0000-0000-0000-000000004a41",
+      "text": "Lot n° 822 : joindre le DC2 si le dossier est retenu.",
+      "page": 12,
+      "family": "RC",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": false,
+      "extraction_status": "COMPLETED"
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000004aa8",
+      "tenant_id": "00000000-0000-0000-0000-000000004a39",
+      "case_id": "00000000-0000-0000-0000-000000004a3a",
+      "version_id": "00000000-0000-0000-0000-000000004a42",
+      "text": "Lot n° 823 : joindre le DC2 si le dossier est retenu.",
+      "page": 13,
+      "family": "RC",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": false,
+      "extraction_status": "COMPLETED"
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000004aa9",
+      "tenant_id": "00000000-0000-0000-0000-000000004a39",
+      "case_id": "00000000-0000-0000-0000-000000004a3a",
+      "version_id": "00000000-0000-0000-0000-000000004a3b",
+      "text": "Lot n° 824 : joindre le DC2 si le dossier est retenu.",
+      "page": 14,
+      "family": "RC",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "REVIEW_REQUIRED"
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000004aaa",
+      "tenant_id": "00000000-0000-0000-0000-000000004a39",
+      "case_id": "00000000-0000-0000-0000-000000004a3a",
+      "version_id": "00000000-0000-0000-0000-000000004a3b",
+      "text": "Lot 825 : la DPGF est requise.",
+      "page": 15,
+      "family": "RC",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED"
+    }
+  ],
+  "queries": [
+    {
+      "id": "condition-if",
+      "text": "Pour le lot 811, faut-il joindre le DC2 ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000004a9c"
+      ],
+      "expected_clause_ids": [
+        "c1-DC2"
+      ],
+      "family": "condition-if",
+      "critical": true,
+      "review_required": true,
+      "expected_unknown": true,
+      "expected_conflicts": [],
+      "expected_query_lot": 811,
+      "expected_query_anchor": "lot 811",
+      "expected_refusal": null,
+      "expected_visit_subject": null,
+      "expected_visit_anchor": null,
+      "expected_legacy_intent": {
+        "state": "NONE",
+        "subject": null,
+        "start_byte": null,
+        "end_byte": null
+      },
+      "expected_intent": {
+        "subject": "DC2",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED"
+      },
+      "expected_query_anchors": [
+        {
+          "signal": "LOT",
+          "start_byte": 8,
+          "end_byte": 15,
+          "excerpt": "lot 811"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 17,
+          "end_byte": 32,
+          "excerpt": "faut-il joindre"
+        },
+        {
+          "signal": "SUBJECT",
+          "start_byte": 36,
+          "end_byte": 39,
+          "excerpt": "DC2"
+        }
+      ]
+    },
+    {
+      "id": "condition-unless",
+      "text": "Pour le lot 812, faut-il joindre le DC2 ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000004a9d"
+      ],
+      "expected_clause_ids": [
+        "c2-DC2"
+      ],
+      "family": "condition-unless",
+      "critical": true,
+      "review_required": true,
+      "expected_unknown": true,
+      "expected_conflicts": [],
+      "expected_query_lot": 812,
+      "expected_query_anchor": "lot 812",
+      "expected_refusal": null,
+      "expected_visit_subject": null,
+      "expected_visit_anchor": null,
+      "expected_legacy_intent": {
+        "state": "NONE",
+        "subject": null,
+        "start_byte": null,
+        "end_byte": null
+      },
+      "expected_intent": {
+        "subject": "DC2",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED"
+      },
+      "expected_query_anchors": [
+        {
+          "signal": "LOT",
+          "start_byte": 8,
+          "end_byte": 15,
+          "excerpt": "lot 812"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 17,
+          "end_byte": 32,
+          "excerpt": "faut-il joindre"
+        },
+        {
+          "signal": "SUBJECT",
+          "start_byte": 36,
+          "end_byte": 39,
+          "excerpt": "DC2"
+        }
+      ]
+    },
+    {
+      "id": "condition-negation",
+      "text": "Pour le lot 813, faut-il joindre le DC1 ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000004a9e"
+      ],
+      "expected_clause_ids": [
+        "c3-DC1"
+      ],
+      "family": "condition-negation",
+      "critical": true,
+      "review_required": true,
+      "expected_unknown": true,
+      "expected_conflicts": [],
+      "expected_query_lot": 813,
+      "expected_query_anchor": "lot 813",
+      "expected_refusal": null,
+      "expected_visit_subject": null,
+      "expected_visit_anchor": null,
+      "expected_legacy_intent": {
+        "state": "NONE",
+        "subject": null,
+        "start_byte": null,
+        "end_byte": null
+      },
+      "expected_intent": {
+        "subject": "DC1",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED"
+      },
+      "expected_query_anchors": [
+        {
+          "signal": "LOT",
+          "start_byte": 8,
+          "end_byte": 15,
+          "excerpt": "lot 813"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 17,
+          "end_byte": 32,
+          "excerpt": "faut-il joindre"
+        },
+        {
+          "signal": "SUBJECT",
+          "start_byte": 36,
+          "end_byte": 39,
+          "excerpt": "DC1"
+        }
+      ]
+    },
+    {
+      "id": "condition-when",
+      "text": "Pour le lot 815, faut-il joindre le mémoire technique ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000004aa0"
+      ],
+      "expected_clause_ids": [
+        "c5-MEMOIRE_TECHNIQUE"
+      ],
+      "family": "condition-when",
+      "critical": true,
+      "review_required": true,
+      "expected_unknown": true,
+      "expected_conflicts": [],
+      "expected_query_lot": 815,
+      "expected_query_anchor": "lot 815",
+      "expected_refusal": null,
+      "expected_visit_subject": null,
+      "expected_visit_anchor": null,
+      "expected_legacy_intent": {
+        "state": "NONE",
+        "subject": null,
+        "start_byte": null,
+        "end_byte": null
+      },
+      "expected_intent": {
+        "subject": "MEMOIRE_TECHNIQUE",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED"
+      },
+      "expected_query_anchors": [
+        {
+          "signal": "LOT",
+          "start_byte": 8,
+          "end_byte": 15,
+          "excerpt": "lot 815"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 17,
+          "end_byte": 32,
+          "excerpt": "faut-il joindre"
+        },
+        {
+          "signal": "SUBJECT",
+          "start_byte": 36,
+          "end_byte": 54,
+          "excerpt": "mémoire technique"
+        }
+      ]
+    },
+    {
+      "id": "nominal",
+      "text": "Pour le lot 816, faut-il joindre le DC2 ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000004aa1"
+      ],
+      "expected_clause_ids": [
+        "c6-DC2"
+      ],
+      "family": "nominal",
+      "critical": true,
+      "review_required": false,
+      "expected_unknown": false,
+      "expected_conflicts": [],
+      "expected_query_lot": 816,
+      "expected_query_anchor": "lot 816",
+      "expected_refusal": null,
+      "expected_visit_subject": null,
+      "expected_visit_anchor": null,
+      "expected_legacy_intent": {
+        "state": "NONE",
+        "subject": null,
+        "start_byte": null,
+        "end_byte": null
+      },
+      "expected_intent": {
+        "subject": "DC2",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED"
+      },
+      "expected_query_anchors": [
+        {
+          "signal": "LOT",
+          "start_byte": 8,
+          "end_byte": 15,
+          "excerpt": "lot 816"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 17,
+          "end_byte": 32,
+          "excerpt": "faut-il joindre"
+        },
+        {
+          "signal": "SUBJECT",
+          "start_byte": 36,
+          "end_byte": 39,
+          "excerpt": "DC2"
+        }
+      ]
+    },
+    {
+      "id": "multiple-source",
+      "text": "Pour le lot 817, faut-il joindre le DC2 ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000004aa2"
+      ],
+      "expected_clause_ids": [
+        "c7-DC2"
+      ],
+      "family": "multiple-source",
+      "critical": true,
+      "review_required": true,
+      "expected_unknown": true,
+      "expected_conflicts": [],
+      "expected_query_lot": 817,
+      "expected_query_anchor": "lot 817",
+      "expected_refusal": null,
+      "expected_visit_subject": null,
+      "expected_visit_anchor": null,
+      "expected_legacy_intent": {
+        "state": "NONE",
+        "subject": null,
+        "start_byte": null,
+        "end_byte": null
+      },
+      "expected_intent": {
+        "subject": "DC2",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED"
+      },
+      "expected_query_anchors": [
+        {
+          "signal": "LOT",
+          "start_byte": 8,
+          "end_byte": 15,
+          "excerpt": "lot 817"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 17,
+          "end_byte": 32,
+          "excerpt": "faut-il joindre"
+        },
+        {
+          "signal": "SUBJECT",
+          "start_byte": 36,
+          "end_byte": 39,
+          "excerpt": "DC2"
+        }
+      ]
+    },
+    {
+      "id": "truncated-condition",
+      "text": "Pour le lot 818, faut-il joindre le DC2 ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000004aa3"
+      ],
+      "expected_clause_ids": [
+        "c8-DC2"
+      ],
+      "family": "truncated-condition",
+      "critical": true,
+      "review_required": true,
+      "expected_unknown": true,
+      "expected_conflicts": [],
+      "expected_query_lot": 818,
+      "expected_query_anchor": "lot 818",
+      "expected_refusal": null,
+      "expected_visit_subject": null,
+      "expected_visit_anchor": null,
+      "expected_legacy_intent": {
+        "state": "NONE",
+        "subject": null,
+        "start_byte": null,
+        "end_byte": null
+      },
+      "expected_intent": {
+        "subject": "DC2",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED"
+      },
+      "expected_query_anchors": [
+        {
+          "signal": "LOT",
+          "start_byte": 8,
+          "end_byte": 15,
+          "excerpt": "lot 818"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 17,
+          "end_byte": 32,
+          "excerpt": "faut-il joindre"
+        },
+        {
+          "signal": "SUBJECT",
+          "start_byte": 36,
+          "end_byte": 39,
+          "excerpt": "DC2"
+        }
+      ]
+    },
+    {
+      "id": "visit",
+      "text": "La visite de site est-elle obligatoire pour le lot 814 ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000004a9f"
+      ],
+      "expected_clause_ids": [
+        "c4-VISIT_SITE"
+      ],
+      "family": "visit",
+      "critical": true,
+      "review_required": false,
+      "expected_unknown": false,
+      "expected_conflicts": [],
+      "expected_query_lot": 814,
+      "expected_query_anchor": "lot 814",
+      "expected_refusal": null,
+      "expected_visit_subject": "VISIT_SITE",
+      "expected_visit_anchor": "visite de site",
+      "expected_legacy_intent": {
+        "state": "CANDIDATE",
+        "subject": "VISIT_SITE",
+        "start_byte": 3,
+        "end_byte": 17
+      },
+      "expected_intent": {
+        "subject": "VISIT_SITE",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED"
+      },
+      "expected_query_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 3,
+          "end_byte": 17,
+          "excerpt": "visite de site"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 18,
+          "end_byte": 38,
+          "excerpt": "est-elle obligatoire"
+        },
+        {
+          "signal": "LOT",
+          "start_byte": 47,
+          "end_byte": 54,
+          "excerpt": "lot 814"
+        }
+      ]
+    },
+    {
+      "id": "hour",
+      "text": "À quelle heure débute la visite de site pour le lot 814 ?",
+      "expected": [],
+      "expected_clause_ids": [],
+      "family": "hour",
+      "critical": true,
+      "review_required": false,
+      "expected_unknown": false,
+      "expected_conflicts": [],
+      "expected_query_lot": 814,
+      "expected_query_anchor": "lot 814",
+      "expected_refusal": null,
+      "expected_visit_subject": "UNKNOWN",
+      "expected_visit_anchor": null,
+      "expected_legacy_intent": {
+        "state": "UNKNOWN",
+        "subject": null,
+        "start_byte": null,
+        "end_byte": null
+      },
+      "expected_intent": {
+        "subject": "VISIT_SITE",
+        "demand": "DATE_TIME",
+        "coverage": "UNSUPPORTED"
+      },
+      "expected_query_anchors": [
+        {
+          "signal": "DEMAND",
+          "start_byte": 0,
+          "end_byte": 15,
+          "excerpt": "À quelle heure"
+        },
+        {
+          "signal": "SUBJECT",
+          "start_byte": 27,
+          "end_byte": 41,
+          "excerpt": "visite de site"
+        },
+        {
+          "signal": "LOT",
+          "start_byte": 50,
+          "end_byte": 57,
+          "excerpt": "lot 814"
+        }
+      ]
+    },
+    {
+      "id": "multiple-query",
+      "text": "Faut-il joindre le DC1 et le DC2 pour le lot 817 ?",
+      "expected": [],
+      "expected_clause_ids": [],
+      "family": "multiple-query",
+      "critical": true,
+      "review_required": false,
+      "expected_unknown": false,
+      "expected_conflicts": [],
+      "expected_query_lot": 817,
+      "expected_query_anchor": "lot 817",
+      "expected_refusal": null,
+      "expected_visit_subject": null,
+      "expected_visit_anchor": null,
+      "expected_legacy_intent": {
+        "state": "NONE",
+        "subject": null,
+        "start_byte": null,
+        "end_byte": null
+      },
+      "expected_intent": {
+        "subject": "UNKNOWN",
+        "demand": "UNKNOWN",
+        "coverage": "AMBIGUOUS"
+      },
+      "expected_query_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 19,
+          "end_byte": 22,
+          "excerpt": "DC1"
+        },
+        {
+          "signal": "SUBJECT",
+          "start_byte": 29,
+          "end_byte": 32,
+          "excerpt": "DC2"
+        },
+        {
+          "signal": "LOT",
+          "start_byte": 41,
+          "end_byte": 48,
+          "excerpt": "lot 817"
+        }
+      ]
+    },
+    {
+      "id": "foreign-tenant",
+      "text": "Faut-il joindre le DC2 pour le lot 820 ?",
+      "expected": [],
+      "expected_clause_ids": [],
+      "family": "foreign-tenant",
+      "critical": true,
+      "review_required": false,
+      "expected_unknown": false,
+      "expected_conflicts": [],
+      "expected_query_lot": 820,
+      "expected_query_anchor": "lot 820",
+      "expected_refusal": null,
+      "expected_visit_subject": null,
+      "expected_visit_anchor": null,
+      "expected_legacy_intent": {
+        "state": "NONE",
+        "subject": null,
+        "start_byte": null,
+        "end_byte": null
+      },
+      "expected_intent": {
+        "subject": "DC2",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED"
+      },
+      "expected_query_anchors": [
+        {
+          "signal": "DEMAND",
+          "start_byte": 0,
+          "end_byte": 15,
+          "excerpt": "Faut-il joindre"
+        },
+        {
+          "signal": "SUBJECT",
+          "start_byte": 19,
+          "end_byte": 22,
+          "excerpt": "DC2"
+        },
+        {
+          "signal": "LOT",
+          "start_byte": 31,
+          "end_byte": 38,
+          "excerpt": "lot 820"
+        }
+      ]
+    },
+    {
+      "id": "dpgf",
+      "text": "La DPGF est-elle requise pour le lot 825 ?",
+      "expected": [],
+      "expected_clause_ids": [],
+      "family": "dpgf",
+      "critical": true,
+      "review_required": false,
+      "expected_unknown": false,
+      "expected_conflicts": [],
+      "expected_query_lot": 825,
+      "expected_query_anchor": "lot 825",
+      "expected_refusal": "FINANCIAL_SCOPE_REFUSED",
+      "expected_visit_subject": null,
+      "expected_visit_anchor": null,
+      "expected_legacy_intent": null,
+      "expected_intent": null,
+      "expected_query_anchors": []
+    }
+  ],
+  "clause_inventory": [
+    {
+      "id": "c1-DC2",
+      "source_fragment_id": "00000000-0000-0000-0000-000000004a9c",
+      "start_byte": 0,
+      "end_byte": 54,
+      "excerpt": "Lot n° 811 : joindre le DC2 si le dossier est retenu.",
+      "subject": "DC2",
+      "lot": 811,
+      "value": "UNKNOWN",
+      "kind": "UNKNOWN"
+    },
+    {
+      "id": "c2-DC2",
+      "source_fragment_id": "00000000-0000-0000-0000-000000004a9d",
+      "start_byte": 0,
+      "end_byte": 70,
+      "excerpt": "Pour le lot 812, fournir le DC2 sauf dispense du pouvoir adjudicateur.",
+      "subject": "DC2",
+      "lot": 812,
+      "value": "UNKNOWN",
+      "kind": "UNKNOWN"
+    },
+    {
+      "id": "c3-DC1",
+      "source_fragment_id": "00000000-0000-0000-0000-000000004a9e",
+      "start_byte": 0,
+      "end_byte": 63,
+      "excerpt": "Lot no 813 : remettre le DC1 si le candidat n'est pas exempté.",
+      "subject": "DC1",
+      "lot": 813,
+      "value": "UNKNOWN",
+      "kind": "UNKNOWN"
+    },
+    {
+      "id": "c4-VISIT_SITE",
+      "source_fragment_id": "00000000-0000-0000-0000-000000004a9f",
+      "start_byte": 0,
+      "end_byte": 38,
+      "excerpt": "Lot 814 : réaliser la visite de site.",
+      "subject": "VISIT_SITE",
+      "lot": 814,
+      "value": "REQUIRED",
+      "kind": "ASSERTION"
+    },
+    {
+      "id": "c5-MEMOIRE_TECHNIQUE",
+      "source_fragment_id": "00000000-0000-0000-0000-000000004aa0",
+      "start_byte": 0,
+      "end_byte": 81,
+      "excerpt": "Lot n° 815 : présenter le mémoire technique lorsque la candidature est admise.",
+      "subject": "MEMOIRE_TECHNIQUE",
+      "lot": 815,
+      "value": "UNKNOWN",
+      "kind": "UNKNOWN"
+    },
+    {
+      "id": "c6-DC2",
+      "source_fragment_id": "00000000-0000-0000-0000-000000004aa1",
+      "start_byte": 0,
+      "end_byte": 28,
+      "excerpt": "Lot 816 : le DC2 est requis.",
+      "subject": "DC2",
+      "lot": 816,
+      "value": "REQUIRED",
+      "kind": "ASSERTION"
+    },
+    {
+      "id": "c7-DC1",
+      "source_fragment_id": "00000000-0000-0000-0000-000000004aa2",
+      "start_byte": 0,
+      "end_byte": 35,
+      "excerpt": "Lot 817 : joindre le DC1 et le DC2.",
+      "subject": "DC1",
+      "lot": 817,
+      "value": "REQUIRED",
+      "kind": "ASSERTION"
+    },
+    {
+      "id": "c7-DC2",
+      "source_fragment_id": "00000000-0000-0000-0000-000000004aa2",
+      "start_byte": 0,
+      "end_byte": 35,
+      "excerpt": "Lot 817 : joindre le DC1 et le DC2.",
+      "subject": "DC2",
+      "lot": 817,
+      "value": "REQUIRED",
+      "kind": "ASSERTION"
+    },
+    {
+      "id": "c8-DC2",
+      "source_fragment_id": "00000000-0000-0000-0000-000000004aa3",
+      "start_byte": 0,
+      "end_byte": 28,
+      "excerpt": "Lot 818 : joindre le DC2 si.",
+      "subject": "DC2",
+      "lot": 818,
+      "value": "UNKNOWN",
+      "kind": "UNKNOWN"
+    },
+    {
+      "id": "c15-DPGF",
+      "source_fragment_id": "00000000-0000-0000-0000-000000004aaa",
+      "start_byte": 0,
+      "end_byte": 30,
+      "excerpt": "Lot 825 : la DPGF est requise.",
+      "subject": "DPGF",
+      "lot": 825,
+      "value": "REQUIRED",
+      "kind": "ASSERTION"
+    }
+  ],
+  "imperative_anchors": [
+    {
+      "source_fragment_id": "00000000-0000-0000-0000-000000004a9c",
+      "source_sha256": "2e8387063c92dc652d13b42383e08c46f23f5dbb9d4502b399ff1cbb992a64d2",
+      "start_byte": 0,
+      "end_byte": 54,
+      "anchors": [
+        {
+          "signal": "LOT",
+          "start_byte": 8,
+          "end_byte": 11,
+          "excerpt": "811"
+        },
+        {
+          "signal": "DIRECTIVE",
+          "start_byte": 14,
+          "end_byte": 21,
+          "excerpt": "joindre"
+        },
+        {
+          "signal": "SUBJECT",
+          "start_byte": 22,
+          "end_byte": 28,
+          "excerpt": "le DC2"
+        }
+      ],
+      "condition_signals": [
+        {
+          "signal": "CONDITION",
+          "start_byte": 29,
+          "end_byte": 53,
+          "excerpt": "si le dossier est retenu"
+        }
+      ],
+      "value": "UNKNOWN",
+      "kind": "UNKNOWN"
+    },
+    {
+      "source_fragment_id": "00000000-0000-0000-0000-000000004a9d",
+      "source_sha256": "6be463e02610c3a99b5022eccabc392065ce0ff23ad1ab6a0c6f051a48e798e0",
+      "start_byte": 0,
+      "end_byte": 70,
+      "anchors": [
+        {
+          "signal": "LOT",
+          "start_byte": 12,
+          "end_byte": 15,
+          "excerpt": "812"
+        },
+        {
+          "signal": "DIRECTIVE",
+          "start_byte": 17,
+          "end_byte": 24,
+          "excerpt": "fournir"
+        },
+        {
+          "signal": "SUBJECT",
+          "start_byte": 25,
+          "end_byte": 31,
+          "excerpt": "le DC2"
+        }
+      ],
+      "condition_signals": [
+        {
+          "signal": "CONDITION",
+          "start_byte": 32,
+          "end_byte": 69,
+          "excerpt": "sauf dispense du pouvoir adjudicateur"
+        }
+      ],
+      "value": "UNKNOWN",
+      "kind": "UNKNOWN"
+    },
+    {
+      "source_fragment_id": "00000000-0000-0000-0000-000000004a9e",
+      "source_sha256": "12a18aa29ed6d2c535028138d0cfc0b48c6863c567172bacb40839c9a3754545",
+      "start_byte": 0,
+      "end_byte": 63,
+      "anchors": [
+        {
+          "signal": "LOT",
+          "start_byte": 7,
+          "end_byte": 10,
+          "excerpt": "813"
+        },
+        {
+          "signal": "DIRECTIVE",
+          "start_byte": 13,
+          "end_byte": 21,
+          "excerpt": "remettre"
+        },
+        {
+          "signal": "SUBJECT",
+          "start_byte": 22,
+          "end_byte": 28,
+          "excerpt": "le DC1"
+        }
+      ],
+      "condition_signals": [
+        {
+          "signal": "CONDITION",
+          "start_byte": 29,
+          "end_byte": 62,
+          "excerpt": "si le candidat n'est pas exempté"
+        }
+      ],
+      "value": "UNKNOWN",
+      "kind": "UNKNOWN"
+    },
+    {
+      "source_fragment_id": "00000000-0000-0000-0000-000000004a9f",
+      "source_sha256": "23f418daba1bcd4d95d72df58d7f530f3f78437a2e8b3026fe0687d60238e226",
+      "start_byte": 0,
+      "end_byte": 38,
+      "anchors": [
+        {
+          "signal": "LOT",
+          "start_byte": 4,
+          "end_byte": 7,
+          "excerpt": "814"
+        },
+        {
+          "signal": "DIRECTIVE",
+          "start_byte": 10,
+          "end_byte": 19,
+          "excerpt": "réaliser"
+        },
+        {
+          "signal": "SUBJECT",
+          "start_byte": 20,
+          "end_byte": 37,
+          "excerpt": "la visite de site"
+        }
+      ],
+      "condition_signals": [],
+      "value": "REQUIRED",
+      "kind": "ASSERTION"
+    },
+    {
+      "source_fragment_id": "00000000-0000-0000-0000-000000004aa0",
+      "source_sha256": "aa7af54b14e21c75e287cf8cce4f16e442a1edce72b9634dea19cab120548ffb",
+      "start_byte": 0,
+      "end_byte": 81,
+      "anchors": [
+        {
+          "signal": "LOT",
+          "start_byte": 8,
+          "end_byte": 11,
+          "excerpt": "815"
+        },
+        {
+          "signal": "DIRECTIVE",
+          "start_byte": 14,
+          "end_byte": 24,
+          "excerpt": "présenter"
+        },
+        {
+          "signal": "SUBJECT",
+          "start_byte": 25,
+          "end_byte": 46,
+          "excerpt": "le mémoire technique"
+        }
+      ],
+      "condition_signals": [
+        {
+          "signal": "CONDITION",
+          "start_byte": 47,
+          "end_byte": 80,
+          "excerpt": "lorsque la candidature est admise"
+        }
+      ],
+      "value": "UNKNOWN",
+      "kind": "UNKNOWN"
+    }
+  ],
+  "annotation_origin": {
+    "kind": "fresh-manual-before-measurement",
+    "novel_holdout": false,
+    "engine_adjusted_after_measurement": false,
+    "template_origin": "v14 annotation notation; new source wording and identities; no engine outputs used",
+    "source": "build-gold.py (no engine imports)",
+    "budgets": {
+      "top_k": 10,
+      "recall_at": [
+        5,
+        10
+      ],
+      "max_expected_sources": 1
+    },
+    "limits": [
+      "synthetic only",
+      "multi-subject source deliberately expected although parser unsupported",
+      "DPGF non evaluable"
+    ],
+    "new_synthetic_examples": true,
+    "blind_holdout": false,
+    "review": "Independent source annotation review before engine, 52 UTF8 anchors/10 clause spans/5 hashes; inherited templates, not statistical independence"
+  }
+}

@@ -52,6 +52,7 @@ class DecisionRecord(RevisionedAggregateRecord, Base):
             use_alter=True,
         ),
         sa.UniqueConstraint("tenant_id", "id", name="uq_decisions__tenant_id"),
+        sa.UniqueConstraint("tenant_id", "case_id", "id", name="uq_decisions_tenant_case_id"),
         sa.UniqueConstraint(
             "tenant_id",
             "decision_key_hash",

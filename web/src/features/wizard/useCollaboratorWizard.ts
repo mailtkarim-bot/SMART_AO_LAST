@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useLayoutEffect } from "react";
 import type { Dispatch, SetStateAction } from "react";
 
 import type { ApiClient } from "../../infrastructure/api";
@@ -10,11 +10,14 @@ import type {
   RecordInformationResponseInput,
   ResolveTaskBlockerInput,
   PreparationPackage,
+  ResponseContribution,
   CaseDceReading,
   CapabilityAssessments,
   CapabilityCandidate,
   CreatePreparationResponsePlanInput,
   CreatePreparationSnapshotInput,
+  SelectedResponseDraft,
+  SelectedResponseAnnex,
   CommandReceipt,
   CreateTechnicalResponseDraftInput,
   PreparationResponsePlan,
@@ -31,6 +34,15 @@ type WizardTransmissionReceipt = {
   transmission_id: string;
   receipt: CommandReceipt;
 };
+type ActionOwner = string | object;
+type ScopedAction<I, R> = { intent: I | null; receipt: R | null; busy: boolean };
+type ActionScopes<I, R> = ReadonlyMap<ActionOwner, ReadonlyMap<string, ScopedAction<I, R>>>;
+function putScopedAction<I, R>(states: ActionScopes<I, R>, owner: ActionOwner, key: string, patch: Partial<ScopedAction<I, R>>) {
+  const scopes = new Map(states.get(owner));
+  scopes.set(key, {intent:null,receipt:null,busy:false,...scopes.get(key),...patch});
+  return new Map(states).set(owner, scopes);
+}
+
 export type ResponsePlanItemDraft = {
   requirement_id: string;
   section_code: PreparationResponsePlanSection | "";
@@ -73,10 +85,11 @@ function newCommandIds() {
 }
 
 function isDefinitiveClientError(error: unknown): boolean {
-  return error instanceof Error
-    && typeof (error as Error & { status?: unknown }).status === "number"
-    && (error as Error & { status: number }).status >= 400
-    && (error as Error & { status: number }).status < 500;
+  if (!(error instanceof Error)) return false;
+  const {status,detail} = error as Error & {status?:number;detail?:string};
+  // Timeout, throttling and unqualified conflicts cannot prove that the command had no effect.
+  return [400,401,403,404,405,422].includes(status ?? 0)
+    || (status === 409 && detail === "VERSION_CONFLICT");
 }
 
 function responsePlanMatchesDraft(plan: PreparationResponsePlan, items: ResponsePlanItemDraft[]) {
@@ -87,7 +100,7 @@ function responsePlanMatchesDraft(plan: PreparationResponsePlan, items: Response
   ));
 }
 
-export function useCollaboratorWizard(api: ApiClient, setMessage: SetMessage) {
+export function useCollaboratorWizard(api: ApiClient, setMessage: SetMessage, contributionOwnerKey = "") {
   const [wizardCaseId, setWizardCaseId] = useState("");
   const [wizardPackageId, setWizardPackageId] = useState("");
   const [wizardPackage, setWizardPackage] = useState<PreparationPackage | null>(null);
@@ -97,12 +110,6 @@ export function useCollaboratorWizard(api: ApiClient, setMessage: SetMessage) {
   const [wizardOutcome, setWizardOutcome] = useState<WizardOutcome>("RECORDED");
   const [wizardSnapshotId, setWizardSnapshotId] = useState("");
   const [wizardTransmissionId, setWizardTransmissionId] = useState("");
-  const [wizardSnapshotReceipt, setWizardSnapshotReceipt] = useState<WizardSnapshotReceipt | null>(null);
-  const [wizardTransmissionReceipt, setWizardTransmissionReceipt] = useState<WizardTransmissionReceipt | null>(null);
-  const [pendingSnapshotIntent, setPendingSnapshotIntent] = useState<CreatePreparationSnapshotInput | null>(null);
-  const [pendingTransmissionIntent, setPendingTransmissionIntent] = useState<TransmitPreparationSnapshotInput | null>(null);
-  const [wizardSnapshotBusy, setWizardSnapshotBusy] = useState(false);
-  const [wizardTransmissionBusy, setWizardTransmissionBusy] = useState(false);
   const [wizardPreviewDocumentId, setWizardPreviewDocumentId] = useState<string | null>(null);
   const [wizardPreviewContent, setWizardPreviewContent] = useState<string | null>(null);
   const [wizardDocumentBusy, setWizardDocumentBusy] = useState(false);
@@ -112,7 +119,64 @@ export function useCollaboratorWizard(api: ApiClient, setMessage: SetMessage) {
   const [pendingDraftIntent, setPendingDraftIntent] = useState<CreateTechnicalResponseDraftInput | null>(null);
   const [wizardTaskWorkflow, setWizardTaskWorkflow] = useState<CollaboratorTaskWorkflow | null>(null);
 
-  async function loadWizardResponsePlan(packageProjection: PreparationPackage): Promise<boolean> {
+  const actionOwner = contributionOwnerKey || api.createPreparationSnapshot;
+  const actionKey = JSON.stringify([wizardCaseId.trim(),wizardPackageId.trim()]);
+  const [wizardPackageOwner, setWizardPackageOwner] = useState<ActionOwner | null>(null);
+  const wizardContextCurrent = wizardPackageOwner === actionOwner && wizardPackage?.case_id === wizardCaseId.trim() && wizardPackage?.package_id === wizardPackageId.trim();
+  const latestActionScope = useRef({owner:actionOwner,key:actionKey});
+  useLayoutEffect(()=>{latestActionScope.current={owner:actionOwner,key:actionKey};});
+  const wizardReadSequence = useRef(0);
+  const [snapshotScopes, setSnapshotScopes] = useState<ActionScopes<CreatePreparationSnapshotInput, WizardSnapshotReceipt>>(new Map());
+  const [transmissionScopes, setTransmissionScopes] = useState<ActionScopes<TransmitPreparationSnapshotInput, WizardTransmissionReceipt>>(new Map());
+  const snapshotAction = snapshotScopes.get(actionOwner)?.get(actionKey);
+  const transmissionAction = transmissionScopes.get(actionOwner)?.get(actionKey);
+  const pendingSnapshotIntent = snapshotAction?.intent ?? null;
+  const pendingTransmissionIntent = transmissionAction?.intent ?? null;
+  const wizardSnapshotReceipt = snapshotAction?.receipt ?? null;
+  const wizardTransmissionReceipt = transmissionAction?.receipt ?? null;
+  const wizardSnapshotBusy = snapshotAction?.busy ?? false;
+  const wizardTransmissionBusy = transmissionAction?.busy ?? false;
+  function setPendingSnapshotIntent(intent: CreatePreparationSnapshotInput | null) {setSnapshotScopes(states=>putScopedAction(states,actionOwner,actionKey,{intent}));}
+  function setPendingTransmissionIntent(intent: TransmitPreparationSnapshotInput | null) {setTransmissionScopes(states=>putScopedAction(states,actionOwner,actionKey,{intent}));}
+  function setWizardSnapshotReceipt(receipt: WizardSnapshotReceipt | null) {setSnapshotScopes(states=>putScopedAction(states,actionOwner,actionKey,{receipt}));}
+  function setWizardTransmissionReceipt(receipt: WizardTransmissionReceipt | null) {setTransmissionScopes(states=>putScopedAction(states,actionOwner,actionKey,{receipt}));}
+  function setWizardSnapshotBusy(busy: boolean) {setSnapshotScopes(states=>putScopedAction(states,actionOwner,actionKey,{busy}));}
+  function setWizardTransmissionBusy(busy: boolean) {setTransmissionScopes(states=>putScopedAction(states,actionOwner,actionKey,{busy}));}
+  const hasAction = Boolean(pendingSnapshotIntent || pendingTransmissionIntent || wizardSnapshotReceipt || wizardTransmissionReceipt);
+  const previousActionScope = useRef({owner:actionOwner,key:actionKey,hasAction});
+  useLayoutEffect(()=>{
+    const previous=previousActionScope.current;
+    if((previous.owner!==actionOwner || previous.key!==actionKey) && (previous.hasAction || hasAction)) {
+      setWizardSnapshotId(pendingSnapshotIntent?.snapshot_id ?? wizardSnapshotReceipt?.snapshot_id ?? pendingTransmissionIntent?.snapshot_id ?? wizardTransmissionReceipt?.snapshot_id ?? "");
+      setWizardTransmissionId(pendingTransmissionIntent?.transmission_id ?? wizardTransmissionReceipt?.transmission_id ?? "");
+    }
+    previousActionScope.current={owner:actionOwner,key:actionKey,hasAction};
+  },[actionOwner,actionKey,hasAction,pendingSnapshotIntent,pendingTransmissionIntent,wizardSnapshotReceipt,wizardTransmissionReceipt]);
+
+  const currentDraftScope = { owner: contributionOwnerKey, post: api.createTechnicalResponseDraft, caseId: wizardCaseId.trim(), packageId: wizardPackageId.trim(), loadedPackageId: wizardPackage?.package_id, dceVersion: wizardPackage?.dce_version_id, planVersion: wizardResponsePlan.exactPlan?.version };
+  const latestDraftScope = useRef(currentDraftScope);
+  useLayoutEffect(() => { latestDraftScope.current = currentDraftScope; });
+  const [pendingDraftScope, setPendingDraftScope] = useState<(typeof currentDraftScope & { uncertain?: boolean }) | null>(null);
+  function sameDraftScope(expected: typeof currentDraftScope | null, current: typeof currentDraftScope, includePlan = true) {
+    return expected !== null && expected.owner === current.owner && (expected.owner !== "" || expected.post === current.post) && expected.caseId === current.caseId && expected.packageId === current.packageId && expected.loadedPackageId === current.loadedPackageId && expected.dceVersion === current.dceVersion && (!includePlan || expected.planVersion === current.planVersion);
+  }
+  function draftScopeMatches(expected: typeof currentDraftScope | null, includePlan = true) {
+    return sameDraftScope(expected, latestDraftScope.current, includePlan);
+  }
+
+
+  function markPendingDraftUncertain(expected: typeof currentDraftScope | null) {
+    setPendingDraftScope((previous) => previous && expected && sameDraftScope(previous, expected)
+      ? { ...previous, uncertain: true }
+      : previous);
+  }
+  const pendingDraftUncertainHere = Boolean(pendingDraftIntent && pendingDraftScope?.uncertain && sameDraftScope(pendingDraftScope, currentDraftScope));
+
+  const responsePlanReadSequence = useRef(0);
+  async function loadWizardResponsePlan(packageProjection: PreparationPackage, isCurrent = () => true): Promise<boolean> {
+    if (!isCurrent()) return false;
+    const sequence = ++responsePlanReadSequence.current;
+    const currentRead = () => isCurrent() && sequence === responsePlanReadSequence.current;
     setWizardResponsePlan((current) => ({ ...current, loading: true, readState: "UNREAD", exactPlan: null, error: null }));
     try {
       const [dce, assessment, candidates, planList] = await Promise.all([
@@ -121,6 +185,7 @@ export function useCollaboratorWizard(api: ApiClient, setMessage: SetMessage) {
         api.getCapabilityCandidates(packageProjection.case_id),
         api.getPreparationResponsePlans(packageProjection.package_id),
       ]);
+      if (!currentRead()) return false;
       if (dce.case_id !== packageProjection.case_id
         || dce.dce.dce_version_id !== packageProjection.dce_version_id
         || dce.dce_freshness !== "CURRENT"
@@ -173,6 +238,7 @@ export function useCollaboratorWizard(api: ApiClient, setMessage: SetMessage) {
       }));
       return true;
     } catch {
+      if (!currentRead()) return false;
       setWizardResponsePlan((current) => ({
         ...current,
         loading: false,
@@ -189,22 +255,29 @@ export function useCollaboratorWizard(api: ApiClient, setMessage: SetMessage) {
       setMessage({ tone: "error", text: "Renseignez l’affaire et le package de préparation collaborateur." });
       return;
     }
+    const sequence=++wizardReadSequence.current;
+    const owner=actionOwner, key=actionKey;
+    const isCurrent=()=>latestActionScope.current.owner===owner && latestActionScope.current.key===key && sequence===wizardReadSequence.current;
     try {
       const [packageResult, taskResult] = await Promise.all([
         api.getCollaboratorPreparation(wizardPackageId.trim()),
         api.listCollaboratorTasks(wizardCaseId.trim()),
       ]);
+      if(!isCurrent())return;
       if (packageResult.case_id !== wizardCaseId.trim() || taskResult.case_id !== packageResult.case_id) {
         throw new Error("L’affaire et le package de préparation ne correspondent pas.");
       }
       setWizardPackage(packageResult);
+      setWizardPackageOwner(() => owner);
       setWizardTasks(taskResult.tasks);
-      await loadWizardResponsePlan(packageResult);
+      await loadWizardResponsePlan(packageResult,isCurrent);
+      if(!isCurrent())return;
       if (!wizardTaskId && taskResult.tasks[0]) setWizardTaskId(taskResult.tasks[0].task_id);
       if (notify) {
         setMessage({ tone: "success", text: "Wizard collaborateur chargé depuis les projections serveur." });
       }
     } catch (error) {
+      if(!isCurrent())return;
       setWizardPackage(null);
       setWizardTasks([]);
       if (notify) {
@@ -368,14 +441,16 @@ export function useCollaboratorWizard(api: ApiClient, setMessage: SetMessage) {
     );
   }
 
-  async function refreshPreparationAfterCommand(): Promise<boolean> {
-    if (!wizardPackage) return false;
+  async function refreshPreparationAfterCommand(isCurrent = () => true): Promise<boolean> {
+    if (!wizardPackage || !isCurrent()) return false;
     const packageResult = await api.getCollaboratorPreparation(wizardPackage.package_id);
+    if (!isCurrent()) return false;
     if (packageResult.case_id !== wizardPackage.case_id || packageResult.dce_version_id !== wizardPackage.dce_version_id) {
       throw new Error("VERSION_CONFLICT");
     }
     setWizardPackage(packageResult);
-    return loadWizardResponsePlan(packageResult);
+    setWizardPackageOwner(() => actionOwner);
+    return loadWizardResponsePlan(packageResult, isCurrent);
   }
 
   async function submitWizardResponsePlan(intent: CreatePreparationResponsePlanInput) {
@@ -455,23 +530,26 @@ export function useCollaboratorWizard(api: ApiClient, setMessage: SetMessage) {
     }
   }
 
-  async function submitWizardDraft(intent: CreateTechnicalResponseDraftInput) {
-    if (!wizardPackage) return;
+  async function submitWizardDraft(intent: CreateTechnicalResponseDraftInput, expectedScope = pendingDraftScope) {
+    if (!wizardPackage || !draftScopeMatches(expectedScope)) return;
+    setPendingDraftScope((previous) => previous && expectedScope && sameDraftScope(previous, expectedScope) ? { ...previous, uncertain: false } : previous);
     setWizardResponsePlan((current) => ({ ...current, draftRequestState: "SUBMITTING", error: null }));
     try {
       await api.createTechnicalResponseDraft(wizardPackage.package_id, intent);
     } catch (error) {
+      if (!draftScopeMatches(expectedScope)) { markPendingDraftUncertain(expectedScope); return; }
       const status = (error as { status?: number }).status;
       const detail = (error as { detail?: string }).detail;
       if (status === 409) {
         setPendingDraftIntent(null);
-        const readback = await refreshPreparationAfterCommand().catch(() => false);
+        const readback = await refreshPreparationAfterCommand(() => draftScopeMatches(expectedScope, false)).catch(() => false);
+        if (!draftScopeMatches(expectedScope, false)) return;
         setWizardResponsePlan((current) => ({ ...current, draftRequestState: "CONFLICT", ...(readback ? {} : { readState: "ERROR", exactPlan: null, error: "Le conflit est détecté, mais le plan n’a pas pu être relu." }) }));
         setMessage({ tone: "warning", text: readback ? "Conflit de révision : le plan a été relu. Vérifiez-le avant une nouvelle action." : "Conflit détecté, lecture du plan indisponible." });
       } else if (status === undefined || status >= 500) {
         setWizardResponsePlan((current) => ({ ...current, draftRequestState: "UNKNOWN", error: "Résultat incertain. Réessayez la même intention; le serveur conserve le contrôle du plan." }));
         setMessage({ tone: "warning", text: "Résultat incertain : réessayez le même brouillon sans créer de nouvelle intention." });
-      } else if (status === 422 && detail === "RESPONSE_PLAN_UNKNOWN") {
+      } else if (status === 422 && (detail === "RESPONSE_PLAN_UNKNOWN" || detail === "CONTRIBUTION_SOURCE_UNKNOWN")) {
         setWizardResponsePlan((current) => ({ ...current, draftRequestState: "SOURCE_UNKNOWN", error: "Une pièce source est indisponible ou son SHA-256 relu ne concorde pas avec le manifeste privé. UNKNOWN est conservé; aucun brouillon n’a été créé." }));
         setMessage({ tone: "warning", text: "Source UNKNOWN : aucune pièce n’a été réutilisée et aucun brouillon n’a été créé." });
       } else {
@@ -481,16 +559,19 @@ export function useCollaboratorWizard(api: ApiClient, setMessage: SetMessage) {
       }
       return;
     }
+    if (!draftScopeMatches(expectedScope)) { markPendingDraftUncertain(expectedScope); return; }
+    setPendingDraftScope(null);
     setPendingDraftIntent(null);
     setWizardResponsePlan((current) => ({ ...current, draftRequestState: "RECEIVED", draftedPlanVersion: current.exactPlan?.version ?? null }));
-    const readback = await refreshPreparationAfterCommand().catch(() => false);
+    const readback = await refreshPreparationAfterCommand(() => draftScopeMatches(expectedScope, false)).catch(() => false);
+    if (!draftScopeMatches(expectedScope, false)) return;
     setMessage({
       tone: readback ? "success" : "warning",
       text: readback ? "Brouillon de réponse créé depuis le plan exact relu." : "Reçu de création obtenu; le plan ne peut pas être relu pour l’instant.",
     });
   }
 
-  async function createWizardResponseDraft() {
+  async function createWizardResponseDraft(contributions?: ResponseContribution[]) {
     if (!wizardPackage || !canCreateWizardResponseDraft()) return;
     const plan = wizardResponsePlan.exactPlan;
     const document = [...wizardPackage.generated_documents]
@@ -500,13 +581,15 @@ export function useCollaboratorWizard(api: ApiClient, setMessage: SetMessage) {
     const intent: CreateTechnicalResponseDraftInput = {
       ...newCommandIds(),
       draft_id: crypto.randomUUID(),
+      ...(contributions ? { contributions: structuredClone(contributions) } : {}),
       expected_package_revision: wizardPackage.aggregate_revision,
       source_document_id: document.document_id,
       section_codes: [...new Set(plan.content.items.map((item) => item.section_code))].sort(),
       source_refs: [...new Set(plan.content.items.map((item) => item.source_proposal_id).filter((value): value is string => value !== null))].sort(),
     };
+    setPendingDraftScope(currentDraftScope);
     setPendingDraftIntent(intent);
-    await submitWizardDraft(intent);
+    await submitWizardDraft(intent, currentDraftScope);
   }
 
   async function retryWizardResponseDraft() {
@@ -656,106 +739,81 @@ export function useCollaboratorWizard(api: ApiClient, setMessage: SetMessage) {
     }
   }
 
-  async function createWizardSnapshot() {
-    if (!wizardPackage || wizardPackage.package_id !== wizardPackageId.trim()) return;
-    const snapshotId = pendingSnapshotIntent?.snapshot_id
-      ?? wizardSnapshotId.trim()
-      ?? crypto.randomUUID();
-    const resolvedSnapshotId = snapshotId || crypto.randomUUID();
-    if (!wizardSnapshotId.trim()) setWizardSnapshotId(resolvedSnapshotId);
+  async function createWizardSnapshot(selection?: SelectedResponseDraft, annexes:SelectedResponseAnnex[]=[], justification="") {
+    if (!wizardContextCurrent || !wizardPackage || wizardPackage.package_id !== wizardPackageId.trim() || wizardPackage.case_id !== wizardCaseId.trim()) return;
     const intent = pendingSnapshotIntent ?? {
-      ...newCommandIds(),
-      snapshot_id: resolvedSnapshotId,
+      ...newCommandIds(), snapshot_id: wizardSnapshotId.trim() || crypto.randomUUID(),
       expected_package_revision: wizardPackage.aggregate_revision,
+      ...(selection ? {selected_response_draft:structuredClone(selection)} : {}),
+      ...(annexes.length ? {selected_annexes:structuredClone(annexes),annex_justification:justification.trim()} : {}),
     };
-    setPendingSnapshotIntent(intent);
-    setWizardSnapshotBusy(true);
+    const operationScope=currentDraftScope;
+    const isCurrent=()=>draftScopeMatches(operationScope,false);
+    setWizardSnapshotId(intent.snapshot_id);
+    setPendingSnapshotIntent(intent);setWizardSnapshotBusy(true);
+    let received=false;
     try {
-      const receipt = await api.createPreparationSnapshot(wizardPackage.package_id, intent);
-      setWizardSnapshotReceipt({ snapshot_id: intent.snapshot_id, receipt });
-      setWizardSnapshotId(intent.snapshot_id);
-      setPendingSnapshotIntent(null);
-      const snapshotRef = receipt.aggregate_refs.find(
-        (reference) => reference.aggregate_type === "PreparationSnapshot",
-      );
-      setMessage({
-        tone: "success",
-        text: `Snapshot ${intent.snapshot_id} v${snapshotRef?.aggregate_revision ?? "?"} créé depuis les versions revues.`,
-      });
-      await refreshCollaboratorWizard();
-    } catch (error) {
-      if (isDefinitiveClientError(error)) {
-        setPendingSnapshotIntent(null);
-        await refreshCollaboratorWizard();
-      }
-      setMessage({
-        tone: "error",
-        text: error instanceof Error
-          ? isDefinitiveClientError(error)
-            ? `${error.message} — le package a été relu; une nouvelle intention est nécessaire après résolution du blocage.`
-            : `${error.message} — la même intention reste prête à être rejouée.`
-          : "La création du snapshot a échoué; rejouez la même intention.",
-      });
-    } finally {
-      setWizardSnapshotBusy(false);
-    }
+      const receipt=await api.createPreparationSnapshot(wizardPackage.package_id,intent);
+      setWizardSnapshotReceipt({snapshot_id:intent.snapshot_id,receipt});
+      setPendingSnapshotIntent(null);received=true;
+      if(!isCurrent())return;
+      const readback=await refreshPreparationAfterCommand(isCurrent);
+      if(!isCurrent())return;
+      setMessage({tone:readback?"success":"warning",text:readback
+        ? `Snapshot ${intent.snapshot_id} créé depuis les octets revus sélectionnés.`
+        : "Reçu snapshot enregistré; sources non relues · UNKNOWN."});
+    } catch(error) {
+      if(!isCurrent())return;
+      if(received){setMessage({tone:"warning",text:"Reçu snapshot enregistré; relecture indisponible · UNKNOWN."});return;}
+      const terminal=isDefinitiveClientError(error);
+      const status=(error as {status?:number})?.status;
+      const readback=(terminal||status===409) ? await refreshPreparationAfterCommand(isCurrent).catch(()=>false) : false;
+      if(!isCurrent())return;
+      if(terminal&&readback)setPendingSnapshotIntent(null);
+      setMessage({tone:"error",text:terminal&&readback
+        ? "Le serveur a refusé le snapshot; package relu, vérifiez les sources avant une nouvelle intention."
+        : "Résultat snapshot UNKNOWN; rejouez la même intention, sélection et identifiants conservés."});
+    } finally {setWizardSnapshotBusy(false);}
   }
 
   async function transmitWizardSnapshot() {
-    if (
-      !wizardPackage
-      || wizardPackage.package_id !== wizardPackageId.trim()
-      || !wizardSnapshotId.trim()
-    ) return;
-    const transmissionId = pendingTransmissionIntent?.transmission_id
-      ?? wizardTransmissionId.trim()
-      ?? crypto.randomUUID();
-    const resolvedTransmissionId = transmissionId || crypto.randomUUID();
-    if (!wizardTransmissionId.trim()) setWizardTransmissionId(resolvedTransmissionId);
-    const intent = pendingTransmissionIntent ?? {
-      ...newCommandIds(),
-      snapshot_id: wizardSnapshotId.trim(),
-      transmission_id: resolvedTransmissionId,
-      expected_package_revision: wizardPackage.aggregate_revision,
-    };
-    setPendingTransmissionIntent(intent);
-    setWizardTransmissionBusy(true);
+    if(!wizardContextCurrent || !wizardPackage || wizardPackage.package_id!==wizardPackageId.trim() || wizardPackage.case_id!==wizardCaseId.trim() || !wizardSnapshotId.trim())return;
+    const intent=pendingTransmissionIntent??{...newCommandIds(),snapshot_id:wizardSnapshotId.trim(),
+      transmission_id:wizardTransmissionId.trim()||crypto.randomUUID(),expected_package_revision:wizardPackage.aggregate_revision};
+    const operationScope=currentDraftScope;
+    const isCurrent=()=>draftScopeMatches(operationScope,false);
+    setWizardTransmissionId(intent.transmission_id);
+    setPendingTransmissionIntent(intent);setWizardTransmissionBusy(true);
+    let received=false;
     try {
-      const receipt = await api.transmitPreparationSnapshot(wizardPackage.package_id, intent);
-      setWizardTransmissionReceipt({
-        snapshot_id: intent.snapshot_id,
-        transmission_id: intent.transmission_id,
-        receipt,
-      });
-      setPendingTransmissionIntent(null);
-      setMessage({
-        tone: "success",
-        text: `Snapshot transmis au patron (reçu ${intent.transmission_id}). Aucun dépôt externe n’est effectué par cette action.`,
-      });
-      await refreshCollaboratorWizard();
-    } catch (error) {
-      if (isDefinitiveClientError(error)) {
-        setPendingTransmissionIntent(null);
-        await refreshCollaboratorWizard();
-      }
-      setMessage({
-        tone: "error",
-        text: error instanceof Error
-          ? isDefinitiveClientError(error)
-            ? `${error.message} — le package a été relu; vérifiez le reçu Patron avant une nouvelle intention.`
-            : `${error.message} — la même intention reste prête à être rejouée.`
-          : "La transmission du snapshot a échoué; rejouez la même intention.",
-      });
-    } finally {
-      setWizardTransmissionBusy(false);
-    }
+      const receipt=await api.transmitPreparationSnapshot(wizardPackage.package_id,intent);
+      setWizardTransmissionReceipt({snapshot_id:intent.snapshot_id,transmission_id:intent.transmission_id,receipt});
+      setPendingTransmissionIntent(null);received=true;
+      if(!isCurrent())return;
+      const readback=await refreshPreparationAfterCommand(isCurrent);
+      if(!isCurrent())return;
+      setMessage({tone:readback?"success":"warning",text:readback
+        ? `Snapshot transmis au patron (reçu ${intent.transmission_id}). Aucun dépôt externe n’est effectué par cette action.`
+        : "Reçu de transmission enregistré; sources non relues · UNKNOWN."});
+    } catch(error) {
+      if(!isCurrent())return;
+      if(received){setMessage({tone:"warning",text:"Reçu de transmission enregistré; relecture indisponible · UNKNOWN."});return;}
+      const terminal=isDefinitiveClientError(error);
+      const status=(error as {status?:number})?.status;
+      const readback=(terminal||status===409) ? await refreshPreparationAfterCommand(isCurrent).catch(()=>false) : false;
+      if(!isCurrent())return;
+      if(terminal&&readback)setPendingTransmissionIntent(null);
+      setMessage({tone:"error",text:terminal&&readback
+        ? "Le serveur a refusé la transmission; package relu, vérifiez le reçu Patron avant une nouvelle intention."
+        : "Résultat transmission UNKNOWN; rejouez la même intention et les mêmes identifiants."});
+    } finally {setWizardTransmissionBusy(false);}
   }
 
   return {
     wizardCaseId,
     wizardPackageId,
-    wizardPackage,
-    wizardTasks,
+    wizardPackage: wizardContextCurrent ? wizardPackage : null,
+    wizardTasks: wizardContextCurrent ? wizardTasks : [],
     wizardTaskId,
     wizardResultText,
     wizardOutcome,
@@ -766,9 +824,11 @@ export function useCollaboratorWizard(api: ApiClient, setMessage: SetMessage) {
     wizardSnapshotBusy,
     wizardTransmissionBusy,
     wizardSnapshotRetryPending: Boolean(pendingSnapshotIntent),
+    wizardSnapshotSelection: pendingSnapshotIntent?.selected_response_draft ?? null,
+    wizardSnapshotAnnexes: pendingSnapshotIntent?.selected_annexes ?? [],
     wizardTransmissionRetryPending: Boolean(pendingTransmissionIntent),
     canCreateWizardSnapshot: Boolean(
-      wizardPackage
+      wizardContextCurrent && wizardPackage
         && wizardPackage.package_id === wizardPackageId.trim()
         && !wizardSnapshotBusy
         && (
@@ -777,21 +837,21 @@ export function useCollaboratorWizard(api: ApiClient, setMessage: SetMessage) {
         ),
     ),
     canTransmitWizardSnapshot: Boolean(
-      wizardPackage
+      wizardContextCurrent && wizardPackage
         && wizardPackage.package_id === wizardPackageId.trim()
         && (wizardSnapshotId.trim() || pendingTransmissionIntent)
         && !wizardTransmissionBusy
         && wizardTransmissionReceipt?.snapshot_id !== wizardSnapshotId.trim(),
     ),
     wizardPreviewDocumentId,
-    wizardPreviewContent,
+    wizardPreviewContent: wizardContextCurrent ? wizardPreviewContent : null,
     wizardDocumentBusy,
     wizardTaskWorkflow,
     wizardDocumentKind,
-    wizardResponsePlan,
-    canSaveWizardResponsePlan: canSaveWizardResponsePlan(),
-    isWizardResponsePlanCurrent: isWizardResponsePlanCurrent(),
-    canCreateWizardResponseDraft: canCreateWizardResponseDraft(),
+    wizardResponsePlan: !wizardContextCurrent ? emptyResponsePlan : pendingDraftUncertainHere ? { ...wizardResponsePlan, draftRequestState: "UNKNOWN" as const } : wizardResponsePlan,
+    canSaveWizardResponsePlan: wizardContextCurrent && canSaveWizardResponsePlan(),
+    isWizardResponsePlanCurrent: wizardContextCurrent && isWizardResponsePlanCurrent(),
+    canCreateWizardResponseDraft: wizardContextCurrent && canCreateWizardResponseDraft(),
     setWizardCaseId,
     setWizardPackageId,
     setWizardTaskId,
@@ -819,7 +879,8 @@ export function useCollaboratorWizard(api: ApiClient, setMessage: SetMessage) {
     retryWizardResponseDraft,
     canRetryWizardResponseDraft: Boolean(
       pendingDraftIntent
-        && (wizardResponsePlan.draftRequestState === "UNKNOWN"
+        && sameDraftScope(pendingDraftScope, currentDraftScope)
+        && (pendingDraftUncertainHere || wizardResponsePlan.draftRequestState === "UNKNOWN"
           || wizardResponsePlan.draftRequestState === "SOURCE_UNKNOWN"),
     ),
     claimWizardTask,

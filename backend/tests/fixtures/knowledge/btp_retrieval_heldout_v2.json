@@ -1,0 +1,303 @@
+{
+  "schema_version": 1,
+  "synthetic": true,
+  "held_out": true,
+  "tenant_id": "00000000-0000-0000-0000-000000000047",
+  "case_id": "00000000-0000-0000-0000-000000000048",
+  "version_id": "00000000-0000-0000-0000-000000000049",
+  "documents": [
+    {
+      "id": "00000000-0000-0000-0000-0000000003e8",
+      "tenant_id": "00000000-0000-0000-0000-000000000047",
+      "case_id": "00000000-0000-0000-0000-000000000048",
+      "version_id": "00000000-0000-0000-0000-000000000049",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 2,
+      "family": "RC",
+      "text": "Lot 7 : la remise des candidatures intervient le 18 avril 2037 à 11h00 UTC."
+    },
+    {
+      "id": "00000000-0000-0000-0000-0000000003e9",
+      "tenant_id": "00000000-0000-0000-0000-000000000047",
+      "case_id": "00000000-0000-0000-0000-000000000048",
+      "version_id": "00000000-0000-0000-0000-000000000049",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 3,
+      "family": "RECTIFICATIF",
+      "text": "Le rectificatif du lot 7 annule la date de remise précédente. Les candidatures seront remises le 22 avril 2037 à 15h00 UTC."
+    },
+    {
+      "id": "00000000-0000-0000-0000-0000000003ea",
+      "tenant_id": "00000000-0000-0000-0000-000000000047",
+      "case_id": "00000000-0000-0000-0000-000000000048",
+      "version_id": "00000000-0000-0000-0000-000000000049",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 4,
+      "family": "RC",
+      "text": "Lot 8 : la visite est obligatoire et le certificat de présence accompagne le dossier."
+    },
+    {
+      "id": "00000000-0000-0000-0000-0000000003eb",
+      "tenant_id": "00000000-0000-0000-0000-000000000047",
+      "case_id": "00000000-0000-0000-0000-000000000048",
+      "version_id": "00000000-0000-0000-0000-000000000049",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 5,
+      "family": "ANNEXE",
+      "text": "Lot 8 : aucune visite ne peut être imposée aux candidats. Le certificat de présence n’est pas requis."
+    },
+    {
+      "id": "00000000-0000-0000-0000-0000000003ec",
+      "tenant_id": "00000000-0000-0000-0000-000000000047",
+      "case_id": "00000000-0000-0000-0000-000000000048",
+      "version_id": "00000000-0000-0000-0000-000000000049",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 6,
+      "family": "CCTP",
+      "text": "Les menuiseries extérieures du bâtiment est doivent garantir un affaiblissement acoustique de 38 dB."
+    },
+    {
+      "id": "00000000-0000-0000-0000-0000000003ed",
+      "tenant_id": "00000000-0000-0000-0000-000000000047",
+      "case_id": "00000000-0000-0000-0000-000000000048",
+      "version_id": "00000000-0000-0000-0000-000000000049",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 7,
+      "family": "PGC",
+      "text": "Les produits inflammables sont entreposés dans une armoire ventilée distincte du vestiaire. Une rétention est exigée."
+    },
+    {
+      "id": "00000000-0000-0000-0000-0000000003ee",
+      "tenant_id": "00000000-0000-0000-0000-000000000047",
+      "case_id": "00000000-0000-0000-0000-000000000048",
+      "version_id": "00000000-0000-0000-0000-000000000049",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 8,
+      "family": "CCAP",
+      "text": "Les essais de fonctionnement sont consignés dans un procès-verbal signé avant la réception des installations."
+    },
+    {
+      "id": "00000000-0000-0000-0000-0000000003ef",
+      "tenant_id": "00000000-0000-0000-0000-000000000047",
+      "case_id": "00000000-0000-0000-0000-000000000048",
+      "version_id": "00000000-0000-0000-0000-000000000049",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 9,
+      "family": "RC",
+      "text": "Les plans de phasage doivent distinguer l’aile occupée de l’aile évacuée. Les circulations de secours restent libres."
+    },
+    {
+      "id": "00000000-0000-0000-0000-0000000003f0",
+      "tenant_id": "00000000-0000-0000-0000-000000000047",
+      "case_id": "00000000-0000-0000-0000-000000000048",
+      "version_id": "00000000-0000-0000-0000-000000000049",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 10,
+      "family": "CCTP",
+      "text": "La clôture provisoire est posée avant l’installation de la base vie. Elle est maintenue pendant toute la durée des travaux."
+    },
+    {
+      "id": "00000000-0000-0000-0000-0000000003f1",
+      "tenant_id": "00000000-0000-0000-0000-000000000047",
+      "case_id": "00000000-0000-0000-0000-000000000048",
+      "version_id": "00000000-0000-0000-0000-000000000049",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 11,
+      "family": "CCTP",
+      "text": "La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention. La préparation recense les repères et les accès des locaux. Les plans sont consultés avant intervention.  Les essais d’étanchéité précèdent toute fermeture des gaines techniques."
+    },
+    {
+      "id": "00000000-0000-0000-0000-00000000044c",
+      "tenant_id": "00000000-0000-0000-0000-000000000063",
+      "case_id": "00000000-0000-0000-0000-000000000048",
+      "version_id": "00000000-0000-0000-0000-000000000049",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 2,
+      "family": "RC",
+      "text": "La marque de sonde géothermique OMEGA_CANARI ne doit jamais être exposée."
+    },
+    {
+      "id": "00000000-0000-0000-0000-00000000044d",
+      "tenant_id": "00000000-0000-0000-0000-000000000047",
+      "case_id": "00000000-0000-0000-0000-000000000048",
+      "version_id": "00000000-0000-0000-0000-000000000063",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 2,
+      "family": "RC",
+      "text": "La marque de sonde géothermique OMEGA_CANARI ne doit jamais être exposée."
+    },
+    {
+      "id": "00000000-0000-0000-0000-00000000044e",
+      "tenant_id": "00000000-0000-0000-0000-000000000047",
+      "case_id": "00000000-0000-0000-0000-000000000048",
+      "version_id": "00000000-0000-0000-0000-000000000049",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": false,
+      "extraction_status": "COMPLETED",
+      "page": 2,
+      "family": "RC",
+      "text": "La marque de sonde géothermique OMEGA_CANARI ne doit jamais être exposée."
+    },
+    {
+      "id": "00000000-0000-0000-0000-00000000044f",
+      "tenant_id": "00000000-0000-0000-0000-000000000047",
+      "case_id": "00000000-0000-0000-0000-000000000048",
+      "version_id": "00000000-0000-0000-0000-000000000049",
+      "classification": "FINANCIAL_PRIVATE",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 2,
+      "family": "RC",
+      "text": "La marque de sonde géothermique OMEGA_CANARI ne doit jamais être exposée."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000450",
+      "tenant_id": "00000000-0000-0000-0000-000000000047",
+      "case_id": "00000000-0000-0000-0000-000000000048",
+      "version_id": "00000000-0000-0000-0000-000000000049",
+      "classification": "PERSONAL_DATA",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 2,
+      "family": "RC",
+      "text": "La marque de sonde géothermique OMEGA_CANARI ne doit jamais être exposée."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000451",
+      "tenant_id": "00000000-0000-0000-0000-000000000047",
+      "case_id": "00000000-0000-0000-0000-000000000048",
+      "version_id": "00000000-0000-0000-0000-000000000049",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "REVIEW_REQUIRED",
+      "page": 2,
+      "family": "RC",
+      "text": "La marque de sonde géothermique OMEGA_CANARI ne doit jamais être exposée."
+    }
+  ],
+  "queries": [
+    {
+      "id": "h-deadline",
+      "text": "Quelles dates de remise du lot 7 faut-il confronter après rectificatif ?",
+      "expected": [
+        "00000000-0000-0000-0000-0000000003e8",
+        "00000000-0000-0000-0000-0000000003e9"
+      ],
+      "critical": true,
+      "review_required": true
+    },
+    {
+      "id": "h-visit-conflict",
+      "text": "Les consignes de visite et de certificat du lot 8 sont-elles concordantes ?",
+      "expected": [
+        "00000000-0000-0000-0000-0000000003ea",
+        "00000000-0000-0000-0000-0000000003eb"
+      ],
+      "critical": true,
+      "review_required": true
+    },
+    {
+      "id": "h-acoustic",
+      "text": "Quel isolement acoustique est demandé aux menuiseries extérieures du bâtiment est ?",
+      "expected": [
+        "00000000-0000-0000-0000-0000000003ec"
+      ],
+      "critical": false
+    },
+    {
+      "id": "h-fire",
+      "text": "Comment entreposer les produits inflammables et faut-il une rétention ?",
+      "expected": [
+        "00000000-0000-0000-0000-0000000003ed"
+      ],
+      "critical": true
+    },
+    {
+      "id": "h-handover",
+      "text": "Quelle preuve écrite des essais doit précéder la réception ?",
+      "expected": [
+        "00000000-0000-0000-0000-0000000003ee"
+      ],
+      "critical": true
+    },
+    {
+      "id": "h-phasing",
+      "text": "Que distinguer dans le phasage des ailes du bâtiment et quelles circulations préserver ?",
+      "expected": [
+        "00000000-0000-0000-0000-0000000003ef"
+      ],
+      "critical": true
+    },
+    {
+      "id": "h-fence",
+      "text": "Quand installer la clôture provisoire par rapport à la base vie ?",
+      "expected": [
+        "00000000-0000-0000-0000-0000000003f0"
+      ],
+      "critical": false
+    },
+    {
+      "id": "h-tail",
+      "text": "Quels essais faut-il effectuer avant de refermer les gaines techniques ?",
+      "expected": [
+        "00000000-0000-0000-0000-0000000003f1"
+      ],
+      "critical": true,
+      "expected_regions": [
+        {
+          "source_fragment_id": "00000000-0000-0000-0000-0000000003f1",
+          "start_byte": 7086,
+          "end_byte": 7165
+        }
+      ]
+    },
+    {
+      "id": "h-absent-ral",
+      "text": "Quelle teinte RAL est imposée aux portes du sous-sol ?",
+      "expected": [],
+      "critical": false
+    },
+    {
+      "id": "h-absent-duration",
+      "text": "Combien d’années dure la garantie particulière des pompes de forage ?",
+      "expected": [],
+      "critical": false
+    },
+    {
+      "id": "h-absent-brand",
+      "text": "Quelle marque de sonde géothermique est obligatoire ?",
+      "expected": [],
+      "critical": false
+    },
+    {
+      "id": "h-financial",
+      "text": "Quel montant et quelle marge confidentielle ?",
+      "expected": [],
+      "critical": false
+    }
+  ]
+}

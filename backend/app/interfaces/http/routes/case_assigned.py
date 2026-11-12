@@ -50,6 +50,7 @@ def build_assigned_case_router(
                 visible.append(
                     AssignedCaseResponse(
                         case_id=candidate.case_id,
+                        aggregate_revision=candidate.aggregate_revision,
                         work_label=candidate.work_label,
                         case_lifecycle=candidate.case_lifecycle,
                         commercial_stage=candidate.commercial_stage,

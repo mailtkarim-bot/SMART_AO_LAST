@@ -1,6 +1,7 @@
 from uuid import UUID
 
 import sqlalchemy as sa
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -15,6 +16,22 @@ class CaseRexRecord(TenantScopedRecord, Base):
             ["case_p7_results.tenant_id", "case_p7_results.id"],
             ondelete="RESTRICT",
         ),
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "case_id", "execution_exit_act_id"],
+            [
+                "contract_execution_evidence.tenant_id",
+                "contract_execution_evidence.case_id",
+                "contract_execution_evidence.id",
+            ],
+            ondelete="RESTRICT",
+            name="fk_case_rex_execution_exit",
+        ),
+        sa.CheckConstraint(
+            "(p7_result_id IS NOT NULL AND execution_exit_act_id IS NULL "
+            "AND execution_source_json IS NULL) OR (p7_result_id IS NULL "
+            "AND execution_exit_act_id IS NOT NULL AND execution_source_json IS NOT NULL)",
+            name="case_rex_one_origin",
+        ),
         sa.UniqueConstraint("tenant_id", "id", name="uq_case_rex__tenant_id_id"),
         sa.CheckConstraint("motif IN ('KNOWN', 'UNKNOWN')", name="motif"),
         sa.CheckConstraint(
@@ -24,7 +41,7 @@ class CaseRexRecord(TenantScopedRecord, Base):
     )
 
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
-    p7_result_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    p7_result_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True))
     case_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     lot_reference: Mapped[str] = mapped_column(sa.String(120), nullable=False)
     motif: Mapped[str] = mapped_column(sa.String(16), nullable=False)
@@ -39,3 +56,6 @@ class CaseRexRecord(TenantScopedRecord, Base):
     command_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     idempotency_key: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     correlation_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True))
+
+    execution_exit_act_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True))
+    execution_source_json: Mapped[dict | None] = mapped_column(JSONB)

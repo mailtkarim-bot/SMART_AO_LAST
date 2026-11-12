@@ -42,7 +42,9 @@ def test_c10_rollback_barriers_upgrade_downgrade_and_reupgrade(database_engine: 
     config = Config(str(ALEMBIC_INI))
     config.set_main_option("sqlalchemy.url", DATABASE_URL)
 
-    assert EXPECTED_ALEMBIC_HEAD == "20261010_0136"
+    from alembic.script import ScriptDirectory
+
+    assert ScriptDirectory.from_config(config).get_current_head() == EXPECTED_ALEMBIC_HEAD
     assert _trigger_names(database_engine) == _C10_TRIGGERS
 
     command.downgrade(config, "20261009_0135")

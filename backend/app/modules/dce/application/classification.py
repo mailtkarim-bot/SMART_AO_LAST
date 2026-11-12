@@ -9,8 +9,9 @@ from hashlib import sha256
 from typing import Final
 from uuid import UUID, uuid5
 
-from sqlalchemy import and_, select
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy import and_, or_, select
+from sqlalchemy.orm import Session, aliased, sessionmaker
+from sqlalchemy.sql.elements import ColumnElement
 
 from app.modules.dce.application.commands import (
     DceDocumentClassificationEvidenceInput,
@@ -28,7 +29,7 @@ from app.modules.dce.infrastructure.models.dce_version import DceDocumentRecord,
 from app.platform.events.dispatcher import CommandContext, CommandDispatcher, DispatchResult
 
 CLASSIFIER_ID: Final = "smart-ao-document-rules"
-CLASSIFIER_VERSION: Final = "1"
+CLASSIFIER_VERSION: Final = "2"
 SYSTEM_CLASSIFICATION_ACTOR_ID: Final = UUID("00000000-0000-0000-0000-000000000015")
 MAX_DOCUMENTS: Final = 10_000
 MAX_SOURCE_FRAGMENTS: Final = 100_000
@@ -102,7 +103,7 @@ _CLASSIFICATION_RULES: Final = (
         "RC",
         "DOCUMENT_RC_TITLE_V1",
         re.compile(
-            r"\brèglement\s+de\s+la\s+consultation\b|\brèglement\s+de\s+consultation\b",
+            r"\br[èe]glement\s+de\s+la\s+consultation\b|\br[èe]glement\s+de\s+consultation\b",
             re.IGNORECASE,
         ),
     ),
@@ -159,6 +160,30 @@ _CLASSIFICATION_RULES: Final = (
         re.compile(r"\brectificatif\b|\bmodification\s+de\s+la\s+consultation\b", re.IGNORECASE),
     ),
 )
+
+
+def current_completed_extraction_condition(*, tenant_id: UUID | str) -> ColumnElement[bool]:
+    """Exclude historical text, including completed extractions tied with review outcomes."""
+
+    newer_extraction = aliased(DceDocumentExtractionRecord)
+    return ~(
+        select(newer_extraction.id)
+        .where(
+            newer_extraction.tenant_id == tenant_id,
+            newer_extraction.dce_document_id == DceDocumentExtractionRecord.dce_document_id,
+            or_(
+                newer_extraction.created_at > DceDocumentExtractionRecord.created_at,
+                and_(
+                    newer_extraction.created_at == DceDocumentExtractionRecord.created_at,
+                    or_(
+                        newer_extraction.status != "COMPLETED",
+                        newer_extraction.id > DceDocumentExtractionRecord.id,
+                    ),
+                ),
+            ),
+        )
+        .exists()
+    )
 
 
 class DceDocumentClassificationService:
@@ -251,6 +276,7 @@ class DceDocumentClassificationService:
                     DceDocumentExtractionRecord.tenant_id == tenant_id,
                     DceDocumentExtractionRecord.dce_document_id.in_(document_ids),
                     DceDocumentExtractionRecord.status == "COMPLETED",
+                    current_completed_extraction_condition(tenant_id=tenant_id),
                 )
                 .order_by(
                     DceDocumentExtractionRecord.dce_document_id,
@@ -353,6 +379,53 @@ def _classify_document(*, document: ClassificationDocument) -> ClassificationRes
             classification=None,
             rule_match_count=0,
             evidence=(),
+        )
+    first = min(document.fragments, key=lambda fragment: fragment.ordinal)
+    title_evidence: dict[str, ClassificationEvidence] = {}
+    title_matches = []
+    for rule in _CLASSIFICATION_RULES:
+        if rule.classification not in {"RC", "CCAP", "CCTP", "AE", "BPU", "DPGF"}:
+            continue
+        heading = re.compile(
+            r"^[ \t]*(?:" + rule.pattern.pattern + r")(?:[ \t]+[—–:-][ \t]+[^\n]+)?[ \t]*$",
+            re.IGNORECASE | re.MULTILINE,
+        )
+        match = heading.search(first.text[:2_000])
+        if match is None:
+            continue
+        title_matches.append((match.start(), match.end(), rule))
+    title_matches.sort(key=lambda item: item[0])
+    previous_end = 0
+    for match_start, match_end, rule in title_matches:
+        if title_evidence and first.text[previous_end:match_start].strip():
+            break
+        previous_end = match_end
+        start, end, excerpt = _bounded_excerpt(
+            text=first.text, match_start=match_start, match_end=match_end
+        )
+        title_evidence[rule.classification] = ClassificationEvidence(
+            fragment_id=first.fragment_id,
+            rule_id=rule.rule_id,
+            start_byte_offset=start,
+            end_byte_offset=end,
+            excerpt=excerpt,
+        )
+    if title_evidence:
+        if len(title_evidence) != 1:
+            return ClassificationResult(
+                dce_document_id=document.dce_document_id,
+                status="REVIEW_REQUIRED",
+                classification=None,
+                rule_match_count=0,
+                evidence=(),
+            )
+        family, title_source_evidence = next(iter(title_evidence.items()))
+        return ClassificationResult(
+            dce_document_id=document.dce_document_id,
+            status="CLASSIFIED",
+            classification=family,
+            rule_match_count=1,
+            evidence=(title_source_evidence,),
         )
     evidence_by_classification: dict[str, list[ClassificationEvidence]] = {}
     evidence_keys: set[tuple[str, UUID, int, int]] = set()
@@ -511,3 +584,26 @@ def _bounded_excerpt(*, text: str, match_start: int, match_end: int) -> tuple[in
         len(text[:end].encode("utf-8")),
         excerpt,
     )
+
+
+def document_family_references(text: str) -> tuple[tuple[str, int, int], ...]:
+    """Locate family names without classifying a document or proving its presence."""
+    references = [
+        (rule.classification, match.start(), match.end())
+        for rule in _CLASSIFICATION_RULES
+        if rule.classification in {"RC", "CCAP", "CCTP", "AE", "BPU", "DPGF", "PLAN", "ANNEX"}
+        for match in rule.pattern.finditer(text)
+    ]
+    references.extend(
+        ("RC", match.start(), match.end())
+        for match in re.finditer(r"(?<![\w-])RC(?![\w-])", text, re.IGNORECASE)
+    )
+    references.extend(
+        ("BPU", match.start(), match.end())
+        for match in re.finditer(
+            r"\bbordereau\s+des\s+prix\s+unitaires\b",
+            text,
+            re.IGNORECASE,
+        )
+    )
+    return tuple(sorted(set(references), key=lambda item: (item[1], item[2], item[0])))

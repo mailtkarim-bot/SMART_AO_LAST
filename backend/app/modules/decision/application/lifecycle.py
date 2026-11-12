@@ -81,6 +81,27 @@ class PatronDecisionLifecycleService:
         )
         if not decision.allowed:
             raise PermissionError(decision.code)
+        if any(
+            ref.aggregate_type == "ANALYSIS_ASSESSMENT"
+            for ref in getattr(command, "references", ())
+        ):
+            private = self._policy.authorize(
+                context=actor,
+                request=AuthorizationRequest(
+                    action=Capability.PRICING_READ,
+                    resource=AuthorizationResource(
+                        resource_type="DECISION",
+                        resource_id=command.decision_id,
+                        tenant_id=actor.tenant_id,
+                        case_id=command.case_id,
+                        classification=DataClassification.FINANCIAL_PRIVATE,
+                    ),
+                    evaluated_at=now,
+                    mfa_required=True,
+                ),
+            )
+            if not private.allowed:
+                raise PermissionError(private.code)
         return self._dispatcher.dispatch(
             command=command,
             context=CommandContext(
@@ -93,6 +114,21 @@ class PatronDecisionLifecycleService:
                 session_id=actor.session_id,
                 case_id=command.case_id,
                 correlation_id=actor.correlation_id,
+                financial_access_verified=self._policy.authorize(
+                    context=actor,
+                    request=AuthorizationRequest(
+                        action=Capability.PRICING_READ,
+                        resource=AuthorizationResource(
+                            resource_type="DECISION",
+                            resource_id=command.decision_id,
+                            tenant_id=actor.tenant_id,
+                            case_id=command.case_id,
+                            classification=DataClassification.FINANCIAL_PRIVATE,
+                        ),
+                        evaluated_at=now,
+                        mfa_required=True,
+                    ),
+                ).allowed,
             ),
         )
 
@@ -127,12 +163,22 @@ class CreateDecisionHandler:
                 "scope_fingerprint": effective_scope_fingerprint,
             }
         )
+        requalification = None
         if self._repository.active_decision_exists(
             session=session,
             tenant_id=tenant_id,
             decision_key_hash=decision_key_hash,
         ):
-            raise CommandExecutionError("DECISION_ALREADY_ACTIVE")
+            requalification = self._repository.mark_changed_dce_review_required(
+                session=session,
+                tenant_id=tenant_id,
+                case_id=command.case_id,
+                decision_key_hash=decision_key_hash,
+                actor_id=UUID(str(context.actor_id)),
+                now=context.received_at,
+            )
+            if requalification is None:
+                raise CommandExecutionError("DECISION_ALREADY_ACTIVE")
         decision = DecisionDraft(
             id=command.decision_id,
             tenant_id=UUID(str(context.tenant_id)),
@@ -164,6 +210,17 @@ class CreateDecisionHandler:
                     "aggregate_id": str(decision.id),
                     "aggregate_revision": 0,
                 },
+                *(
+                    (
+                        {
+                            "aggregate_type": "Decision",
+                            "aggregate_id": str(requalification.decision_id),
+                            "aggregate_revision": requalification.aggregate_revision,
+                        },
+                    )
+                    if requalification
+                    else ()
+                ),
             ),
             events=(
                 PendingDomainEvent(
@@ -172,6 +229,30 @@ class CreateDecisionHandler:
                     aggregate_revision=0,
                     event_type="DecisionDraftCreated",
                     payload={"decision_id": str(decision.id), "case_id": str(decision.case_id)},
+                ),
+                *(
+                    (
+                        PendingDomainEvent(
+                            aggregate_type="Decision",
+                            aggregate_id=requalification.decision_id,
+                            aggregate_revision=requalification.aggregate_revision,
+                            event_type="DecisionMarkedReviewRequired",
+                            payload={
+                                "decision_id": str(requalification.decision_id),
+                                "case_id": str(command.case_id),
+                                "reason": "APPLICABLE_DCE_CHANGED",
+                                "predecessor_dce_version_id": str(
+                                    requalification.predecessor_dce_version_id
+                                ),
+                                "successor_dce_version_id": str(
+                                    requalification.successor_dce_version_id
+                                ),
+                                "new_draft_id": str(decision.id),
+                            },
+                        ),
+                    )
+                    if requalification
+                    else ()
                 ),
             ),
         )
@@ -200,6 +281,8 @@ class FreezeDecisionContextHandler:
             or snapshot.root.context_status != "INCOMPLETE"
             or snapshot.contexts
         ):
+            if any(ref.aggregate_type == "ANALYSIS_ASSESSMENT" for ref in command.references):
+                raise CommandExecutionError("STALE_DECISION_CONTEXT")
             raise CommandExecutionError("DECISION_NOT_READY_FOR_CONTEXT")
         if snapshot.root.aggregate_revision != command.expected_revision:
             raise CommandExecutionError("STALE_DECISION_REVISION")
@@ -233,6 +316,8 @@ class FreezeDecisionContextHandler:
                 aggregate_revision=reference.aggregate_revision,
                 content_hash=reference.content_hash,
             ):
+                if "ANALYSIS_ASSESSMENT" in valid_reference_types:
+                    raise CommandExecutionError("STALE_DECISION_CONTEXT")
                 raise CommandExecutionError("INVALID_DECISION_CONTEXT_REFERENCE")
 
         prepared_at = context.received_at
@@ -350,9 +435,26 @@ class ResolveDecisionConditionHandler:
         *,
         repository_factory: Callable[[Any], DecisionRepository],
         condition_repository: DecisionConditionRepository,
+        lifecycle_repository: DecisionLifecycleRepository | None = None,
     ) -> None:
         self._repository_factory = repository_factory
         self._condition_repository = condition_repository
+        self._lifecycle_repository = lifecycle_repository
+
+    def authorize_context(self, *, session, command, context):
+        if context.financial_access_verified:
+            return
+        snapshot = self._repository_factory(session).get(
+            tenant_id=context.tenant_id, aggregate_id=command.decision_id
+        )
+        if (
+            snapshot is not None
+            and snapshot.root.case_id == command.case_id
+            and any(
+                ref.aggregate_type == "ANALYSIS_ASSESSMENT" for ref in snapshot.context_references
+            )
+        ):
+            raise CommandExecutionError("FINANCIAL_SCOPE_FORBIDDEN")
 
     def execute(
         self, *, session, command: ResolveDecisionConditionCommand, context: CommandContext
@@ -363,6 +465,25 @@ class ResolveDecisionConditionHandler:
             raise CommandExecutionError("NOT_FOUND_OR_FORBIDDEN")
         if snapshot.root.outcome != "CONDITIONAL_GO" or snapshot.root.lifecycle != "FINALIZED":
             raise CommandExecutionError("DECISION_NOT_CONDITIONAL_GO")
+        if (
+            any(ref.aggregate_type == "ANALYSIS_ASSESSMENT" for ref in snapshot.context_references)
+            and not context.financial_access_verified
+        ):
+            raise CommandExecutionError("FINANCIAL_SCOPE_FORBIDDEN")
+        for ref in snapshot.context_references:
+            if ref.aggregate_type in {"ANALYSIS_ASSESSMENT", "CAPACITY_RUN"} and (
+                self._lifecycle_repository is None
+                or not self._lifecycle_repository.context_reference_is_valid(
+                    session=session,
+                    tenant_id=UUID(str(context.tenant_id)),
+                    case_id=command.case_id,
+                    aggregate_type=ref.aggregate_type,
+                    aggregate_id=ref.aggregate_id,
+                    aggregate_revision=ref.aggregate_revision,
+                    content_hash=ref.content_hash,
+                )
+            ):
+                raise CommandExecutionError("STALE_DECISION_CONTEXT")
         condition_index = next(
             (
                 index
@@ -484,6 +605,7 @@ def decision_lifecycle_handlers(
         ResolveDecisionConditionCommand.command_type: ResolveDecisionConditionHandler(
             repository_factory=repository_factory,
             condition_repository=condition_repository,
+            lifecycle_repository=lifecycle_repository,
         ),
         LinkDecisionConditionContractEvidenceCommand.command_type: LinkConditionEvidenceHandler(
             lifecycle_repository=lifecycle_repository,

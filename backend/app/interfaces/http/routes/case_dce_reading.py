@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import asdict
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -12,12 +13,14 @@ from app.interfaces.http.routes.consultations import ConsultationSecurityRuntime
 from app.modules.dce.application.queries import CaseDceReadingAvailability
 from app.modules.dce.application.source_anchor_projection import DceSourceAnchorProjection
 from app.modules.dce.public.contracts import (
+    CaseDceCoverageResponse,
     CaseDceReadingCountersResponse,
     CaseDceReadingDceResponse,
     CaseDceReadingRequirementResponse,
     CaseDceReadingResponse,
     CaseDceSourceAnchorResponse,
     CaseDceSourceLocatorResponse,
+    CaseDceStructuredCandidateResponse,
 )
 from app.platform.security.authorization import AuthorizationRequest, AuthorizationResource
 from app.platform.security.capabilities import Capability
@@ -117,6 +120,7 @@ def build_case_dce_reading_router(
             )
 
         reading = lookup.reading
+        coverage = getattr(reading, "coverage", None)
         return CaseDceReadingResponse(
             case_id=lookup.case_id,
             work_label=lookup.work_label,
@@ -131,6 +135,11 @@ def build_case_dce_reading_router(
                 classification_readiness=reading.classification_readiness,
                 analysis_readiness=reading.analysis_readiness,
                 source_received_at=reading.source_received_at,
+            ),
+            coverage=(
+                CaseDceCoverageResponse.model_validate(asdict(coverage))
+                if coverage is not None
+                else None
             ),
             counters=CaseDceReadingCountersResponse(
                 total=reading.counters.total,
@@ -150,6 +159,12 @@ def build_case_dce_reading_router(
                     document_family=requirement.document_family,
                     source_locator_label=requirement.source_locator_label,
                     source_anchor=_source_anchor_response(requirement.source_anchor),
+                    structured_candidate=(
+                        CaseDceStructuredCandidateResponse.model_validate(asdict(candidate))
+                        if (candidate := getattr(requirement, "structured_candidate", None))
+                        is not None
+                        else None
+                    ),
                 )
                 for requirement in reading.requirements
             ],

@@ -79,6 +79,14 @@ function renderPanel(overrides: Partial<React.ComponentProps<typeof BoampOpportu
 }
 
 describe("BoampOpportunityPanel", () => {
+  it('requires confirmation of the selected public decision before posting',()=>{
+    const onQualify=vi.fn();renderPanel({onQualify,observations:[observation],selectedObservationId:observation.observation_id});
+    fireEvent.click(screen.getByRole('button',{name:/Enregistrer la décision P0/}));
+    expect(onQualify).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByLabelText('Je confirme la décision P0 et son motif pour cet avis.'));
+    fireEvent.click(screen.getByRole('button',{name:/Enregistrer la décision P0/}));
+    expect(onQualify).toHaveBeenCalledTimes(1);
+  });
   it("renders a tenant-scoped empty state", () => {
     renderPanel();
     expect(screen.getByText("Aucune opportunité BOAMP disponible")).toBeInTheDocument();
@@ -122,7 +130,9 @@ describe("BoampOpportunityPanel", () => {
     expect(screen.queryByText("a".repeat(64))).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /Réhabilitation d’une école/ }));
+    fireEvent.click(screen.getByLabelText("Je confirme la décision P0 et son motif pour cet avis."));
     fireEvent.click(screen.getByRole("button", { name: /Enregistrer la décision P0/ }));
+    fireEvent.click(screen.getByLabelText("Je confirme l’ouverture d’une Affaire avec les inconnues affichées."));
     fireEvent.click(screen.getByRole("button", { name: /Créer une affaire/ }));
     expect(onSelect).toHaveBeenCalledWith("observation-1");
     expect(onQualify).toHaveBeenCalledOnce();

@@ -40,10 +40,12 @@ class DeclareContractInstrumentSupersessionHandler(CommandHandler):
             raise CommandExecutionError("PATRON_REQUIRED")
         if (
             session.scalar(
-                sa.select(CaseRecord.id).where(
+                sa.select(CaseRecord.id)
+                .where(
                     CaseRecord.tenant_id == tenant_id,
                     CaseRecord.id == command.case_id,
                 )
+                .with_for_update()
             )
             is None
         ):

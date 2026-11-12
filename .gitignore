@@ -37,3 +37,6 @@ minio_data/
 
 # Derived local codebase graph and extraction caches; keep outside checkpoints.
 graphify-out/
+
+# Private local proofs and full WIP archives are not publishable source.
+.local-proofs/

@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from datetime import datetime
+from datetime import datetime, timedelta
+from hashlib import sha256
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4, uuid5
 
 import sqlalchemy as sa
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, aliased
 
 from app.modules.case.infrastructure.models.case import CaseRecord
 
@@ -117,21 +118,36 @@ class BoampQualificationRepository:
                     case_id=current.case_id,
                     case_created_at=current.case_created_at,
                 )
-        for case in session.scalars(
-            sa.select(CaseRecord).where(
-                CaseRecord.tenant_id == tenant_id,
+        source = aliased(BoampOpportunityObservationRecord)
+        for observation_id, case in session.execute(
+            sa.select(BoampOpportunityObservationRecord.id, CaseRecord)
+            .join(
+                source,
+                sa.and_(
+                    source.tenant_id == BoampOpportunityObservationRecord.tenant_id,
+                    source.source == BoampOpportunityObservationRecord.source,
+                    source.source_notice_id == BoampOpportunityObservationRecord.source_notice_id,
+                ),
+            )
+            .join(
+                CaseRecord,
+                sa.and_(
+                    CaseRecord.tenant_id == source.tenant_id,
+                    CaseRecord.origin_reference_id == source.id,
+                ),
+            )
+            .where(
+                BoampOpportunityObservationRecord.tenant_id == tenant_id,
+                BoampOpportunityObservationRecord.id.in_(observation_ids),
                 CaseRecord.business_origin == "OPPORTUNITY",
-                CaseRecord.origin_reference_id.in_(observation_ids),
                 CaseRecord.lifecycle != "ARCHIVED",
             )
+            .order_by(CaseRecord.created_at, CaseRecord.id)
         ):
-            current = states[case.origin_reference_id]
+            current = states[observation_id]
             if current.case_id is None:
-                states[case.origin_reference_id] = BoampObservationState(
-                    latest_qualification=current.latest_qualification,
-                    case_id=case.id,
-                    case_created_at=case.created_at,
-                    source_captures=current.source_captures,
+                states[observation_id] = replace(
+                    current, case_id=case.id, case_created_at=case.created_at
                 )
 
         captures_by_observation: dict[UUID, list[BoampSourceCaptureRecord]] = {
@@ -186,6 +202,7 @@ class BoampQualificationRepository:
         command: BoampQualificationCommand,
         now: datetime,
     ) -> QualificationPersistenceResult:
+        lock_boamp_notice(session, observation)
         qualification_id = uuid5(
             UUID("00000000-0000-0000-0000-000000000004"),
             f"boamp-qualification:{tenant_id}:{command.idempotency_key}",
@@ -230,6 +247,21 @@ class BoampQualificationRepository:
                 replayed=True,
             )
 
+        latest = session.scalar(
+            sa.select(BoampOpportunityQualificationRecord)
+            .where(
+                BoampOpportunityQualificationRecord.tenant_id == tenant_id,
+                BoampOpportunityQualificationRecord.observation_id == observation.id,
+            )
+            .order_by(
+                BoampOpportunityQualificationRecord.created_at.desc(),
+                BoampOpportunityQualificationRecord.id.desc(),
+            )
+            .limit(1)
+        )
+        recorded_at = session.scalar(sa.select(sa.func.clock_timestamp()))
+        if latest is not None and recorded_at <= latest.created_at:
+            recorded_at = latest.created_at + timedelta(microseconds=1)
         record = BoampOpportunityQualificationRecord(
             id=qualification_id,
             tenant_id=tenant_id,
@@ -242,6 +274,8 @@ class BoampQualificationRepository:
             command_id=command.command_id,
             idempotency_key=command.idempotency_key,
             correlation_id=command.correlation_id,
+            created_at=recorded_at,
+            updated_at=recorded_at,
         )
         session.add(record)
         event_id = uuid4()
@@ -295,3 +329,15 @@ class BoampQualificationRepository:
             event_id=event_id,
             replayed=False,
         )
+
+
+def lock_boamp_notice(session: Session, observation: BoampOpportunityObservationRecord) -> None:
+    """Serialize decisions and conversion across immutable snapshots of the same notice."""
+    key = int.from_bytes(
+        sha256(
+            f"boamp-notice:{observation.tenant_id}:{observation.source}:{observation.source_notice_id}".encode()
+        ).digest()[:8],
+        "big",
+        signed=True,
+    )
+    session.execute(sa.select(sa.func.pg_advisory_xact_lock(key)))

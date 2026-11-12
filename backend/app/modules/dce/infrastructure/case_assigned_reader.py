@@ -21,6 +21,7 @@ class SqlAlchemyAssignedCaseReader:
         statement = (
             sa.select(
                 CaseRecord.id,
+                CaseRecord.aggregate_revision,
                 CaseRecord.title,
                 CaseRecord.lifecycle,
                 CaseRecord.commercial_stage,
@@ -38,6 +39,7 @@ class SqlAlchemyAssignedCaseReader:
         return tuple(
             AssignedCaseProjection(
                 case_id=row.id,
+                aggregate_revision=row.aggregate_revision,
                 work_label=row.title,
                 case_lifecycle=row.lifecycle,
                 commercial_stage=row.commercial_stage,

@@ -62,3 +62,5 @@ class PostReceptionObligationRecord(TenantScopedRecord, Base):
         sa.String(24), nullable=False, server_default="REVIEW_REQUIRED"
     )
     actor_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+
+    closure_review_json: Mapped[dict | None] = mapped_column(JSONB)

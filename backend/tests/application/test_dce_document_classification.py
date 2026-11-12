@@ -628,6 +628,44 @@ def test_classification_handler_direct_replay_is_idempotent(
 
 @pytest.mark.db
 @pytest.mark.integration
+@pytest.mark.parametrize("tied", [False, True])
+def test_review_required_extraction_prevents_classifying_historical_text(
+    session_factory: sessionmaker[Session], tied: bool
+) -> None:
+    tenant_id, dce_version_id, document_ids = _seed_dce(session_factory, document_texts=["CCTP"])
+    with session_factory.begin() as session:
+        previous = session.scalar(sa.select(DceDocumentExtractionRecord))
+        assert previous is not None
+        session.add(
+            DceDocumentExtractionRecord(
+                id=UUID(int=1),
+                tenant_id=tenant_id,
+                dce_version_id=dce_version_id,
+                dce_document_id=document_ids[0],
+                input_sha256=previous.input_sha256,
+                extractor_id="fixture",
+                extractor_version="2",
+                status="REVIEW_REQUIRED",
+                fragment_count=0,
+                extracted_char_count=0,
+                failure_code="PDF_PAGE_CONTENT_UNEXTRACTED",
+                created_at=(
+                    previous.created_at if tied else previous.created_at + timedelta(seconds=1)
+                ),
+            )
+        )
+    service = _service(session_factory=session_factory)
+    _, documents = service._load_documents(tenant_id=tenant_id, dce_version_id=dce_version_id)
+    result = project_dce_classification(documents=documents).results[0]
+    assert documents[0].fragments == ()
+    assert result.status == "NOT_EXTRACTED"
+    assert result.classification is None
+    recorded = service.classify(tenant_id=tenant_id, dce_version_id=dce_version_id, now=NOW)
+    assert recorded.result_code == "DCE_DOCUMENT_CLASSIFICATION_RECORDED"
+
+
+@pytest.mark.db
+@pytest.mark.integration
 def test_new_completed_extraction_creates_a_classification_history_successor(
     session_factory: sessionmaker[Session],
 ) -> None:

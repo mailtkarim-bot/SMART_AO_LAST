@@ -35,6 +35,7 @@ const initialAdoption: BusinessMethodProfileAdoption = {
 function renderPanel(overrides: Record<string, unknown> = {}) {
   const api = {
     listBusinessMethodProfileVersions: vi.fn().mockResolvedValue({ company_id: "company-1", versions: [v1, v2] }),
+    listBusinessMethodProfileAdoptions: vi.fn().mockResolvedValue([]),
     getBusinessMethodProfileAdoption: vi.fn().mockResolvedValue(initialAdoption),
     publishBusinessMethodProfile: vi.fn().mockResolvedValue({ aggregate_refs: [{ aggregate_type: "BusinessMethodProfile", aggregate_id: "profile-3", aggregate_revision: 3, content_hash: "3".repeat(64) }] }),
     adoptBusinessMethodProfile: vi.fn().mockResolvedValue({ aggregate_refs: [{ aggregate_type: "BusinessMethodProfileAdoption", aggregate_id: "adoption-2", aggregate_revision: 2 }] }),
@@ -88,6 +89,10 @@ describe("BusinessMethodProfilePanel", () => {
     const { api } = renderPanel({ getBusinessMethodProfileAdoption: refreshedAdoption });
     await screen.findByText("profile-1");
     fireEvent.change(screen.getByLabelText("Version à prévisualiser ou adopter"), { target: { value: "profile-2" } });
+    expect(screen.getByLabelText("Profil actuellement adopté")).toHaveTextContent(/"Lot"/);
+    expect(screen.getByLabelText("Aperçu de la version publiée")).toHaveTextContent(/"Zone"/);
+    expect(screen.getByRole("button", { name: "Adopter v2 pour l’Affaire" })).toBeDisabled();
+    fireEvent.click(screen.getByLabelText(/Je confirme l’adoption de cette version/));
     fireEvent.click(screen.getByRole("button", { name: "Adopter v2 pour l’Affaire" }));
     await waitFor(() => expect(api.adoptBusinessMethodProfile).toHaveBeenCalledOnce());
     expect(api.adoptBusinessMethodProfile).toHaveBeenCalledWith("case-1", expect.objectContaining({
@@ -97,4 +102,11 @@ describe("BusinessMethodProfilePanel", () => {
       profile_content_sha256: v2.content_sha256,
     }));
   });
+});
+
+
+it("relit l'historique des adoptions exactes de l’Affaire", async () => {
+  renderPanel({ listBusinessMethodProfileAdoptions: vi.fn().mockResolvedValue([initialAdoption]) });
+  expect(await screen.findByText(/Historique des adoptions/)).toBeVisible();
+  expect(screen.getByText(/Acte adoption-1/)).toBeVisible();
 });

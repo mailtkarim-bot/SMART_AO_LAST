@@ -25,6 +25,16 @@ const SOURCE_CHANNEL_OPTIONS: Array<{ value: DceProvenanceChannel; label: string
 ];
 
 type Props = {
+  canReplace?: boolean;
+  pending?: boolean;
+  pendingVersionId?: string;
+  pendingPredecessorId?: string;
+  pendingPredecessorRevision?: number;
+  pendingCorpusHash?: string;
+  replacementReason?: string;
+  replacementConfirmed?: boolean;
+  onReplacementReasonChange?: (value: string) => void;
+  onReplacementConfirmedChange?: (value: boolean) => void;
   selectedCase: AssignedCase | undefined;
   consultation: ConsultationProjection | null;
   dceVersionMetadata: DceVersionMetadata | null;
@@ -33,6 +43,8 @@ type Props = {
   busy: boolean;
   sourceChannel: DceProvenanceChannel;
   file: File | null;
+  files?: File[];
+  onFilesChange?: (files: File[]) => void;
   step: "IDLE" | "PREPARING" | "UPLOADING" | "ADMITTING";
   onSourceChannelChange: (channel: DceProvenanceChannel) => void;
   onFileChange: (file: File | null) => void;
@@ -58,6 +70,8 @@ const STEP_LABELS: Record<Props["step"], string> = {
 };
 
 export function DceOpeningPanel({
+  canReplace = false, pending = false, pendingVersionId, pendingPredecessorId, pendingPredecessorRevision, pendingCorpusHash, replacementReason = "", replacementConfirmed = false,
+  onReplacementReasonChange, onReplacementConfirmedChange,
   selectedCase,
   consultation,
   dceVersionMetadata,
@@ -66,6 +80,7 @@ export function DceOpeningPanel({
   busy,
   sourceChannel,
   file,
+  files, onFilesChange,
   step,
   onSourceChannelChange,
   onFileChange,
@@ -85,7 +100,7 @@ export function DceOpeningPanel({
           className="secondary-button compact-button"
           type="button"
           onClick={onOpen}
-          disabled={!selectedCase || loading}
+          disabled={!selectedCase || loading || pending || busy}
         >
           {loading ? "Ouverture…" : "Ouvrir / actualiser l'espace"}
         </button>
@@ -117,7 +132,7 @@ export function DceOpeningPanel({
             <div className="dce-meta">
               <span>Consultation : {truncateId(consultationId)}</span>
               <span>
-                Version DCE applicable : {dceVersionId ? truncateId(dceVersionId) : "non liée"}
+                {pending ? "Dernière version rattachée (à requalifier)" : "Version DCE applicable"} : {dceVersionId ? truncateId(dceVersionId) : "non liée"}
               </span>
             </div>
           </div>
@@ -159,7 +174,9 @@ export function DceOpeningPanel({
                 <span className="section-kicker">VERSION DCE APPLICABLE</span>
                 <span>{dceVersionMetadata.lifecycle}</span>
               </div>
+              {dceVersionMetadata.lifecycle !== "ADMITTED" && <p role="status">Version historique ou retirée : aucune source de cette version ne doit être tenue pour courante.</p>}
               <div className="dce-meta">
+                <span>Prédécesseur : {dceVersionMetadata.predecessor_dce_version_id ?? "aucun remplacement démontré"}</span>
                 <span>Intégrité : {dceVersionMetadata.integrity}</span>
                 <span>Classification : {dceVersionMetadata.classification_readiness}</span>
                 <span>Analyse : {dceVersionMetadata.analysis_readiness}</span>
@@ -209,17 +226,17 @@ export function DceOpeningPanel({
           <div className="detail-panel">
             <div className="subheading">
               <span className="section-kicker">ADMISSION D'UN DOCUMENT DCE</span>
-              <span>un fichier par admission</span>
+              <span>un corpus explicite par admission</span>
             </div>
             <label>
               <span>Canal source</span>
               <select
                 value={sourceChannel}
                 onChange={(event) => onSourceChannelChange(event.target.value as DceProvenanceChannel)}
-                disabled={busy}
+                disabled={busy || pending}
               >
                 {SOURCE_CHANNEL_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
+                  <option key={option.value} value={option.value} disabled={option.value === "RECTIFICATION" && (!canReplace || !dceVersionMetadata || dceVersionMetadata.lifecycle !== "ADMITTED")}>
                     {option.label}
                   </option>
                 ))}
@@ -229,11 +246,23 @@ export function DceOpeningPanel({
               <span>Document DCE</span>
               <input
                 type="file"
+                multiple
                 aria-label="Document DCE"
-                onChange={(event) => onFileChange(event.target.files?.[0] ?? null)}
-                disabled={busy}
+                onChange={(event) => onFilesChange ? onFilesChange(Array.from(event.target.files ?? [])) : onFileChange(event.target.files?.[0] ?? null)}
+                disabled={busy || pending}
               />
             </label>
+            {sourceChannel === "RECTIFICATION" && <fieldset disabled={busy || pending}>
+              <legend>Remplacement explicite</legend>
+              <p>Prédécesseur : {pendingPredecessorId ?? dceVersionMetadata?.id ?? "UNKNOWN"} · révision {pendingPredecessorRevision ?? dceVersionMetadata?.aggregate_revision ?? "UNKNOWN"}. Les pièces absentes et les accords ne sont pas repris automatiquement.</p>
+              <label>Motif du rectificatif<input maxLength={2000} value={replacementReason} onChange={event => onReplacementReasonChange?.(event.target.value)} /></label>
+              <label><input type="checkbox" checked={replacementConfirmed} onChange={event => onReplacementConfirmedChange?.(event.target.checked)} />Je confirme le remplacement de cette version exacte et le rattachement à cette Affaire.</label>
+              {!canReplace && <p>Acte de remplacement réservé au Patron administrateur.</p>}
+            </fieldset>}
+            {pending && <div className="dce-meta"><span>Version de l’acte : {pendingVersionId ?? "UNKNOWN"}</span><span>Prédécesseur de l’acte : {pendingPredecessorId ?? "aucun remplacement"}</span><span>SHA-256 du corpus de l’acte : {pendingCorpusHash ?? "UNKNOWN"}</span></div>}
+            {pending && <p role="status">Acte en attente de résolution : fichiers, prédécesseur et identifiants conservés. Réessayez le même acte ; aucun nouvel accord n’est déduit.</p>}
+            <p className="muted-copy">Limites locales : 100 fichiers, 150 Mo par fichier. Le serveur contrôle les formats, droits et limites ; aucune pièce d’une ancienne version n’est ajoutée automatiquement.</p>
+            {files && files.length > 1 && <ul>{files.map((source, index) => <li key={index}>{source.name} · {formatByteSize(source.size)}</li>)}</ul>}
             {file ? <p className="muted-copy">Fichier sélectionné : {file.name}</p> : null}
             {step !== "IDLE" ? (
               <p className="muted-copy" role="status">
@@ -245,9 +274,9 @@ export function DceOpeningPanel({
                 className="primary-button"
                 type="button"
                 onClick={onAdmit}
-                disabled={busy || !file || !consultation}
+                disabled={busy || (!pending && (!file || !consultation || (sourceChannel === "RECTIFICATION" && (!canReplace || !replacementConfirmed || !replacementReason.trim()))))}
               >
-                {busy ? "Transfert…" : "Préparer et admettre le document"}
+                {busy ? "Transfert…" : pending ? "Réessayer le même acte" : "Préparer et admettre le document"}
                 <span>→</span>
               </button>
             </div>

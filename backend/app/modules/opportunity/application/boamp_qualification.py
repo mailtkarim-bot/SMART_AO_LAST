@@ -329,8 +329,6 @@ def _unknowns(
     deadline_state: BoampDeadlineState,
     opened: bool,
 ) -> tuple[dict[str, object], ...]:
-    if not opened:
-        return ()
     source_ref = f"BOAMP:{record.source_notice_id}"
     unknowns: list[dict[str, object]] = [
         {

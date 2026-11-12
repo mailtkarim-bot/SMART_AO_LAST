@@ -1,5 +1,5 @@
 import { scenarioParameterFields, type usePricingScenarios } from "./usePricingScenarios";
-import type { ChangeEvent, Dispatch, SetStateAction } from "react";
+import {useState, type ChangeEvent, type Dispatch, type SetStateAction} from "react";
 
 import { formatBasisPoints } from "../../shared/financialFormatting";
 import type { PricingImportBatchRead, PricingScenario } from "../../shared/types";
@@ -8,6 +8,8 @@ import type {
   PricingImportState,
   PricingImportUnknownAction,
 } from "./usePricingImport";
+
+const importErrorLabels:Record<string,string>={UNIT_PRICE_PRECISION_UNQUALIFIED:"Prix unitaire : précision non qualifiée",FORMULA_REQUIRES_REVIEW:"Formule non qualifiée — revue nécessaire",QUANTITY_INVALID:"Quantité absente ou invalide",UNIT_PRICE_INVALID:"Prix unitaire invalide",TOTAL_PRICE_INVALID:"Montant fourni invalide",PRICE_REQUIRED:"Prix ou montant manquant",DESIGNATION_REQUIRED:"Désignation manquante",TOTAL_PRICE_MISMATCH:"Montant différent de quantité × prix",TOTAL_PRICE_OUT_OF_RANGE:"Montant hors limite",CODE_TOO_LONG:"Code trop long",UNIT_TOO_LONG:"Unité trop longue",DESIGNATION_TOO_LONG:"Désignation trop longue"};
 
 type PricingPanelProps = {
   scenarioCreation: ReturnType<typeof usePricingScenarios>["creation"];
@@ -68,6 +70,10 @@ export function PricingPanel({
   onReload,
   onCommit,
 }: PricingPanelProps) {
+  const [importPage,setImportPage]=useState<{batchId:string;page:number}|null>(null);
+  const currentPage=importPage?.batchId===pricingImportPreview?.batch_id?importPage?.page??0:0;
+  const rows=pricingImportPreview?.rows??[];
+  const page=Math.min(currentPage,Math.max(0,Math.ceil(rows.length/20)-1));
   return (
     <>
       <div className="section-heading enterprise-pricing-heading">
@@ -247,14 +253,23 @@ export function PricingPanel({
                 ? ` · ${pricingImportPreview.error_count} erreur${pricingImportPreview.error_count > 1 ? "s" : ""}`
                 : ""}
             </span>
-            {pricingImportPreview.rows.slice(0, 5).map((row) => (
-              <div className="import-preview-row" key={row.row_number}>
-                <span>
+            <p role="status">Lignes {rows.length?page*20+1:0}–{Math.min((page+1)*20,rows.length)} sur {rows.length} · toutes les lignes sont consultables.</p>
+            <p>Le tableau peut défiler horizontalement.</p>
+            <div className="line-table-wrap" role="region" aria-label="Lignes importées — tableau défilant" tabIndex={0}><table><caption>Lignes importées et sources du classeur</caption><thead><tr><th scope="col">Poste</th><th scope="col">Source</th><th scope="col">État</th></tr></thead><tbody>
+            {pricingImportPreview.rows.slice(page*20, (page+1)*20).map((row) => (
+              <tr className="import-preview-row" key={row.row_number}>
+                <td>
                   #{row.row_number} · {row.designation ?? "Ligne sans désignation"}
-                </span>
-                <span>{row.errors.length ? row.errors.join(", ") : "Valide"}</span>
-              </div>
+                </td>
+                <td><small>{row.source_locator?`${row.source_locator.sheet} · ligne ${row.source_locator.row} · cellules ${Object.values(row.source_locator.cells).join(", ")}`:"Source de la ligne : UNKNOWN"}</small></td>
+                <td>{row.errors.length ? row.errors.map(error=>importErrorLabels[error]??"Valeur à vérifier").join(", ") : "Valide"}</td>
+              </tr>
             ))}
+            </tbody></table></div>
+            {rows.length>20&&<nav aria-label="Pagination des lignes importées">
+              <button type="button" className="secondary-button" disabled={page===0} onClick={()=>setImportPage({batchId:pricingImportPreview.batch_id,page:page-1})}>Lignes précédentes</button>
+              <button type="button" className="secondary-button" disabled={(page+1)*20>=rows.length} onClick={()=>setImportPage({batchId:pricingImportPreview.batch_id,page:page+1})}>Lignes suivantes</button>
+            </nav>}
           </div>
         )}
         <small className="invariant-note">

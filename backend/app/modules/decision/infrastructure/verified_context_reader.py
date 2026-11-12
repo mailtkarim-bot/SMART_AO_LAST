@@ -22,6 +22,55 @@ class SqlAlchemyDecisionVerifiedContextReader(DecisionVerifiedContextReader):
         self, *, session: object, tenant_id: UUID, context_id: UUID, case_id: UUID
     ) -> bool:
         db_session = cast(Session, session)
+        from app.modules.decision.infrastructure.analysis_reference import (
+            assessment_reference_is_current,
+        )
+        from app.modules.decision.infrastructure.capacity_reference import (
+            capacity_reference_is_current,
+        )
+
+        capacity_refs = db_session.scalars(
+            sa.select(DecisionContextReferenceRecord).where(
+                DecisionContextReferenceRecord.tenant_id == tenant_id,
+                DecisionContextReferenceRecord.decision_context_id == context_id,
+                DecisionContextReferenceRecord.aggregate_type == "CAPACITY_RUN",
+            )
+        ).all()
+        if any(
+            not capacity_reference_is_current(
+                db_session,
+                tenant_id=tenant_id,
+                case_id=case_id,
+                aggregate_id=ref.aggregate_id,
+                aggregate_revision=ref.aggregate_revision,
+                content_hash=ref.content_hash,
+            )
+            for ref in capacity_refs
+        ):
+            from app.platform.events.dispatcher import CommandExecutionError
+
+            raise CommandExecutionError("STALE_DECISION_CONTEXT")
+        assessment_refs = db_session.scalars(
+            sa.select(DecisionContextReferenceRecord).where(
+                DecisionContextReferenceRecord.tenant_id == tenant_id,
+                DecisionContextReferenceRecord.decision_context_id == context_id,
+                DecisionContextReferenceRecord.aggregate_type == "ANALYSIS_ASSESSMENT",
+            )
+        ).all()
+        if any(
+            not assessment_reference_is_current(
+                db_session,
+                tenant_id=tenant_id,
+                case_id=case_id,
+                aggregate_id=ref.aggregate_id,
+                aggregate_revision=ref.aggregate_revision,
+                content_hash=ref.content_hash,
+            )
+            for ref in assessment_refs
+        ):
+            from app.platform.events.dispatcher import CommandExecutionError
+
+            raise CommandExecutionError("STALE_DECISION_CONTEXT")
         applicable_dce_version_id = db_session.scalar(
             sa.select(CaseRecord.applicable_dce_version_id).where(
                 CaseRecord.tenant_id == tenant_id,

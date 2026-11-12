@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+from io import BytesIO
 from types import ModuleType
 from typing import Any, cast
 
@@ -14,6 +15,7 @@ from app.modules.dce.infrastructure.advanced_extraction import (
     DoclingAdvancedExtractionAdapter,
     PyMuPdfAdvancedExtractionAdapter,
 )
+from pypdf import PdfWriter
 
 
 def test_advanced_extractor_falls_back_to_deterministic_for_unsupported_media() -> None:
@@ -52,9 +54,13 @@ def test_pymupdf_adapter_preserves_page_block_and_bbox(monkeypatch) -> None:
     cast(Any, fake_pymupdf).open = lambda *, stream, filetype: FakeDocument()
     monkeypatch.setitem(sys.modules, "pymupdf", fake_pymupdf)
 
+    writer = PdfWriter()
+    writer.add_blank_page(width=100, height=100)
+    payload = BytesIO()
+    writer.write(payload)
     projection = PyMuPdfAdvancedExtractionAdapter().extract(
         media_type="application/pdf",
-        source_bytes=b"pdf",
+        source_bytes=payload.getvalue(),
     )
 
     assert projection.status == "COMPLETED"

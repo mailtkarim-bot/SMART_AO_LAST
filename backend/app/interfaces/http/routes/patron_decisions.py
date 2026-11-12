@@ -208,7 +208,7 @@ def build_patron_decision_router(
                 detail = str(error)
                 code = (
                     status.HTTP_409_CONFLICT
-                    if detail == "STALE_DECISION_REVISION"
+                    if detail in {"STALE_DECISION_REVISION", "STALE_DECISION_CONTEXT"}
                     else status.HTTP_404_NOT_FOUND
                     if detail == "NOT_FOUND_OR_FORBIDDEN"
                     else status.HTTP_422_UNPROCESSABLE_CONTENT
@@ -276,7 +276,9 @@ def build_patron_decision_router(
                 detail = str(error)
                 code = (
                     status.HTTP_409_CONFLICT
-                    if detail == "STALE_DECISION_REVISION"
+                    if detail in {"STALE_DECISION_REVISION", "STALE_DECISION_CONTEXT"}
+                    else status.HTTP_403_FORBIDDEN
+                    if detail == "FINANCIAL_SCOPE_FORBIDDEN"
                     else status.HTTP_404_NOT_FOUND
                     if detail == "NOT_FOUND_OR_FORBIDDEN"
                     else status.HTTP_422_UNPROCESSABLE_CONTENT
@@ -744,6 +746,8 @@ def build_patron_decision_router(
                 detail = str(error)
                 if detail == "NOT_FOUND_OR_FORBIDDEN":
                     code = status.HTTP_404_NOT_FOUND
+                elif detail == "FINANCIAL_SCOPE_FORBIDDEN":
+                    code = status.HTTP_403_FORBIDDEN
                 elif detail in {"STALE_DECISION_CONTEXT", "STALE_DECISION_REVISION"}:
                     code = status.HTTP_409_CONFLICT
                 else:

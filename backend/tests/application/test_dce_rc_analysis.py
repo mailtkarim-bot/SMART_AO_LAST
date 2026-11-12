@@ -22,7 +22,10 @@ from app.modules.dce.application.handlers import (
     _validate_rc_analysis_observations,
 )
 from app.modules.dce.infrastructure.models.consultation import ConsultationRecord
-from app.modules.dce.infrastructure.models.dce_extraction import DceDocumentExtractionFragmentRecord
+from app.modules.dce.infrastructure.models.dce_extraction import (
+    DceDocumentExtractionFragmentRecord,
+    DceDocumentExtractionRecord,
+)
 from app.modules.dce.infrastructure.models.dce_rc_analysis import (
     DceRcAnalysisRunRecord,
     DceRcRequirementObservationRecord,
@@ -215,6 +218,53 @@ def _extract_then_analyze(
         dce_version_id=dce_version_id,
         now=NOW,
     )
+
+
+@pytest.mark.db
+@pytest.mark.integration
+@pytest.mark.parametrize("same_time", [False, True])
+def test_new_review_extraction_cannot_fall_back_to_older_complete_sources(
+    session_factory: sessionmaker[Session], tmp_path: Path, same_time: bool
+) -> None:
+    storage = LocalQuarantineStorageAdapter(root=tmp_path)
+    tenant_id, document_id, dce_version_id = _seed_admitted_document(
+        session_factory,
+        storage=storage,
+        source_bytes=b"Le memoire technique est obligatoire.",
+    )
+    asyncio.run(
+        _extraction_service(session_factory=session_factory, storage=storage).extract(
+            tenant_id=tenant_id, dce_document_id=document_id, now=NOW
+        )
+    )
+    with session_factory.begin() as session:
+        previous = session.scalar(
+            sa.select(DceDocumentExtractionRecord).where(
+                DceDocumentExtractionRecord.dce_document_id == document_id
+            )
+        )
+        assert previous is not None
+        session.add(
+            DceDocumentExtractionRecord(
+                id=uuid4(),
+                tenant_id=tenant_id,
+                dce_version_id=dce_version_id,
+                dce_document_id=document_id,
+                input_sha256=previous.input_sha256,
+                extractor_id="synthetic-review",
+                extractor_version="1",
+                status="REVIEW_REQUIRED",
+                fragment_count=0,
+                extracted_char_count=0,
+                failure_code="PDF_PAGE_CONTENT_UNEXTRACTED",
+                created_at=previous.created_at
+                + (timedelta(0) if same_time else timedelta(seconds=1)),
+            )
+        )
+    with pytest.raises(ValueError, match="DCE_EXTRACTION_COMPLETED_REQUIRED"):
+        _analysis_service(session_factory=session_factory)._load_completed_fragments(  # noqa: SLF001
+            tenant_id=tenant_id, dce_version_id=dce_version_id
+        )
 
 
 @pytest.mark.db
@@ -738,6 +788,65 @@ def test_rc_analysis_rejects_source_count_and_manifest_mismatch(
 
 @pytest.mark.db
 @pytest.mark.integration
+def test_rc_analysis_records_only_latest_completed_extraction(
+    session_factory, tmp_path: Path
+) -> None:
+    storage = LocalQuarantineStorageAdapter(root=tmp_path)
+    tenant_id, document_id, dce_version_id = _seed_admitted_document(
+        session_factory,
+        storage=storage,
+        source_bytes="Le mémoire technique est obligatoire.".encode(),
+    )
+    asyncio.run(
+        _extraction_service(session_factory=session_factory, storage=storage).extract(
+            tenant_id=tenant_id, dce_document_id=document_id, now=NOW
+        )
+    )
+    latest_id, fragment_id = uuid4(), uuid4()
+    text = "La visite de site est obligatoire."
+    with session_factory.begin() as session:
+        previous = session.scalar(sa.select(DceDocumentExtractionRecord))
+        assert previous is not None
+        session.add(
+            DceDocumentExtractionRecord(
+                id=latest_id,
+                tenant_id=tenant_id,
+                dce_version_id=dce_version_id,
+                dce_document_id=document_id,
+                input_sha256=previous.input_sha256,
+                extractor_id="fixture",
+                extractor_version="2",
+                status="COMPLETED",
+                fragment_count=1,
+                extracted_char_count=len(text),
+                failure_code=None,
+                created_at=previous.created_at + timedelta(seconds=1),
+            )
+        )
+        session.flush()
+        session.add(
+            DceDocumentExtractionFragmentRecord(
+                id=fragment_id,
+                tenant_id=tenant_id,
+                extraction_id=latest_id,
+                ordinal=1,
+                locator_json={"kind": "text_line", "line": 1, "part": 1},
+                text=text,
+                text_sha256=sha256(text.encode()).hexdigest(),
+            )
+        )
+    service = _analysis_service(session_factory=session_factory)
+    sources = service._load_completed_fragments(tenant_id=tenant_id, dce_version_id=dce_version_id)
+    assert [source.fragment_id for source in sources] == [fragment_id]
+    recorded = service.analyze(tenant_id=tenant_id, dce_version_id=dce_version_id, now=NOW)
+    assert recorded.result_code == "DCE_RC_ANALYSIS_RECORDED"
+    with session_factory() as session:
+        observations = list(session.scalars(sa.select(DceRcRequirementObservationRecord)))
+        assert {observation.requirement_kind for observation in observations} == {"RC_SITE_VISIT"}
+
+
+@pytest.mark.db
+@pytest.mark.integration
 def test_rc_analysis_handler_replay_is_deterministic(session_factory, tmp_path: Path) -> None:
     storage = LocalQuarantineStorageAdapter(root=tmp_path)
     tenant_id, document_id, dce_version_id = _seed_admitted_document(
@@ -782,3 +891,78 @@ def test_rc_analysis_handler_replay_is_deterministic(session_factory, tmp_path: 
     )
     assert first.result_code == "DCE_RC_ANALYSIS_RECORDED"
     assert replay.result_code == "DCE_RC_ANALYSIS_ALREADY_RECORDED"
+
+
+@pytest.mark.db
+@pytest.mark.integration
+def test_rc_subcontracting_is_recorded_and_read_with_exact_family_and_tenant(
+    session_factory: sessionmaker[Session], tmp_path: Path
+) -> None:
+    from app.modules.case.infrastructure.models.case import CaseRecord
+    from app.modules.dce.infrastructure.contract_risk_reader import (
+        SqlAlchemyDceContractRiskSignalReader,
+    )
+
+    storage = LocalQuarantineStorageAdapter(root=tmp_path)
+    tenant_id, document_id, version_id = _seed_admitted_document(
+        session_factory,
+        storage=storage,
+        source_bytes=(
+            "Toute sous-traitance sur le périmètre réservé est réputée interdite."
+        ).encode(),
+    )
+    case_id = uuid4()
+    with session_factory.begin() as session:
+        session.add(
+            DceDocumentClassificationRecord(
+                id=uuid4(),
+                tenant_id=tenant_id,
+                dce_document_id=document_id,
+                classification="RC",
+                rationale="Source synthétique RC.",
+                source="TEST",
+                previous_classification_id=None,
+                is_current=True,
+                created_by_actor_id=None,
+            )
+        )
+        session.add(
+            CaseRecord(
+                id=case_id,
+                tenant_id=tenant_id,
+                aggregate_revision=0,
+                functional_identity_hash="c" * 64,
+                title="Essai synthétique sous-traitance",
+                business_origin="MANUAL",
+                origin_rationale="Qualification locale",
+                scope_kind="SINGLE_LOT",
+                scope_json={"lot_reference": "TEST"},
+                scope_fingerprint="d" * 64,
+                applicable_dce_version_id=version_id,
+                lifecycle="ACTIVE",
+                commercial_stage="ANALYSIS",
+                decision_readiness="NOT_ASSESSED",
+                dce_freshness="CURRENT",
+                responsibility_status="UNASSIGNED",
+            )
+        )
+    result = _extract_then_analyze(
+        session_factory=session_factory,
+        storage=storage,
+        tenant_id=tenant_id,
+        document_id=document_id,
+        dce_version_id=version_id,
+    )
+    replay = _analysis_service(session_factory=session_factory).analyze(
+        tenant_id=tenant_id, dce_version_id=version_id, now=NOW
+    )
+    assert result.result_code == "DCE_RC_ANALYSIS_RECORDED"
+    assert replay.replayed
+    reader = SqlAlchemyDceContractRiskSignalReader(session_factory)
+    signals = reader.list_for_case(tenant_id=tenant_id, case_id=case_id, limit=20)
+    assert len(signals) == 1
+    assert signals[0].document_family == "RC"
+    assert signals[0].requirement_kind == "CCAP_SUBCONTRACTING"
+    assert signals[0].rule_version == "11"
+    assert signals[0].verification_status == "REVIEW_REQUIRED"
+    assert reader.list_for_case(tenant_id=uuid4(), case_id=case_id, limit=20) == ()

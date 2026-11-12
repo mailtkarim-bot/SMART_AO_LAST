@@ -33,7 +33,7 @@ _CONTRACT_RISK_KINDS = (
 
 
 class SqlAlchemyDceContractRiskSignalReader:
-    """Read-only tenant-scoped projection of persisted CCAP/CCTP signals."""
+    """Read-only tenant-scoped projection of persisted contract-risk signals."""
 
     def __init__(self, session_factory: sessionmaker[Session]) -> None:
         self._session_factory = session_factory
@@ -125,7 +125,7 @@ class SqlAlchemyDceContractRiskSignalReader:
                         DceDocumentClassificationRecord.tenant_id == tenant_id,
                         DceDocumentClassificationRecord.dce_document_id == DceDocumentRecord.id,
                         DceDocumentClassificationRecord.is_current.is_(True),
-                        DceDocumentClassificationRecord.classification.in_(("CCAP", "CCTP")),
+                        DceDocumentClassificationRecord.classification.in_(("CCAP", "CCTP", "RC")),
                     ),
                 )
                 .where(
@@ -133,6 +133,14 @@ class SqlAlchemyDceContractRiskSignalReader:
                     DceRcRequirementObservationRecord.analysis_id == analysis_id,
                     DceRcRequirementObservationRecord.dce_version_id == dce_version_id,
                     DceRcRequirementObservationRecord.requirement_kind.in_(_CONTRACT_RISK_KINDS),
+                    sa.or_(
+                        DceDocumentClassificationRecord.classification.in_(("CCAP", "CCTP")),
+                        sa.and_(
+                            DceDocumentClassificationRecord.classification == "RC",
+                            DceRcRequirementObservationRecord.requirement_kind
+                            == "CCAP_SUBCONTRACTING",
+                        ),
+                    ),
                 )
                 .order_by(
                     DceRcRequirementObservationRecord.fragment_id.asc(),
@@ -182,6 +190,14 @@ def _source_locator_label(locator_json: object, document_family: str) -> str:
         return f"{document_family} · page {locator_json['page']}"
     if kind == "docx_paragraph" and _positive_int(locator_json.get("paragraph")):
         return f"{document_family} · paragraphe {locator_json['paragraph']}"
+    if kind == "docx_table_cell" and all(
+        _positive_int(locator_json.get(field)) for field in ("table", "row", "column", "paragraph")
+    ):
+        return (
+            f"{document_family} · tableau {locator_json['table']} · ligne {locator_json['row']}"
+            f" · colonne {locator_json['column']} · paragraphe {locator_json['paragraph']}"
+            " · contexte entre cellules UNKNOWN"
+        )
     if kind == "text_line" and _positive_int(locator_json.get("line")):
         return f"{document_family} · ligne {locator_json['line']}"
     return f"{document_family} · localisation indisponible"

@@ -1,24 +1,34 @@
+import {CashSchedulePanel} from "../features/pricing/CashSchedulePanel";
+import type {CashPendingStore} from "../features/pricing/cashScheduleTypes";
+import {BuyerDocxIntentStore} from "../features/wizard/BuyerDocxIntentStore";
+import {CaseClosurePanel} from "../features/decision/CaseClosurePanel";
+import type {ClosurePendingStore} from "../features/decision/closureTypes";
+import {ChangeIntentStore} from "../features/decision/ChangeIntentStore";
+import {AnalysisDossierPendingStore} from "../features/dce/analysisDossierPending";
+import {AnalysisAssessmentPendingStore} from "../features/dce/analysisAssessmentPending";
 import { CapabilityCandidatesPanel } from "../features/cases/CapabilityCandidatesPanel";
 import { useCapabilityCandidates } from "../features/cases/useCapabilityCandidates";
 import { CapabilityAssessmentsPanel } from "../features/cases/CapabilityAssessmentsPanel";
 import { useCapabilityAssessments } from "../features/cases/useCapabilityAssessments";
 import { useCapabilityProposal } from "../features/cases/useCapabilityProposal";
-import { Suspense, lazy, useEffect, useLayoutEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
+import { Suspense, lazy, useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type MouseEvent as ReactMouseEvent } from "react";
 import { usePricingScenarios } from "../features/pricing/usePricingScenarios";
+import {PricingPositionsPanel} from "../features/pricing/PricingPositionsPanel";
+import {PricingPositionPendingStore} from "../features/pricing/pricingPositionPending";
+import {CapacityPanel, CapacityPendingStore} from "../features/capacity/CapacityPanel";
 import { PricingPanel } from "../features/pricing/PricingPanel";
 import { CaseResolutionPanel } from "../features/cases/CaseResolutionPanel";
 import { useCaseResolution } from "../features/cases/useCaseResolution";
 import { formatMinorMoney as formatMoney } from "../shared/financialFormatting";
 import { PartnerOfferPricesPanel } from "../features/pricing/PartnerOfferPricesPanel";
 import { PaymentCyclePanel } from "../features/decision/PaymentCyclePanel";
-import { PostReceptionObligationsPanel } from "../features/decision/PostReceptionObligationsPanel";
 import { CaseOutcomePanel } from "../features/results/CaseOutcomePanel";
 import { CaseHandoverPanel } from "../features/results/CaseHandoverPanel";
+import { HandoverIntentStore } from "../features/results/HandoverIntentStore";
 import { CaseContractChangePanel } from "../features/decision/CaseContractChangePanel";
 import { useCaseExecutionResults } from "../features/results/useCaseExecutionResults";
 import { useCaseRex } from "../features/results/useCaseRex";
 import { useCaseInterview } from "../features/results/useCaseInterviews";
-import { ContractExecutionEvidencePanel } from "../features/decision/ContractExecutionEvidencePanel";
 import { ContractExecutionEvidenceRequalificationPanel } from "../features/decision/ContractExecutionEvidenceRequalificationPanel";
 import { ContractInstrumentVersionsPanel } from "../features/decision/ContractInstrumentVersionsPanel";
 import { usePaymentCycles } from "../features/pricing/usePaymentCycles";
@@ -42,6 +52,7 @@ import { CollaboratorWizardPanel } from "../features/wizard/CollaboratorWizardPa
 import { useCollaboratorWizard } from "../features/wizard/useCollaboratorWizard";
 import { PatronCockpitPanel } from "../features/cockpit/PatronCockpitPanel";
 import { PatronDecisionPanel } from "../features/decision/PatronDecisionPanel";
+import {CommitmentCardPanel,CommitmentPendingStore} from "../features/decision/CommitmentCardPanel";
 import { DecisionRiskRequirementsPanel } from "../features/decision/DecisionRiskRequirementsPanel";
 import { DecisionRisksPanel } from "../features/decision/DecisionRisksPanel";
 import { DceContractRiskSignalsPanel } from "../features/decision/DceContractRiskSignalsPanel";
@@ -60,6 +71,8 @@ import { BoampOpportunityPanel } from "../features/opportunities/BoampOpportunit
 import { useBoampOpportunities } from "../features/opportunities/useBoampOpportunities";
 import { FinancialDraftPanel } from "../features/draft/FinancialDraftPanel";
 import { useFinancialDraft } from "../features/draft/useFinancialDraft";
+import { CaseAnalysisSummaryPanel } from "../features/dce/CaseAnalysisSummaryPanel";
+import { useCaseAnalysisSummary } from "../features/dce/useCaseAnalysisSummary";
 import { DceKnowledgePanel } from "../features/dce/DceKnowledgePanel";
 import { DceOpeningPanel } from "../features/dce/DceOpeningPanel";
 import { useDceOpening } from "../features/dce/useDceOpening";
@@ -151,7 +164,7 @@ function App() {
   const [tenantId, setTenantId] = useState("");
   const [cases, setCases] = useState<AssignedCase[]>([]);
   const [actions, setActions] = useState<PatronAction[]>([]);
-  const [decisionDossier, setDecisionDossier] = useState<PatronDecisionDossier | null>(null);
+  const [decisionDossierSnapshot, setDecisionDossierSnapshot] = useState<{scope:string;value:PatronDecisionDossier}|null>(null);
   const initialDeepLink = readDeepLink(window.location.hash);
   const [selectedCaseId, setSelectedCaseId] = useState(initialDeepLink.caseId);
   const [loading, setLoading] = useState(false);
@@ -181,9 +194,44 @@ function App() {
     currentActor?.actor_kind === "PATRON_DELEGATE"
   );
   const isCollaborator = businessReady && currentActor?.actor_kind === "COLLABORATEUR";
+ const[analysisDossierPending]=useState(()=>new AnalysisDossierPendingStore());
+  const[positionPendingStore]=useState(()=>new PricingPositionPendingStore());
+  const[capacityPendingStore]=useState(()=>new CapacityPendingStore());
+  const[handoverPendingStore]=useState(()=>new HandoverIntentStore());
+  const[buyerDocxPendingStore]=useState(()=>new BuyerDocxIntentStore());
+  const[changePendingStore]=useState(()=>new ChangeIntentStore());
+  const[cashPendingStore]=useState<CashPendingStore>(()=>new Map());
+  const[closurePendingStore]=useState<ClosurePendingStore>(()=>new Map());
+  const[commitmentPendingStore]=useState(()=>new CommitmentPendingStore());
+  const[decisionReadVersion,setDecisionReadVersion]=useState(0);
+  const commitmentDecisionChanged=useCallback(()=>setDecisionReadVersion(value=>value+1),[]);
+  const[analysisPendingIntents]=useState(()=>new AnalysisAssessmentPendingStore());
+  const analysisIntentOwnerKey=businessReady&&currentActor?JSON.stringify([baseUrl,currentActor.identity_id,currentActor.tenant_slug,currentActor.actor_id,currentActor.actor_kind,currentActor.membership_state,currentActor.operational_profile]):"";
+  const analysisIntentScope = JSON.stringify([analysisIntentOwnerKey, selectedCaseId]);
+  const analysisPendingSnapshot = useSyncExternalStore(analysisPendingIntents.subscribe, analysisPendingIntents.getSnapshot);
+  const dossierPendingSnapshot = useSyncExternalStore(analysisDossierPending.subscribe, analysisDossierPending.getSnapshot);
+  const analysisActPending = [...analysisPendingSnapshot.keys()].some(key => JSON.parse(key)[0] === analysisIntentScope) || dossierPendingSnapshot.has(analysisIntentScope);
+  const caseReadOwnerKey=JSON.stringify([analysisIntentOwnerKey,sessionGeneration]);
+  const caseReadOwnerRef=useRef(caseReadOwnerKey),caseReadSequence=useRef(0);
+  useLayoutEffect(()=>{caseReadOwnerRef.current=caseReadOwnerKey;caseReadSequence.current++;},[caseReadOwnerKey]);
+  const commitmentPending=useSyncExternalStore(commitmentPendingStore.subscribe,commitmentPendingStore.getSnapshot).get(JSON.stringify([analysisIntentOwnerKey,selectedCaseId]));
+  const commitmentLocked=commitmentPending!==undefined;
+  const commitmentReadBlocked=commitmentPending?.phase==="UNKNOWN"||commitmentPending?.phase==="SENDING";
   const dceReadingScopeKey = businessReady && currentActor
     ? JSON.stringify([baseUrl, sessionGeneration, currentActor.identity_id, currentActor.tenant_slug, currentActor.actor_id, currentActor.actor_kind, currentActor.operational_profile, currentActor.membership_state])
     : "";
+  const decisionDossierScope=JSON.stringify([dceReadingScopeKey,selectedCaseId]);
+  const decisionDossier=decisionDossierSnapshot?.scope===decisionDossierScope?decisionDossierSnapshot.value:null;
+  const setDecisionDossier=useCallback((value:PatronDecisionDossier|null)=>setDecisionDossierSnapshot(value?{scope:JSON.stringify([dceReadingScopeKey,value.case_id]),value}:null),[dceReadingScopeKey]);
+  useEffect(()=>{
+    if(!decisionReadVersion||!businessReady||!isPatron||!selectedCaseId||commitmentReadBlocked)return;
+    let current=true;
+    setDecisionDossier(null);
+    api.getDecisionDossier(selectedCaseId).then(value=>{
+      if(current&&value.case_id===selectedCaseId)setDecisionDossier(value);
+    }).catch(()=>{if(current)setDecisionDossier(null);});
+    return()=>{current=false;};
+  },[api,decisionReadVersion,businessReady,isPatron,selectedCaseId,dceReadingScopeKey,commitmentReadBlocked,setDecisionDossier]);
   useLayoutEffect(() => {
     setMessage(null);
   }, [dceReadingScopeKey]);
@@ -244,6 +292,7 @@ function App() {
       ? enterpriseCompany?.company_id ?? ""
       : "",
     businessReady && currentActor?.actor_kind === "PATRON_ADMIN" ? selectedCaseId : "",
+    analysisIntentOwnerKey,
   );
   const {
     wizardCaseId,
@@ -260,6 +309,8 @@ function App() {
     wizardSnapshotBusy,
     wizardTransmissionBusy,
     wizardSnapshotRetryPending,
+    wizardSnapshotSelection,
+    wizardSnapshotAnnexes,
     wizardTransmissionRetryPending,
     canCreateWizardSnapshot,
     canTransmitWizardSnapshot,
@@ -302,18 +353,27 @@ function App() {
     recordWizardInformationResponse,
     declareWizardTaskBlocker,
     resolveWizardTaskBlocker,
-  } = useCollaboratorWizard(api, setMessage);
+  } = useCollaboratorWizard(api, setMessage, analysisIntentOwnerKey);
   const financialDraft = useFinancialDraft(api, setMessage, selectedCaseId, currentActor?.actor_kind === "PATRON_ADMIN" ? resolutionScopeKey : "");
   const scenarioReading = usePricingScenarios(api, selectedCaseId, currentActor?.actor_kind === "PATRON_ADMIN" ? resolutionScopeKey : "", financialDraft.publishedReport);
   const cockpit = usePatronCockpit(api, setMessage, async (caseId) => {
     setSelectedCaseId(caseId);
   });
   const boamp = useBoampOpportunities(api, setMessage, async (result) => {
-    setSelectedCaseId(result.case_id);
-    setActiveNav("review");
+    if(!await refreshCases(result.case_id))throw Error("CASE_READ_REQUIRED");
+    if(caseReadOwnerRef.current===caseReadOwnerKey)setActiveNav("review");
+  }, analysisIntentOwnerKey);
+  const selectedDceVersion = cases.find(item => item.case_id === selectedCaseId)?.applicable_dce_version_id ?? null;
+  const selectedDceAvailability = cases.find(item => item.case_id === selectedCaseId)?.dce_availability ?? null;
+  const selectedCase = cases.find((item) => item.case_id === selectedCaseId) ?? cases[0];
+  const dceOpening = useDceOpening(api, setMessage, selectedCase, async () => {
     await refreshCases();
-  });
-  const dceKnowledge = useDceKnowledge(api, setMessage, selectedCaseId, dceReadingScopeKey);
+    await dceKnowledge.loadReading(selectedCaseId);
+  }, dceReadingScopeKey);
+  const dceKnowledge = useDceKnowledge(api, setMessage, selectedCaseId, JSON.stringify([dceReadingScopeKey, selectedDceVersion, selectedDceAvailability]));
+  const analysisAllowed = businessReady && currentActor?.actor_kind === "PATRON_ADMIN";
+  const analysisVersion = selectedCase?.case_id === selectedCaseId && !dceOpening.pending && !dceOpening.busy && dceKnowledge.reading?.case_id === selectedCaseId && dceKnowledge.reading.dce_freshness === "CURRENT" && dceKnowledge.reading.dce.lifecycle === "ADMITTED" && dceKnowledge.reading.dce.integrity === "VERIFIED" ? dceKnowledge.reading.dce.dce_version_id : null;
+  const caseAnalysis = useCaseAnalysisSummary(api, selectedCaseId, analysisAllowed ? dceReadingScopeKey : "", analysisVersion);
   const capabilityDceReading = dceKnowledge.reading?.case_id === selectedCaseId
     && dceKnowledge.reading.dce_freshness === "CURRENT"
     && dceKnowledge.reading.dce.lifecycle === "ADMITTED"
@@ -405,6 +465,7 @@ function App() {
     financialDraft.reportId,
     selectedCaseId,
     financialDraft.loadDraft,
+    businessReady ? caseReadOwnerKey : "",
   );
   const {
     reportId,
@@ -417,11 +478,6 @@ function App() {
     loadDraft,
     submitLine,
   } = financialDraft;
-  const selectedCase = cases.find((item) => item.case_id === selectedCaseId) ?? cases[0];
-  const dceOpening = useDceOpening(api, setMessage, selectedCase, async () => {
-    await refreshCases();
-    await dceKnowledge.loadReading(selectedCaseId);
-  });
   const primaryAction = actions[0];
   const watchItems = actions.filter((action) => action.action_id !== primaryAction?.action_id).slice(0, 3);
   const financialReport = draft ?? financialDraft.publishedReport;
@@ -524,35 +580,41 @@ function App() {
 
   useEffect(() => {
     if (!selectedCaseId || !businessReady) return;
-    if (isPatron) {
+    if (isPatron&&!commitmentReadBlocked) {
       void refreshDecisionDossier(selectedCaseId);
     }
-    if (isPatron || isCollaborator) void dceKnowledge.loadReading(selectedCaseId);
+    if ((isPatron || isCollaborator) && selectedCase?.case_id === selectedCaseId && !dceOpening.pending && !dceOpening.busy) void dceKnowledge.loadReading(selectedCaseId);
     void dceOpening.openSpace();
   // See the session/case keying rationale above; feature-hook commands are intentionally omitted.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCaseId, businessReady, isCollaborator, isPatron, dceReadingScopeKey]);
+  }, [selectedCaseId, businessReady, isCollaborator, isPatron, dceReadingScopeKey,selectedDceVersion,selectedDceAvailability,commitmentReadBlocked]);
 
   useEffect(() => {
     setContextConfirmed(false);
   }, [currentActor?.actor_id]);
 
-  async function refreshCases() {
+  async function refreshCases(preferredCaseId?:string) {
+    if(caseReadOwnerRef.current!==caseReadOwnerKey)return false;
+    const sequence=++caseReadSequence.current;
     setLoading(true);
     setMessage(null);
     try {
       const result = await api.listAssignedCases();
+      if(caseReadOwnerRef.current!==caseReadOwnerKey||sequence!==caseReadSequence.current)return false;
+      if(preferredCaseId&&!result.some(item=>item.case_id===preferredCaseId))throw Error("Affaire reçue mais non retrouvée dans la lecture courante.");
       setCases(result);
-      const requestedCase = result.find((item) => item.case_id === selectedCaseId);
+      const requestedCase = result.find((item) => item.case_id === (preferredCaseId??selectedCaseId));
       if (requestedCase) setSelectedCaseId(requestedCase.case_id);
       else if (!selectedCaseId && result[0]) setSelectedCaseId(result[0].case_id);
       else if (selectedCaseId && !requestedCase) setSelectedCaseId(result[0]?.case_id ?? "");
       setMessage({ tone: "success", text: `${result.length} affaire${result.length > 1 ? "s" : ""} chargée${result.length > 1 ? "s" : ""}.` });
       setResumePending(false);
+      return true;
     } catch (error) {
-      setMessage({ tone: "error", text: error instanceof Error ? error.message : "Impossible de charger les affaires." });
+      if(caseReadOwnerRef.current===caseReadOwnerKey&&sequence===caseReadSequence.current)setMessage({ tone: "error", text: error instanceof Error ? error.message : "Impossible de charger les affaires." });
+      return false;
     } finally {
-      setLoading(false);
+      if(caseReadOwnerRef.current===caseReadOwnerKey&&sequence===caseReadSequence.current)setLoading(false);
     }
   }
 
@@ -1059,6 +1121,8 @@ function App() {
             onReload={() => void pricingImport.reloadPricingImport()}
             onCommit={() => void pricingImport.commitPricingImport()}
             />
+          <PricingPositionsPanel api={api} enabled={businessReady&&isPatron} caseId={selectedCaseId} batchId={pricingImport.pricingImportBatchId} ownerKey={analysisIntentOwnerKey} scopeKey={dceReadingScopeKey} pendingStore={positionPendingStore}/>
+          <CapacityPanel sourceReadBlocked={dceOpening.pending || dceOpening.busy} api={api} enabled={businessReady&&isPatron} caseId={selectedCaseId} ownerKey={analysisIntentOwnerKey} scopeKey={JSON.stringify([dceReadingScopeKey,selectedDceVersion,selectedDceAvailability])} pendingStore={capacityPendingStore}/>
           <PartnerOfferPricesPanel
             api={api}
             caseId={selectedCaseId}
@@ -1093,6 +1157,10 @@ function App() {
 
         {isPatron && (
           <BoampOpportunityPanel
+          key={analysisIntentOwnerKey}
+          pending={boamp.pending}
+          onResume={()=>void boamp.resume()}
+          onOpenCase={id=>{void refreshCases(id).then(ok=>{if(ok&&caseReadOwnerRef.current===caseReadOwnerKey)setActiveNav("review");});}}
           observations={boamp.observations}
           selectedObservationId={boamp.selectedObservationId}
           qualificationForm={boamp.qualificationForm}
@@ -1113,19 +1181,32 @@ function App() {
 
         <DceKnowledgePanel
           selectedCaseId={selectedCaseId}
+          sourceReadBlocked={dceOpening.pending || dceOpening.busy}
           reading={dceKnowledge.reading}
           results={dceKnowledge.results}
           query={dceKnowledge.query}
           loading={dceKnowledge.loading}
           searching={dceKnowledge.searching}
           onQueryChange={dceKnowledge.setQuery}
-          onLoad={() => void dceKnowledge.loadReading()}
-          onSearch={() => void dceKnowledge.searchKnowledge()}
+          onLoad={() => { if (!dceOpening.pending && !dceOpening.busy) void dceKnowledge.loadReading(); }}
+          onSearch={() => { if (!dceOpening.pending && !dceOpening.busy) void dceKnowledge.searchKnowledge(); }}
           onResetSearch={dceKnowledge.resetSearch}
         />
 
+        <CaseAnalysisSummaryPanel key={JSON.stringify([dceReadingScopeKey,selectedCaseId,analysisVersion])} api={api} dossierPendingIntents={analysisDossierPending} pendingIntents={analysisPendingIntents} intentScope={JSON.stringify([analysisIntentOwnerKey,selectedCaseId])} sourceReadBlocked={dceOpening.pending || dceOpening.busy} allowed={analysisAllowed} caseId={selectedCaseId} dceVersionId={analysisVersion} summary={caseAnalysis.summary} loading={caseAnalysis.loading} error={caseAnalysis.error} onRefresh={() => void caseAnalysis.refresh()} />
+
         <DceOpeningPanel
           selectedCase={selectedCase}
+          canReplace={currentActor?.actor_kind === "PATRON_ADMIN"}
+          pending={dceOpening.pending}
+          pendingVersionId={dceOpening.pendingVersionId}
+          pendingPredecessorId={dceOpening.pendingPredecessorId}
+          pendingPredecessorRevision={dceOpening.pendingPredecessorRevision}
+          pendingCorpusHash={dceOpening.pendingCorpusHash}
+          replacementReason={dceOpening.replacementReason}
+          replacementConfirmed={dceOpening.replacementConfirmed}
+          onReplacementReasonChange={dceOpening.setReplacementReason}
+          onReplacementConfirmedChange={dceOpening.setReplacementConfirmed}
           consultation={dceOpening.consultation}
           dceVersionMetadata={dceOpening.dceVersionMetadata}
           inventory={dceOpening.inventory}
@@ -1133,6 +1214,8 @@ function App() {
           busy={dceOpening.busy}
           sourceChannel={dceOpening.sourceChannel}
           file={dceOpening.file}
+          files={dceOpening.files}
+          onFilesChange={dceOpening.setFiles}
           step={dceOpening.step}
           onSourceChannelChange={dceOpening.setSourceChannel}
           onFileChange={dceOpening.setFile}
@@ -1141,9 +1224,10 @@ function App() {
         />
 
         {isAuthenticated && <MfaPanel api={api} setMessage={setMessage} onAuthenticationChanged={refreshActor} />}
-        {isPatron && <PreparationReviewPanel api={api} setMessage={setMessage} />}
+        {isPatron && <PreparationReviewPanel api={api} setMessage={setMessage} ownerKey={analysisIntentOwnerKey} />}
 
         <CollaboratorWizardPanel
+          buyerDocxTools={{api,store:buyerDocxPendingStore,onRecorded:()=>loadCollaboratorWizard(false)}}
           wizardCaseId={wizardCaseId}
           wizardPackageId={wizardPackageId}
           wizardPackage={wizardPackage}
@@ -1158,6 +1242,8 @@ function App() {
           wizardSnapshotBusy={wizardSnapshotBusy}
           wizardTransmissionBusy={wizardTransmissionBusy}
           wizardSnapshotRetryPending={wizardSnapshotRetryPending}
+          wizardSnapshotSelection={wizardSnapshotSelection}
+          wizardSnapshotAnnexes={wizardSnapshotAnnexes}
           wizardTransmissionRetryPending={wizardTransmissionRetryPending}
           canCreateWizardSnapshot={canCreateWizardSnapshot}
           canTransmitWizardSnapshot={canTransmitWizardSnapshot}
@@ -1189,9 +1275,10 @@ function App() {
           onCompleteTask={() => void completeWizardTask()}
           onEvaluateReadiness={() => void evaluateWizardReadiness()}
           onGenerateDocument={() => void generateWizardDocument()}
-          onCreateResponseDraft={() => void createWizardResponseDraft()}
+          contributionOwnerKey={analysisIntentOwnerKey}
+          onCreateResponseDraft={(contributions) => void createWizardResponseDraft(contributions)}
           onRetryResponseDraft={() => void retryWizardResponseDraft()}
-          onCreateSnapshot={() => void createWizardSnapshot()}
+          onCreateSnapshot={(selection,annexes,justification) => void createWizardSnapshot(selection,annexes,justification)}
           onTransmitSnapshot={() => void transmitWizardSnapshot()}
           onPreviewDocument={(documentId) => void previewWizardDocument(documentId)}
           onDownloadDocument={(documentId) => void downloadWizardDocument(documentId)}
@@ -1212,15 +1299,17 @@ function App() {
           />
         )}
 
+        <CommitmentCardPanel sourceReadBlocked={dceOpening.pending || dceOpening.busy || analysisActPending} api={api} enabled={businessReady&&isPatron} caseId={selectedCaseId} actorId={currentActor?.actor_id??""} ownerKey={analysisIntentOwnerKey} scopeKey={JSON.stringify([dceReadingScopeKey,analysisVersion])} dceVersionId={analysisVersion} pendingStore={commitmentPendingStore} onDecisionChanged={commitmentDecisionChanged} onOpenAnalysis={()=>navigateTo("case-analysis-summary-section","dce")}/>
+
         {isPatron && (
           <PatronDecisionPanel
-            decisionDossier={decisionDossier}
+            decisionDossier={!commitmentLocked&&decisionDossier?.case_id===selectedCaseId?decisionDossier:null}
             postReceptionObligations={postReceptionObligations.items}
             contractExecutionEvidence={contractExecutionEvidence.items}
             contractExecutionEvidenceTimeline={contractExecutionEvidence.timeline}
             contractExecutionEvidenceStatus={contractExecutionEvidence.status}
             formatDate={formatDate}
-            canManage={currentActor?.actor_kind === "PATRON_ADMIN"}
+            canManage={!commitmentLocked&&currentActor?.actor_kind === "PATRON_ADMIN"}
             onCreateDecision={() => void createDecision()}
             onFreezeContext={(input) => void freezeDecisionContext(input)}
             onResolveCondition={(conditionId, input) =>
@@ -1297,10 +1386,10 @@ function App() {
           />
         )}
 
+        {businessReady && selectedCaseId && currentActor?.actor_kind=== "PATRON_ADMIN" && <CashSchedulePanel sourceReadBlocked={dceOpening.pending || dceOpening.busy} api={api} caseId={selectedCaseId} ownerKey={analysisIntentOwnerKey} scopeKey={JSON.stringify([dceReadingScopeKey,selectedDceVersion,selectedDceAvailability])} pendingStore={cashPendingStore}/>}
+        {businessReady && selectedCaseId && currentActor?.actor_kind=== "PATRON_ADMIN" && <CaseClosurePanel sourceReadBlocked={dceOpening.pending || dceOpening.busy} api={api} caseId={selectedCaseId} ownerKey={analysisIntentOwnerKey} scopeKey={JSON.stringify([dceReadingScopeKey,selectedDceVersion,selectedDceAvailability])} pendingStore={closurePendingStore}/>}
         {isPatron && !paymentCycles.loading && <PaymentCyclePanel cycles={paymentCycles.cycles} reviews={paymentCycleReviews.reviews} unknownAudit={paymentUnknownAudit.audit} ownerAct={paymentUnknownAuditOwnerAct.act} rejectionReview={paymentCollectionRejectionReview.review} onRejectionReview={async (input) => { await api.recordPaymentCollectionRejectionReview(selectedCaseId, input); paymentCollectionRejectionReview.refresh(); }} onOwnerAct={async (input) => { await api.recordPaymentUnknownAuditOwnerAct(selectedCaseId, input); paymentUnknownAuditOwnerAct.refresh(); }} onCreate={async (input) => { await api.recordPaymentCycle(selectedCaseId, input); await paymentCycles.refresh(); paymentUnknownAudit.refresh(); }} onReview={async (cycleId, input) => { await api.recordPaymentCycleReview(cycleId, input); paymentCycleReviews.refresh(); paymentUnknownAudit.refresh(); }} onQualify={async (cycleId, input) => { await api.qualifyPaymentCycle(selectedCaseId, cycleId, input); await paymentCycles.refresh(); }} />}
-        {isPatron && <PostReceptionObligationsPanel caseId={selectedCaseId} obligations={postReceptionObligations.items} receptionActs={contractExecutionEvidence.items} onCreate={async (input) => { await api.recordPostReceptionObligation(selectedCaseId, input); postReceptionObligations.refresh(); }} onTransition={async (obligationId, input) => { try { await api.transitionPostReceptionObligation(selectedCaseId, obligationId, input); } finally { postReceptionObligations.refresh(); } }} />}
         {isPatron && <ContractInstrumentVersionsPanel caseId={selectedCaseId} versions={contractInstrumentVersions.items} supersessions={contractInstrumentVersions.supersessions} status={contractInstrumentVersions.status} canManage={currentActor?.actor_kind === "PATRON_ADMIN"} onCreate={async (caseId, input) => { await api.recordContractInstrumentVersion(caseId, input); if (caseId === selectedCaseId) contractInstrumentVersions.refresh(); }} onDeclareSupersession={async (caseId, input) => { await api.declareContractInstrumentSupersession(caseId, input); if (caseId === selectedCaseId) { contractInstrumentVersions.refresh(); contractExecutionEvidence.refresh(); } }} />}
-        {isPatron && <ContractExecutionEvidencePanel caseId={selectedCaseId} canManage={currentActor?.actor_kind === "PATRON_ADMIN"} instrumentVersions={contractInstrumentVersions.items} onCreate={async (caseId, input) => { await api.recordContractExecutionEvidence(caseId, input); if (caseId === selectedCaseId) contractExecutionEvidence.refresh(); }} />}
         {isPatron && <ContractExecutionEvidenceRequalificationPanel caseId={selectedCaseId} acts={contractExecutionEvidence.items} versions={contractInstrumentVersions.items} supersessions={contractInstrumentVersions.supersessions} requalifications={contractExecutionEvidence.requalifications} status={contractExecutionEvidence.status} canManage={currentActor?.actor_kind === "PATRON_ADMIN"} onRecord={async (caseId, input) => { await api.recordContractExecutionEvidenceRequalification(caseId, input); if (caseId === selectedCaseId) contractExecutionEvidence.refresh(); }} />}
 
         {isPatron && (
@@ -1363,25 +1452,18 @@ function App() {
 
         {businessReady && (currentActor?.actor_kind === "PATRON_ADMIN" || currentActor?.actor_kind === "COLLABORATEUR") && selectedCaseId && (
           <CaseHandoverPanel
+            sourceReadBlocked={dceOpening.pending || dceOpening.busy}
+            scopeKey={JSON.stringify([dceReadingScopeKey,selectedDceVersion,selectedDceAvailability])}
             api={api}
             caseId={selectedCaseId}
             canManage={currentActor.actor_kind === "PATRON_ADMIN"}
+            canReceive={currentActor.actor_kind === "COLLABORATEUR" && currentActor.operational_profile === "RESPONSABLE"}
+            ownerKey={analysisIntentOwnerKey}
+            pendingStore={handoverPendingStore}
           />
         )}
-        {businessReady && currentActor?.actor_kind === "PATRON_ADMIN" && selectedCaseId && (
-          <CaseContractChangePanel
-            api={api}
-            caseId={selectedCaseId}
-            versions={contractInstrumentVersions.items}
-          />
-        )}
-        {currentActor?.actor_kind === "PATRON_ADMIN" && selectedCaseId && (
-          <CaseContractChangePanel
-            api={api}
-            caseId={selectedCaseId}
-            versions={contractInstrumentVersions.items}
-          />
-        )}
+        {businessReady && selectedCaseId && (currentActor?.actor_kind==='PATRON_ADMIN'||currentActor?.actor_kind==='COLLABORATEUR'&&currentActor.operational_profile==='RESPONSABLE')&&<CaseContractChangePanel sourceReadBlocked={dceOpening.pending || dceOpening.busy} scopeKey={JSON.stringify([dceReadingScopeKey,selectedDceVersion,selectedDceAvailability])} api={api} caseId={selectedCaseId} versions={contractInstrumentVersions.items} canManage={currentActor.actor_kind==='PATRON_ADMIN'} ownerKey={analysisIntentOwnerKey} pendingStore={changePendingStore}/>}
+
 
         {currentActor?.actor_kind === "PATRON_ADMIN" && <div id="results-section">
           <CaseOutcomePanel

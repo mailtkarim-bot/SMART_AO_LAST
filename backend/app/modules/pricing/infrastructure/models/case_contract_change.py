@@ -67,6 +67,7 @@ class CaseContractChangeEventRecord(TenantScopedRecord, Base):
         ),
     )
 
+    operational_context_json: Mapped[dict[str, object] | None] = mapped_column(JSONB, nullable=True)
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
     case_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     handover_snapshot_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
@@ -167,6 +168,7 @@ class CaseContractChangeApplicabilityRecord(TenantScopedRecord, Base):
         ),
     )
 
+    operational_review_json: Mapped[dict[str, object] | None] = mapped_column(JSONB, nullable=True)
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
     case_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     event_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
@@ -246,6 +248,7 @@ class CaseContractChangeActionRecord(TenantScopedRecord, Base):
         ),
     )
 
+    operational_details_json: Mapped[dict[str, object] | None] = mapped_column(JSONB, nullable=True)
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
     case_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     event_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
@@ -709,6 +712,9 @@ class CaseContractChangeActionExecutionRecord(TenantScopedRecord, Base):
         ),
     )
 
+    operational_publication_json: Mapped[dict[str, object] | None] = mapped_column(
+        JSONB, nullable=True
+    )
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
     case_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     event_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)

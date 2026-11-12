@@ -45,6 +45,9 @@ class FakeLifecycleRepository:
     def active_decision_exists(self, *, session, tenant_id, decision_key_hash):
         return False
 
+    def mark_changed_dce_review_required(self, **kwargs):
+        return None
+
     def case_has_applicable_dce(self, *, session, tenant_id, case_id):
         return self.applicable_dce
 

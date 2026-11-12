@@ -45,6 +45,28 @@ class PreparationSubmissionSourceReader:
         self._review = review_handler
         self._transmission = transmission_handler
 
+    def read_final_coverage(self, *, session, preparation_package_id, source, context):
+        current = self.read(
+            session=session,
+            preparation_package_id=preparation_package_id,
+            source=source,
+            context=context,
+        )
+        if current is None:
+            return None
+        if current != source or not isinstance(source, dict):
+            raise CommandExecutionError("PREPARATION_SOURCE_UNKNOWN")
+        drafts = source.get("response_drafts")
+        if not isinstance(drafts, list) or len(drafts) != 1:
+            raise CommandExecutionError("PREPARATION_SOURCE_UNKNOWN")
+        selected = drafts[0]
+        return self._review.read_final_response_coverage(
+            session=session,
+            context=context,
+            package_id=preparation_package_id,
+            selection={key: selected[key] for key in ("draft_id", "version", "content_sha256")},
+        )
+
     def read(
         self,
         *,
@@ -169,14 +191,33 @@ class PreparationSubmissionSourceReader:
                 GeneratedTechnicalDocumentRecord.state == "GENERATED",
             )
         )
-        if document is None or manifest.get("documents") != [
-            {
+        expected_document = (
+            None
+            if document is None
+            else {
                 "document_id": str(document.id),
                 "version": document.version,
                 "kind": document.document_kind,
                 "sha256": document.content_sha256,
             }
-        ]:
+        )
+        if document is not None and document.content_format == "DOCX":
+            assert expected_document is not None
+            expected_document["content_format"] = "DOCX"
+        annexes = (
+            self._transmission.validate_annexes(
+                session=db, package=package, manifest=manifest, context=context
+            )
+            if manifest.get("annexes")
+            else []
+        )
+        if annexes and manifest.get("snapshot_id") != str(snapshot.id):
+            raise CommandExecutionError("PREPARATION_SOURCE_UNKNOWN")
+        expected_documents = [
+            expected_document,
+            *({"kind": "SOURCE_ANNEX", **item} for item in annexes),
+        ]
+        if document is None or manifest.get("documents") != expected_documents:
             raise CommandExecutionError("PREPARATION_SOURCE_UNKNOWN")
         plan, facts = self._review.current_response_plan(
             session=db,
@@ -194,9 +235,16 @@ class PreparationSubmissionSourceReader:
             session=db,
             package=package,
             tenant_id=package.tenant_id,
+            selected_response_draft=manifest.get("selected_response_draft"),
         )
         if not drafts or manifest.get("response_drafts") != drafts:
             raise CommandExecutionError("PREPARATION_SOURCE_UNKNOWN")
+        if {draft.get("content_format", "MARKDOWN") for draft in drafts} != {
+            document.content_format
+        }:
+            raise CommandExecutionError("PREPARATION_SOURCE_UNKNOWN")
+        if {draft["content_sha256"] for draft in drafts} != {document.content_sha256}:
+            raise CommandExecutionError("PREPARATION_REVIEWED_DOCUMENT_REPUBLICATION_REQUIRED")
         for record, command_type, result_code, aggregate_type, revision in (
             (
                 snapshot,
@@ -223,7 +271,7 @@ class PreparationSubmissionSourceReader:
                 expected_aggregate_id=record.id,
                 expected_aggregate_revision=revision,
             )
-        return {
+        result = {
             "snapshot_id": str(snapshot.id),
             "snapshot_version": snapshot.version,
             "manifest_sha256": snapshot.manifest_sha256,
@@ -233,3 +281,7 @@ class PreparationSubmissionSourceReader:
             "readiness": manifest["readiness"],
             "response_drafts": drafts,
         }
+        if annexes:
+            result["annexes"] = annexes
+            result["annex_selection_note"] = manifest["annex_selection_note"]
+        return result

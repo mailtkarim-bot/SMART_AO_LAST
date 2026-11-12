@@ -30,6 +30,7 @@ __all__ = [
     "CaseP7ResultRecord",
     "CaseInterviewRecord",
     "CaseHandoverSnapshotRecord",
+    "CaseHandoverReceiptRecord",
     "CaseRexRecord",
     "CaseTeachingApplicabilityRecord",
     "CaseDispositionRecord",
@@ -37,3 +38,6 @@ __all__ = [
     "CaseRetentionRecord",
 ]
 from app.modules.patron_action.infrastructure.models.disposition import CaseDispositionRecord
+from app.modules.patron_action.infrastructure.models.handover_receipt import (
+    CaseHandoverReceiptRecord,
+)

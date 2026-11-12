@@ -1,0 +1,32 @@
+{
+  "schema_version": 2,
+  "kind": "rc_intent_independent_qualification_protocol",
+  "mechanism": "rc-compositional-v2",
+  "anchor_convention": "lexical-cue-v2",
+  "stage": "INTENT_ONLY_NOT_RETRIEVAL",
+  "challenge_file": "backend/tests/fixtures/knowledge/rc_intent_independent_challenge_v2.sealed.json",
+  "challenge_sha256": "1c87df7aea14435b56bcb3d64dc2245aef5f3bd0390d18058fb509abed11a559",
+  "contract_file": "backend/tests/fixtures/knowledge/rc_intent_compositional_contract_v2.json",
+  "contract_sha256": "36379db40b998c7974fa917798551523f2a74e3e0172f7ba5a2603e8fd357152",
+  "counts": {
+    "COVERED": 16,
+    "UNSUPPORTED": 4,
+    "AMBIGUOUS": 5,
+    "UNKNOWN": 6,
+    "FINANCIAL": 1
+  },
+  "gates": {
+    "all_positive_exact": true,
+    "all_structural_refusal_exact": true,
+    "all_unsupported_exact": true,
+    "financial_exact": true,
+    "max_promotions": 0,
+    "max_invalid_anchors": 0,
+    "max_anchor_mismatches": 0
+  },
+  "repetitions": 4,
+  "warm_repetitions": 3,
+  "p95_ms_max": 1500,
+  "scope": "Independent synthetic challenge, no statistical generalization claim; no retrieval/SQL/model qualification",
+  "preparation_review": "Separate author and reviewer; no candidate/development/old challenges viewed. Document reference contained historical aggregates, exposure declared. Subject/anchor and conditional-question clarifications corrected before measurement; original revisions kept privately."
+}

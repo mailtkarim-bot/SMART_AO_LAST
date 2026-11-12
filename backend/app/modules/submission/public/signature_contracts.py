@@ -7,13 +7,15 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class RequestSubmissionSignatureRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
     command_id: UUID
     idempotency_key: UUID
     correlation_id: UUID | None = None
     signature_id: UUID
     expected_package_version: int = Field(ge=1)
+    expected_manifest_sha256: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
+    rationale: str | None = Field(default=None, min_length=1, max_length=2000)
 
 
 class RecordSubmissionSignatureCallbackRequest(BaseModel):

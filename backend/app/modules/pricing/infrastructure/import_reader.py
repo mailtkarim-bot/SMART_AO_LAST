@@ -74,6 +74,7 @@ class SqlAlchemyImportPreviewReader:
                     unit_price_minor=row.unit_price_minor,
                     total_minor=row.total_minor,
                     errors=tuple(row.error_codes_json or []),
+                    source_locator=row.source_locator_json,
                 )
                 for row in rows
             ),

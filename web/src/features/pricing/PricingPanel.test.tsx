@@ -82,6 +82,22 @@ function renderPanel(overrides: Partial<PanelProps> = {}) {
   return { ...render(<PricingPanel {...props} />), props };
 }
 
+it("makes every imported line reachable with its worksheet and cell sources",()=>{
+ const rows=Array.from({length:25},(_,i)=>({...preview.rows[0],row_number:i+2,designation:`Poste ${i+1}`,source_locator:{sheet:"Lot 2",row:i+2,cells:{designation:`B${i+2}`,quantity:`C${i+2}`}}}));
+ renderPanel({pricingImportPreview:{...preview,rows,row_count:25,valid_row_count:25}});
+ expect(screen.getByText(/Lot 2 · ligne 2 ·/)).toBeInTheDocument();
+ expect(screen.getByText(/cellules B2, C2$/)).toBeInTheDocument();
+ fireEvent.click(screen.getByRole("button",{name:"Lignes suivantes"}));
+ expect(screen.getByText(/Poste 25/)).toBeInTheDocument();
+ expect(screen.getByText(/Lot 2 · ligne 26/)).toBeInTheDocument();
+});
+
+it("presents source and financial errors in a readable table",()=>{
+ renderPanel({pricingImportPreview:{...preview,rows:[{...preview.rows[0],errors:["FORMULA_REQUIRES_REVIEW"]}]}});
+ expect(screen.getByRole("columnheader",{name:"Source"})).toBeInTheDocument();
+ expect(screen.getByText("Formule non qualifiée — revue nécessaire")).toBeInTheDocument();
+});
+
 describe("PricingPanel integration", () => {
   it("prepares an explicit selection without calling a mutation", () => {
     const { props, unmount } = renderPanel(); unmount();

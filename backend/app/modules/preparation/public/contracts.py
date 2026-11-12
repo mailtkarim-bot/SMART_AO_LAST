@@ -6,6 +6,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from app.modules.membership.public.text_safety import contains_forbidden_text
+
 
 class PreparationCommandRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
@@ -90,10 +92,98 @@ class AddPreparationCorrectionRequest(PreparationCommandRequest):
         return self
 
 
+class SelectedResponseDraft(BaseModel):
+    """One explicitly chosen immutable assembled response, never a review approval."""
+
+    model_config = ConfigDict(extra="forbid")
+    draft_id: UUID
+    version: int = Field(ge=1)
+    content_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
+class ResponseCoveragePiece(BaseModel):
+    section_code: str
+    locator: str
+    sha256: str
+    start_byte: int | None = None
+    end_byte: int | None = None
+    text_present: bool
+    missing: str
+
+
+class ResponseCoverageRequirement(BaseModel):
+    requirement_id: UUID
+    document_family: str
+    source_state: str
+    confirmation: str
+    source_locator: str
+    source_anchor: dict | None = None
+    source_excerpt: str | None = None
+    lot_candidates: list[int]
+    applicability: Literal["UNKNOWN"] = "UNKNOWN"
+    coverage: Literal["UNKNOWN"] = "UNKNOWN"
+    signature: Literal["UNKNOWN"] = "UNKNOWN"
+    response_state: Literal["TEXT_PRESENT", "TEXT_WITH_GAPS", "MISSING", "UNKNOWN"]
+    pieces: list[ResponseCoveragePiece]
+
+
+class ResponseCitedAnnex(BaseModel):
+    requirement_id: UUID
+    section_code: str
+    document_id: UUID
+    sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    inclusion: Literal["UNKNOWN"] = "UNKNOWN"
+
+
+class ResponseCoverageProjection(BaseModel):
+    content_byte_size: int | None = Field(default=None, ge=0)
+    package_id: UUID
+    dce_version_id: UUID
+    selected_response: SelectedResponseDraft
+    content_format: Literal["MARKDOWN", "DOCX"]
+    requirements: list[ResponseCoverageRequirement]
+    cited_annexes: list[ResponseCitedAnnex] = Field(default_factory=list)
+    coverage: Literal["UNKNOWN"] = "UNKNOWN"
+    signature: Literal["UNKNOWN"] = "UNKNOWN"
+    annexes: Literal["UNKNOWN"] = "UNKNOWN"
+    inventory: Literal["CURRENT_NON_FINANCIAL_SIGNALS_ONLY"] = "CURRENT_NON_FINANCIAL_SIGNALS_ONLY"
+
+
+class SelectedResponseAnnex(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    requirement_id: UUID
+    document_id: UUID
+    sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
+def validate_annex_selection(response, annexes, justification=None):
+    if justification and (
+        contains_forbidden_text(justification) or "devis" in justification.casefold()
+    ):
+        raise ValueError("FINANCIAL_DATA_FORBIDDEN")
+    if annexes and not (justification and justification.strip()):
+        raise ValueError("ANNEX_JUSTIFICATION_REQUIRED")
+    if annexes and response is None:
+        raise ValueError("ANNEX_RESPONSE_SELECTION_REQUIRED")
+    identities = [(item.requirement_id, item.document_id) for item in annexes]
+    if len(identities) != len(set(identities)):
+        raise ValueError("ANNEX_SELECTION_DUPLICATE")
+
+
 class CreatePreparationSnapshotRequest(PreparationCommandRequest):
+    selected_response_draft: SelectedResponseDraft | None = None
+    selected_annexes: list[SelectedResponseAnnex] = Field(default_factory=list, max_length=64)
+    annex_justification: str | None = Field(default=None, min_length=1, max_length=2000)
     expected_package_revision: int = Field(ge=0)
     package_id: UUID
     snapshot_id: UUID
+
+    @model_validator(mode="after")
+    def exact_annex_selection(self):
+        validate_annex_selection(
+            self.selected_response_draft, self.selected_annexes, self.annex_justification
+        )
+        return self
 
 
 class TransmitPreparationSnapshotRequest(PreparationCommandRequest):
@@ -103,12 +193,41 @@ class TransmitPreparationSnapshotRequest(PreparationCommandRequest):
     transmission_id: UUID
 
 
+class ResponseContribution(BaseModel):
+    """Human wording for one exact response-plan item, never a coverage approval."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    requirement_id: UUID
+    section_code: Literal[
+        "COVER", "UNDERSTANDING", "METHOD", "RESOURCES", "SCHEDULE", "RISKS", "SOURCES"
+    ]
+    content: str = Field(default="", max_length=12000)
+    missing: str = Field(default="", max_length=2000)
+
+    @field_validator("content", "missing")
+    @classmethod
+    def non_financial(cls, value):
+        if contains_forbidden_text(value) or "devis" in value.casefold():
+            raise ValueError("FINANCIAL_DATA_FORBIDDEN")
+        return value
+
+    @model_validator(mode="after")
+    def explicit_content_or_missing(self):
+        if not self.content and not self.missing:
+            raise ValueError("CONTRIBUTION_CONTENT_OR_MISSING_REQUIRED")
+        return self
+
+
 class CreateTechnicalResponseDraftRequest(PreparationCommandRequest):
     expected_package_revision: int = Field(ge=0)
     draft_id: UUID
     source_document_id: UUID
     section_codes: list[str] = Field(min_length=1, max_length=32)
     source_refs: list[UUID] = Field(min_length=1, max_length=64)
+
+    contributions: list[ResponseContribution] | None = Field(
+        default=None, min_length=1, max_length=64
+    )
 
 
 class PreparationResponsePlanItemRequest(BaseModel):
@@ -167,6 +286,7 @@ class PreparationCommandResponse(BaseModel):
         "PREPARATION_REVIEW_DECIDED",
         "PREPARATION_CORRECTION_ADDED",
         "TECHNICAL_RESPONSE_DRAFT_CREATED",
+        "BUYER_DOCX_RESPONSE_DRAFT_CREATED",
         "PREPARATION_RESPONSE_PLAN_CREATED",
         "PREPARATION_SNAPSHOT_CREATED",
         "PREPARATION_TRANSMITTED_TO_PATRON",
@@ -315,6 +435,7 @@ class PreparationReadinessProjection(BaseModel):
 
 
 class GeneratedDocumentProjection(BaseModel):
+    content_format: Literal["MARKDOWN", "DOCX"] = "MARKDOWN"
     model_config = ConfigDict(extra="forbid")
 
     document_id: UUID
@@ -325,6 +446,8 @@ class GeneratedDocumentProjection(BaseModel):
 
 
 class TechnicalResponseDraftProjection(BaseModel):
+    content_format: Literal["MARKDOWN", "DOCX"] = "MARKDOWN"
+    content_provenance: dict | None = None
     model_config = ConfigDict(extra="forbid")
 
     draft_id: UUID
@@ -353,3 +476,41 @@ class PreparationPackageProjection(BaseModel):
     latest_readiness: PreparationReadinessProjection | None
     generated_documents: list[GeneratedDocumentProjection]
     response_drafts: list[TechnicalResponseDraftProjection]
+
+
+class BuyerDocxTemplateReference(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    document_id: UUID
+    dce_version_id: UUID
+    sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
+class BuyerDocxFieldMapping(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    locator: str = Field(min_length=1, max_length=160)
+    expected_xml_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    requirement_id: UUID
+    section_code: Literal[
+        "COVER", "UNDERSTANDING", "METHOD", "RESOURCES", "SCHEDULE", "RISKS", "SOURCES"
+    ]
+
+
+class CreateBuyerDocxResponseDraftRequest(PreparationCommandRequest):
+    expected_package_revision: int = Field(ge=0)
+    draft_id: UUID
+    source_response: SelectedResponseDraft
+    template: BuyerDocxTemplateReference
+    fields: list[BuyerDocxFieldMapping] = Field(min_length=1, max_length=64)
+
+    @model_validator(mode="after")
+    def distinct_output_and_regions(self):
+        if self.draft_id == self.source_response.draft_id:
+            raise ValueError("BUYER_DOCX_DISTINCT_DRAFT_REQUIRED")
+        if len({f.locator for f in self.fields}) != len(self.fields):
+            raise ValueError("BUYER_DOCX_DUPLICATE_REGION")
+        return self
+
+
+class BuyerDocxInputsRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    source_response: SelectedResponseDraft

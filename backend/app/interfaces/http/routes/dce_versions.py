@@ -49,6 +49,11 @@ def build_dce_version_router(
             authorization=authorization,
             context_resolver=security_runtime.context_resolver,
         )
+        if (
+            request.predecessor_dce_version_id is not None
+            and context.actor_kind.value != "PATRON_ADMIN"
+        ):
+            raise HTTPException(status_code=403, detail="FORBIDDEN")
         owner_tenant_id = runtime.get_consultation_tenant_id(
             consultation_id=request.consultation_id
         )

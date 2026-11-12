@@ -51,6 +51,7 @@ class CommandContext:
     session_id: UUID | str | None = None
     case_id: UUID | str | None = None
     correlation_id: UUID | str | None = None
+    financial_access_verified: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -144,6 +145,10 @@ class CommandDispatcher:
         request_hash = canonical_request_hash(command)
         try:
             with self._session_factory.begin() as session:
+                # A durable receipt must not bypass a handler's current access boundary.
+                authorize = getattr(type(handler), "authorize_context", None)
+                if authorize is not None:
+                    authorize(handler, session=session, command=command, context=context)
                 receipt = self._find_receipt(
                     session=session,
                     tenant_id=context.tenant_id,

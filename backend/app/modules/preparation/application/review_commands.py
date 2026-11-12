@@ -3,8 +3,14 @@ from __future__ import annotations
 from typing import Literal
 from uuid import UUID
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, field_validator, model_serializer, model_validator
 
+from app.modules.preparation.public.contracts import (
+    BuyerDocxFieldMapping,
+    BuyerDocxTemplateReference,
+    ResponseContribution,
+    SelectedResponseDraft,
+)
 from app.platform.events.command_contracts import ApplicationCommand
 
 _FINANCIAL_TERMS = (
@@ -107,3 +113,43 @@ class CreateTechnicalResponseDraftCommand(ApplicationCommand):
     section_codes: list[str] = Field(min_length=1, max_length=32)
     source_refs: list[UUID] = Field(min_length=1, max_length=64)
     responsible_role: Literal["COLLABORATEUR"] = "COLLABORATEUR"
+
+    contributions: list[ResponseContribution] | None = Field(
+        default=None, min_length=1, max_length=64
+    )
+
+    @field_validator("contributions")
+    @classmethod
+    def contributions_without_finance(cls, values):
+        if values is not None:
+            for item in values:
+                _reject_financial_text(item.content)
+                _reject_financial_text(item.missing)
+        return values
+
+    @model_serializer(mode="wrap")
+    def legacy_payload(self, handler):
+        payload = handler(self)
+        if self.contributions is None:
+            payload.pop("contributions", None)
+        return payload
+
+
+class CreateBuyerDocxResponseDraftCommand(ApplicationCommand):
+    """Fill explicit buyer regions from one exact reviewed native Markdown response."""
+
+    command_type = "CreateBuyerDocxResponseDraft"
+    package_id: UUID
+    expected_package_revision: int = Field(ge=0)
+    draft_id: UUID
+    source_response: SelectedResponseDraft
+    template: BuyerDocxTemplateReference
+    fields: list[BuyerDocxFieldMapping] = Field(min_length=1, max_length=64)
+
+    @model_validator(mode="after")
+    def explicit_target(self):
+        if self.draft_id == self.source_response.draft_id:
+            raise ValueError("BUYER_DOCX_DISTINCT_DRAFT_REQUIRED")
+        if len({f.locator for f in self.fields}) != len(self.fields):
+            raise ValueError("BUYER_DOCX_DUPLICATE_REGION")
+        return self

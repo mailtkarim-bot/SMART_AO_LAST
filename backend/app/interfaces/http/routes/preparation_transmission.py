@@ -63,6 +63,9 @@ def build_preparation_transmission_router(
                 package_id=package_id,
                 snapshot_id=request.snapshot_id,
                 expected_package_revision=request.expected_package_revision,
+                selected_response_draft=request.selected_response_draft,
+                selected_annexes=request.selected_annexes,
+                annex_justification=request.annex_justification,
             ),
         )
 

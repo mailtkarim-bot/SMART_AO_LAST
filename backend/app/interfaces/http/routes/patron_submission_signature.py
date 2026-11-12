@@ -62,6 +62,8 @@ def build_patron_submission_signature_router(
                     signature_id=request.signature_id,
                     submission_package_id=submission_package_id,
                     expected_package_version=request.expected_package_version,
+                    expected_manifest_sha256=request.expected_manifest_sha256,
+                    rationale=request.rationale,
                     signer_membership_id=actor.membership_id,
                     provider=service.provider,
                 ),

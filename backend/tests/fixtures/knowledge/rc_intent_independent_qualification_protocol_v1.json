@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "kind": "rc_intent_independent_qualification_protocol",
+  "status": "PREPARED_PENDING_OWNER_CHOICE",
+  "stage": "INTENT_ONLY",
+  "held_out": false,
+  "candidate_implemented": false,
+  "recognizer_executed": false,
+  "development_file": "backend/tests/fixtures/knowledge/rc_intent_development_design_v1.json",
+  "development_sha256": "15dda79e96c9e1850f3c893ea997789ca4f6701e8daa8ffc1c6dbb5f9452738e",
+  "contract_file": "backend/tests/fixtures/knowledge/rc_intent_recognition_design_contract_v1.json",
+  "contract_sha256": "51614049d25efef7821e8bc056c974b508bdb362b6884685de100f2d5ee21c88",
+  "challenge_file": "backend/tests/fixtures/knowledge/rc_intent_independent_challenge_v1.sealed.json",
+  "challenge_sha256": "635ff315787ac80ec14166c70426f8aae61ed079e94e85e3289d538ffee5acb4",
+  "challenge_case_count": 32,
+  "expected_distribution": {
+    "COVERED": 16,
+    "UNSUPPORTED": 4,
+    "AMBIGUOUS": 5,
+    "UNKNOWN": 6,
+    "FINANCIAL": 1
+  },
+  "covered_by_subject": {
+    "VISIT": 2,
+    "VISIT_SITE": 3,
+    "VISIT_MEDICAL": 2,
+    "DC1": 2,
+    "DC2": 3,
+    "MEMOIRE_TECHNIQUE": 2,
+    "VARIANTS": 2
+  },
+  "positive_explicit_scope_count": 2,
+  "positive_unknown_scope_count": 14,
+  "independence": {
+    "author_role": "independent_spec_reviewer",
+    "developer_corpus_seen_by_author": false,
+    "measured_gold_seen_by_author": false,
+    "recognizer_code_seen_by_author": false,
+    "coordinator_saw_challenge_text": false,
+    "second_review_seen_development": false,
+    "shared_public_contract": true,
+    "historical_aggregates_in_contract_reference_seen": true,
+    "statistical_independence_claimed": false,
+    "procedural_seal_only": true
+  },
+  "review_status": "SEMANTIC_SECOND_REVIEW_COMPLETE_AND_JSON_LOT_TYPES_CORRECTED_BEFORE_SEAL",
+  "candidate_gates_proposed": {
+    "covered_minimum": 16,
+    "covered_denominator": 16,
+    "unsupported_exact_required": 4,
+    "structural_abstentions_required": 11,
+    "financial_refusal_required": 1,
+    "max_unsafe_promotions": 0,
+    "max_false_anchors": 0,
+    "max_invented_scopes": 0
+  },
+  "evaluation_plan": [
+    "owner mechanism choice and contract review",
+    "implement opt-in candidate on development only",
+    "freeze candidate/rules/prompt/profile/code/tests before challenge text access",
+    "evaluate frozen independent challenge once and retain every omission/refusal/error",
+    "no adjustment on opened challenge; new version and new challenge if candidate changes"
+  ],
+  "retrieval_sql_qualification": "Separate later stage; not prepared or qualified by intent-only challenge",
+  "annotation_revision_history": "Private originals preserved; contract clarity, family/scope coverage, then two scalar type corrections; no runtime observed"
+}

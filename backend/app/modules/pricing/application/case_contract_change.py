@@ -34,7 +34,12 @@ from app.platform.security.authorization import (
     AuthorizationResource,
 )
 from app.platform.security.capabilities import Capability
-from app.platform.security.context import ActorContext, ActorKind, DataClassification
+from app.platform.security.context import (
+    ActorContext,
+    ActorKind,
+    DataClassification,
+    OperationalProfile,
+)
 
 
 class CaseContractChangeService:
@@ -51,6 +56,22 @@ class CaseContractChangeService:
 
     def record(self, *, actor: ActorContext, command, now: datetime):
         self.authorize_case_write(actor=actor, case_id=command.case_id, now=now)
+        if any(
+            getattr(command, name, None) is not None
+            for name in (
+                "operational_context",
+                "operational_review",
+                "operational_details",
+                "operational_publication",
+            )
+        ):
+            self._authorize(
+                actor=actor,
+                case_id=command.case_id,
+                action=Capability.PATRON_ACTION_WRITE,
+                now=now,
+                mfa_required=True,
+            )
         return self._dispatcher.dispatch(
             command=command,
             context=CommandContext(
@@ -81,8 +102,52 @@ class CaseContractChangeService:
         self._authorize(actor=actor, case_id=case_id, action=Capability.PATRON_ACTION_READ, now=now)
         return self._reader.list_for_case(tenant_id=actor.tenant_id, case_id=case_id)
 
+    def list_operational_for_case(self, *, actor, case_id, now):
+        from app.modules.pricing.application.operational_change_projection import (
+            public_change_projection,
+        )
+
+        if actor.actor_kind is ActorKind.COLLABORATEUR:
+            if actor.operational_profile is not OperationalProfile.RESPONSABLE:
+                raise PermissionError("RESPONSABLE_REQUIRED")
+            decision = self._policy.authorize(
+                context=actor,
+                request=AuthorizationRequest(
+                    action=Capability.CASE_DCE_READ,
+                    resource=AuthorizationResource(
+                        resource_type="CASE_CONTRACT_CHANGE",
+                        resource_id=case_id,
+                        tenant_id=actor.tenant_id,
+                        case_id=case_id,
+                        classification=DataClassification.INTERNAL_OPERATIONAL,
+                    ),
+                    evaluated_at=now,
+                ),
+            )
+            if not decision.allowed:
+                raise PermissionError("FORBIDDEN")
+        elif actor.actor_kind is ActorKind.PATRON_ADMIN:
+            self._authorize(
+                actor=actor, case_id=case_id, action=Capability.PATRON_ACTION_READ, now=now
+            )
+        else:
+            raise PermissionError("FORBIDDEN")
+        return tuple(
+            value
+            for row in self._reader.list_operational_for_case(
+                tenant_id=actor.tenant_id, case_id=case_id
+            )
+            if (value := public_change_projection(row)) is not None
+        )
+
     def _authorize(
-        self, *, actor: ActorContext, case_id: UUID, action: Capability, now: datetime
+        self,
+        *,
+        actor: ActorContext,
+        case_id: UUID,
+        action: Capability,
+        now: datetime,
+        mfa_required=False,
     ) -> None:
         decision = self._policy.authorize(
             context=actor,
@@ -96,14 +161,15 @@ class CaseContractChangeService:
                     case_id=case_id,
                 ),
                 evaluated_at=now,
+                mfa_required=mfa_required,
             ),
         )
         if not decision.allowed:
             raise PermissionError(decision.code)
 
 
-def case_contract_change_handlers() -> dict[str, CommandHandler]:
-    handler = CaseContractChangeHandler()
+def case_contract_change_handlers(*, storage=None) -> dict[str, CommandHandler]:
+    handler = CaseContractChangeHandler(storage=storage)
     return {
         RecordCaseContractChangeEventCommand.command_type: handler,
         RecordCaseContractChangeApplicabilityCommand.command_type: handler,

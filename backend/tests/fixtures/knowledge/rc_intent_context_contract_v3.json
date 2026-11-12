@@ -1,0 +1,41 @@
+{
+  "schema_version": 3,
+  "kind": "rc_context_intent_contract",
+  "mechanism": "rc-context-v3",
+  "anchor_convention": "lexical-cue-v3",
+  "base_contract": "rc_intent_compositional_contract_v2.json",
+  "synthetic_only": true,
+  "context_patterns": [
+    "pour\\s+(?:préparer|rédiger|constituer|compléter|organiser)\\s+(?:notre|la|une)\\s+(?:offre|réponse|candidature|dossier)",
+    "dans\\s+le\\s+cadre\\s+de\\s+(?:notre|la)\\s+(?:réponse|offre|candidature)",
+    "pour\\s+la\\s+(?:préparation|rédaction|constitution)\\s+de\\s+notre\\s+(?:offre|réponse|candidature|dossier)",
+    "à\\s+titre\\s+de\\s+précision",
+    "pour\\s+information"
+  ],
+  "context_rules": [
+    "Only declared workflow/metadiscourse contexts can be qualified neutral. The list is finite, versioned and not a general semantic guarantee.",
+    "At most one leading context followed by comma/colon/em-dash and one trailing context after comma and before the terminal question mark. Case/whitespace variants accepted. No internal parenthetical deletion, no arbitrary phrase stripping.",
+    "An expected_contexts item is NEUTRAL_CONTEXT with exact original UTF8 [start,end), excerpt includes the consumed delimiter and surrounding whitespace: leading interval includes prefix through space after delimiter; trailing interval includes comma through whitespace immediately before ?. Sorted original order.",
+    "Context cannot mention catalog subject, other requirement/document/action outside declared grammar, negation, condition, lot/version/date/financial information. Any such segment must NOT be certified neutral. Raw recognizer may still prove legitimate explicit lot scope without any neutral context (e.g. ordinary lot prefix); never erase or invent scope.",
+    "Financial guard and invalid input budget are checked on the WHOLE ORIGINAL query first, even context mentions/citations. Financial refusal has null intent and no context evidence.",
+    "Raw query remains authoritative and is never passed rewritten to retrieval/encoder. An internal grammatical view may replace only proven context intervals by whitespace of identical character positions; remap all view UTF8 offsets through character positions back to original bytes, validate excerpts and original hash, retain every context in the output.",
+    "Covered main intent retains exactly one SUBJECT/DEMAND and uniqueLOT if proven. Context evidence is separate from intent anchors. Failure to validate any mapping or unproven removal => abstention, no fabricated anchor.",
+    "Contexts never establish source applicability or business truth; UNKNOWN remains. Underlying v2 safeguards for multiple subjects/demands/scope/negation/condition remain in force on every unqualified segment.",
+    "No context or unknown context is silently dropped as a fallback. No source reading, model, SQL, retrieval, active factory or API integration.",
+    "Abstention convention: quotations/metalinguistic/explicit response-instructions => UNKNOWN/NON_ACTIVE_REQUEST; plain declarative or unproved request without interrogative evidence => UNKNOWN/INSUFFICIENT_EVIDENCE. Preserve explicit subject/validlot and noDEMAND.",
+    "Without a catalog subject, an inversion pronoun by itself does NOT prove an unresolved reference. Explicit demonstrative/object-pronoun reference without antecedent => UNKNOWN/UNRESOLVED_REFERENCE; otherwise UNKNOWN/UNKNOWN_SUBJECT. Unknown qualifier keeps SUBJECT lexical span, subjectUNKNOWN. These changes are prospective v3 reasons, never reinterpret v1/v2 results.",
+    "Declared context qualification does not broaden the base lexical subject/demand inventory; cases requiring other main predicates are outside first context proof. New challenge targets this context treatment, with baselines compared on identical frozen cases only."
+  ],
+  "challenge_gates": {
+    "positive_exact_fraction": 1,
+    "structural_refusal_exact_fraction": 1,
+    "unsupported_exact_fraction": 1,
+    "financial_exact_fraction": 1,
+    "max_promotions": 0,
+    "max_invalid_anchors": 0,
+    "max_anchor_mismatches": 0,
+    "max_context_mismatches": 0,
+    "repetitions": 4,
+    "p95_ms_max": 1500
+  }
+}

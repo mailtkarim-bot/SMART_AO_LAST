@@ -326,3 +326,87 @@ def test_case_dce_reading_maps_missing_or_unavailable_projection(lookup):
     assert response.json() == {
         "detail": "NOT_FOUND_OR_FORBIDDEN" if lookup is None else "COMMAND_REJECTED"
     }
+
+
+def test_case_reading_exposes_closed_coverage_and_rejects_complete_claim():
+    from dataclasses import asdict
+
+    from app.modules.dce.application.queries import (
+        CaseDceCoverageProjection,
+        CaseDceDocumentCoverage,
+    )
+    from app.modules.dce.public.contracts import CaseDceCoverageResponse
+    from pydantic import ValidationError
+
+    case_id, document_id = uuid4(), uuid4()
+    lookup = _available_lookup(case_id)
+    lookup.reading.coverage = CaseDceCoverageProjection(
+        case_scope_kind="SINGLE_LOT",
+        total_documents=1,
+        completed_extractions=0,
+        unread_documents=1,
+        documents=(
+            CaseDceDocumentCoverage(
+                document_id=document_id,
+                extraction_id=None,
+                document_family="RC",
+                extraction_status="NOT_STARTED",
+            ),
+        ),
+    )
+    response = _client(runtime=_Runtime(lookup=lookup)).get(
+        f"/api/v1/cases/{case_id}/dce-reading",
+        headers=_headers(),
+    )
+    assert response.status_code == 200
+    coverage = response.json()["coverage"]
+    assert coverage["documents"][0]["document_id"] == str(document_id)
+    assert coverage["analysis_complete"] is False
+    assert coverage["critical_unread_documents"] is None
+    payload = asdict(lookup.reading.coverage)
+    payload["analysis_complete"] = True
+    with pytest.raises(ValidationError):
+        CaseDceCoverageResponse.model_validate(payload)
+
+
+def test_case_reading_exposes_structured_candidates_without_promoting_confirmation():
+    from app.modules.dce.application.requirement_values import project_rc_requirement_values
+
+    fragment_id = uuid4()
+    case_id = uuid4()
+    lookup = _available_lookup(case_id)
+    item = lookup.reading.requirements[0]
+    item.source_anchor = DceSourceAnchorProjection(
+        source_anchor_id=fragment_id,
+        dce_version_id=lookup.reading.dce_version_id,
+        dce_document_id=uuid4(),
+        extraction_id=uuid4(),
+        fragment_ordinal=1,
+        source_sha256="a" * 64,
+        fragment_sha256="b" * 64,
+        extractor_id="synthetic",
+        extractor_version="1",
+        locator=DceSourceLocator(
+            kind=DceSourceLocatorKind.TEXT_LINE, coordinates={"line": 1, "part": 1}
+        ),
+    )
+    item.confirmation_outcome = "PENDING_HUMAN_CONFIRMATION"
+    item.structured_candidate = project_rc_requirement_values(
+        excerpt="Date limite de remise : 21/11/2034 à 10h30 pour le lot 2.",
+        requirement_type="SUBMISSION_DEADLINE_SIGNAL",
+        directive_signal="UNSPECIFIED",
+        start_byte_offset=0,
+        source_fragment_id=fragment_id,
+    )
+    response = _client(runtime=_Runtime(lookup=lookup)).get(
+        f"/api/v1/cases/{case_id}/dce-reading", headers=_headers()
+    )
+    assert response.status_code == 200
+    body = response.json()["requirements"][0]
+    values = body.get("structured_candidate")
+    assert values is not None
+    assert values["date_iso"] == "2034-11-21" and values["time_local"] == "10:30"
+    assert values["lot_numbers"] == [2] and values["applicability"] == "UNKNOWN"
+    assert values["timezone"] is None and values["timezone_state"] == "UNKNOWN"
+    assert body["confirmation_outcome"] == "PENDING_HUMAN_CONFIRMATION"
+    assert "excerpt" not in values and "text" not in values

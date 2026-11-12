@@ -253,10 +253,62 @@ def test_patron_creates_reads_and_registers_enterprise_documents_without_sensiti
     }
     assert "storage_object_id" not in body["documents"][0]
     assert "original_filename" not in body["documents"][0]
-    assert "sha256" not in body["documents"][0]
+    assert all(document["sha256"] == "a" * 64 for document in body["documents"])
     assert "command_id" not in body["documents"][0]
     assert "idempotency_key" not in body["documents"][0]
     assert tenant_id
+    from tests.db.test_regulatory_profile_persistence import _case
+
+    case_id = uuid4()
+    with session_factory.begin() as session:
+        session.add(_case(tenant_id=tenant_id, case_id=case_id, marker="b"))
+    profile_url = (
+        f"/api/v1/patron/enterprise/companies/{company_id}/business-method-profile/versions"
+    )
+    adoption_url = f"/api/v1/patron/cases/{case_id}/business-method-profile/adoptions"
+    versions = []
+    for version, word in enumerate(("Zone", "Lot")):
+        published = client.post(
+            profile_url,
+            headers=headers,
+            json={
+                "command_id": str(uuid4()),
+                "idempotency_key": str(uuid4()),
+                "expected_version": version,
+                "profile": {"terminology": {"lot": word}},
+            },
+        )
+        assert published.status_code == 201, published.text
+        versions.append(published.json()["aggregate_refs"][0])
+    assert client.get(adoption_url, headers=headers).json() == []
+    for revision, ref in enumerate((versions[0], versions[1], versions[0])):
+        payload = {
+            "command_id": str(uuid4()),
+            "idempotency_key": str(uuid4()),
+            "expected_adoption_revision": revision,
+            "profile_version_id": ref["aggregate_id"],
+            "profile_version": ref["aggregate_revision"],
+            "profile_content_sha256": ref["content_hash"],
+        }
+        adopted = client.post(adoption_url, headers=headers, json=payload)
+        assert adopted.status_code == 201, adopted.text
+        retry = client.post(adoption_url, headers=headers, json=payload)
+        assert retry.status_code == 200 and retry.json()["replayed"]
+    history = client.get(adoption_url, headers=headers)
+    assert history.status_code == 200
+    assert [row["profile_version"] for row in history.json()] == [1, 2, 1]
+    assert [row["adoption_revision"] for row in history.json()] == [1, 2, 3]
+    assert (
+        client.get(profile_url, headers=headers).json()["versions"][0]["profile"]["terminology"][
+            "lot"
+        ]
+        == "Zone"
+    )
+    assert client.get("/api/v1/patron/enterprise/company", headers=headers).json() == body
+    _, foreign_identity, foreign_session = _seed_principal(database_engine, role="PATRON_ADMIN")
+    foreign_headers = _headers(tokens, identity_id=foreign_identity, session_id=foreign_session)
+    assert client.get(adoption_url, headers=foreign_headers).status_code == 404
+    assert client.get(profile_url, headers=foreign_headers).status_code == 404
 
 
 @pytest.mark.api

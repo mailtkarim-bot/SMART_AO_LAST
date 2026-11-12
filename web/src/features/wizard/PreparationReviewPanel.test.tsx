@@ -153,3 +153,15 @@ describe("PreparationReviewPanel", () => {
     expect(screen.getByText(/aggregate_revision": 9/)).toBeInTheDocument();
   });
 });
+
+it("labels the human review decision note", () => {
+  render(<PreparationReviewPanel api={{} as ApiClient} setMessage={vi.fn()} />);
+  expect(screen.getByRole("textbox", { name: "Note de décision" })).toBeInTheDocument();
+});
+
+it('masks a binary review preview immediately when the authenticated owner changes',async()=>{
+ const api={listPreparationReviews:vi.fn().mockResolvedValue({package_id:'pkg',reviews:[]}),listPreparationResponseDrafts:vi.fn().mockResolvedValue({package_id:'pkg',drafts:[{draft_id:'docx',version:1,state:'DRAFT',section_codes:['METHOD'],source_refs:[],responsible_role:'COLLABORATEUR',content_format:'DOCX',content_sha256:'a'.repeat(64),content:'PRIVATE DOCX PREVIEW'}]}),listPreparationTransmissions:vi.fn().mockResolvedValue({package_id:'pkg',deliveries:[]})} as unknown as ApiClient;
+ const setMessage=vi.fn();const view=render(<PreparationReviewPanel api={api} setMessage={setMessage} ownerKey="owner-a"/>);
+ fireEvent.change(screen.getByPlaceholderText('UUID du package'),{target:{value:'pkg'}});fireEvent.click(screen.getByRole('button',{name:'Charger les revues'}));await screen.findByText('PRIVATE DOCX PREVIEW');
+ view.rerender(<PreparationReviewPanel api={api} setMessage={setMessage} ownerKey="owner-b"/>);expect(screen.queryByText('PRIVATE DOCX PREVIEW')).toBeNull();
+});

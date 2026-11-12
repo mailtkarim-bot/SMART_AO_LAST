@@ -1,0 +1,8 @@
+export type CashFlow = {flow_id:string; direction:'INFLOW'|'OUTFLOW'; currency_code:string; amount_minor:number|null; declared_date:string|null; source_refs:string[]; native_source_id?:string|null};
+export type CashOpening = {currency_code:string; amount_minor:number|null; source_refs:string[]};
+export type CashDeclaration = {period_start:string; period_end:string; status:'ACTIVE'|'CANCELLED'; assumptions:string; openings:CashOpening[]; flows:CashFlow[]};
+export type CashSource = {financial_report?:{report_id:string;revision:number;state:'PUBLISHED'};id:string; label:string; sha256:string; direction:'INFLOW'|'OUTFLOW'; currency_code:string; amount_minor:number; declared_date:string|null; source_refs:string[]};
+export type CashRevision = {id:string; revision:number; context_state:string; created_at:string; justification:string; human_confirmed:boolean; source_snapshot:{case_source:{dce_version_id:string|null};sources:Record<string,string>;source_details?:Record<string,CashSource>}; declaration:CashDeclaration; projection:{status:string; scope_state:string; settlement_state:string; currencies:{currency_code:string; opening_minor:string|null;closing_minor:string|null;missing:string[]; rows:(Omit<CashFlow,'amount_minor'> & {amount_minor:string|null;cumulative_minor:string|null})[]}[]}};
+export type CashView = {case_id:string; revision:number; view_sha256:string; current:CashRevision|null;history:CashRevision[];sources:CashSource[];history_truncated:boolean;catalog_truncated:boolean};
+export type CashIntent = {input:Record<string,unknown>;phase:'NEW'|'SENDING'|'UNKNOWN'|'READ_REQUIRED'|'CONFLICT'};
+export type CashPendingStore = Map<string,CashIntent>;

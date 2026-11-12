@@ -2,12 +2,93 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import date
 from enum import StrEnum
+from typing import Any
 from uuid import UUID
 
 from app.modules.preparation.application.ports import PreparationRequirementInput
+from app.modules.preparation.public.contracts import ResponseContribution
+
+
+def build_response_coverage(*, requirements, contributions, regions=None) -> list[dict[str, Any]]:
+    """Confront all safe DCE signals with one verified artifact, never infer compliance."""
+    rows = []
+    for point in requirements:
+        if point.document_family in {"DPGF", "BPU"}:
+            continue
+        current = (
+            point.source_proof_state == "CURRENT_SOURCE"
+            and point.confirmation_outcome == "CONFIRMED"
+        )
+        pieces = []
+        for (requirement, section), part in contributions.items():
+            if requirement != str(point.requirement_id):
+                continue
+            targets = (
+                [None]
+                if regions is None
+                else [
+                    region
+                    for region in regions
+                    if region.get("source")
+                    and region["source"]["requirement_id"] == requirement
+                    and region["source"]["section_code"] == section
+                ]
+            )
+            for region in targets:
+                pieces.append(
+                    dict(
+                        section_code=section,
+                        locator=region["locator"]
+                        if region
+                        else f"bytes:{part.start_byte}-{part.end_byte}",
+                        start_byte=None if region else part.start_byte,
+                        end_byte=None if region else part.end_byte,
+                        sha256=region["text_sha256"] if region else part.raw_sha256,
+                        text_present=bool(part.text)
+                        and (region is None or region["state"] == "FILLED"),
+                        missing=part.missing,
+                    )
+                )
+        has_text = any(piece["text_present"] for piece in pieces)
+        has_gaps = any(
+            not piece["text_present"]
+            or (
+                piece["missing"]
+                and piece["missing"] != "UNKNOWN — absence de manque non démontrée."
+            )
+            for piece in pieces
+        )
+        candidate = point.structured_candidate
+        rows.append(
+            dict(
+                requirement_id=point.requirement_id,
+                document_family=point.document_family,
+                source_state=point.source_proof_state,
+                confirmation=point.confirmation_outcome,
+                source_locator=point.source_locator_label,
+                source_anchor=asdict(point.source_anchor) if point.source_anchor else None,
+                lot_candidates=list(candidate.lot_numbers)
+                if current and candidate is not None and candidate.lot_state == "CANDIDATE"
+                else [],
+                applicability="UNKNOWN",
+                coverage="UNKNOWN",
+                signature="UNKNOWN",
+                response_state=(
+                    "UNKNOWN"
+                    if not current
+                    else "MISSING"
+                    if not has_text
+                    else "TEXT_WITH_GAPS"
+                    if has_gaps
+                    else "TEXT_PRESENT"
+                ),
+                pieces=pieces,
+            )
+        )
+    return rows
 
 
 @dataclass(frozen=True, slots=True)
@@ -18,6 +99,7 @@ class ResponsePlanDraftItem:
     capability_title: str
     capability_version_number: int
     verified_source_count: int
+    source_snapshot: str | None = None
 
 
 _RESPONSE_PLAN_SECTIONS = {
@@ -36,11 +118,19 @@ def build_response_plan_draft(
     plan_version: int,
     draft_version: int,
     items: tuple[ResponsePlanDraftItem, ...],
+    contributions: tuple[ResponseContribution, ...] | None = None,
 ) -> str:
     """Render a non-financial, versioned outline from resolved plan facts only."""
     sections = sorted({item.section_code for item in items})
     if not items or any(section not in _RESPONSE_PLAN_SECTIONS for section in sections):
         raise ValueError("invalid response-plan draft items")
+    by_item: dict[tuple[UUID, str], ResponseContribution] = {}
+    if contributions is not None:
+        identities = [(value.requirement_id, value.section_code) for value in contributions]
+        expected = {(item.requirement_id, item.section_code) for item in items}
+        if len(identities) != len(set(identities)) or set(identities) != expected:
+            raise ValueError("CONTRIBUTION_PLAN_MISMATCH")
+        by_item = {(value.requirement_id, value.section_code): value for value in contributions}
     ordered = sorted(items, key=lambda item: (item.section_code, str(item.requirement_id)))
     lines = [
         "# Brouillon de réponse technique",
@@ -57,15 +147,42 @@ def build_response_plan_draft(
         for index, item in enumerate(section_items, start=1):
             if item.verified_source_count <= 0:
                 raise ValueError("response-plan source is not verified")
+            contribution = by_item.get((item.requirement_id, item.section_code))
+            wording = "- Contribution : à rédiger et vérifier par le Collaborateur."
+            if contribution is not None:
+                wording = (
+                    "- Rédaction humaine — non validée par la seule saisie :\n"
+                    + "\n".join(
+                        "> " + _safe_response_fact(line)
+                        for line in contribution.content.splitlines()
+                    )
+                    + ("\n> UNKNOWN — contenu non rédigé." if not contribution.content else "")
+                    + "\n- Manques déclarés : "
+                    + (
+                        _safe_response_fact(contribution.missing)
+                        or "UNKNOWN — absence de manque non démontrée."
+                    )
+                    + "\n- Couverture de l’exigence : UNKNOWN — revue humaine exacte requise."
+                )
             lines.extend(
                 [
-                    f"### Exigence {index}",
+                    f"### Exigence {index}"
+                    + (
+                        f" — {item.requirement_id} / {item.section_code}"
+                        if contribution is not None
+                        else ""
+                    ),
                     f"- Proposition choisie : {_safe_response_fact(item.capability_name)} — "
                     f"{_safe_response_fact(item.capability_title)} "
                     f"(version {item.capability_version_number}).",
                     f"- {item.verified_source_count} pièce(s) relue(s); SHA-256 recalculés "
                     "et concordants avec le manifeste privé.",
-                    "- Contribution : à rédiger et vérifier par le Collaborateur.",
+                    *(
+                        (["- Sources résolues côté serveur : " + item.source_snapshot])
+                        if contribution is not None and item.source_snapshot
+                        else []
+                    ),
+                    wording,
                     "",
                 ]
             )

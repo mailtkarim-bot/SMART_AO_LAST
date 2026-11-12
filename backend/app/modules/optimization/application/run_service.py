@@ -117,14 +117,22 @@ class CapacityRunService:
 
 def _input_snapshot(plan_input: CaseCapacityPlanInput) -> dict[str, object]:
     return {
-        "demands": [
-            {"id": str(demand.id), "required_units": demand.required_units}
-            for demand in plan_input.demands
-        ],
-        "supplies": [
-            {"id": str(supply.id), "capacity_units": supply.capacity_units}
-            for supply in plan_input.supplies
-        ],
+        "demands": (
+            [
+                {"id": str(demand.id), "required_units": demand.required_units}
+                for demand in plan_input.demands
+            ]
+            if plan_input.demands is not None
+            else None
+        ),
+        "supplies": (
+            [
+                {"id": str(supply.id), "capacity_units": supply.capacity_units}
+                for supply in plan_input.supplies
+            ]
+            if plan_input.supplies is not None
+            else None
+        ),
     }
 
 

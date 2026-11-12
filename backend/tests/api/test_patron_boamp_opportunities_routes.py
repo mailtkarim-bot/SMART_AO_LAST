@@ -177,7 +177,7 @@ def test_read_route_requires_bearer_and_returns_closed_projection() -> None:
     assert body["lot_scope_state"] == "UNKNOWN"
     assert body["lot_scope_source"] == "BOAMP"
     assert body["deadline_state"] == "EXPIRED"
-    assert body["unknowns"] == []
+    assert {u["code"] for u in body["unknowns"]} == {"LOT_SCOPE", "DCE_NOT_RECEIVED"}
     assert body["source_captures"] == []
     assert "tenant_id" not in body
     assert "actor_id" not in body

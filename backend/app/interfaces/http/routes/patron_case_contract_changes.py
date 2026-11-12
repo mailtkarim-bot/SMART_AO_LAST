@@ -44,7 +44,11 @@ from app.modules.pricing.public.case_contract_change_contracts import (
     RecordCaseContractChangeImpactDeclarationRequest,
     RecordCaseContractChangeResponse,
 )
-from app.platform.events.dispatcher import CommandExecutionError
+from app.platform.events.dispatcher import (
+    CommandExecutionError,
+    CommandInProgressError,
+    IdempotencyKeyReusedError,
+)
 
 
 def build_patron_case_contract_change_router(
@@ -68,10 +72,15 @@ def build_patron_case_contract_change_router(
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="FORBIDDEN"
             ) from error
-        return CaseContractChangeEventListResponse(
+        payload = CaseContractChangeEventListResponse(
             case_id=case_id,
-            events=[ContractChangeEventResponse.model_validate(event) for event in events],
-        )
+            events=[ContractChangeEventResponse.model_validate(event) for event in events[:100]],
+            truncated=len(events) > 100,
+        ).model_dump(mode="json")
+        # Preserve legacy payloads while making an exceeded read budget explicit.
+        if not payload["truncated"]:
+            payload.pop("truncated")
+        return JSONResponse(content=payload, headers={"Cache-Control": "no-store"})
 
     @router.post(
         "/{case_id}/contract-change-events",
@@ -372,10 +381,19 @@ def _dispatch(service, command, *, actor):
         return service.record(actor=actor, command=command, now=datetime.now(tz=UTC))
     except PermissionError as error:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="FORBIDDEN") from error
+    except IdempotencyKeyReusedError as error:
+        raise HTTPException(status_code=409, detail="IDEMPOTENCY_KEY_REUSED") from error
+    except CommandInProgressError as error:
+        raise HTTPException(status_code=409, detail="COMMAND_IN_PROGRESS") from error
     except CommandExecutionError as error:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(error)
-        ) from error
+        detail = str(error)
+        if detail == "command failed before commit":
+            raise HTTPException(status_code=503, detail="COMMAND_UNAVAILABLE") from error
+        conflict = detail in {
+            "OPERATIONAL_CHANGE_SOURCE_CONFLICT",
+            "OPERATIONAL_CHANGE_CONTRACT_SOURCE_CONFLICT",
+        }
+        raise HTTPException(status_code=409 if conflict else 422, detail=detail) from error
 
 
 def _reject_non_binary_content_type(content_type: str | None) -> None:
@@ -399,3 +417,29 @@ def _content_length(value: str | None) -> int | None:
     if parsed < 0:
         raise HTTPException(status_code=400, detail="INVALID_CONTENT_LENGTH")
     return parsed
+
+
+def build_operational_case_contract_change_router(
+    *, service: CaseContractChangeService, security_runtime: ConsultationSecurityRuntime
+) -> APIRouter:
+    router = APIRouter(prefix="/api/v1/cases", tags=["operational-contract-changes"])
+
+    @router.get("/{case_id}/contract-change-events")
+    def read_operational(case_id: UUID, authorization: str | None = Header(default=None)):
+        actor = _actor(authorization, security_runtime)
+        try:
+            rows = service.list_operational_for_case(
+                actor=actor, case_id=case_id, now=datetime.now(tz=UTC)
+            )
+        except PermissionError as error:
+            raise HTTPException(status_code=403, detail="FORBIDDEN") from error
+        return JSONResponse(
+            content={
+                "case_id": str(case_id),
+                "events": list(rows[:100]),
+                "truncated": len(rows) > 100,
+            },
+            headers={"Cache-Control": "no-store"},
+        )
+
+    return router

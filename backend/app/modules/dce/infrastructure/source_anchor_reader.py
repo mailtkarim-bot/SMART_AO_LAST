@@ -92,6 +92,14 @@ class SqlAlchemyDceSourceAnchorReader:
             if document_sha256 != extraction_sha256:
                 raise ValueError("DCE_SOURCE_ANCHOR_SOURCE_HASH_MISMATCH")
 
+            # A newly recognised shape must not promote an unqualified historical parser.
+            if (
+                isinstance(fragment_record.locator_json, dict)
+                and fragment_record.locator_json.get("kind") == "docx_table_cell"
+                and (extraction_record.extractor_id, extraction_record.extractor_version)
+                != ("smart-ao-deterministic", "4")
+            ):
+                continue
             projections[fragment_record.id] = DceSourceAnchorProjection(
                 source_anchor_id=fragment_record.id,
                 dce_version_id=extraction_record.dce_version_id,

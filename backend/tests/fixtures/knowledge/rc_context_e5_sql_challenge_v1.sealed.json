@@ -1,0 +1,3493 @@
+{
+  "schema_version": 1,
+  "synthetic": true,
+  "kind": "rc_semantic_measurement",
+  "held_out": true,
+  "preparation_only": false,
+  "tenant_id": "7aff6bbb-bc3e-557e-bdd7-e21d039da53b",
+  "case_id": "04baef29-0455-53a2-b084-2216abe612d5",
+  "version_id": "f3b50f86-2d46-5d40-ab2f-a6ba8563ea38",
+  "documents": [
+    {
+      "id": "c0ca70a0-5461-5cfc-803e-66e79673e0d2",
+      "tenant_id": "7aff6bbb-bc3e-557e-bdd7-e21d039da53b",
+      "case_id": "04baef29-0455-53a2-b084-2216abe612d5",
+      "version_id": "f3b50f86-2d46-5d40-ab2f-a6ba8563ea38",
+      "text": "Article 3 — Candidature. Les dispositions suivantes concernent tous les candidats. Chaque candidat remet un formulaire DC1 signé. Il joint également un formulaire DC2 renseigné. Ces pièces sont demandées pour la candidature et non pour l'offre technique.",
+      "text_sha256": "40510ba69af63a4c956dae9245d71e1c429e02f44b29cc7d6c2fefd034311680",
+      "page": 1,
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "classification": "INTERNAL_OPERATIONAL"
+    },
+    {
+      "id": "7fda57a1-f643-5880-a352-bff2f9697ef7",
+      "tenant_id": "7aff6bbb-bc3e-557e-bdd7-e21d039da53b",
+      "case_id": "04baef29-0455-53a2-b084-2216abe612d5",
+      "version_id": "f3b50f86-2d46-5d40-ab2f-a6ba8563ea38",
+      "text": "Lot 02 — Couverture. Pour ce lot uniquement, la visite du site est obligatoire avant la remise de l'offre. Le candidat joint l'attestation de visite à son offre. Pour les autres lots, la visite reste facultative.",
+      "text_sha256": "d71f967c1f96141691aab93028d2effe85887ff4a9021f948389b864201229e1",
+      "page": 2,
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "classification": "INTERNAL_OPERATIONAL"
+    },
+    {
+      "id": "f8130ef7-cc23-5c7b-a1d7-bba6592f82df",
+      "tenant_id": "7aff6bbb-bc3e-557e-bdd7-e21d039da53b",
+      "case_id": "04baef29-0455-53a2-b084-2216abe612d5",
+      "version_id": "f3b50f86-2d46-5d40-ab2f-a6ba8563ea38",
+      "text": "Organisation du chantier, lot 04 — Électricité. Lorsque deux entreprises interviennent simultanément dans une même zone, le titulaire désigne un coordinateur de zone et transmet son nom au maître d'œuvre avant le début de cette intervention simultanée.",
+      "text_sha256": "0aed4ee869a78d06187ed74207bf1f50393738a25edf5f79c8e2a93cd8002f13",
+      "page": 3,
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "classification": "INTERNAL_OPERATIONAL"
+    },
+    {
+      "id": "71f642bb-9fbc-56d6-bac0-7b595e26cb99",
+      "tenant_id": "7aff6bbb-bc3e-557e-bdd7-e21d039da53b",
+      "case_id": "04baef29-0455-53a2-b084-2216abe612d5",
+      "version_id": "f3b50f86-2d46-5d40-ab2f-a6ba8563ea38",
+      "text": "Présentation des offres. Les variantes ne sont pas autorisées. Chaque soumissionnaire remet une offre conforme à la solution de base. Cette règle vaut pour l'ensemble des lots, dont la liste n'est pas reproduite ici.",
+      "text_sha256": "f2793e34b1e93f5c1192061c780d0a1e9d8ffb322dcdde9115d56567976ff685",
+      "page": 4,
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "classification": "INTERNAL_OPERATIONAL"
+    },
+    {
+      "id": "5fe122b4-9203-50e2-b8ee-d96c0123ea63",
+      "tenant_id": "7aff6bbb-bc3e-557e-bdd7-e21d039da53b",
+      "case_id": "04baef29-0455-53a2-b084-2216abe612d5",
+      "version_id": "f3b50f86-2d46-5d40-ab2f-a6ba8563ea38",
+      "text": "Lot 06 — Revêtements de sols. Un échantillon n'est exigé que si le candidat propose le revêtement R2. Dans ce cas, le candidat dépose un échantillon de 30 cm sur 30 cm avant la date limite de remise des offres.",
+      "text_sha256": "017b77fd7ab60d9669dbedc1a8b499956c3111542ac82b4460f3acc9945d288f",
+      "page": 5,
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "classification": "INTERNAL_OPERATIONAL"
+    },
+    {
+      "id": "3e2386af-ab6a-56a6-9693-ebe3d7ade73b",
+      "tenant_id": "7aff6bbb-bc3e-557e-bdd7-e21d039da53b",
+      "case_id": "04baef29-0455-53a2-b084-2216abe612d5",
+      "version_id": "f3b50f86-2d46-5d40-ab2f-a6ba8563ea38",
+      "text": "Prévention — lot 01, démolition. Avant toute affectation à des travaux exposant à l'amiante, l'employeur vérifie que le salarié dispose d'un avis d'aptitude médicale adapté. Aucun dossier médical individuel ne doit être joint à l'offre.",
+      "text_sha256": "3a6694a3bdac614c54fc02f19eedb6d0e64dee1b14535e3be7bb1b17de5d2c5e",
+      "page": 6,
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "classification": "INTERNAL_OPERATIONAL"
+    },
+    {
+      "id": "3dd426ef-dede-53dc-9f22-4c0ee0dfb1a5",
+      "tenant_id": "7aff6bbb-bc3e-557e-bdd7-e21d039da53b",
+      "case_id": "04baef29-0455-53a2-b084-2216abe612d5",
+      "version_id": "f3b50f86-2d46-5d40-ab2f-a6ba8563ea38",
+      "text": "Annexe environnementale. Si la fiche produit n'est pas disponible à la date de dépôt, le candidat indique sa date prévisionnelle de transmission dans le mémoire technique. Cette disposition ne dispense pas de remettre le mémoire technique.",
+      "text_sha256": "d62476452b3426e4a0f508d680a4c8a705ba5ee0580a2a33fa47eac595932305",
+      "page": 7,
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "classification": "INTERNAL_OPERATIONAL"
+    },
+    {
+      "id": "9f41f5b1-0082-5682-82d8-8196c884bb1c",
+      "tenant_id": "7aff6bbb-bc3e-557e-bdd7-e21d039da53b",
+      "case_id": "04baef29-0455-53a2-b084-2216abe612d5",
+      "version_id": "f3b50f86-2d46-5d40-ab2f-a6ba8563ea38",
+      "text": "Rectificatif n° 2 — lot 03, menuiseries. Pour le seul lot 03, la date de remise des échantillons est désormais le 18 novembre 2031 à 12 h. Elle remplace la date du 12 novembre 2031 à 12 h figurant à l'article 8. La date limite de remise des offres reste le 20 novembre 2031 à 16 h.",
+      "text_sha256": "05b1ea9959e65e574e28e3de4f9fe07b7510d9a23c0a2c529a71d54668623b91",
+      "page": 8,
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "classification": "INTERNAL_OPERATIONAL"
+    },
+    {
+      "id": "3430065f-56d7-5802-b470-f0839e68c039",
+      "tenant_id": "7aff6bbb-bc3e-557e-bdd7-e21d039da53b",
+      "case_id": "04baef29-0455-53a2-b084-2216abe612d5",
+      "version_id": "f3b50f86-2d46-5d40-ab2f-a6ba8563ea38",
+      "text": "Lot 07 — Peinture. Si le candidat prévoit une sous-traitance dès le dépôt de son offre, il identifie les prestations concernées dans son mémoire. Il n'est pas tenu de désigner à ce stade un sous-traitant pour une prestation qu'il prévoit d'exécuter lui-même.",
+      "text_sha256": "f1f8eccd891577d031127f3c2834973b9bb8e6650c4fe7b5780ee77fb14a124a",
+      "page": 9,
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "classification": "INTERNAL_OPERATIONAL"
+    },
+    {
+      "id": "02e83b64-8932-5716-b83b-aa53b6ad9abd",
+      "tenant_id": "7aff6bbb-bc3e-557e-bdd7-e21d039da53b",
+      "case_id": "04baef29-0455-53a2-b084-2216abe612d5",
+      "version_id": "f3b50f86-2d46-5d40-ab2f-a6ba8563ea38",
+      "text": "Modalités communes de transmission. Le dépôt électronique est obligatoire. Une copie de sauvegarde est facultative. Si une copie de sauvegarde est envoyée, elle doit parvenir avant la même date limite que l'offre électronique.",
+      "text_sha256": "354c6a858b5d051c81e4434487f611b42b55697f3122fe050392929c332996e9",
+      "page": 10,
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "classification": "INTERNAL_OPERATIONAL"
+    },
+    {
+      "id": "8e7b582e-b133-5520-b081-d3c9bef742b4",
+      "tenant_id": "7aff6bbb-bc3e-557e-bdd7-e21d039da53b",
+      "case_id": "04baef29-0455-53a2-b084-2216abe612d5",
+      "version_id": "f3b50f86-2d46-5d40-ab2f-a6ba8563ea38",
+      "text": "Lot 05 — Plomberie. Le candidat joint la DPGF complétée à son offre. Les montants, quantités et lignes de cette DPGF ne sont pas reproduits dans le présent extrait.",
+      "text_sha256": "92affcfbd51101f330a0c0a35ba33ad28dd52ee2f47807a404b2eeb125c384cc",
+      "page": 11,
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "classification": "INTERNAL_OPERATIONAL"
+    },
+    {
+      "id": "d1f9133e-5f88-5c0b-be0b-d7e6990788e1",
+      "tenant_id": "7aff6bbb-bc3e-557e-bdd7-e21d039da53b",
+      "case_id": "04baef29-0455-53a2-b084-2216abe612d5",
+      "version_id": "f3b50f86-2d46-5d40-ab2f-a6ba8563ea38",
+      "text": "Analyse des offres — lot 08, serrurerie. La valeur technique est appréciée à partir du mémoire technique. Le présent extrait ne précise ni sous-critères ni pondérations.",
+      "text_sha256": "649df9de1821d6ddaffbbba3e8ed7111a81aa573a10bfc8e7b41e0c857788d03",
+      "page": 12,
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "classification": "INTERNAL_OPERATIONAL"
+    },
+    {
+      "id": "de5b8784-5256-5fc7-ae34-697f33a208ff",
+      "tenant_id": "7aff6bbb-bc3e-557e-bdd7-e21d039da53b",
+      "case_id": "04baef29-0455-53a2-b084-2216abe612d5",
+      "version_id": "f3b50f86-2d46-5d40-ab2f-a6ba8563ea38",
+      "text": "Message intitulé « Rectificatif ». La réunion mentionnée au règlement est reportée au 14 décembre 2031 à 9 h. Le message ne précise ni le lot, ni l'article, ni la nature de cette réunion. Le règlement contient une réunion de visite et une réunion de préparation.",
+      "text_sha256": "1a1393a359bcb6553ae9cea2336c5f803d9e11151ab47a4fb38fd9b8ae0e691c",
+      "page": 13,
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "classification": "INTERNAL_OPERATIONAL"
+    },
+    {
+      "id": "f94d2554-df70-52b7-82e8-02ff24a69f73",
+      "tenant_id": "7aff6bbb-bc3e-557e-bdd7-e21d039da53b",
+      "case_id": "04baef29-0455-53a2-b084-2216abe612d5",
+      "version_id": "f3b50f86-2d46-5d40-ab2f-a6ba8563ea38",
+      "text": "Notice patient — consultation de dermatologie. Avant le rendez-vous, le patient apporte ses ordonnances en cours. Cette notice concerne exclusivement les soins individuels et ne constitue pas une pièce du règlement de consultation des travaux.",
+      "text_sha256": "7f9e71ef6833985b7d869b941c695ecc27fffd61b83c7a24a34a42de1cbad909",
+      "page": 14,
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "classification": "INTERNAL_OPERATIONAL"
+    },
+    {
+      "id": "94d2e0d8-eb9a-53bd-9c92-ac926f208a02",
+      "tenant_id": "7aff6bbb-bc3e-557e-bdd7-e21d039da53b",
+      "case_id": "04baef29-0455-53a2-b084-2216abe612d5",
+      "version_id": "f3b50f86-2d46-5d40-ab2f-a6ba8563ea38",
+      "text": "Préparation des interventions — lot 09, désamiantage. Avant sa première intervention sur ce chantier, chaque opérateur affecté au désamiantage doit effectuer une visite médicale d'aptitude. Le planning prévisionnel est communiqué séparément.",
+      "text_sha256": "4eb4210c6ab82fc0f3831980b9c28ea3529f9009dd57131b8a5f75cf137f0854",
+      "page": 15,
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "classification": "INTERNAL_OPERATIONAL"
+    },
+    {
+      "id": "5f8dff2c-902a-5062-b286-6e830cc23aca",
+      "tenant_id": "5f8dff2c-902a-5062-b286-6e830cc23aca",
+      "case_id": "a7188fe9-65b0-5a10-9905-bd11ef760a3a",
+      "version_id": "a68d452c-b0f2-557e-bf26-9e1cec86b0b4",
+      "text": "Lot 02 : la visite du site n’est pas obligatoire.",
+      "text_sha256": "775fe957a2719130c41cd592db553939e4d6529b3539022d3c88fb5a6cbfb4b6",
+      "page": 2,
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "classification": "INTERNAL_OPERATIONAL"
+    },
+    {
+      "id": "a7188fe9-65b0-5a10-9905-bd11ef760a3a",
+      "tenant_id": "7aff6bbb-bc3e-557e-bdd7-e21d039da53b",
+      "case_id": "271891f8-e9aa-54be-9a49-632797eaad52",
+      "version_id": "15740cdd-b30f-58ff-b8e4-3ccdfe62e203",
+      "text": "Lot 02 : la visite du site n’est pas obligatoire.",
+      "text_sha256": "775fe957a2719130c41cd592db553939e4d6529b3539022d3c88fb5a6cbfb4b6",
+      "page": 2,
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "classification": "INTERNAL_OPERATIONAL"
+    },
+    {
+      "id": "043d95c6-35b3-57bd-bac5-664938516001",
+      "tenant_id": "7aff6bbb-bc3e-557e-bdd7-e21d039da53b",
+      "case_id": "04baef29-0455-53a2-b084-2216abe612d5",
+      "version_id": "f3b50f86-2d46-5d40-ab2f-a6ba8563ea38",
+      "text": "Lot 02 : la visite du site n’est pas obligatoire.",
+      "text_sha256": "775fe957a2719130c41cd592db553939e4d6529b3539022d3c88fb5a6cbfb4b6",
+      "page": 2,
+      "current": true,
+      "extraction_status": "REVIEW_REQUIRED",
+      "classification": "INTERNAL_OPERATIONAL"
+    },
+    {
+      "id": "32ba3717-1615-5bfd-a0de-6166a0a8756b",
+      "tenant_id": "7aff6bbb-bc3e-557e-bdd7-e21d039da53b",
+      "case_id": "04baef29-0455-53a2-b084-2216abe612d5",
+      "version_id": "32ba3717-1615-5bfd-a0de-6166a0a8756b",
+      "text": "Lot 02 : la visite du site n’est pas obligatoire.",
+      "text_sha256": "775fe957a2719130c41cd592db553939e4d6529b3539022d3c88fb5a6cbfb4b6",
+      "page": 2,
+      "current": false,
+      "extraction_status": "COMPLETED",
+      "classification": "INTERNAL_OPERATIONAL"
+    }
+  ],
+  "source_facts": [
+    {
+      "id": "DC1",
+      "source_fragment_id": "c0ca70a0-5461-5cfc-803e-66e79673e0d2",
+      "start_byte": 85,
+      "end_byte": 132,
+      "excerpt": "Chaque candidat remet un formulaire DC1 signé.",
+      "source_sha256": "40510ba69af63a4c956dae9245d71e1c429e02f44b29cc7d6c2fefd034311680",
+      "subject": "DC1",
+      "lot": null,
+      "value": "REQUIRED",
+      "kind": "ASSERTION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Article 3 — Candidature.",
+        "Les dispositions suivantes concernent tous les candidats."
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "c0ca70a0-5461-5cfc-803e-66e79673e0d2",
+          "start_byte": 0,
+          "end_byte": 26,
+          "excerpt": "Article 3 — Candidature.",
+          "source_sha256": "40510ba69af63a4c956dae9245d71e1c429e02f44b29cc7d6c2fefd034311680"
+        },
+        {
+          "source_fragment_id": "c0ca70a0-5461-5cfc-803e-66e79673e0d2",
+          "start_byte": 27,
+          "end_byte": 84,
+          "excerpt": "Les dispositions suivantes concernent tous les candidats.",
+          "source_sha256": "40510ba69af63a4c956dae9245d71e1c429e02f44b29cc7d6c2fefd034311680"
+        }
+      ]
+    },
+    {
+      "id": "DC2",
+      "source_fragment_id": "c0ca70a0-5461-5cfc-803e-66e79673e0d2",
+      "start_byte": 133,
+      "end_byte": 182,
+      "excerpt": "Il joint également un formulaire DC2 renseigné.",
+      "source_sha256": "40510ba69af63a4c956dae9245d71e1c429e02f44b29cc7d6c2fefd034311680",
+      "subject": "DC2",
+      "lot": null,
+      "value": "REQUIRED",
+      "kind": "ASSERTION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Article 3 — Candidature.",
+        "Chaque candidat remet un formulaire DC1 signé."
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "c0ca70a0-5461-5cfc-803e-66e79673e0d2",
+          "start_byte": 0,
+          "end_byte": 26,
+          "excerpt": "Article 3 — Candidature.",
+          "source_sha256": "40510ba69af63a4c956dae9245d71e1c429e02f44b29cc7d6c2fefd034311680"
+        },
+        {
+          "source_fragment_id": "c0ca70a0-5461-5cfc-803e-66e79673e0d2",
+          "start_byte": 85,
+          "end_byte": 132,
+          "excerpt": "Chaque candidat remet un formulaire DC1 signé.",
+          "source_sha256": "40510ba69af63a4c956dae9245d71e1c429e02f44b29cc7d6c2fefd034311680"
+        }
+      ]
+    },
+    {
+      "id": "PHASE",
+      "source_fragment_id": "c0ca70a0-5461-5cfc-803e-66e79673e0d2",
+      "start_byte": 183,
+      "end_byte": 261,
+      "excerpt": "Ces pièces sont demandées pour la candidature et non pour l'offre technique.",
+      "source_sha256": "40510ba69af63a4c956dae9245d71e1c429e02f44b29cc7d6c2fefd034311680",
+      "subject": "SUBMISSION_PHASE",
+      "lot": null,
+      "value": "NOT_REQUIRED",
+      "kind": "NEGATION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Chaque candidat remet un formulaire DC1 signé.",
+        "Il joint également un formulaire DC2 renseigné."
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "c0ca70a0-5461-5cfc-803e-66e79673e0d2",
+          "start_byte": 85,
+          "end_byte": 132,
+          "excerpt": "Chaque candidat remet un formulaire DC1 signé.",
+          "source_sha256": "40510ba69af63a4c956dae9245d71e1c429e02f44b29cc7d6c2fefd034311680"
+        },
+        {
+          "source_fragment_id": "c0ca70a0-5461-5cfc-803e-66e79673e0d2",
+          "start_byte": 133,
+          "end_byte": 182,
+          "excerpt": "Il joint également un formulaire DC2 renseigné.",
+          "source_sha256": "40510ba69af63a4c956dae9245d71e1c429e02f44b29cc7d6c2fefd034311680"
+        }
+      ]
+    },
+    {
+      "id": "SITE",
+      "source_fragment_id": "7fda57a1-f643-5880-a352-bff2f9697ef7",
+      "start_byte": 47,
+      "end_byte": 108,
+      "excerpt": "la visite du site est obligatoire avant la remise de l'offre.",
+      "source_sha256": "d71f967c1f96141691aab93028d2effe85887ff4a9021f948389b864201229e1",
+      "subject": "VISIT_SITE",
+      "lot": 2,
+      "value": "REQUIRED",
+      "kind": "ASSERTION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Lot 02 — Couverture. Pour ce lot uniquement,"
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "7fda57a1-f643-5880-a352-bff2f9697ef7",
+          "start_byte": 0,
+          "end_byte": 46,
+          "excerpt": "Lot 02 — Couverture. Pour ce lot uniquement,",
+          "source_sha256": "d71f967c1f96141691aab93028d2effe85887ff4a9021f948389b864201229e1"
+        }
+      ]
+    },
+    {
+      "id": "ATTEST",
+      "source_fragment_id": "7fda57a1-f643-5880-a352-bff2f9697ef7",
+      "start_byte": 109,
+      "end_byte": 164,
+      "excerpt": "Le candidat joint l'attestation de visite à son offre.",
+      "source_sha256": "d71f967c1f96141691aab93028d2effe85887ff4a9021f948389b864201229e1",
+      "subject": "VISIT_CERTIFICATE",
+      "lot": 2,
+      "value": "REQUIRED",
+      "kind": "ASSERTION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Lot 02 — Couverture. Pour ce lot uniquement,"
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "7fda57a1-f643-5880-a352-bff2f9697ef7",
+          "start_byte": 0,
+          "end_byte": 46,
+          "excerpt": "Lot 02 — Couverture. Pour ce lot uniquement,",
+          "source_sha256": "d71f967c1f96141691aab93028d2effe85887ff4a9021f948389b864201229e1"
+        }
+      ]
+    },
+    {
+      "id": "OTHER_VISIT",
+      "source_fragment_id": "7fda57a1-f643-5880-a352-bff2f9697ef7",
+      "start_byte": 165,
+      "end_byte": 215,
+      "excerpt": "Pour les autres lots, la visite reste facultative.",
+      "source_sha256": "d71f967c1f96141691aab93028d2effe85887ff4a9021f948389b864201229e1",
+      "subject": "VISIT",
+      "lot": null,
+      "value": "NOT_REQUIRED",
+      "kind": "ASSERTION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Lot 02 — Couverture."
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "7fda57a1-f643-5880-a352-bff2f9697ef7",
+          "start_byte": 0,
+          "end_byte": 22,
+          "excerpt": "Lot 02 — Couverture.",
+          "source_sha256": "d71f967c1f96141691aab93028d2effe85887ff4a9021f948389b864201229e1"
+        }
+      ]
+    },
+    {
+      "id": "COORD",
+      "source_fragment_id": "f8130ef7-cc23-5c7b-a1d7-bba6592f82df",
+      "start_byte": 127,
+      "end_byte": 172,
+      "excerpt": "le titulaire désigne un coordinateur de zone",
+      "source_sha256": "0aed4ee869a78d06187ed74207bf1f50393738a25edf5f79c8e2a93cd8002f13",
+      "subject": "COORDINATION",
+      "lot": 4,
+      "value": "REQUIRED",
+      "kind": "ASSERTION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Organisation du chantier, lot 04 — Électricité.",
+        "Lorsque deux entreprises interviennent simultanément dans une même zone,"
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "f8130ef7-cc23-5c7b-a1d7-bba6592f82df",
+          "start_byte": 0,
+          "end_byte": 51,
+          "excerpt": "Organisation du chantier, lot 04 — Électricité.",
+          "source_sha256": "0aed4ee869a78d06187ed74207bf1f50393738a25edf5f79c8e2a93cd8002f13"
+        },
+        {
+          "source_fragment_id": "f8130ef7-cc23-5c7b-a1d7-bba6592f82df",
+          "start_byte": 52,
+          "end_byte": 126,
+          "excerpt": "Lorsque deux entreprises interviennent simultanément dans une même zone,",
+          "source_sha256": "0aed4ee869a78d06187ed74207bf1f50393738a25edf5f79c8e2a93cd8002f13"
+        }
+      ]
+    },
+    {
+      "id": "COORD_NAME",
+      "source_fragment_id": "f8130ef7-cc23-5c7b-a1d7-bba6592f82df",
+      "start_byte": 176,
+      "end_byte": 263,
+      "excerpt": "transmet son nom au maître d'œuvre avant le début de cette intervention simultanée.",
+      "source_sha256": "0aed4ee869a78d06187ed74207bf1f50393738a25edf5f79c8e2a93cd8002f13",
+      "subject": "COORDINATION",
+      "lot": 4,
+      "value": "REQUIRED",
+      "kind": "ASSERTION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Organisation du chantier, lot 04 — Électricité.",
+        "Lorsque deux entreprises interviennent simultanément dans une même zone,",
+        "le titulaire désigne un coordinateur de zone"
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "f8130ef7-cc23-5c7b-a1d7-bba6592f82df",
+          "start_byte": 0,
+          "end_byte": 51,
+          "excerpt": "Organisation du chantier, lot 04 — Électricité.",
+          "source_sha256": "0aed4ee869a78d06187ed74207bf1f50393738a25edf5f79c8e2a93cd8002f13"
+        },
+        {
+          "source_fragment_id": "f8130ef7-cc23-5c7b-a1d7-bba6592f82df",
+          "start_byte": 52,
+          "end_byte": 126,
+          "excerpt": "Lorsque deux entreprises interviennent simultanément dans une même zone,",
+          "source_sha256": "0aed4ee869a78d06187ed74207bf1f50393738a25edf5f79c8e2a93cd8002f13"
+        },
+        {
+          "source_fragment_id": "f8130ef7-cc23-5c7b-a1d7-bba6592f82df",
+          "start_byte": 127,
+          "end_byte": 172,
+          "excerpt": "le titulaire désigne un coordinateur de zone",
+          "source_sha256": "0aed4ee869a78d06187ed74207bf1f50393738a25edf5f79c8e2a93cd8002f13"
+        }
+      ]
+    },
+    {
+      "id": "VARIANT",
+      "source_fragment_id": "71f642bb-9fbc-56d6-bac0-7b595e26cb99",
+      "start_byte": 26,
+      "end_byte": 64,
+      "excerpt": "Les variantes ne sont pas autorisées.",
+      "source_sha256": "f2793e34b1e93f5c1192061c780d0a1e9d8ffb322dcdde9115d56567976ff685",
+      "subject": "VARIANTS",
+      "lot": null,
+      "value": "FORBIDDEN",
+      "kind": "NEGATION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Cette règle vaut pour l'ensemble des lots, dont la liste n'est pas reproduite ici."
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "71f642bb-9fbc-56d6-bac0-7b595e26cb99",
+          "start_byte": 137,
+          "end_byte": 220,
+          "excerpt": "Cette règle vaut pour l'ensemble des lots, dont la liste n'est pas reproduite ici.",
+          "source_sha256": "f2793e34b1e93f5c1192061c780d0a1e9d8ffb322dcdde9115d56567976ff685"
+        }
+      ]
+    },
+    {
+      "id": "BASE",
+      "source_fragment_id": "71f642bb-9fbc-56d6-bac0-7b595e26cb99",
+      "start_byte": 65,
+      "end_byte": 136,
+      "excerpt": "Chaque soumissionnaire remet une offre conforme à la solution de base.",
+      "source_sha256": "f2793e34b1e93f5c1192061c780d0a1e9d8ffb322dcdde9115d56567976ff685",
+      "subject": "BASE_OFFER",
+      "lot": null,
+      "value": "REQUIRED",
+      "kind": "ASSERTION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Cette règle vaut pour l'ensemble des lots, dont la liste n'est pas reproduite ici."
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "71f642bb-9fbc-56d6-bac0-7b595e26cb99",
+          "start_byte": 137,
+          "end_byte": 220,
+          "excerpt": "Cette règle vaut pour l'ensemble des lots, dont la liste n'est pas reproduite ici.",
+          "source_sha256": "f2793e34b1e93f5c1192061c780d0a1e9d8ffb322dcdde9115d56567976ff685"
+        }
+      ]
+    },
+    {
+      "id": "SAMPLE",
+      "source_fragment_id": "5fe122b4-9203-50e2-b8ee-d96c0123ea63",
+      "start_byte": 121,
+      "end_byte": 218,
+      "excerpt": "le candidat dépose un échantillon de 30 cm sur 30 cm avant la date limite de remise des offres.",
+      "source_sha256": "017b77fd7ab60d9669dbedc1a8b499956c3111542ac82b4460f3acc9945d288f",
+      "subject": "SAMPLE",
+      "lot": 6,
+      "value": "REQUIRED",
+      "kind": "ASSERTION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Lot 06 — Revêtements de sols.",
+        "Un échantillon n'est exigé que si le candidat propose le revêtement R2.",
+        "Dans ce cas,"
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "5fe122b4-9203-50e2-b8ee-d96c0123ea63",
+          "start_byte": 0,
+          "end_byte": 32,
+          "excerpt": "Lot 06 — Revêtements de sols.",
+          "source_sha256": "017b77fd7ab60d9669dbedc1a8b499956c3111542ac82b4460f3acc9945d288f"
+        },
+        {
+          "source_fragment_id": "5fe122b4-9203-50e2-b8ee-d96c0123ea63",
+          "start_byte": 33,
+          "end_byte": 107,
+          "excerpt": "Un échantillon n'est exigé que si le candidat propose le revêtement R2.",
+          "source_sha256": "017b77fd7ab60d9669dbedc1a8b499956c3111542ac82b4460f3acc9945d288f"
+        },
+        {
+          "source_fragment_id": "5fe122b4-9203-50e2-b8ee-d96c0123ea63",
+          "start_byte": 108,
+          "end_byte": 120,
+          "excerpt": "Dans ce cas,",
+          "source_sha256": "017b77fd7ab60d9669dbedc1a8b499956c3111542ac82b4460f3acc9945d288f"
+        }
+      ]
+    },
+    {
+      "id": "APTITUDE",
+      "source_fragment_id": "3e2386af-ab6a-56a6-9693-ebe3d7ade73b",
+      "start_byte": 99,
+      "end_byte": 183,
+      "excerpt": "l'employeur vérifie que le salarié dispose d'un avis d'aptitude médicale adapté.",
+      "source_sha256": "3a6694a3bdac614c54fc02f19eedb6d0e64dee1b14535e3be7bb1b17de5d2c5e",
+      "subject": "MEDICAL_FITNESS",
+      "lot": 1,
+      "value": "REQUIRED",
+      "kind": "ASSERTION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Prévention — lot 01, démolition.",
+        "Avant toute affectation à des travaux exposant à l'amiante,"
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "3e2386af-ab6a-56a6-9693-ebe3d7ade73b",
+          "start_byte": 0,
+          "end_byte": 36,
+          "excerpt": "Prévention — lot 01, démolition.",
+          "source_sha256": "3a6694a3bdac614c54fc02f19eedb6d0e64dee1b14535e3be7bb1b17de5d2c5e"
+        },
+        {
+          "source_fragment_id": "3e2386af-ab6a-56a6-9693-ebe3d7ade73b",
+          "start_byte": 37,
+          "end_byte": 98,
+          "excerpt": "Avant toute affectation à des travaux exposant à l'amiante,",
+          "source_sha256": "3a6694a3bdac614c54fc02f19eedb6d0e64dee1b14535e3be7bb1b17de5d2c5e"
+        }
+      ]
+    },
+    {
+      "id": "NO_FILE",
+      "source_fragment_id": "3e2386af-ab6a-56a6-9693-ebe3d7ade73b",
+      "start_byte": 184,
+      "end_byte": 249,
+      "excerpt": "Aucun dossier médical individuel ne doit être joint à l'offre.",
+      "source_sha256": "3a6694a3bdac614c54fc02f19eedb6d0e64dee1b14535e3be7bb1b17de5d2c5e",
+      "subject": "PERSONAL_MEDICAL_FILE",
+      "lot": 1,
+      "value": "FORBIDDEN",
+      "kind": "NEGATION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Prévention — lot 01, démolition."
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "3e2386af-ab6a-56a6-9693-ebe3d7ade73b",
+          "start_byte": 0,
+          "end_byte": 36,
+          "excerpt": "Prévention — lot 01, démolition.",
+          "source_sha256": "3a6694a3bdac614c54fc02f19eedb6d0e64dee1b14535e3be7bb1b17de5d2c5e"
+        }
+      ]
+    },
+    {
+      "id": "SHEET",
+      "source_fragment_id": "3dd426ef-dede-53dc-9f22-4c0ee0dfb1a5",
+      "start_byte": 89,
+      "end_byte": 176,
+      "excerpt": "le candidat indique sa date prévisionnelle de transmission dans le mémoire technique.",
+      "source_sha256": "d62476452b3426e4a0f508d680a4c8a705ba5ee0580a2a33fa47eac595932305",
+      "subject": "PRODUCT_SHEET",
+      "lot": null,
+      "value": "REQUIRED",
+      "kind": "ASSERTION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Si la fiche produit n'est pas disponible à la date de dépôt,"
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "3dd426ef-dede-53dc-9f22-4c0ee0dfb1a5",
+          "start_byte": 25,
+          "end_byte": 88,
+          "excerpt": "Si la fiche produit n'est pas disponible à la date de dépôt,",
+          "source_sha256": "d62476452b3426e4a0f508d680a4c8a705ba5ee0580a2a33fa47eac595932305"
+        }
+      ]
+    },
+    {
+      "id": "MEMORY",
+      "source_fragment_id": "3dd426ef-dede-53dc-9f22-4c0ee0dfb1a5",
+      "start_byte": 177,
+      "end_byte": 245,
+      "excerpt": "Cette disposition ne dispense pas de remettre le mémoire technique.",
+      "source_sha256": "d62476452b3426e4a0f508d680a4c8a705ba5ee0580a2a33fa47eac595932305",
+      "subject": "TECHNICAL_MEMO",
+      "lot": null,
+      "value": "REQUIRED",
+      "kind": "ASSERTION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Si la fiche produit n'est pas disponible à la date de dépôt, le candidat indique sa date prévisionnelle de transmission dans le mémoire technique."
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "3dd426ef-dede-53dc-9f22-4c0ee0dfb1a5",
+          "start_byte": 25,
+          "end_byte": 176,
+          "excerpt": "Si la fiche produit n'est pas disponible à la date de dépôt, le candidat indique sa date prévisionnelle de transmission dans le mémoire technique.",
+          "source_sha256": "d62476452b3426e4a0f508d680a4c8a705ba5ee0580a2a33fa47eac595932305"
+        }
+      ]
+    },
+    {
+      "id": "SAMPLE_DATE",
+      "source_fragment_id": "9f41f5b1-0082-5682-82d8-8196c884bb1c",
+      "start_byte": 65,
+      "end_byte": 144,
+      "excerpt": "la date de remise des échantillons est désormais le 18 novembre 2031 à 12 h.",
+      "source_sha256": "05b1ea9959e65e574e28e3de4f9fe07b7510d9a23c0a2c529a71d54668623b91",
+      "subject": "SAMPLE",
+      "lot": 3,
+      "value": "2031-11-18T12:00",
+      "kind": "RECTIFICATION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Pour le seul lot 03,",
+        "Elle remplace la date du 12 novembre 2031 à 12 h figurant à l'article 8."
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "9f41f5b1-0082-5682-82d8-8196c884bb1c",
+          "start_byte": 44,
+          "end_byte": 64,
+          "excerpt": "Pour le seul lot 03,",
+          "source_sha256": "05b1ea9959e65e574e28e3de4f9fe07b7510d9a23c0a2c529a71d54668623b91"
+        },
+        {
+          "source_fragment_id": "9f41f5b1-0082-5682-82d8-8196c884bb1c",
+          "start_byte": 145,
+          "end_byte": 219,
+          "excerpt": "Elle remplace la date du 12 novembre 2031 à 12 h figurant à l'article 8.",
+          "source_sha256": "05b1ea9959e65e574e28e3de4f9fe07b7510d9a23c0a2c529a71d54668623b91"
+        }
+      ]
+    },
+    {
+      "id": "OFFER_DATE",
+      "source_fragment_id": "9f41f5b1-0082-5682-82d8-8196c884bb1c",
+      "start_byte": 220,
+      "end_byte": 290,
+      "excerpt": "La date limite de remise des offres reste le 20 novembre 2031 à 16 h.",
+      "source_sha256": "05b1ea9959e65e574e28e3de4f9fe07b7510d9a23c0a2c529a71d54668623b91",
+      "subject": "OFFER_DEADLINE",
+      "lot": 3,
+      "value": "2031-11-20T16:00",
+      "kind": "ASSERTION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Rectificatif n° 2 — lot 03, menuiseries."
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "9f41f5b1-0082-5682-82d8-8196c884bb1c",
+          "start_byte": 0,
+          "end_byte": 43,
+          "excerpt": "Rectificatif n° 2 — lot 03, menuiseries.",
+          "source_sha256": "05b1ea9959e65e574e28e3de4f9fe07b7510d9a23c0a2c529a71d54668623b91"
+        }
+      ]
+    },
+    {
+      "id": "SUBCONTRACT",
+      "source_fragment_id": "3430065f-56d7-5802-b470-f0839e68c039",
+      "start_byte": 94,
+      "end_byte": 153,
+      "excerpt": "il identifie les prestations concernées dans son mémoire.",
+      "source_sha256": "f1f8eccd891577d031127f3c2834973b9bb8e6650c4fe7b5780ee77fb14a124a",
+      "subject": "SUBCONTRACT",
+      "lot": 7,
+      "value": "REQUIRED",
+      "kind": "ASSERTION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Lot 07 — Peinture.",
+        "Si le candidat prévoit une sous-traitance dès le dépôt de son offre,"
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "3430065f-56d7-5802-b470-f0839e68c039",
+          "start_byte": 0,
+          "end_byte": 20,
+          "excerpt": "Lot 07 — Peinture.",
+          "source_sha256": "f1f8eccd891577d031127f3c2834973b9bb8e6650c4fe7b5780ee77fb14a124a"
+        },
+        {
+          "source_fragment_id": "3430065f-56d7-5802-b470-f0839e68c039",
+          "start_byte": 21,
+          "end_byte": 93,
+          "excerpt": "Si le candidat prévoit une sous-traitance dès le dépôt de son offre,",
+          "source_sha256": "f1f8eccd891577d031127f3c2834973b9bb8e6650c4fe7b5780ee77fb14a124a"
+        }
+      ]
+    },
+    {
+      "id": "NO_SUB_NAME",
+      "source_fragment_id": "3430065f-56d7-5802-b470-f0839e68c039",
+      "start_byte": 154,
+      "end_byte": 271,
+      "excerpt": "Il n'est pas tenu de désigner à ce stade un sous-traitant pour une prestation qu'il prévoit d'exécuter lui-même.",
+      "source_sha256": "f1f8eccd891577d031127f3c2834973b9bb8e6650c4fe7b5780ee77fb14a124a",
+      "subject": "SUBCONTRACT",
+      "lot": 7,
+      "value": "NOT_REQUIRED",
+      "kind": "NEGATION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Lot 07 — Peinture."
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "3430065f-56d7-5802-b470-f0839e68c039",
+          "start_byte": 0,
+          "end_byte": 20,
+          "excerpt": "Lot 07 — Peinture.",
+          "source_sha256": "f1f8eccd891577d031127f3c2834973b9bb8e6650c4fe7b5780ee77fb14a124a"
+        }
+      ]
+    },
+    {
+      "id": "ELECTRONIC",
+      "source_fragment_id": "02e83b64-8932-5716-b83b-aa53b6ad9abd",
+      "start_byte": 37,
+      "end_byte": 78,
+      "excerpt": "Le dépôt électronique est obligatoire.",
+      "source_sha256": "354c6a858b5d051c81e4434487f611b42b55697f3122fe050392929c332996e9",
+      "subject": "ELECTRONIC_SUBMISSION",
+      "lot": null,
+      "value": "REQUIRED",
+      "kind": "ASSERTION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Modalités communes de transmission."
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "02e83b64-8932-5716-b83b-aa53b6ad9abd",
+          "start_byte": 0,
+          "end_byte": 36,
+          "excerpt": "Modalités communes de transmission.",
+          "source_sha256": "354c6a858b5d051c81e4434487f611b42b55697f3122fe050392929c332996e9"
+        }
+      ]
+    },
+    {
+      "id": "BACKUP",
+      "source_fragment_id": "02e83b64-8932-5716-b83b-aa53b6ad9abd",
+      "start_byte": 79,
+      "end_byte": 119,
+      "excerpt": "Une copie de sauvegarde est facultative.",
+      "source_sha256": "354c6a858b5d051c81e4434487f611b42b55697f3122fe050392929c332996e9",
+      "subject": "BACKUP_COPY",
+      "lot": null,
+      "value": "NOT_REQUIRED",
+      "kind": "ASSERTION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Modalités communes de transmission."
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "02e83b64-8932-5716-b83b-aa53b6ad9abd",
+          "start_byte": 0,
+          "end_byte": 36,
+          "excerpt": "Modalités communes de transmission.",
+          "source_sha256": "354c6a858b5d051c81e4434487f611b42b55697f3122fe050392929c332996e9"
+        }
+      ]
+    },
+    {
+      "id": "BACKUP_DATE",
+      "source_fragment_id": "02e83b64-8932-5716-b83b-aa53b6ad9abd",
+      "start_byte": 161,
+      "end_byte": 233,
+      "excerpt": "elle doit parvenir avant la même date limite que l'offre électronique.",
+      "source_sha256": "354c6a858b5d051c81e4434487f611b42b55697f3122fe050392929c332996e9",
+      "subject": "BACKUP_COPY",
+      "lot": null,
+      "value": "REQUIRED",
+      "kind": "ASSERTION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Si une copie de sauvegarde est envoyée,"
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "02e83b64-8932-5716-b83b-aa53b6ad9abd",
+          "start_byte": 120,
+          "end_byte": 160,
+          "excerpt": "Si une copie de sauvegarde est envoyée,",
+          "source_sha256": "354c6a858b5d051c81e4434487f611b42b55697f3122fe050392929c332996e9"
+        }
+      ]
+    },
+    {
+      "id": "MEDICAL",
+      "source_fragment_id": "94d2e0d8-eb9a-53bd-9c92-ac926f208a02",
+      "start_byte": 107,
+      "end_byte": 198,
+      "excerpt": "chaque opérateur affecté au désamiantage doit effectuer une visite médicale d'aptitude.",
+      "source_sha256": "4eb4210c6ab82fc0f3831980b9c28ea3529f9009dd57131b8a5f75cf137f0854",
+      "subject": "VISIT_MEDICAL",
+      "lot": 9,
+      "value": "REQUIRED",
+      "kind": "ASSERTION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Préparation des interventions — lot 09, désamiantage.",
+        "Avant sa première intervention sur ce chantier,"
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "94d2e0d8-eb9a-53bd-9c92-ac926f208a02",
+          "start_byte": 0,
+          "end_byte": 57,
+          "excerpt": "Préparation des interventions — lot 09, désamiantage.",
+          "source_sha256": "4eb4210c6ab82fc0f3831980b9c28ea3529f9009dd57131b8a5f75cf137f0854"
+        },
+        {
+          "source_fragment_id": "94d2e0d8-eb9a-53bd-9c92-ac926f208a02",
+          "start_byte": 58,
+          "end_byte": 106,
+          "excerpt": "Avant sa première intervention sur ce chantier,",
+          "source_sha256": "4eb4210c6ab82fc0f3831980b9c28ea3529f9009dd57131b8a5f75cf137f0854"
+        }
+      ]
+    }
+  ],
+  "clause_inventory": [
+    {
+      "id": "DC1",
+      "source_fragment_id": "c0ca70a0-5461-5cfc-803e-66e79673e0d2",
+      "start_byte": 85,
+      "end_byte": 132,
+      "excerpt": "Chaque candidat remet un formulaire DC1 signé.",
+      "source_sha256": "40510ba69af63a4c956dae9245d71e1c429e02f44b29cc7d6c2fefd034311680",
+      "subject": "DC1",
+      "lot": null,
+      "value": "REQUIRED",
+      "kind": "ASSERTION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Article 3 — Candidature.",
+        "Les dispositions suivantes concernent tous les candidats."
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "c0ca70a0-5461-5cfc-803e-66e79673e0d2",
+          "start_byte": 0,
+          "end_byte": 26,
+          "excerpt": "Article 3 — Candidature.",
+          "source_sha256": "40510ba69af63a4c956dae9245d71e1c429e02f44b29cc7d6c2fefd034311680"
+        },
+        {
+          "source_fragment_id": "c0ca70a0-5461-5cfc-803e-66e79673e0d2",
+          "start_byte": 27,
+          "end_byte": 84,
+          "excerpt": "Les dispositions suivantes concernent tous les candidats.",
+          "source_sha256": "40510ba69af63a4c956dae9245d71e1c429e02f44b29cc7d6c2fefd034311680"
+        }
+      ]
+    },
+    {
+      "id": "DC2",
+      "source_fragment_id": "c0ca70a0-5461-5cfc-803e-66e79673e0d2",
+      "start_byte": 133,
+      "end_byte": 182,
+      "excerpt": "Il joint également un formulaire DC2 renseigné.",
+      "source_sha256": "40510ba69af63a4c956dae9245d71e1c429e02f44b29cc7d6c2fefd034311680",
+      "subject": "DC2",
+      "lot": null,
+      "value": "REQUIRED",
+      "kind": "ASSERTION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Article 3 — Candidature.",
+        "Chaque candidat remet un formulaire DC1 signé."
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "c0ca70a0-5461-5cfc-803e-66e79673e0d2",
+          "start_byte": 0,
+          "end_byte": 26,
+          "excerpt": "Article 3 — Candidature.",
+          "source_sha256": "40510ba69af63a4c956dae9245d71e1c429e02f44b29cc7d6c2fefd034311680"
+        },
+        {
+          "source_fragment_id": "c0ca70a0-5461-5cfc-803e-66e79673e0d2",
+          "start_byte": 85,
+          "end_byte": 132,
+          "excerpt": "Chaque candidat remet un formulaire DC1 signé.",
+          "source_sha256": "40510ba69af63a4c956dae9245d71e1c429e02f44b29cc7d6c2fefd034311680"
+        }
+      ]
+    },
+    {
+      "id": "PHASE",
+      "source_fragment_id": "c0ca70a0-5461-5cfc-803e-66e79673e0d2",
+      "start_byte": 183,
+      "end_byte": 261,
+      "excerpt": "Ces pièces sont demandées pour la candidature et non pour l'offre technique.",
+      "source_sha256": "40510ba69af63a4c956dae9245d71e1c429e02f44b29cc7d6c2fefd034311680",
+      "subject": "SUBMISSION_PHASE",
+      "lot": null,
+      "value": "NOT_REQUIRED",
+      "kind": "NEGATION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Chaque candidat remet un formulaire DC1 signé.",
+        "Il joint également un formulaire DC2 renseigné."
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "c0ca70a0-5461-5cfc-803e-66e79673e0d2",
+          "start_byte": 85,
+          "end_byte": 132,
+          "excerpt": "Chaque candidat remet un formulaire DC1 signé.",
+          "source_sha256": "40510ba69af63a4c956dae9245d71e1c429e02f44b29cc7d6c2fefd034311680"
+        },
+        {
+          "source_fragment_id": "c0ca70a0-5461-5cfc-803e-66e79673e0d2",
+          "start_byte": 133,
+          "end_byte": 182,
+          "excerpt": "Il joint également un formulaire DC2 renseigné.",
+          "source_sha256": "40510ba69af63a4c956dae9245d71e1c429e02f44b29cc7d6c2fefd034311680"
+        }
+      ]
+    },
+    {
+      "id": "SITE",
+      "source_fragment_id": "7fda57a1-f643-5880-a352-bff2f9697ef7",
+      "start_byte": 47,
+      "end_byte": 108,
+      "excerpt": "la visite du site est obligatoire avant la remise de l'offre.",
+      "source_sha256": "d71f967c1f96141691aab93028d2effe85887ff4a9021f948389b864201229e1",
+      "subject": "VISIT_SITE",
+      "lot": 2,
+      "value": "REQUIRED",
+      "kind": "ASSERTION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Lot 02 — Couverture. Pour ce lot uniquement,"
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "7fda57a1-f643-5880-a352-bff2f9697ef7",
+          "start_byte": 0,
+          "end_byte": 46,
+          "excerpt": "Lot 02 — Couverture. Pour ce lot uniquement,",
+          "source_sha256": "d71f967c1f96141691aab93028d2effe85887ff4a9021f948389b864201229e1"
+        }
+      ]
+    },
+    {
+      "id": "ATTEST",
+      "source_fragment_id": "7fda57a1-f643-5880-a352-bff2f9697ef7",
+      "start_byte": 109,
+      "end_byte": 164,
+      "excerpt": "Le candidat joint l'attestation de visite à son offre.",
+      "source_sha256": "d71f967c1f96141691aab93028d2effe85887ff4a9021f948389b864201229e1",
+      "subject": "VISIT_CERTIFICATE",
+      "lot": 2,
+      "value": "REQUIRED",
+      "kind": "ASSERTION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Lot 02 — Couverture. Pour ce lot uniquement,"
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "7fda57a1-f643-5880-a352-bff2f9697ef7",
+          "start_byte": 0,
+          "end_byte": 46,
+          "excerpt": "Lot 02 — Couverture. Pour ce lot uniquement,",
+          "source_sha256": "d71f967c1f96141691aab93028d2effe85887ff4a9021f948389b864201229e1"
+        }
+      ]
+    },
+    {
+      "id": "OTHER_VISIT",
+      "source_fragment_id": "7fda57a1-f643-5880-a352-bff2f9697ef7",
+      "start_byte": 165,
+      "end_byte": 215,
+      "excerpt": "Pour les autres lots, la visite reste facultative.",
+      "source_sha256": "d71f967c1f96141691aab93028d2effe85887ff4a9021f948389b864201229e1",
+      "subject": "VISIT",
+      "lot": null,
+      "value": "NOT_REQUIRED",
+      "kind": "ASSERTION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Lot 02 — Couverture."
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "7fda57a1-f643-5880-a352-bff2f9697ef7",
+          "start_byte": 0,
+          "end_byte": 22,
+          "excerpt": "Lot 02 — Couverture.",
+          "source_sha256": "d71f967c1f96141691aab93028d2effe85887ff4a9021f948389b864201229e1"
+        }
+      ]
+    },
+    {
+      "id": "COORD",
+      "source_fragment_id": "f8130ef7-cc23-5c7b-a1d7-bba6592f82df",
+      "start_byte": 127,
+      "end_byte": 172,
+      "excerpt": "le titulaire désigne un coordinateur de zone",
+      "source_sha256": "0aed4ee869a78d06187ed74207bf1f50393738a25edf5f79c8e2a93cd8002f13",
+      "subject": "COORDINATION",
+      "lot": 4,
+      "value": "REQUIRED",
+      "kind": "ASSERTION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Organisation du chantier, lot 04 — Électricité.",
+        "Lorsque deux entreprises interviennent simultanément dans une même zone,"
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "f8130ef7-cc23-5c7b-a1d7-bba6592f82df",
+          "start_byte": 0,
+          "end_byte": 51,
+          "excerpt": "Organisation du chantier, lot 04 — Électricité.",
+          "source_sha256": "0aed4ee869a78d06187ed74207bf1f50393738a25edf5f79c8e2a93cd8002f13"
+        },
+        {
+          "source_fragment_id": "f8130ef7-cc23-5c7b-a1d7-bba6592f82df",
+          "start_byte": 52,
+          "end_byte": 126,
+          "excerpt": "Lorsque deux entreprises interviennent simultanément dans une même zone,",
+          "source_sha256": "0aed4ee869a78d06187ed74207bf1f50393738a25edf5f79c8e2a93cd8002f13"
+        }
+      ]
+    },
+    {
+      "id": "COORD_NAME",
+      "source_fragment_id": "f8130ef7-cc23-5c7b-a1d7-bba6592f82df",
+      "start_byte": 176,
+      "end_byte": 263,
+      "excerpt": "transmet son nom au maître d'œuvre avant le début de cette intervention simultanée.",
+      "source_sha256": "0aed4ee869a78d06187ed74207bf1f50393738a25edf5f79c8e2a93cd8002f13",
+      "subject": "COORDINATION",
+      "lot": 4,
+      "value": "REQUIRED",
+      "kind": "ASSERTION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Organisation du chantier, lot 04 — Électricité.",
+        "Lorsque deux entreprises interviennent simultanément dans une même zone,",
+        "le titulaire désigne un coordinateur de zone"
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "f8130ef7-cc23-5c7b-a1d7-bba6592f82df",
+          "start_byte": 0,
+          "end_byte": 51,
+          "excerpt": "Organisation du chantier, lot 04 — Électricité.",
+          "source_sha256": "0aed4ee869a78d06187ed74207bf1f50393738a25edf5f79c8e2a93cd8002f13"
+        },
+        {
+          "source_fragment_id": "f8130ef7-cc23-5c7b-a1d7-bba6592f82df",
+          "start_byte": 52,
+          "end_byte": 126,
+          "excerpt": "Lorsque deux entreprises interviennent simultanément dans une même zone,",
+          "source_sha256": "0aed4ee869a78d06187ed74207bf1f50393738a25edf5f79c8e2a93cd8002f13"
+        },
+        {
+          "source_fragment_id": "f8130ef7-cc23-5c7b-a1d7-bba6592f82df",
+          "start_byte": 127,
+          "end_byte": 172,
+          "excerpt": "le titulaire désigne un coordinateur de zone",
+          "source_sha256": "0aed4ee869a78d06187ed74207bf1f50393738a25edf5f79c8e2a93cd8002f13"
+        }
+      ]
+    },
+    {
+      "id": "VARIANT",
+      "source_fragment_id": "71f642bb-9fbc-56d6-bac0-7b595e26cb99",
+      "start_byte": 26,
+      "end_byte": 64,
+      "excerpt": "Les variantes ne sont pas autorisées.",
+      "source_sha256": "f2793e34b1e93f5c1192061c780d0a1e9d8ffb322dcdde9115d56567976ff685",
+      "subject": "VARIANTS",
+      "lot": null,
+      "value": "FORBIDDEN",
+      "kind": "NEGATION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Cette règle vaut pour l'ensemble des lots, dont la liste n'est pas reproduite ici."
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "71f642bb-9fbc-56d6-bac0-7b595e26cb99",
+          "start_byte": 137,
+          "end_byte": 220,
+          "excerpt": "Cette règle vaut pour l'ensemble des lots, dont la liste n'est pas reproduite ici.",
+          "source_sha256": "f2793e34b1e93f5c1192061c780d0a1e9d8ffb322dcdde9115d56567976ff685"
+        }
+      ]
+    },
+    {
+      "id": "BASE",
+      "source_fragment_id": "71f642bb-9fbc-56d6-bac0-7b595e26cb99",
+      "start_byte": 65,
+      "end_byte": 136,
+      "excerpt": "Chaque soumissionnaire remet une offre conforme à la solution de base.",
+      "source_sha256": "f2793e34b1e93f5c1192061c780d0a1e9d8ffb322dcdde9115d56567976ff685",
+      "subject": "BASE_OFFER",
+      "lot": null,
+      "value": "REQUIRED",
+      "kind": "ASSERTION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Cette règle vaut pour l'ensemble des lots, dont la liste n'est pas reproduite ici."
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "71f642bb-9fbc-56d6-bac0-7b595e26cb99",
+          "start_byte": 137,
+          "end_byte": 220,
+          "excerpt": "Cette règle vaut pour l'ensemble des lots, dont la liste n'est pas reproduite ici.",
+          "source_sha256": "f2793e34b1e93f5c1192061c780d0a1e9d8ffb322dcdde9115d56567976ff685"
+        }
+      ]
+    },
+    {
+      "id": "SAMPLE",
+      "source_fragment_id": "5fe122b4-9203-50e2-b8ee-d96c0123ea63",
+      "start_byte": 121,
+      "end_byte": 218,
+      "excerpt": "le candidat dépose un échantillon de 30 cm sur 30 cm avant la date limite de remise des offres.",
+      "source_sha256": "017b77fd7ab60d9669dbedc1a8b499956c3111542ac82b4460f3acc9945d288f",
+      "subject": "SAMPLE",
+      "lot": 6,
+      "value": "REQUIRED",
+      "kind": "ASSERTION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Lot 06 — Revêtements de sols.",
+        "Un échantillon n'est exigé que si le candidat propose le revêtement R2.",
+        "Dans ce cas,"
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "5fe122b4-9203-50e2-b8ee-d96c0123ea63",
+          "start_byte": 0,
+          "end_byte": 32,
+          "excerpt": "Lot 06 — Revêtements de sols.",
+          "source_sha256": "017b77fd7ab60d9669dbedc1a8b499956c3111542ac82b4460f3acc9945d288f"
+        },
+        {
+          "source_fragment_id": "5fe122b4-9203-50e2-b8ee-d96c0123ea63",
+          "start_byte": 33,
+          "end_byte": 107,
+          "excerpt": "Un échantillon n'est exigé que si le candidat propose le revêtement R2.",
+          "source_sha256": "017b77fd7ab60d9669dbedc1a8b499956c3111542ac82b4460f3acc9945d288f"
+        },
+        {
+          "source_fragment_id": "5fe122b4-9203-50e2-b8ee-d96c0123ea63",
+          "start_byte": 108,
+          "end_byte": 120,
+          "excerpt": "Dans ce cas,",
+          "source_sha256": "017b77fd7ab60d9669dbedc1a8b499956c3111542ac82b4460f3acc9945d288f"
+        }
+      ]
+    },
+    {
+      "id": "APTITUDE",
+      "source_fragment_id": "3e2386af-ab6a-56a6-9693-ebe3d7ade73b",
+      "start_byte": 99,
+      "end_byte": 183,
+      "excerpt": "l'employeur vérifie que le salarié dispose d'un avis d'aptitude médicale adapté.",
+      "source_sha256": "3a6694a3bdac614c54fc02f19eedb6d0e64dee1b14535e3be7bb1b17de5d2c5e",
+      "subject": "MEDICAL_FITNESS",
+      "lot": 1,
+      "value": "REQUIRED",
+      "kind": "ASSERTION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Prévention — lot 01, démolition.",
+        "Avant toute affectation à des travaux exposant à l'amiante,"
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "3e2386af-ab6a-56a6-9693-ebe3d7ade73b",
+          "start_byte": 0,
+          "end_byte": 36,
+          "excerpt": "Prévention — lot 01, démolition.",
+          "source_sha256": "3a6694a3bdac614c54fc02f19eedb6d0e64dee1b14535e3be7bb1b17de5d2c5e"
+        },
+        {
+          "source_fragment_id": "3e2386af-ab6a-56a6-9693-ebe3d7ade73b",
+          "start_byte": 37,
+          "end_byte": 98,
+          "excerpt": "Avant toute affectation à des travaux exposant à l'amiante,",
+          "source_sha256": "3a6694a3bdac614c54fc02f19eedb6d0e64dee1b14535e3be7bb1b17de5d2c5e"
+        }
+      ]
+    },
+    {
+      "id": "NO_FILE",
+      "source_fragment_id": "3e2386af-ab6a-56a6-9693-ebe3d7ade73b",
+      "start_byte": 184,
+      "end_byte": 249,
+      "excerpt": "Aucun dossier médical individuel ne doit être joint à l'offre.",
+      "source_sha256": "3a6694a3bdac614c54fc02f19eedb6d0e64dee1b14535e3be7bb1b17de5d2c5e",
+      "subject": "PERSONAL_MEDICAL_FILE",
+      "lot": 1,
+      "value": "FORBIDDEN",
+      "kind": "NEGATION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Prévention — lot 01, démolition."
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "3e2386af-ab6a-56a6-9693-ebe3d7ade73b",
+          "start_byte": 0,
+          "end_byte": 36,
+          "excerpt": "Prévention — lot 01, démolition.",
+          "source_sha256": "3a6694a3bdac614c54fc02f19eedb6d0e64dee1b14535e3be7bb1b17de5d2c5e"
+        }
+      ]
+    },
+    {
+      "id": "SHEET",
+      "source_fragment_id": "3dd426ef-dede-53dc-9f22-4c0ee0dfb1a5",
+      "start_byte": 89,
+      "end_byte": 176,
+      "excerpt": "le candidat indique sa date prévisionnelle de transmission dans le mémoire technique.",
+      "source_sha256": "d62476452b3426e4a0f508d680a4c8a705ba5ee0580a2a33fa47eac595932305",
+      "subject": "PRODUCT_SHEET",
+      "lot": null,
+      "value": "REQUIRED",
+      "kind": "ASSERTION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Si la fiche produit n'est pas disponible à la date de dépôt,"
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "3dd426ef-dede-53dc-9f22-4c0ee0dfb1a5",
+          "start_byte": 25,
+          "end_byte": 88,
+          "excerpt": "Si la fiche produit n'est pas disponible à la date de dépôt,",
+          "source_sha256": "d62476452b3426e4a0f508d680a4c8a705ba5ee0580a2a33fa47eac595932305"
+        }
+      ]
+    },
+    {
+      "id": "MEMORY",
+      "source_fragment_id": "3dd426ef-dede-53dc-9f22-4c0ee0dfb1a5",
+      "start_byte": 177,
+      "end_byte": 245,
+      "excerpt": "Cette disposition ne dispense pas de remettre le mémoire technique.",
+      "source_sha256": "d62476452b3426e4a0f508d680a4c8a705ba5ee0580a2a33fa47eac595932305",
+      "subject": "TECHNICAL_MEMO",
+      "lot": null,
+      "value": "REQUIRED",
+      "kind": "ASSERTION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Si la fiche produit n'est pas disponible à la date de dépôt, le candidat indique sa date prévisionnelle de transmission dans le mémoire technique."
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "3dd426ef-dede-53dc-9f22-4c0ee0dfb1a5",
+          "start_byte": 25,
+          "end_byte": 176,
+          "excerpt": "Si la fiche produit n'est pas disponible à la date de dépôt, le candidat indique sa date prévisionnelle de transmission dans le mémoire technique.",
+          "source_sha256": "d62476452b3426e4a0f508d680a4c8a705ba5ee0580a2a33fa47eac595932305"
+        }
+      ]
+    },
+    {
+      "id": "SAMPLE_DATE",
+      "source_fragment_id": "9f41f5b1-0082-5682-82d8-8196c884bb1c",
+      "start_byte": 65,
+      "end_byte": 144,
+      "excerpt": "la date de remise des échantillons est désormais le 18 novembre 2031 à 12 h.",
+      "source_sha256": "05b1ea9959e65e574e28e3de4f9fe07b7510d9a23c0a2c529a71d54668623b91",
+      "subject": "SAMPLE",
+      "lot": 3,
+      "value": "2031-11-18T12:00",
+      "kind": "RECTIFICATION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Pour le seul lot 03,",
+        "Elle remplace la date du 12 novembre 2031 à 12 h figurant à l'article 8."
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "9f41f5b1-0082-5682-82d8-8196c884bb1c",
+          "start_byte": 44,
+          "end_byte": 64,
+          "excerpt": "Pour le seul lot 03,",
+          "source_sha256": "05b1ea9959e65e574e28e3de4f9fe07b7510d9a23c0a2c529a71d54668623b91"
+        },
+        {
+          "source_fragment_id": "9f41f5b1-0082-5682-82d8-8196c884bb1c",
+          "start_byte": 145,
+          "end_byte": 219,
+          "excerpt": "Elle remplace la date du 12 novembre 2031 à 12 h figurant à l'article 8.",
+          "source_sha256": "05b1ea9959e65e574e28e3de4f9fe07b7510d9a23c0a2c529a71d54668623b91"
+        }
+      ]
+    },
+    {
+      "id": "OFFER_DATE",
+      "source_fragment_id": "9f41f5b1-0082-5682-82d8-8196c884bb1c",
+      "start_byte": 220,
+      "end_byte": 290,
+      "excerpt": "La date limite de remise des offres reste le 20 novembre 2031 à 16 h.",
+      "source_sha256": "05b1ea9959e65e574e28e3de4f9fe07b7510d9a23c0a2c529a71d54668623b91",
+      "subject": "OFFER_DEADLINE",
+      "lot": 3,
+      "value": "2031-11-20T16:00",
+      "kind": "ASSERTION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Rectificatif n° 2 — lot 03, menuiseries."
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "9f41f5b1-0082-5682-82d8-8196c884bb1c",
+          "start_byte": 0,
+          "end_byte": 43,
+          "excerpt": "Rectificatif n° 2 — lot 03, menuiseries.",
+          "source_sha256": "05b1ea9959e65e574e28e3de4f9fe07b7510d9a23c0a2c529a71d54668623b91"
+        }
+      ]
+    },
+    {
+      "id": "SUBCONTRACT",
+      "source_fragment_id": "3430065f-56d7-5802-b470-f0839e68c039",
+      "start_byte": 94,
+      "end_byte": 153,
+      "excerpt": "il identifie les prestations concernées dans son mémoire.",
+      "source_sha256": "f1f8eccd891577d031127f3c2834973b9bb8e6650c4fe7b5780ee77fb14a124a",
+      "subject": "SUBCONTRACT",
+      "lot": 7,
+      "value": "REQUIRED",
+      "kind": "ASSERTION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Lot 07 — Peinture.",
+        "Si le candidat prévoit une sous-traitance dès le dépôt de son offre,"
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "3430065f-56d7-5802-b470-f0839e68c039",
+          "start_byte": 0,
+          "end_byte": 20,
+          "excerpt": "Lot 07 — Peinture.",
+          "source_sha256": "f1f8eccd891577d031127f3c2834973b9bb8e6650c4fe7b5780ee77fb14a124a"
+        },
+        {
+          "source_fragment_id": "3430065f-56d7-5802-b470-f0839e68c039",
+          "start_byte": 21,
+          "end_byte": 93,
+          "excerpt": "Si le candidat prévoit une sous-traitance dès le dépôt de son offre,",
+          "source_sha256": "f1f8eccd891577d031127f3c2834973b9bb8e6650c4fe7b5780ee77fb14a124a"
+        }
+      ]
+    },
+    {
+      "id": "NO_SUB_NAME",
+      "source_fragment_id": "3430065f-56d7-5802-b470-f0839e68c039",
+      "start_byte": 154,
+      "end_byte": 271,
+      "excerpt": "Il n'est pas tenu de désigner à ce stade un sous-traitant pour une prestation qu'il prévoit d'exécuter lui-même.",
+      "source_sha256": "f1f8eccd891577d031127f3c2834973b9bb8e6650c4fe7b5780ee77fb14a124a",
+      "subject": "SUBCONTRACT",
+      "lot": 7,
+      "value": "NOT_REQUIRED",
+      "kind": "NEGATION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Lot 07 — Peinture."
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "3430065f-56d7-5802-b470-f0839e68c039",
+          "start_byte": 0,
+          "end_byte": 20,
+          "excerpt": "Lot 07 — Peinture.",
+          "source_sha256": "f1f8eccd891577d031127f3c2834973b9bb8e6650c4fe7b5780ee77fb14a124a"
+        }
+      ]
+    },
+    {
+      "id": "ELECTRONIC",
+      "source_fragment_id": "02e83b64-8932-5716-b83b-aa53b6ad9abd",
+      "start_byte": 37,
+      "end_byte": 78,
+      "excerpt": "Le dépôt électronique est obligatoire.",
+      "source_sha256": "354c6a858b5d051c81e4434487f611b42b55697f3122fe050392929c332996e9",
+      "subject": "ELECTRONIC_SUBMISSION",
+      "lot": null,
+      "value": "REQUIRED",
+      "kind": "ASSERTION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Modalités communes de transmission."
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "02e83b64-8932-5716-b83b-aa53b6ad9abd",
+          "start_byte": 0,
+          "end_byte": 36,
+          "excerpt": "Modalités communes de transmission.",
+          "source_sha256": "354c6a858b5d051c81e4434487f611b42b55697f3122fe050392929c332996e9"
+        }
+      ]
+    },
+    {
+      "id": "BACKUP",
+      "source_fragment_id": "02e83b64-8932-5716-b83b-aa53b6ad9abd",
+      "start_byte": 79,
+      "end_byte": 119,
+      "excerpt": "Une copie de sauvegarde est facultative.",
+      "source_sha256": "354c6a858b5d051c81e4434487f611b42b55697f3122fe050392929c332996e9",
+      "subject": "BACKUP_COPY",
+      "lot": null,
+      "value": "NOT_REQUIRED",
+      "kind": "ASSERTION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Modalités communes de transmission."
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "02e83b64-8932-5716-b83b-aa53b6ad9abd",
+          "start_byte": 0,
+          "end_byte": 36,
+          "excerpt": "Modalités communes de transmission.",
+          "source_sha256": "354c6a858b5d051c81e4434487f611b42b55697f3122fe050392929c332996e9"
+        }
+      ]
+    },
+    {
+      "id": "BACKUP_DATE",
+      "source_fragment_id": "02e83b64-8932-5716-b83b-aa53b6ad9abd",
+      "start_byte": 161,
+      "end_byte": 233,
+      "excerpt": "elle doit parvenir avant la même date limite que l'offre électronique.",
+      "source_sha256": "354c6a858b5d051c81e4434487f611b42b55697f3122fe050392929c332996e9",
+      "subject": "BACKUP_COPY",
+      "lot": null,
+      "value": "REQUIRED",
+      "kind": "ASSERTION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Si une copie de sauvegarde est envoyée,"
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "02e83b64-8932-5716-b83b-aa53b6ad9abd",
+          "start_byte": 120,
+          "end_byte": 160,
+          "excerpt": "Si une copie de sauvegarde est envoyée,",
+          "source_sha256": "354c6a858b5d051c81e4434487f611b42b55697f3122fe050392929c332996e9"
+        }
+      ]
+    },
+    {
+      "id": "MEDICAL",
+      "source_fragment_id": "94d2e0d8-eb9a-53bd-9c92-ac926f208a02",
+      "start_byte": 107,
+      "end_byte": 198,
+      "excerpt": "chaque opérateur affecté au désamiantage doit effectuer une visite médicale d'aptitude.",
+      "source_sha256": "4eb4210c6ab82fc0f3831980b9c28ea3529f9009dd57131b8a5f75cf137f0854",
+      "subject": "VISIT_MEDICAL",
+      "lot": 9,
+      "value": "REQUIRED",
+      "kind": "ASSERTION",
+      "applicability": "UNKNOWN",
+      "upstream_conditions": [
+        "Préparation des interventions — lot 09, désamiantage.",
+        "Avant sa première intervention sur ce chantier,"
+      ],
+      "context_regions": [
+        {
+          "source_fragment_id": "94d2e0d8-eb9a-53bd-9c92-ac926f208a02",
+          "start_byte": 0,
+          "end_byte": 57,
+          "excerpt": "Préparation des interventions — lot 09, désamiantage.",
+          "source_sha256": "4eb4210c6ab82fc0f3831980b9c28ea3529f9009dd57131b8a5f75cf137f0854"
+        },
+        {
+          "source_fragment_id": "94d2e0d8-eb9a-53bd-9c92-ac926f208a02",
+          "start_byte": 58,
+          "end_byte": 106,
+          "excerpt": "Avant sa première intervention sur ce chantier,",
+          "source_sha256": "4eb4210c6ab82fc0f3831980b9c28ea3529f9009dd57131b8a5f75cf137f0854"
+        }
+      ]
+    }
+  ],
+  "queries": [
+    {
+      "id": "Q01",
+      "text": "Quels formulaires chaque candidat doit-il remettre ?",
+      "query_sha256": "d23b2ab2a967cb65da2fef2a42526cf1e15975f72cf2b620ffa8f30faf28f4e7",
+      "semantic_request": {
+        "subject": "MULTIPLE",
+        "demand": "OBLIGATION",
+        "lot": null
+      },
+      "gold_sources": [
+        "c0ca70a0-5461-5cfc-803e-66e79673e0d2"
+      ],
+      "gold_regions": [
+        {
+          "id": "DC1",
+          "source_fragment_id": "c0ca70a0-5461-5cfc-803e-66e79673e0d2",
+          "start_byte": 85,
+          "end_byte": 132,
+          "excerpt": "Chaque candidat remet un formulaire DC1 signé.",
+          "source_sha256": "40510ba69af63a4c956dae9245d71e1c429e02f44b29cc7d6c2fefd034311680",
+          "subject": "DC1",
+          "lot": null,
+          "value": "REQUIRED",
+          "kind": "ASSERTION",
+          "applicability": "UNKNOWN",
+          "upstream_conditions": [
+            "Article 3 — Candidature.",
+            "Les dispositions suivantes concernent tous les candidats."
+          ],
+          "context_regions": [
+            {
+              "source_fragment_id": "c0ca70a0-5461-5cfc-803e-66e79673e0d2",
+              "start_byte": 0,
+              "end_byte": 26,
+              "excerpt": "Article 3 — Candidature.",
+              "source_sha256": "40510ba69af63a4c956dae9245d71e1c429e02f44b29cc7d6c2fefd034311680"
+            },
+            {
+              "source_fragment_id": "c0ca70a0-5461-5cfc-803e-66e79673e0d2",
+              "start_byte": 27,
+              "end_byte": 84,
+              "excerpt": "Les dispositions suivantes concernent tous les candidats.",
+              "source_sha256": "40510ba69af63a4c956dae9245d71e1c429e02f44b29cc7d6c2fefd034311680"
+            }
+          ]
+        },
+        {
+          "id": "DC2",
+          "source_fragment_id": "c0ca70a0-5461-5cfc-803e-66e79673e0d2",
+          "start_byte": 133,
+          "end_byte": 182,
+          "excerpt": "Il joint également un formulaire DC2 renseigné.",
+          "source_sha256": "40510ba69af63a4c956dae9245d71e1c429e02f44b29cc7d6c2fefd034311680",
+          "subject": "DC2",
+          "lot": null,
+          "value": "REQUIRED",
+          "kind": "ASSERTION",
+          "applicability": "UNKNOWN",
+          "upstream_conditions": [
+            "Article 3 — Candidature.",
+            "Chaque candidat remet un formulaire DC1 signé."
+          ],
+          "context_regions": [
+            {
+              "source_fragment_id": "c0ca70a0-5461-5cfc-803e-66e79673e0d2",
+              "start_byte": 0,
+              "end_byte": 26,
+              "excerpt": "Article 3 — Candidature.",
+              "source_sha256": "40510ba69af63a4c956dae9245d71e1c429e02f44b29cc7d6c2fefd034311680"
+            },
+            {
+              "source_fragment_id": "c0ca70a0-5461-5cfc-803e-66e79673e0d2",
+              "start_byte": 85,
+              "end_byte": 132,
+              "excerpt": "Chaque candidat remet un formulaire DC1 signé.",
+              "source_sha256": "40510ba69af63a4c956dae9245d71e1c429e02f44b29cc7d6c2fefd034311680"
+            }
+          ]
+        }
+      ],
+      "fact_ids": [
+        "DC1",
+        "DC2",
+        "PHASE"
+      ],
+      "runtime_expectations": null,
+      "expected_clause_ids": [
+        "DC1",
+        "DC2"
+      ],
+      "expected_refusal": false,
+      "family": "discursive",
+      "expected_contexts": [],
+      "answerability": "SOURCED_CANDIDATES_ONLY",
+      "context_source_independent": true
+    },
+    {
+      "id": "Q02",
+      "text": "Les formulaires DC1 et DC2 sont-ils demandés pour l’offre technique ?",
+      "query_sha256": "b8cd4f70a1bec92ba5e37e81a107a17ebb5586f76b7f5012712dc3ae053b4ec8",
+      "semantic_request": {
+        "subject": "MULTIPLE",
+        "demand": "OBLIGATION",
+        "lot": null
+      },
+      "gold_sources": [
+        "c0ca70a0-5461-5cfc-803e-66e79673e0d2"
+      ],
+      "gold_regions": [
+        {
+          "id": "PHASE",
+          "source_fragment_id": "c0ca70a0-5461-5cfc-803e-66e79673e0d2",
+          "start_byte": 183,
+          "end_byte": 261,
+          "excerpt": "Ces pièces sont demandées pour la candidature et non pour l'offre technique.",
+          "source_sha256": "40510ba69af63a4c956dae9245d71e1c429e02f44b29cc7d6c2fefd034311680",
+          "subject": "SUBMISSION_PHASE",
+          "lot": null,
+          "value": "NOT_REQUIRED",
+          "kind": "NEGATION",
+          "applicability": "UNKNOWN",
+          "upstream_conditions": [
+            "Chaque candidat remet un formulaire DC1 signé.",
+            "Il joint également un formulaire DC2 renseigné."
+          ],
+          "context_regions": [
+            {
+              "source_fragment_id": "c0ca70a0-5461-5cfc-803e-66e79673e0d2",
+              "start_byte": 85,
+              "end_byte": 132,
+              "excerpt": "Chaque candidat remet un formulaire DC1 signé.",
+              "source_sha256": "40510ba69af63a4c956dae9245d71e1c429e02f44b29cc7d6c2fefd034311680"
+            },
+            {
+              "source_fragment_id": "c0ca70a0-5461-5cfc-803e-66e79673e0d2",
+              "start_byte": 133,
+              "end_byte": 182,
+              "excerpt": "Il joint également un formulaire DC2 renseigné.",
+              "source_sha256": "40510ba69af63a4c956dae9245d71e1c429e02f44b29cc7d6c2fefd034311680"
+            }
+          ]
+        }
+      ],
+      "fact_ids": [
+        "DC1",
+        "DC2",
+        "PHASE"
+      ],
+      "runtime_expectations": null,
+      "expected_clause_ids": [
+        "PHASE"
+      ],
+      "expected_refusal": false,
+      "family": "discursive",
+      "expected_contexts": [],
+      "answerability": "SOURCED_CANDIDATES_ONLY",
+      "context_source_independent": true
+    },
+    {
+      "id": "Q03",
+      "text": "Quelles exigences de visite et de justificatif s’appliquent au lot 02 ?",
+      "query_sha256": "0d3b8c032fef8f130b6481766f730ab6f473546b1799eedbfd775b9492535caa",
+      "semantic_request": {
+        "subject": "MULTIPLE",
+        "demand": "OBLIGATION",
+        "lot": 2
+      },
+      "gold_sources": [
+        "7fda57a1-f643-5880-a352-bff2f9697ef7"
+      ],
+      "gold_regions": [
+        {
+          "id": "SITE",
+          "source_fragment_id": "7fda57a1-f643-5880-a352-bff2f9697ef7",
+          "start_byte": 47,
+          "end_byte": 108,
+          "excerpt": "la visite du site est obligatoire avant la remise de l'offre.",
+          "source_sha256": "d71f967c1f96141691aab93028d2effe85887ff4a9021f948389b864201229e1",
+          "subject": "VISIT_SITE",
+          "lot": 2,
+          "value": "REQUIRED",
+          "kind": "ASSERTION",
+          "applicability": "UNKNOWN",
+          "upstream_conditions": [
+            "Lot 02 — Couverture. Pour ce lot uniquement,"
+          ],
+          "context_regions": [
+            {
+              "source_fragment_id": "7fda57a1-f643-5880-a352-bff2f9697ef7",
+              "start_byte": 0,
+              "end_byte": 46,
+              "excerpt": "Lot 02 — Couverture. Pour ce lot uniquement,",
+              "source_sha256": "d71f967c1f96141691aab93028d2effe85887ff4a9021f948389b864201229e1"
+            }
+          ]
+        },
+        {
+          "id": "ATTEST",
+          "source_fragment_id": "7fda57a1-f643-5880-a352-bff2f9697ef7",
+          "start_byte": 109,
+          "end_byte": 164,
+          "excerpt": "Le candidat joint l'attestation de visite à son offre.",
+          "source_sha256": "d71f967c1f96141691aab93028d2effe85887ff4a9021f948389b864201229e1",
+          "subject": "VISIT_CERTIFICATE",
+          "lot": 2,
+          "value": "REQUIRED",
+          "kind": "ASSERTION",
+          "applicability": "UNKNOWN",
+          "upstream_conditions": [
+            "Lot 02 — Couverture. Pour ce lot uniquement,"
+          ],
+          "context_regions": [
+            {
+              "source_fragment_id": "7fda57a1-f643-5880-a352-bff2f9697ef7",
+              "start_byte": 0,
+              "end_byte": 46,
+              "excerpt": "Lot 02 — Couverture. Pour ce lot uniquement,",
+              "source_sha256": "d71f967c1f96141691aab93028d2effe85887ff4a9021f948389b864201229e1"
+            }
+          ]
+        }
+      ],
+      "fact_ids": [
+        "SITE",
+        "ATTEST",
+        "OTHER_VISIT"
+      ],
+      "runtime_expectations": null,
+      "expected_clause_ids": [
+        "SITE",
+        "ATTEST"
+      ],
+      "expected_refusal": false,
+      "family": "discursive",
+      "expected_contexts": [],
+      "answerability": "SOURCED_CANDIDATES_ONLY",
+      "context_source_independent": true
+    },
+    {
+      "id": "Q04",
+      "text": "La visite est-elle obligatoire pour les autres lots ?",
+      "query_sha256": "73b31f7a5df8552670f1146bdf5f32ae519ab8ffd9149891cd67e4cb7564e009",
+      "semantic_request": {
+        "subject": "VISIT",
+        "demand": "OBLIGATION",
+        "lot": null
+      },
+      "gold_sources": [
+        "7fda57a1-f643-5880-a352-bff2f9697ef7"
+      ],
+      "gold_regions": [
+        {
+          "id": "OTHER_VISIT",
+          "source_fragment_id": "7fda57a1-f643-5880-a352-bff2f9697ef7",
+          "start_byte": 165,
+          "end_byte": 215,
+          "excerpt": "Pour les autres lots, la visite reste facultative.",
+          "source_sha256": "d71f967c1f96141691aab93028d2effe85887ff4a9021f948389b864201229e1",
+          "subject": "VISIT",
+          "lot": null,
+          "value": "NOT_REQUIRED",
+          "kind": "ASSERTION",
+          "applicability": "UNKNOWN",
+          "upstream_conditions": [
+            "Lot 02 — Couverture."
+          ],
+          "context_regions": [
+            {
+              "source_fragment_id": "7fda57a1-f643-5880-a352-bff2f9697ef7",
+              "start_byte": 0,
+              "end_byte": 22,
+              "excerpt": "Lot 02 — Couverture.",
+              "source_sha256": "d71f967c1f96141691aab93028d2effe85887ff4a9021f948389b864201229e1"
+            }
+          ]
+        }
+      ],
+      "fact_ids": [
+        "SITE",
+        "ATTEST",
+        "OTHER_VISIT"
+      ],
+      "runtime_expectations": null,
+      "expected_clause_ids": [
+        "OTHER_VISIT"
+      ],
+      "expected_refusal": false,
+      "family": "discursive",
+      "expected_contexts": [],
+      "answerability": "SOURCED_CANDIDATES_ONLY",
+      "context_source_independent": true
+    },
+    {
+      "id": "Q05",
+      "text": "Dans quelle situation le titulaire doit-il désigner un coordinateur ?",
+      "query_sha256": "f3dd8a9534010b6ca54c4a620980f5e2a27877bb61df273a314882b712b51315",
+      "semantic_request": {
+        "subject": "COORDINATION",
+        "demand": "CONDITION",
+        "lot": null
+      },
+      "gold_sources": [
+        "f8130ef7-cc23-5c7b-a1d7-bba6592f82df"
+      ],
+      "gold_regions": [
+        {
+          "id": "COORD",
+          "source_fragment_id": "f8130ef7-cc23-5c7b-a1d7-bba6592f82df",
+          "start_byte": 127,
+          "end_byte": 172,
+          "excerpt": "le titulaire désigne un coordinateur de zone",
+          "source_sha256": "0aed4ee869a78d06187ed74207bf1f50393738a25edf5f79c8e2a93cd8002f13",
+          "subject": "COORDINATION",
+          "lot": 4,
+          "value": "REQUIRED",
+          "kind": "ASSERTION",
+          "applicability": "UNKNOWN",
+          "upstream_conditions": [
+            "Organisation du chantier, lot 04 — Électricité.",
+            "Lorsque deux entreprises interviennent simultanément dans une même zone,"
+          ],
+          "context_regions": [
+            {
+              "source_fragment_id": "f8130ef7-cc23-5c7b-a1d7-bba6592f82df",
+              "start_byte": 0,
+              "end_byte": 51,
+              "excerpt": "Organisation du chantier, lot 04 — Électricité.",
+              "source_sha256": "0aed4ee869a78d06187ed74207bf1f50393738a25edf5f79c8e2a93cd8002f13"
+            },
+            {
+              "source_fragment_id": "f8130ef7-cc23-5c7b-a1d7-bba6592f82df",
+              "start_byte": 52,
+              "end_byte": 126,
+              "excerpt": "Lorsque deux entreprises interviennent simultanément dans une même zone,",
+              "source_sha256": "0aed4ee869a78d06187ed74207bf1f50393738a25edf5f79c8e2a93cd8002f13"
+            }
+          ]
+        }
+      ],
+      "fact_ids": [
+        "COORD",
+        "COORD_NAME"
+      ],
+      "runtime_expectations": null,
+      "expected_clause_ids": [
+        "COORD"
+      ],
+      "expected_refusal": false,
+      "family": "discursive",
+      "expected_contexts": [],
+      "answerability": "UNRESOLVED_CONDITIONAL_APPLICATION",
+      "context_source_independent": true
+    },
+    {
+      "id": "Q06",
+      "text": "Pour la coordination de zone du lot 04, quelle information le titulaire doit-il transmettre, à qui et quand ?",
+      "query_sha256": "e5dbe21ad8bc84edc2b4e23baa6368098861328277ade788bbe288112836dee7",
+      "semantic_request": {
+        "subject": "COORDINATION",
+        "demand": "MULTIPLE",
+        "lot": null
+      },
+      "gold_sources": [
+        "f8130ef7-cc23-5c7b-a1d7-bba6592f82df"
+      ],
+      "gold_regions": [
+        {
+          "id": "COORD_NAME",
+          "source_fragment_id": "f8130ef7-cc23-5c7b-a1d7-bba6592f82df",
+          "start_byte": 176,
+          "end_byte": 263,
+          "excerpt": "transmet son nom au maître d'œuvre avant le début de cette intervention simultanée.",
+          "source_sha256": "0aed4ee869a78d06187ed74207bf1f50393738a25edf5f79c8e2a93cd8002f13",
+          "subject": "COORDINATION",
+          "lot": 4,
+          "value": "REQUIRED",
+          "kind": "ASSERTION",
+          "applicability": "UNKNOWN",
+          "upstream_conditions": [
+            "Organisation du chantier, lot 04 — Électricité.",
+            "Lorsque deux entreprises interviennent simultanément dans une même zone,",
+            "le titulaire désigne un coordinateur de zone"
+          ],
+          "context_regions": [
+            {
+              "source_fragment_id": "f8130ef7-cc23-5c7b-a1d7-bba6592f82df",
+              "start_byte": 0,
+              "end_byte": 51,
+              "excerpt": "Organisation du chantier, lot 04 — Électricité.",
+              "source_sha256": "0aed4ee869a78d06187ed74207bf1f50393738a25edf5f79c8e2a93cd8002f13"
+            },
+            {
+              "source_fragment_id": "f8130ef7-cc23-5c7b-a1d7-bba6592f82df",
+              "start_byte": 52,
+              "end_byte": 126,
+              "excerpt": "Lorsque deux entreprises interviennent simultanément dans une même zone,",
+              "source_sha256": "0aed4ee869a78d06187ed74207bf1f50393738a25edf5f79c8e2a93cd8002f13"
+            },
+            {
+              "source_fragment_id": "f8130ef7-cc23-5c7b-a1d7-bba6592f82df",
+              "start_byte": 127,
+              "end_byte": 172,
+              "excerpt": "le titulaire désigne un coordinateur de zone",
+              "source_sha256": "0aed4ee869a78d06187ed74207bf1f50393738a25edf5f79c8e2a93cd8002f13"
+            }
+          ]
+        }
+      ],
+      "fact_ids": [
+        "COORD",
+        "COORD_NAME"
+      ],
+      "runtime_expectations": null,
+      "expected_clause_ids": [
+        "COORD_NAME"
+      ],
+      "expected_refusal": false,
+      "family": "discursive",
+      "expected_contexts": [],
+      "answerability": "UNRESOLVED_CONDITIONAL_APPLICATION",
+      "context_source_independent": true
+    },
+    {
+      "id": "Q07",
+      "text": "Les variantes sont-elles autorisées ?",
+      "query_sha256": "7fc1b5394728da0225c7490e08c7f60f22dd99eb389668f27d06164530c67b76",
+      "semantic_request": {
+        "subject": "VARIANTS",
+        "demand": "OBLIGATION",
+        "lot": null
+      },
+      "gold_sources": [
+        "71f642bb-9fbc-56d6-bac0-7b595e26cb99"
+      ],
+      "gold_regions": [
+        {
+          "id": "VARIANT",
+          "source_fragment_id": "71f642bb-9fbc-56d6-bac0-7b595e26cb99",
+          "start_byte": 26,
+          "end_byte": 64,
+          "excerpt": "Les variantes ne sont pas autorisées.",
+          "source_sha256": "f2793e34b1e93f5c1192061c780d0a1e9d8ffb322dcdde9115d56567976ff685",
+          "subject": "VARIANTS",
+          "lot": null,
+          "value": "FORBIDDEN",
+          "kind": "NEGATION",
+          "applicability": "UNKNOWN",
+          "upstream_conditions": [
+            "Cette règle vaut pour l'ensemble des lots, dont la liste n'est pas reproduite ici."
+          ],
+          "context_regions": [
+            {
+              "source_fragment_id": "71f642bb-9fbc-56d6-bac0-7b595e26cb99",
+              "start_byte": 137,
+              "end_byte": 220,
+              "excerpt": "Cette règle vaut pour l'ensemble des lots, dont la liste n'est pas reproduite ici.",
+              "source_sha256": "f2793e34b1e93f5c1192061c780d0a1e9d8ffb322dcdde9115d56567976ff685"
+            }
+          ]
+        }
+      ],
+      "fact_ids": [
+        "VARIANT",
+        "BASE"
+      ],
+      "runtime_expectations": null,
+      "expected_clause_ids": [
+        "VARIANT"
+      ],
+      "expected_refusal": false,
+      "family": "discursive",
+      "expected_contexts": [],
+      "answerability": "SOURCED_CANDIDATES_ONLY",
+      "context_source_independent": true
+    },
+    {
+      "id": "Q08",
+      "text": "Quelle offre chaque soumissionnaire doit-il remettre ?",
+      "query_sha256": "c7bc4dec00e388cdfe1f8038568b709d153bc7f5b05f44b934817f69da94ca71",
+      "semantic_request": {
+        "subject": "BASE_OFFER",
+        "demand": "OBLIGATION",
+        "lot": null
+      },
+      "gold_sources": [
+        "71f642bb-9fbc-56d6-bac0-7b595e26cb99"
+      ],
+      "gold_regions": [
+        {
+          "id": "BASE",
+          "source_fragment_id": "71f642bb-9fbc-56d6-bac0-7b595e26cb99",
+          "start_byte": 65,
+          "end_byte": 136,
+          "excerpt": "Chaque soumissionnaire remet une offre conforme à la solution de base.",
+          "source_sha256": "f2793e34b1e93f5c1192061c780d0a1e9d8ffb322dcdde9115d56567976ff685",
+          "subject": "BASE_OFFER",
+          "lot": null,
+          "value": "REQUIRED",
+          "kind": "ASSERTION",
+          "applicability": "UNKNOWN",
+          "upstream_conditions": [
+            "Cette règle vaut pour l'ensemble des lots, dont la liste n'est pas reproduite ici."
+          ],
+          "context_regions": [
+            {
+              "source_fragment_id": "71f642bb-9fbc-56d6-bac0-7b595e26cb99",
+              "start_byte": 137,
+              "end_byte": 220,
+              "excerpt": "Cette règle vaut pour l'ensemble des lots, dont la liste n'est pas reproduite ici.",
+              "source_sha256": "f2793e34b1e93f5c1192061c780d0a1e9d8ffb322dcdde9115d56567976ff685"
+            }
+          ]
+        }
+      ],
+      "fact_ids": [
+        "VARIANT",
+        "BASE"
+      ],
+      "runtime_expectations": null,
+      "expected_clause_ids": [
+        "BASE"
+      ],
+      "expected_refusal": false,
+      "family": "discursive",
+      "expected_contexts": [],
+      "answerability": "SOURCED_CANDIDATES_ONLY",
+      "context_source_independent": true
+    },
+    {
+      "id": "Q09",
+      "text": "Quand un échantillon est-il exigé et quelles caractéristiques doit-il respecter ?",
+      "query_sha256": "a7246e9c8e8b8a9bfe9f807a7a3c20f2fd7cfb94b8126d7f4f6e06fe765d9ad2",
+      "semantic_request": {
+        "subject": "SAMPLE",
+        "demand": "MULTIPLE",
+        "lot": null
+      },
+      "gold_sources": [
+        "5fe122b4-9203-50e2-b8ee-d96c0123ea63"
+      ],
+      "gold_regions": [
+        {
+          "id": "SAMPLE",
+          "source_fragment_id": "5fe122b4-9203-50e2-b8ee-d96c0123ea63",
+          "start_byte": 121,
+          "end_byte": 218,
+          "excerpt": "le candidat dépose un échantillon de 30 cm sur 30 cm avant la date limite de remise des offres.",
+          "source_sha256": "017b77fd7ab60d9669dbedc1a8b499956c3111542ac82b4460f3acc9945d288f",
+          "subject": "SAMPLE",
+          "lot": 6,
+          "value": "REQUIRED",
+          "kind": "ASSERTION",
+          "applicability": "UNKNOWN",
+          "upstream_conditions": [
+            "Lot 06 — Revêtements de sols.",
+            "Un échantillon n'est exigé que si le candidat propose le revêtement R2.",
+            "Dans ce cas,"
+          ],
+          "context_regions": [
+            {
+              "source_fragment_id": "5fe122b4-9203-50e2-b8ee-d96c0123ea63",
+              "start_byte": 0,
+              "end_byte": 32,
+              "excerpt": "Lot 06 — Revêtements de sols.",
+              "source_sha256": "017b77fd7ab60d9669dbedc1a8b499956c3111542ac82b4460f3acc9945d288f"
+            },
+            {
+              "source_fragment_id": "5fe122b4-9203-50e2-b8ee-d96c0123ea63",
+              "start_byte": 33,
+              "end_byte": 107,
+              "excerpt": "Un échantillon n'est exigé que si le candidat propose le revêtement R2.",
+              "source_sha256": "017b77fd7ab60d9669dbedc1a8b499956c3111542ac82b4460f3acc9945d288f"
+            },
+            {
+              "source_fragment_id": "5fe122b4-9203-50e2-b8ee-d96c0123ea63",
+              "start_byte": 108,
+              "end_byte": 120,
+              "excerpt": "Dans ce cas,",
+              "source_sha256": "017b77fd7ab60d9669dbedc1a8b499956c3111542ac82b4460f3acc9945d288f"
+            }
+          ]
+        }
+      ],
+      "fact_ids": [
+        "SAMPLE"
+      ],
+      "runtime_expectations": null,
+      "expected_clause_ids": [
+        "SAMPLE"
+      ],
+      "expected_refusal": false,
+      "family": "discursive",
+      "expected_contexts": [],
+      "answerability": "UNRESOLVED_CONDITIONAL_APPLICATION",
+      "context_source_independent": true
+    },
+    {
+      "id": "Q10",
+      "text": "Pour le lot 01, quelles obligations et interdictions concernent l’aptitude médicale avant affectation à des travaux exposant à l’amiante et le dépôt d’un dossier médical individuel avec l’offre ?",
+      "query_sha256": "63974781b1a6cca197101160fb919c58ba835f3306c06d3b570281e94eb06a02",
+      "semantic_request": {
+        "subject": "MULTIPLE",
+        "demand": "OBLIGATION",
+        "lot": null
+      },
+      "gold_sources": [
+        "3e2386af-ab6a-56a6-9693-ebe3d7ade73b"
+      ],
+      "gold_regions": [
+        {
+          "id": "APTITUDE",
+          "source_fragment_id": "3e2386af-ab6a-56a6-9693-ebe3d7ade73b",
+          "start_byte": 99,
+          "end_byte": 183,
+          "excerpt": "l'employeur vérifie que le salarié dispose d'un avis d'aptitude médicale adapté.",
+          "source_sha256": "3a6694a3bdac614c54fc02f19eedb6d0e64dee1b14535e3be7bb1b17de5d2c5e",
+          "subject": "MEDICAL_FITNESS",
+          "lot": 1,
+          "value": "REQUIRED",
+          "kind": "ASSERTION",
+          "applicability": "UNKNOWN",
+          "upstream_conditions": [
+            "Prévention — lot 01, démolition.",
+            "Avant toute affectation à des travaux exposant à l'amiante,"
+          ],
+          "context_regions": [
+            {
+              "source_fragment_id": "3e2386af-ab6a-56a6-9693-ebe3d7ade73b",
+              "start_byte": 0,
+              "end_byte": 36,
+              "excerpt": "Prévention — lot 01, démolition.",
+              "source_sha256": "3a6694a3bdac614c54fc02f19eedb6d0e64dee1b14535e3be7bb1b17de5d2c5e"
+            },
+            {
+              "source_fragment_id": "3e2386af-ab6a-56a6-9693-ebe3d7ade73b",
+              "start_byte": 37,
+              "end_byte": 98,
+              "excerpt": "Avant toute affectation à des travaux exposant à l'amiante,",
+              "source_sha256": "3a6694a3bdac614c54fc02f19eedb6d0e64dee1b14535e3be7bb1b17de5d2c5e"
+            }
+          ]
+        },
+        {
+          "id": "NO_FILE",
+          "source_fragment_id": "3e2386af-ab6a-56a6-9693-ebe3d7ade73b",
+          "start_byte": 184,
+          "end_byte": 249,
+          "excerpt": "Aucun dossier médical individuel ne doit être joint à l'offre.",
+          "source_sha256": "3a6694a3bdac614c54fc02f19eedb6d0e64dee1b14535e3be7bb1b17de5d2c5e",
+          "subject": "PERSONAL_MEDICAL_FILE",
+          "lot": 1,
+          "value": "FORBIDDEN",
+          "kind": "NEGATION",
+          "applicability": "UNKNOWN",
+          "upstream_conditions": [
+            "Prévention — lot 01, démolition."
+          ],
+          "context_regions": [
+            {
+              "source_fragment_id": "3e2386af-ab6a-56a6-9693-ebe3d7ade73b",
+              "start_byte": 0,
+              "end_byte": 36,
+              "excerpt": "Prévention — lot 01, démolition.",
+              "source_sha256": "3a6694a3bdac614c54fc02f19eedb6d0e64dee1b14535e3be7bb1b17de5d2c5e"
+            }
+          ]
+        }
+      ],
+      "fact_ids": [
+        "APTITUDE",
+        "NO_FILE"
+      ],
+      "runtime_expectations": null,
+      "expected_clause_ids": [
+        "APTITUDE",
+        "NO_FILE"
+      ],
+      "expected_refusal": false,
+      "family": "discursive",
+      "expected_contexts": [],
+      "answerability": "UNRESOLVED_CONDITIONAL_APPLICATION",
+      "context_source_independent": true
+    },
+    {
+      "id": "Q11",
+      "text": "Que doit faire le candidat si la fiche produit est indisponible au dépôt ?",
+      "query_sha256": "6ab08851027a0744b0bb01e28eb17a5123de11ffdd1da8bcff6bffd2fa235481",
+      "semantic_request": {
+        "subject": "MULTIPLE",
+        "demand": "OBLIGATION",
+        "lot": null
+      },
+      "gold_sources": [
+        "3dd426ef-dede-53dc-9f22-4c0ee0dfb1a5"
+      ],
+      "gold_regions": [
+        {
+          "id": "SHEET",
+          "source_fragment_id": "3dd426ef-dede-53dc-9f22-4c0ee0dfb1a5",
+          "start_byte": 89,
+          "end_byte": 176,
+          "excerpt": "le candidat indique sa date prévisionnelle de transmission dans le mémoire technique.",
+          "source_sha256": "d62476452b3426e4a0f508d680a4c8a705ba5ee0580a2a33fa47eac595932305",
+          "subject": "PRODUCT_SHEET",
+          "lot": null,
+          "value": "REQUIRED",
+          "kind": "ASSERTION",
+          "applicability": "UNKNOWN",
+          "upstream_conditions": [
+            "Si la fiche produit n'est pas disponible à la date de dépôt,"
+          ],
+          "context_regions": [
+            {
+              "source_fragment_id": "3dd426ef-dede-53dc-9f22-4c0ee0dfb1a5",
+              "start_byte": 25,
+              "end_byte": 88,
+              "excerpt": "Si la fiche produit n'est pas disponible à la date de dépôt,",
+              "source_sha256": "d62476452b3426e4a0f508d680a4c8a705ba5ee0580a2a33fa47eac595932305"
+            }
+          ]
+        },
+        {
+          "id": "MEMORY",
+          "source_fragment_id": "3dd426ef-dede-53dc-9f22-4c0ee0dfb1a5",
+          "start_byte": 177,
+          "end_byte": 245,
+          "excerpt": "Cette disposition ne dispense pas de remettre le mémoire technique.",
+          "source_sha256": "d62476452b3426e4a0f508d680a4c8a705ba5ee0580a2a33fa47eac595932305",
+          "subject": "TECHNICAL_MEMO",
+          "lot": null,
+          "value": "REQUIRED",
+          "kind": "ASSERTION",
+          "applicability": "UNKNOWN",
+          "upstream_conditions": [
+            "Si la fiche produit n'est pas disponible à la date de dépôt, le candidat indique sa date prévisionnelle de transmission dans le mémoire technique."
+          ],
+          "context_regions": [
+            {
+              "source_fragment_id": "3dd426ef-dede-53dc-9f22-4c0ee0dfb1a5",
+              "start_byte": 25,
+              "end_byte": 176,
+              "excerpt": "Si la fiche produit n'est pas disponible à la date de dépôt, le candidat indique sa date prévisionnelle de transmission dans le mémoire technique.",
+              "source_sha256": "d62476452b3426e4a0f508d680a4c8a705ba5ee0580a2a33fa47eac595932305"
+            }
+          ]
+        }
+      ],
+      "fact_ids": [
+        "SHEET",
+        "MEMORY"
+      ],
+      "runtime_expectations": null,
+      "expected_clause_ids": [
+        "SHEET",
+        "MEMORY"
+      ],
+      "expected_refusal": false,
+      "family": "discursive",
+      "expected_contexts": [],
+      "answerability": "UNRESOLVED_CONDITIONAL_APPLICATION",
+      "context_source_independent": true
+    },
+    {
+      "id": "Q12",
+      "text": "Quelle date appliquer aux échantillons et quelle date appliquer aux offres ?",
+      "query_sha256": "190ecdcac7fc371c8b77e52ab4676eb19c66a5506e5ed252542c524795ff7bf9",
+      "semantic_request": {
+        "subject": "MULTIPLE",
+        "demand": "DATE_TIME",
+        "lot": null
+      },
+      "gold_sources": [
+        "9f41f5b1-0082-5682-82d8-8196c884bb1c"
+      ],
+      "gold_regions": [
+        {
+          "id": "SAMPLE_DATE",
+          "source_fragment_id": "9f41f5b1-0082-5682-82d8-8196c884bb1c",
+          "start_byte": 65,
+          "end_byte": 144,
+          "excerpt": "la date de remise des échantillons est désormais le 18 novembre 2031 à 12 h.",
+          "source_sha256": "05b1ea9959e65e574e28e3de4f9fe07b7510d9a23c0a2c529a71d54668623b91",
+          "subject": "SAMPLE",
+          "lot": 3,
+          "value": "2031-11-18T12:00",
+          "kind": "RECTIFICATION",
+          "applicability": "UNKNOWN",
+          "upstream_conditions": [
+            "Pour le seul lot 03,",
+            "Elle remplace la date du 12 novembre 2031 à 12 h figurant à l'article 8."
+          ],
+          "context_regions": [
+            {
+              "source_fragment_id": "9f41f5b1-0082-5682-82d8-8196c884bb1c",
+              "start_byte": 44,
+              "end_byte": 64,
+              "excerpt": "Pour le seul lot 03,",
+              "source_sha256": "05b1ea9959e65e574e28e3de4f9fe07b7510d9a23c0a2c529a71d54668623b91"
+            },
+            {
+              "source_fragment_id": "9f41f5b1-0082-5682-82d8-8196c884bb1c",
+              "start_byte": 145,
+              "end_byte": 219,
+              "excerpt": "Elle remplace la date du 12 novembre 2031 à 12 h figurant à l'article 8.",
+              "source_sha256": "05b1ea9959e65e574e28e3de4f9fe07b7510d9a23c0a2c529a71d54668623b91"
+            }
+          ]
+        },
+        {
+          "id": "OFFER_DATE",
+          "source_fragment_id": "9f41f5b1-0082-5682-82d8-8196c884bb1c",
+          "start_byte": 220,
+          "end_byte": 290,
+          "excerpt": "La date limite de remise des offres reste le 20 novembre 2031 à 16 h.",
+          "source_sha256": "05b1ea9959e65e574e28e3de4f9fe07b7510d9a23c0a2c529a71d54668623b91",
+          "subject": "OFFER_DEADLINE",
+          "lot": 3,
+          "value": "2031-11-20T16:00",
+          "kind": "ASSERTION",
+          "applicability": "UNKNOWN",
+          "upstream_conditions": [
+            "Rectificatif n° 2 — lot 03, menuiseries."
+          ],
+          "context_regions": [
+            {
+              "source_fragment_id": "9f41f5b1-0082-5682-82d8-8196c884bb1c",
+              "start_byte": 0,
+              "end_byte": 43,
+              "excerpt": "Rectificatif n° 2 — lot 03, menuiseries.",
+              "source_sha256": "05b1ea9959e65e574e28e3de4f9fe07b7510d9a23c0a2c529a71d54668623b91"
+            }
+          ]
+        }
+      ],
+      "fact_ids": [
+        "SAMPLE_DATE",
+        "OFFER_DATE"
+      ],
+      "runtime_expectations": null,
+      "expected_clause_ids": [
+        "SAMPLE_DATE",
+        "OFFER_DATE"
+      ],
+      "expected_refusal": false,
+      "family": "discursive",
+      "expected_contexts": [],
+      "answerability": "SOURCED_CANDIDATES_ONLY",
+      "context_source_independent": true
+    },
+    {
+      "id": "Q13",
+      "text": "Pour le lot 07, que doit déclarer le candidat s’il prévoit une sous-traitance dès le dépôt de son offre, et quelle désignation n’est pas exigée pour une prestation qu’il prévoit d’exécuter lui-même ?",
+      "query_sha256": "116ae7164367901e9b5d272c101340d3a5aedcd9e1641e1f4a1e610ccddd1ee6",
+      "semantic_request": {
+        "subject": "MULTIPLE",
+        "demand": "OBLIGATION",
+        "lot": null
+      },
+      "gold_sources": [
+        "3430065f-56d7-5802-b470-f0839e68c039"
+      ],
+      "gold_regions": [
+        {
+          "id": "SUBCONTRACT",
+          "source_fragment_id": "3430065f-56d7-5802-b470-f0839e68c039",
+          "start_byte": 94,
+          "end_byte": 153,
+          "excerpt": "il identifie les prestations concernées dans son mémoire.",
+          "source_sha256": "f1f8eccd891577d031127f3c2834973b9bb8e6650c4fe7b5780ee77fb14a124a",
+          "subject": "SUBCONTRACT",
+          "lot": 7,
+          "value": "REQUIRED",
+          "kind": "ASSERTION",
+          "applicability": "UNKNOWN",
+          "upstream_conditions": [
+            "Lot 07 — Peinture.",
+            "Si le candidat prévoit une sous-traitance dès le dépôt de son offre,"
+          ],
+          "context_regions": [
+            {
+              "source_fragment_id": "3430065f-56d7-5802-b470-f0839e68c039",
+              "start_byte": 0,
+              "end_byte": 20,
+              "excerpt": "Lot 07 — Peinture.",
+              "source_sha256": "f1f8eccd891577d031127f3c2834973b9bb8e6650c4fe7b5780ee77fb14a124a"
+            },
+            {
+              "source_fragment_id": "3430065f-56d7-5802-b470-f0839e68c039",
+              "start_byte": 21,
+              "end_byte": 93,
+              "excerpt": "Si le candidat prévoit une sous-traitance dès le dépôt de son offre,",
+              "source_sha256": "f1f8eccd891577d031127f3c2834973b9bb8e6650c4fe7b5780ee77fb14a124a"
+            }
+          ]
+        },
+        {
+          "id": "NO_SUB_NAME",
+          "source_fragment_id": "3430065f-56d7-5802-b470-f0839e68c039",
+          "start_byte": 154,
+          "end_byte": 271,
+          "excerpt": "Il n'est pas tenu de désigner à ce stade un sous-traitant pour une prestation qu'il prévoit d'exécuter lui-même.",
+          "source_sha256": "f1f8eccd891577d031127f3c2834973b9bb8e6650c4fe7b5780ee77fb14a124a",
+          "subject": "SUBCONTRACT",
+          "lot": 7,
+          "value": "NOT_REQUIRED",
+          "kind": "NEGATION",
+          "applicability": "UNKNOWN",
+          "upstream_conditions": [
+            "Lot 07 — Peinture."
+          ],
+          "context_regions": [
+            {
+              "source_fragment_id": "3430065f-56d7-5802-b470-f0839e68c039",
+              "start_byte": 0,
+              "end_byte": 20,
+              "excerpt": "Lot 07 — Peinture.",
+              "source_sha256": "f1f8eccd891577d031127f3c2834973b9bb8e6650c4fe7b5780ee77fb14a124a"
+            }
+          ]
+        }
+      ],
+      "fact_ids": [
+        "SUBCONTRACT",
+        "NO_SUB_NAME"
+      ],
+      "runtime_expectations": null,
+      "expected_clause_ids": [
+        "SUBCONTRACT",
+        "NO_SUB_NAME"
+      ],
+      "expected_refusal": false,
+      "family": "discursive",
+      "expected_contexts": [],
+      "answerability": "UNRESOLVED_CONDITIONAL_APPLICATION",
+      "context_source_independent": true
+    },
+    {
+      "id": "Q14",
+      "text": "Pour la transmission des offres, quelles modalités concernant le dépôt électronique et la copie de sauvegarde sont obligatoires, facultatives ou conditionnelles ?",
+      "query_sha256": "29ffb5d84f2c62ca9e87046968a9716ad5dd19ec70d79f51f69bed7148cd562b",
+      "semantic_request": {
+        "subject": "MULTIPLE",
+        "demand": "OBLIGATION",
+        "lot": null
+      },
+      "gold_sources": [
+        "02e83b64-8932-5716-b83b-aa53b6ad9abd"
+      ],
+      "gold_regions": [
+        {
+          "id": "ELECTRONIC",
+          "source_fragment_id": "02e83b64-8932-5716-b83b-aa53b6ad9abd",
+          "start_byte": 37,
+          "end_byte": 78,
+          "excerpt": "Le dépôt électronique est obligatoire.",
+          "source_sha256": "354c6a858b5d051c81e4434487f611b42b55697f3122fe050392929c332996e9",
+          "subject": "ELECTRONIC_SUBMISSION",
+          "lot": null,
+          "value": "REQUIRED",
+          "kind": "ASSERTION",
+          "applicability": "UNKNOWN",
+          "upstream_conditions": [
+            "Modalités communes de transmission."
+          ],
+          "context_regions": [
+            {
+              "source_fragment_id": "02e83b64-8932-5716-b83b-aa53b6ad9abd",
+              "start_byte": 0,
+              "end_byte": 36,
+              "excerpt": "Modalités communes de transmission.",
+              "source_sha256": "354c6a858b5d051c81e4434487f611b42b55697f3122fe050392929c332996e9"
+            }
+          ]
+        },
+        {
+          "id": "BACKUP",
+          "source_fragment_id": "02e83b64-8932-5716-b83b-aa53b6ad9abd",
+          "start_byte": 79,
+          "end_byte": 119,
+          "excerpt": "Une copie de sauvegarde est facultative.",
+          "source_sha256": "354c6a858b5d051c81e4434487f611b42b55697f3122fe050392929c332996e9",
+          "subject": "BACKUP_COPY",
+          "lot": null,
+          "value": "NOT_REQUIRED",
+          "kind": "ASSERTION",
+          "applicability": "UNKNOWN",
+          "upstream_conditions": [
+            "Modalités communes de transmission."
+          ],
+          "context_regions": [
+            {
+              "source_fragment_id": "02e83b64-8932-5716-b83b-aa53b6ad9abd",
+              "start_byte": 0,
+              "end_byte": 36,
+              "excerpt": "Modalités communes de transmission.",
+              "source_sha256": "354c6a858b5d051c81e4434487f611b42b55697f3122fe050392929c332996e9"
+            }
+          ]
+        },
+        {
+          "id": "BACKUP_DATE",
+          "source_fragment_id": "02e83b64-8932-5716-b83b-aa53b6ad9abd",
+          "start_byte": 161,
+          "end_byte": 233,
+          "excerpt": "elle doit parvenir avant la même date limite que l'offre électronique.",
+          "source_sha256": "354c6a858b5d051c81e4434487f611b42b55697f3122fe050392929c332996e9",
+          "subject": "BACKUP_COPY",
+          "lot": null,
+          "value": "REQUIRED",
+          "kind": "ASSERTION",
+          "applicability": "UNKNOWN",
+          "upstream_conditions": [
+            "Si une copie de sauvegarde est envoyée,"
+          ],
+          "context_regions": [
+            {
+              "source_fragment_id": "02e83b64-8932-5716-b83b-aa53b6ad9abd",
+              "start_byte": 120,
+              "end_byte": 160,
+              "excerpt": "Si une copie de sauvegarde est envoyée,",
+              "source_sha256": "354c6a858b5d051c81e4434487f611b42b55697f3122fe050392929c332996e9"
+            }
+          ]
+        }
+      ],
+      "fact_ids": [
+        "ELECTRONIC",
+        "BACKUP",
+        "BACKUP_DATE"
+      ],
+      "runtime_expectations": null,
+      "expected_clause_ids": [
+        "ELECTRONIC",
+        "BACKUP",
+        "BACKUP_DATE"
+      ],
+      "expected_refusal": false,
+      "family": "discursive",
+      "expected_contexts": [],
+      "answerability": "UNRESOLVED_CONDITIONAL_APPLICATION",
+      "context_source_independent": true
+    },
+    {
+      "id": "Q15",
+      "text": "La DPGF comporte-t-elle une erreur de total ou une ligne non chiffrée ?",
+      "query_sha256": "6330e7e213b3ed5772fd2ec30b8aa2312297df495fdc32af71706d5d11480372",
+      "semantic_request": {
+        "subject": "DPGF",
+        "demand": "FINANCIAL",
+        "lot": null
+      },
+      "gold_sources": [],
+      "gold_regions": [],
+      "fact_ids": [],
+      "runtime_expectations": null,
+      "expected_clause_ids": [],
+      "expected_refusal": true,
+      "family": "discursive",
+      "expected_contexts": [],
+      "answerability": "FINANCIAL_REFUSAL",
+      "context_source_independent": true
+    },
+    {
+      "id": "Q16",
+      "text": "Quel pourcentage de la note est attribué au délai d’intervention ?",
+      "query_sha256": "c474c394ef163ce49e7730530759b3ab2ec79b5903b8ea89156d27ebc1114536",
+      "semantic_request": {
+        "subject": "SCORING",
+        "demand": "UNKNOWN",
+        "lot": null
+      },
+      "gold_sources": [],
+      "gold_regions": [],
+      "fact_ids": [],
+      "runtime_expectations": null,
+      "expected_clause_ids": [],
+      "expected_refusal": false,
+      "family": "discursive",
+      "expected_contexts": [],
+      "answerability": "NO_EVIDENCE",
+      "context_source_independent": true
+    },
+    {
+      "id": "Q17",
+      "text": "La visite obligatoire du lot 02 est-elle reportée au 14 décembre 2031 à 9 h ?",
+      "query_sha256": "a05ab0f8c6d25ea566a1cfca61084c09345331daa86c15a8f85d17927abd4108",
+      "semantic_request": {
+        "subject": "VISIT_SITE",
+        "demand": "DATE_TIME",
+        "lot": 2
+      },
+      "gold_sources": [
+        "7fda57a1-f643-5880-a352-bff2f9697ef7"
+      ],
+      "gold_regions": [
+        {
+          "id": "SITE",
+          "source_fragment_id": "7fda57a1-f643-5880-a352-bff2f9697ef7",
+          "start_byte": 47,
+          "end_byte": 108,
+          "excerpt": "la visite du site est obligatoire avant la remise de l'offre.",
+          "source_sha256": "d71f967c1f96141691aab93028d2effe85887ff4a9021f948389b864201229e1",
+          "subject": "VISIT_SITE",
+          "lot": 2,
+          "value": "REQUIRED",
+          "kind": "ASSERTION",
+          "applicability": "UNKNOWN",
+          "upstream_conditions": [
+            "Lot 02 — Couverture. Pour ce lot uniquement,"
+          ],
+          "context_regions": [
+            {
+              "source_fragment_id": "7fda57a1-f643-5880-a352-bff2f9697ef7",
+              "start_byte": 0,
+              "end_byte": 46,
+              "excerpt": "Lot 02 — Couverture. Pour ce lot uniquement,",
+              "source_sha256": "d71f967c1f96141691aab93028d2effe85887ff4a9021f948389b864201229e1"
+            }
+          ]
+        }
+      ],
+      "fact_ids": [
+        "SITE",
+        "ATTEST",
+        "OTHER_VISIT"
+      ],
+      "runtime_expectations": null,
+      "expected_clause_ids": [
+        "SITE"
+      ],
+      "expected_refusal": false,
+      "family": "discursive",
+      "expected_contexts": [],
+      "answerability": "PARTIAL_REPORT_UNKNOWN",
+      "context_source_independent": true
+    },
+    {
+      "id": "Q18",
+      "text": "La notice patient de consultation de dermatologie impose-t-elle au candidat BTP de joindre ses ordonnances à son offre ?",
+      "query_sha256": "81f4313283e25f8187ee2bf92afc22afdd4a39b27e7b324478a2e1b504fc8ad1",
+      "semantic_request": {
+        "subject": "MEDICAL_PRESCRIPTION",
+        "demand": "OBLIGATION",
+        "lot": null
+      },
+      "gold_sources": [],
+      "gold_regions": [],
+      "fact_ids": [],
+      "runtime_expectations": null,
+      "expected_clause_ids": [],
+      "expected_refusal": false,
+      "family": "discursive",
+      "expected_contexts": [],
+      "answerability": "NO_EVIDENCE",
+      "context_source_independent": true
+    },
+    {
+      "id": "Q19",
+      "text": "Pour préparer la candidature, quel formulaire DC1 chaque candidat doit-il remettre ? Répondre uniquement sur ce formulaire.",
+      "query_sha256": "a6768f0c423f6649382959f77693d366457fea4121bf72fd24e40b60c3b1482d",
+      "semantic_request": {
+        "subject": "DC1",
+        "demand": "OBLIGATION",
+        "lot": null
+      },
+      "gold_sources": [
+        "c0ca70a0-5461-5cfc-803e-66e79673e0d2"
+      ],
+      "gold_regions": [
+        {
+          "id": "DC1",
+          "source_fragment_id": "c0ca70a0-5461-5cfc-803e-66e79673e0d2",
+          "start_byte": 85,
+          "end_byte": 132,
+          "excerpt": "Chaque candidat remet un formulaire DC1 signé.",
+          "source_sha256": "40510ba69af63a4c956dae9245d71e1c429e02f44b29cc7d6c2fefd034311680",
+          "subject": "DC1",
+          "lot": null,
+          "value": "REQUIRED",
+          "kind": "ASSERTION",
+          "applicability": "UNKNOWN",
+          "upstream_conditions": [
+            "Article 3 — Candidature.",
+            "Les dispositions suivantes concernent tous les candidats."
+          ],
+          "context_regions": [
+            {
+              "source_fragment_id": "c0ca70a0-5461-5cfc-803e-66e79673e0d2",
+              "start_byte": 0,
+              "end_byte": 26,
+              "excerpt": "Article 3 — Candidature.",
+              "source_sha256": "40510ba69af63a4c956dae9245d71e1c429e02f44b29cc7d6c2fefd034311680"
+            },
+            {
+              "source_fragment_id": "c0ca70a0-5461-5cfc-803e-66e79673e0d2",
+              "start_byte": 27,
+              "end_byte": 84,
+              "excerpt": "Les dispositions suivantes concernent tous les candidats.",
+              "source_sha256": "40510ba69af63a4c956dae9245d71e1c429e02f44b29cc7d6c2fefd034311680"
+            }
+          ]
+        }
+      ],
+      "fact_ids": [
+        "DC1",
+        "DC2",
+        "PHASE"
+      ],
+      "runtime_expectations": null,
+      "expected_clause_ids": [
+        "DC1"
+      ],
+      "expected_refusal": false,
+      "family": "single_open",
+      "expected_contexts": [
+        "Pour préparer la candidature, "
+      ],
+      "answerability": "SOURCED_CANDIDATES_ONLY",
+      "context_source_independent": true
+    },
+    {
+      "id": "Q20",
+      "text": "Pour préparer la candidature, quel formulaire DC2 chaque candidat doit-il joindre ? Répondre uniquement sur ce formulaire.",
+      "query_sha256": "749d1c225879e75d5a8d61785c780cc886ee1436d8df530fa29d72ec522f1518",
+      "semantic_request": {
+        "subject": "DC2",
+        "demand": "OBLIGATION",
+        "lot": null
+      },
+      "gold_sources": [
+        "c0ca70a0-5461-5cfc-803e-66e79673e0d2"
+      ],
+      "gold_regions": [
+        {
+          "id": "DC2",
+          "source_fragment_id": "c0ca70a0-5461-5cfc-803e-66e79673e0d2",
+          "start_byte": 133,
+          "end_byte": 182,
+          "excerpt": "Il joint également un formulaire DC2 renseigné.",
+          "source_sha256": "40510ba69af63a4c956dae9245d71e1c429e02f44b29cc7d6c2fefd034311680",
+          "subject": "DC2",
+          "lot": null,
+          "value": "REQUIRED",
+          "kind": "ASSERTION",
+          "applicability": "UNKNOWN",
+          "upstream_conditions": [
+            "Article 3 — Candidature.",
+            "Chaque candidat remet un formulaire DC1 signé."
+          ],
+          "context_regions": [
+            {
+              "source_fragment_id": "c0ca70a0-5461-5cfc-803e-66e79673e0d2",
+              "start_byte": 0,
+              "end_byte": 26,
+              "excerpt": "Article 3 — Candidature.",
+              "source_sha256": "40510ba69af63a4c956dae9245d71e1c429e02f44b29cc7d6c2fefd034311680"
+            },
+            {
+              "source_fragment_id": "c0ca70a0-5461-5cfc-803e-66e79673e0d2",
+              "start_byte": 85,
+              "end_byte": 132,
+              "excerpt": "Chaque candidat remet un formulaire DC1 signé.",
+              "source_sha256": "40510ba69af63a4c956dae9245d71e1c429e02f44b29cc7d6c2fefd034311680"
+            }
+          ]
+        }
+      ],
+      "fact_ids": [
+        "DC1",
+        "DC2",
+        "PHASE"
+      ],
+      "runtime_expectations": null,
+      "expected_clause_ids": [
+        "DC2"
+      ],
+      "expected_refusal": false,
+      "family": "single_open",
+      "expected_contexts": [
+        "Pour préparer la candidature, "
+      ],
+      "answerability": "SOURCED_CANDIDATES_ONLY",
+      "context_source_independent": true
+    },
+    {
+      "id": "Q21",
+      "text": "Pour préparer l’offre du lot 02, quelle visite de chantier le candidat doit-il effectuer ? Répondre uniquement sur la visite.",
+      "query_sha256": "58e43202ad6d35cfe320b59e621f5bf2c21878424da4af53324aaf34eb1af521",
+      "semantic_request": {
+        "subject": "VISIT_SITE",
+        "demand": "OBLIGATION",
+        "lot": 2
+      },
+      "gold_sources": [
+        "7fda57a1-f643-5880-a352-bff2f9697ef7"
+      ],
+      "gold_regions": [
+        {
+          "id": "SITE",
+          "source_fragment_id": "7fda57a1-f643-5880-a352-bff2f9697ef7",
+          "start_byte": 47,
+          "end_byte": 108,
+          "excerpt": "la visite du site est obligatoire avant la remise de l'offre.",
+          "source_sha256": "d71f967c1f96141691aab93028d2effe85887ff4a9021f948389b864201229e1",
+          "subject": "VISIT_SITE",
+          "lot": 2,
+          "value": "REQUIRED",
+          "kind": "ASSERTION",
+          "applicability": "UNKNOWN",
+          "upstream_conditions": [
+            "Lot 02 — Couverture. Pour ce lot uniquement,"
+          ],
+          "context_regions": [
+            {
+              "source_fragment_id": "7fda57a1-f643-5880-a352-bff2f9697ef7",
+              "start_byte": 0,
+              "end_byte": 46,
+              "excerpt": "Lot 02 — Couverture. Pour ce lot uniquement,",
+              "source_sha256": "d71f967c1f96141691aab93028d2effe85887ff4a9021f948389b864201229e1"
+            }
+          ]
+        }
+      ],
+      "fact_ids": [
+        "SITE",
+        "ATTEST",
+        "OTHER_VISIT"
+      ],
+      "runtime_expectations": null,
+      "expected_clause_ids": [
+        "SITE"
+      ],
+      "expected_refusal": false,
+      "family": "single_open",
+      "expected_contexts": [],
+      "answerability": "SOURCED_CANDIDATES_ONLY",
+      "context_source_independent": true
+    },
+    {
+      "id": "Q22",
+      "text": "Pour préparer l’intervention du lot 09, quelle visite médicale chaque opérateur affecté au désamiantage doit-il effectuer ? Répondre uniquement sur cette visite.",
+      "query_sha256": "c679cb875e538dc200fdda9e828a863511d777ad37a4055750d658ca332262c7",
+      "semantic_request": {
+        "subject": "VISIT_MEDICAL",
+        "demand": "OBLIGATION",
+        "lot": 9
+      },
+      "gold_sources": [
+        "94d2e0d8-eb9a-53bd-9c92-ac926f208a02"
+      ],
+      "gold_regions": [
+        {
+          "id": "MEDICAL",
+          "source_fragment_id": "94d2e0d8-eb9a-53bd-9c92-ac926f208a02",
+          "start_byte": 107,
+          "end_byte": 198,
+          "excerpt": "chaque opérateur affecté au désamiantage doit effectuer une visite médicale d'aptitude.",
+          "source_sha256": "4eb4210c6ab82fc0f3831980b9c28ea3529f9009dd57131b8a5f75cf137f0854",
+          "subject": "VISIT_MEDICAL",
+          "lot": 9,
+          "value": "REQUIRED",
+          "kind": "ASSERTION",
+          "applicability": "UNKNOWN",
+          "upstream_conditions": [
+            "Préparation des interventions — lot 09, désamiantage.",
+            "Avant sa première intervention sur ce chantier,"
+          ],
+          "context_regions": [
+            {
+              "source_fragment_id": "94d2e0d8-eb9a-53bd-9c92-ac926f208a02",
+              "start_byte": 0,
+              "end_byte": 57,
+              "excerpt": "Préparation des interventions — lot 09, désamiantage.",
+              "source_sha256": "4eb4210c6ab82fc0f3831980b9c28ea3529f9009dd57131b8a5f75cf137f0854"
+            },
+            {
+              "source_fragment_id": "94d2e0d8-eb9a-53bd-9c92-ac926f208a02",
+              "start_byte": 58,
+              "end_byte": 106,
+              "excerpt": "Avant sa première intervention sur ce chantier,",
+              "source_sha256": "4eb4210c6ab82fc0f3831980b9c28ea3529f9009dd57131b8a5f75cf137f0854"
+            }
+          ]
+        }
+      ],
+      "fact_ids": [
+        "MEDICAL"
+      ],
+      "runtime_expectations": null,
+      "expected_clause_ids": [
+        "MEDICAL"
+      ],
+      "expected_refusal": false,
+      "family": "single_open",
+      "expected_contexts": [],
+      "answerability": "UNRESOLVED_CONDITIONAL_APPLICATION",
+      "context_source_independent": true
+    },
+    {
+      "id": "Q23",
+      "text": "Pour préparer une offre du lot 06 proposant le revêtement R2, quel échantillon le candidat doit-il déposer ? Répondre uniquement sur cet échantillon.",
+      "query_sha256": "f6df65ba5f13dfb4be33dca44031270415aa4b248894af7b1ae6dd834a072a32",
+      "semantic_request": {
+        "subject": "SAMPLE",
+        "demand": "OBLIGATION",
+        "lot": 6
+      },
+      "gold_sources": [
+        "5fe122b4-9203-50e2-b8ee-d96c0123ea63"
+      ],
+      "gold_regions": [
+        {
+          "id": "SAMPLE",
+          "source_fragment_id": "5fe122b4-9203-50e2-b8ee-d96c0123ea63",
+          "start_byte": 121,
+          "end_byte": 218,
+          "excerpt": "le candidat dépose un échantillon de 30 cm sur 30 cm avant la date limite de remise des offres.",
+          "source_sha256": "017b77fd7ab60d9669dbedc1a8b499956c3111542ac82b4460f3acc9945d288f",
+          "subject": "SAMPLE",
+          "lot": 6,
+          "value": "REQUIRED",
+          "kind": "ASSERTION",
+          "applicability": "UNKNOWN",
+          "upstream_conditions": [
+            "Lot 06 — Revêtements de sols.",
+            "Un échantillon n'est exigé que si le candidat propose le revêtement R2.",
+            "Dans ce cas,"
+          ],
+          "context_regions": [
+            {
+              "source_fragment_id": "5fe122b4-9203-50e2-b8ee-d96c0123ea63",
+              "start_byte": 0,
+              "end_byte": 32,
+              "excerpt": "Lot 06 — Revêtements de sols.",
+              "source_sha256": "017b77fd7ab60d9669dbedc1a8b499956c3111542ac82b4460f3acc9945d288f"
+            },
+            {
+              "source_fragment_id": "5fe122b4-9203-50e2-b8ee-d96c0123ea63",
+              "start_byte": 33,
+              "end_byte": 107,
+              "excerpt": "Un échantillon n'est exigé que si le candidat propose le revêtement R2.",
+              "source_sha256": "017b77fd7ab60d9669dbedc1a8b499956c3111542ac82b4460f3acc9945d288f"
+            },
+            {
+              "source_fragment_id": "5fe122b4-9203-50e2-b8ee-d96c0123ea63",
+              "start_byte": 108,
+              "end_byte": 120,
+              "excerpt": "Dans ce cas,",
+              "source_sha256": "017b77fd7ab60d9669dbedc1a8b499956c3111542ac82b4460f3acc9945d288f"
+            }
+          ]
+        }
+      ],
+      "fact_ids": [
+        "SAMPLE"
+      ],
+      "runtime_expectations": null,
+      "expected_clause_ids": [
+        "SAMPLE"
+      ],
+      "expected_refusal": false,
+      "family": "single_open",
+      "expected_contexts": [],
+      "answerability": "UNRESOLVED_CONDITIONAL_APPLICATION",
+      "context_source_independent": true
+    },
+    {
+      "id": "Q24",
+      "text": "Pour préparer l’offre du lot 02, quel justificatif de visite le candidat doit-il joindre ? Répondre uniquement sur ce justificatif.",
+      "query_sha256": "622c9c2da9ad2c9b194b5ae758735abf532f0636622d0099eab44d29a986e877",
+      "semantic_request": {
+        "subject": "VISIT_CERTIFICATE",
+        "demand": "OBLIGATION",
+        "lot": 2
+      },
+      "gold_sources": [
+        "7fda57a1-f643-5880-a352-bff2f9697ef7"
+      ],
+      "gold_regions": [
+        {
+          "id": "ATTEST",
+          "source_fragment_id": "7fda57a1-f643-5880-a352-bff2f9697ef7",
+          "start_byte": 109,
+          "end_byte": 164,
+          "excerpt": "Le candidat joint l'attestation de visite à son offre.",
+          "source_sha256": "d71f967c1f96141691aab93028d2effe85887ff4a9021f948389b864201229e1",
+          "subject": "VISIT_CERTIFICATE",
+          "lot": 2,
+          "value": "REQUIRED",
+          "kind": "ASSERTION",
+          "applicability": "UNKNOWN",
+          "upstream_conditions": [
+            "Lot 02 — Couverture. Pour ce lot uniquement,"
+          ],
+          "context_regions": [
+            {
+              "source_fragment_id": "7fda57a1-f643-5880-a352-bff2f9697ef7",
+              "start_byte": 0,
+              "end_byte": 46,
+              "excerpt": "Lot 02 — Couverture. Pour ce lot uniquement,",
+              "source_sha256": "d71f967c1f96141691aab93028d2effe85887ff4a9021f948389b864201229e1"
+            }
+          ]
+        }
+      ],
+      "fact_ids": [
+        "SITE",
+        "ATTEST",
+        "OTHER_VISIT"
+      ],
+      "runtime_expectations": null,
+      "expected_clause_ids": [
+        "ATTEST"
+      ],
+      "expected_refusal": false,
+      "family": "single_open",
+      "expected_contexts": [],
+      "answerability": "SOURCED_CANDIDATES_ONLY",
+      "context_source_independent": true
+    },
+    {
+      "id": "Q25",
+      "text": "Pour préparer sa candidature, chaque candidat doit-il remettre un DC1 signé ?",
+      "query_sha256": "8114fb318e85efaeac0ef4d54c1f58b90edbe232aa94a6d885194edc2d09c65d",
+      "semantic_request": {
+        "subject": "DC1",
+        "demand": "OBLIGATION",
+        "lot": null
+      },
+      "gold_sources": [
+        "c0ca70a0-5461-5cfc-803e-66e79673e0d2"
+      ],
+      "gold_regions": [
+        {
+          "id": "DC1",
+          "source_fragment_id": "c0ca70a0-5461-5cfc-803e-66e79673e0d2",
+          "start_byte": 85,
+          "end_byte": 132,
+          "excerpt": "Chaque candidat remet un formulaire DC1 signé.",
+          "source_sha256": "40510ba69af63a4c956dae9245d71e1c429e02f44b29cc7d6c2fefd034311680",
+          "subject": "DC1",
+          "lot": null,
+          "value": "REQUIRED",
+          "kind": "ASSERTION",
+          "applicability": "UNKNOWN",
+          "upstream_conditions": [
+            "Article 3 — Candidature.",
+            "Les dispositions suivantes concernent tous les candidats."
+          ],
+          "context_regions": [
+            {
+              "source_fragment_id": "c0ca70a0-5461-5cfc-803e-66e79673e0d2",
+              "start_byte": 0,
+              "end_byte": 26,
+              "excerpt": "Article 3 — Candidature.",
+              "source_sha256": "40510ba69af63a4c956dae9245d71e1c429e02f44b29cc7d6c2fefd034311680"
+            },
+            {
+              "source_fragment_id": "c0ca70a0-5461-5cfc-803e-66e79673e0d2",
+              "start_byte": 27,
+              "end_byte": 84,
+              "excerpt": "Les dispositions suivantes concernent tous les candidats.",
+              "source_sha256": "40510ba69af63a4c956dae9245d71e1c429e02f44b29cc7d6c2fefd034311680"
+            }
+          ]
+        }
+      ],
+      "fact_ids": [
+        "DC1",
+        "DC2",
+        "PHASE"
+      ],
+      "runtime_expectations": null,
+      "expected_clause_ids": [
+        "DC1"
+      ],
+      "expected_refusal": false,
+      "family": "single_closed",
+      "expected_contexts": [
+        "Pour préparer sa candidature, "
+      ],
+      "answerability": "SOURCED_CANDIDATES_ONLY",
+      "context_source_independent": true
+    },
+    {
+      "id": "Q26",
+      "text": "Chaque candidat doit-il joindre un DC2 renseigné à sa candidature ?",
+      "query_sha256": "e488bcbec9154ad1b127ccaf1da2d26be94652b5bb681d1746f908a91618c142",
+      "semantic_request": {
+        "subject": "DC2",
+        "demand": "OBLIGATION",
+        "lot": null
+      },
+      "gold_sources": [
+        "c0ca70a0-5461-5cfc-803e-66e79673e0d2"
+      ],
+      "gold_regions": [
+        {
+          "id": "DC2",
+          "source_fragment_id": "c0ca70a0-5461-5cfc-803e-66e79673e0d2",
+          "start_byte": 133,
+          "end_byte": 182,
+          "excerpt": "Il joint également un formulaire DC2 renseigné.",
+          "source_sha256": "40510ba69af63a4c956dae9245d71e1c429e02f44b29cc7d6c2fefd034311680",
+          "subject": "DC2",
+          "lot": null,
+          "value": "REQUIRED",
+          "kind": "ASSERTION",
+          "applicability": "UNKNOWN",
+          "upstream_conditions": [
+            "Article 3 — Candidature.",
+            "Chaque candidat remet un formulaire DC1 signé."
+          ],
+          "context_regions": [
+            {
+              "source_fragment_id": "c0ca70a0-5461-5cfc-803e-66e79673e0d2",
+              "start_byte": 0,
+              "end_byte": 26,
+              "excerpt": "Article 3 — Candidature.",
+              "source_sha256": "40510ba69af63a4c956dae9245d71e1c429e02f44b29cc7d6c2fefd034311680"
+            },
+            {
+              "source_fragment_id": "c0ca70a0-5461-5cfc-803e-66e79673e0d2",
+              "start_byte": 85,
+              "end_byte": 132,
+              "excerpt": "Chaque candidat remet un formulaire DC1 signé.",
+              "source_sha256": "40510ba69af63a4c956dae9245d71e1c429e02f44b29cc7d6c2fefd034311680"
+            }
+          ]
+        }
+      ],
+      "fact_ids": [
+        "DC1",
+        "DC2",
+        "PHASE"
+      ],
+      "runtime_expectations": null,
+      "expected_clause_ids": [
+        "DC2"
+      ],
+      "expected_refusal": false,
+      "family": "single_closed",
+      "expected_contexts": [],
+      "answerability": "SOURCED_CANDIDATES_ONLY",
+      "context_source_independent": true
+    },
+    {
+      "id": "Q27",
+      "text": "Pour le lot 02, la visite du site est-elle obligatoire avant la remise de l’offre ?",
+      "query_sha256": "663f4086bfa5c5beb143cc6ccc3670d18609bda209a98b7238009bd7a2b083f9",
+      "semantic_request": {
+        "subject": "VISIT_SITE",
+        "demand": "OBLIGATION",
+        "lot": 2
+      },
+      "gold_sources": [
+        "7fda57a1-f643-5880-a352-bff2f9697ef7"
+      ],
+      "gold_regions": [
+        {
+          "id": "SITE",
+          "source_fragment_id": "7fda57a1-f643-5880-a352-bff2f9697ef7",
+          "start_byte": 47,
+          "end_byte": 108,
+          "excerpt": "la visite du site est obligatoire avant la remise de l'offre.",
+          "source_sha256": "d71f967c1f96141691aab93028d2effe85887ff4a9021f948389b864201229e1",
+          "subject": "VISIT_SITE",
+          "lot": 2,
+          "value": "REQUIRED",
+          "kind": "ASSERTION",
+          "applicability": "UNKNOWN",
+          "upstream_conditions": [
+            "Lot 02 — Couverture. Pour ce lot uniquement,"
+          ],
+          "context_regions": [
+            {
+              "source_fragment_id": "7fda57a1-f643-5880-a352-bff2f9697ef7",
+              "start_byte": 0,
+              "end_byte": 46,
+              "excerpt": "Lot 02 — Couverture. Pour ce lot uniquement,",
+              "source_sha256": "d71f967c1f96141691aab93028d2effe85887ff4a9021f948389b864201229e1"
+            }
+          ]
+        }
+      ],
+      "fact_ids": [
+        "SITE",
+        "ATTEST",
+        "OTHER_VISIT"
+      ],
+      "runtime_expectations": null,
+      "expected_clause_ids": [
+        "SITE"
+      ],
+      "expected_refusal": false,
+      "family": "single_closed",
+      "expected_contexts": [],
+      "answerability": "SOURCED_CANDIDATES_ONLY",
+      "context_source_independent": true
+    },
+    {
+      "id": "Q28",
+      "text": "Pour le lot 09, chaque opérateur affecté au désamiantage doit-il effectuer une visite médicale d’aptitude avant sa première intervention sur ce chantier ?",
+      "query_sha256": "22bed00da8d39c71fd1f8a38463cb118d90207fb72a8fe79c5aeed53420ca743",
+      "semantic_request": {
+        "subject": "VISIT_MEDICAL",
+        "demand": "OBLIGATION",
+        "lot": 9
+      },
+      "gold_sources": [
+        "94d2e0d8-eb9a-53bd-9c92-ac926f208a02"
+      ],
+      "gold_regions": [
+        {
+          "id": "MEDICAL",
+          "source_fragment_id": "94d2e0d8-eb9a-53bd-9c92-ac926f208a02",
+          "start_byte": 107,
+          "end_byte": 198,
+          "excerpt": "chaque opérateur affecté au désamiantage doit effectuer une visite médicale d'aptitude.",
+          "source_sha256": "4eb4210c6ab82fc0f3831980b9c28ea3529f9009dd57131b8a5f75cf137f0854",
+          "subject": "VISIT_MEDICAL",
+          "lot": 9,
+          "value": "REQUIRED",
+          "kind": "ASSERTION",
+          "applicability": "UNKNOWN",
+          "upstream_conditions": [
+            "Préparation des interventions — lot 09, désamiantage.",
+            "Avant sa première intervention sur ce chantier,"
+          ],
+          "context_regions": [
+            {
+              "source_fragment_id": "94d2e0d8-eb9a-53bd-9c92-ac926f208a02",
+              "start_byte": 0,
+              "end_byte": 57,
+              "excerpt": "Préparation des interventions — lot 09, désamiantage.",
+              "source_sha256": "4eb4210c6ab82fc0f3831980b9c28ea3529f9009dd57131b8a5f75cf137f0854"
+            },
+            {
+              "source_fragment_id": "94d2e0d8-eb9a-53bd-9c92-ac926f208a02",
+              "start_byte": 58,
+              "end_byte": 106,
+              "excerpt": "Avant sa première intervention sur ce chantier,",
+              "source_sha256": "4eb4210c6ab82fc0f3831980b9c28ea3529f9009dd57131b8a5f75cf137f0854"
+            }
+          ]
+        }
+      ],
+      "fact_ids": [
+        "MEDICAL"
+      ],
+      "runtime_expectations": null,
+      "expected_clause_ids": [
+        "MEDICAL"
+      ],
+      "expected_refusal": false,
+      "family": "single_closed",
+      "expected_contexts": [],
+      "answerability": "UNRESOLVED_CONDITIONAL_APPLICATION",
+      "context_source_independent": true
+    },
+    {
+      "id": "Q29",
+      "text": "Pour le lot 06, un candidat proposant le revêtement R2 doit-il déposer un échantillon de 30 cm sur 30 cm avant la date limite de remise des offres ?",
+      "query_sha256": "a93b9958b6ed891dd2042010340d5d8281b0be22e0ca369b5a77c7021025c0b5",
+      "semantic_request": {
+        "subject": "SAMPLE",
+        "demand": "OBLIGATION",
+        "lot": 6
+      },
+      "gold_sources": [
+        "5fe122b4-9203-50e2-b8ee-d96c0123ea63"
+      ],
+      "gold_regions": [
+        {
+          "id": "SAMPLE",
+          "source_fragment_id": "5fe122b4-9203-50e2-b8ee-d96c0123ea63",
+          "start_byte": 121,
+          "end_byte": 218,
+          "excerpt": "le candidat dépose un échantillon de 30 cm sur 30 cm avant la date limite de remise des offres.",
+          "source_sha256": "017b77fd7ab60d9669dbedc1a8b499956c3111542ac82b4460f3acc9945d288f",
+          "subject": "SAMPLE",
+          "lot": 6,
+          "value": "REQUIRED",
+          "kind": "ASSERTION",
+          "applicability": "UNKNOWN",
+          "upstream_conditions": [
+            "Lot 06 — Revêtements de sols.",
+            "Un échantillon n'est exigé que si le candidat propose le revêtement R2.",
+            "Dans ce cas,"
+          ],
+          "context_regions": [
+            {
+              "source_fragment_id": "5fe122b4-9203-50e2-b8ee-d96c0123ea63",
+              "start_byte": 0,
+              "end_byte": 32,
+              "excerpt": "Lot 06 — Revêtements de sols.",
+              "source_sha256": "017b77fd7ab60d9669dbedc1a8b499956c3111542ac82b4460f3acc9945d288f"
+            },
+            {
+              "source_fragment_id": "5fe122b4-9203-50e2-b8ee-d96c0123ea63",
+              "start_byte": 33,
+              "end_byte": 107,
+              "excerpt": "Un échantillon n'est exigé que si le candidat propose le revêtement R2.",
+              "source_sha256": "017b77fd7ab60d9669dbedc1a8b499956c3111542ac82b4460f3acc9945d288f"
+            },
+            {
+              "source_fragment_id": "5fe122b4-9203-50e2-b8ee-d96c0123ea63",
+              "start_byte": 108,
+              "end_byte": 120,
+              "excerpt": "Dans ce cas,",
+              "source_sha256": "017b77fd7ab60d9669dbedc1a8b499956c3111542ac82b4460f3acc9945d288f"
+            }
+          ]
+        }
+      ],
+      "fact_ids": [
+        "SAMPLE"
+      ],
+      "runtime_expectations": null,
+      "expected_clause_ids": [
+        "SAMPLE"
+      ],
+      "expected_refusal": false,
+      "family": "single_closed",
+      "expected_contexts": [],
+      "answerability": "UNRESOLVED_CONDITIONAL_APPLICATION",
+      "context_source_independent": true
+    },
+    {
+      "id": "Q30",
+      "text": "Pour préparer son offre du lot 02, le candidat doit-il y joindre l’attestation de visite ?",
+      "query_sha256": "50874aff65c4f2dac71a7e41e32e5f05115b906ca900f29733acd3f2028376c3",
+      "semantic_request": {
+        "subject": "VISIT_CERTIFICATE",
+        "demand": "OBLIGATION",
+        "lot": 2
+      },
+      "gold_sources": [
+        "7fda57a1-f643-5880-a352-bff2f9697ef7"
+      ],
+      "gold_regions": [
+        {
+          "id": "ATTEST",
+          "source_fragment_id": "7fda57a1-f643-5880-a352-bff2f9697ef7",
+          "start_byte": 109,
+          "end_byte": 164,
+          "excerpt": "Le candidat joint l'attestation de visite à son offre.",
+          "source_sha256": "d71f967c1f96141691aab93028d2effe85887ff4a9021f948389b864201229e1",
+          "subject": "VISIT_CERTIFICATE",
+          "lot": 2,
+          "value": "REQUIRED",
+          "kind": "ASSERTION",
+          "applicability": "UNKNOWN",
+          "upstream_conditions": [
+            "Lot 02 — Couverture. Pour ce lot uniquement,"
+          ],
+          "context_regions": [
+            {
+              "source_fragment_id": "7fda57a1-f643-5880-a352-bff2f9697ef7",
+              "start_byte": 0,
+              "end_byte": 46,
+              "excerpt": "Lot 02 — Couverture. Pour ce lot uniquement,",
+              "source_sha256": "d71f967c1f96141691aab93028d2effe85887ff4a9021f948389b864201229e1"
+            }
+          ]
+        }
+      ],
+      "fact_ids": [
+        "SITE",
+        "ATTEST",
+        "OTHER_VISIT"
+      ],
+      "runtime_expectations": null,
+      "expected_clause_ids": [
+        "ATTEST"
+      ],
+      "expected_refusal": false,
+      "family": "single_closed",
+      "expected_contexts": [],
+      "answerability": "SOURCED_CANDIDATES_ONLY",
+      "context_source_independent": true
+    }
+  ],
+  "qualification_protocol": {
+    "status": "FROZEN_FOR_MEASUREMENT",
+    "top_k": 10,
+    "report_at": [
+      1,
+      5,
+      10
+    ],
+    "restricted_source_ids": [],
+    "latency_budget_ms": 2000,
+    "recall_budget": 0.9,
+    "ram_budget_mib": 1200,
+    "cpu_limit": 2,
+    "timeout_seconds": 600,
+    "independence": "Semantic drafts by isolated review agent without candidate or prior gold; root encoded annotations before any run. Open and closed questions paired, not independent extra proofs.",
+    "context": "Whole current corpus, no per-query injection. Missing referents are not inferred.",
+    "control_query": "Pour préparer notre offre, la visite médicale est-elle obligatoire pour le lot 9 ?",
+    "control_not_scored": true,
+    "editorial_before_freeze": "Independent author clarified Q02/Q06/Q10/Q13/Q14/Q18 referents before any result; semantic modalities REQUIRED/FORBIDDEN preserved independently of candidate enums, source contexts anchored. Query workflow context fidelity is distinct from source context completeness.",
+    "ambiguous_report_source_ids": [
+      "de5b8784-5256-5fc7-ae34-697f33a208ff"
+    ]
+  }
+}

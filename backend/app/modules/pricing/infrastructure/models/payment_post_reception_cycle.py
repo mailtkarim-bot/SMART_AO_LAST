@@ -19,6 +19,7 @@ class PaymentPostReceptionCycleRecord(TenantScopedRecord, Base):
             ["tenant_id", "case_id"], ["cases.tenant_id", "cases.id"], ondelete="RESTRICT"
         ),
         sa.UniqueConstraint("tenant_id", "id", name="uq_payment_post_reception_cycles__tenant_id"),
+        sa.UniqueConstraint("tenant_id", "case_id", "id", name="uq_payment_cycle__tenant_case_id"),
         sa.CheckConstraint(
             "status IN ('SOURCE_SIGNAL_ONLY', 'REVIEW_REQUIRED', 'UNKNOWN')",
             name="payment_cycle_status_closed",

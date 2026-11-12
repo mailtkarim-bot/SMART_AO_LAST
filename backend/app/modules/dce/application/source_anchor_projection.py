@@ -15,6 +15,7 @@ class DceSourceLocatorKind(StrEnum):
     PYMUPDF_BLOCK = "pymupdf_block"
     OCR_PAGE = "ocr_page"
     DOCX_PARAGRAPH = "docx_paragraph"
+    DOCX_TABLE_CELL = "docx_table_cell"
     XLSX_CELL = "xlsx_cell"
     TEXT_LINE = "text_line"
     DOCLING_MARKDOWN = "docling_markdown"
@@ -60,6 +61,7 @@ _POSITIVE_FIELDS: dict[DceSourceLocatorKind, frozenset[str]] = {
     DceSourceLocatorKind.PYMUPDF_BLOCK: frozenset({"page", "block"}),
     DceSourceLocatorKind.OCR_PAGE: frozenset({"page", "order"}),
     DceSourceLocatorKind.DOCX_PARAGRAPH: frozenset({"paragraph"}),
+    DceSourceLocatorKind.DOCX_TABLE_CELL: frozenset({"table", "row", "column", "paragraph"}),
     DceSourceLocatorKind.XLSX_CELL: frozenset(),
     DceSourceLocatorKind.TEXT_LINE: frozenset({"line"}),
     DceSourceLocatorKind.DOCLING_MARKDOWN: frozenset({"line"}),

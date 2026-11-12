@@ -8,9 +8,15 @@ from app.modules.pricing.application.case_contract_change_commands import (
     A1EngagementSourceInput,
     validate_impact_declaration_payload,
 )
+from app.modules.pricing.public.operational_change_contracts import (
+    OperationalActionDetails,
+    OperationalChangeContext,
+    OperationalPublication,
+)
 
 
 class RecordCaseContractChangeEventRequest(BaseModel):
+    operational_context: OperationalChangeContext | None = None
     model_config = ConfigDict(extra="forbid")
 
     command_id: UUID
@@ -29,6 +35,7 @@ class RecordCaseContractChangeEventRequest(BaseModel):
 
 
 class RecordCaseContractChangeApplicabilityRequest(BaseModel):
+    operational_review: OperationalChangeContext | None = None
     model_config = ConfigDict(extra="forbid")
 
     command_id: UUID
@@ -54,6 +61,7 @@ class RecordCaseContractChangeApplicabilityRequest(BaseModel):
 
 
 class RecordCaseContractChangeActionRequest(BaseModel):
+    operational_details: OperationalActionDetails | None = None
     model_config = ConfigDict(extra="forbid")
 
     command_id: UUID
@@ -143,6 +151,7 @@ class RecordCaseContractChangeExternalConfirmationRequest(BaseModel):
 
 
 class RecordCaseContractChangeActionExecutionRequest(BaseModel):
+    operational_publication: OperationalPublication | None = None
     model_config = ConfigDict(extra="forbid")
 
     command_id: UUID
@@ -264,6 +273,9 @@ class ContractChangeInstrumentResponse(BaseModel):
 
 
 class ContractChangeApplicabilityResponse(BaseModel):
+    source_reasons: list[str] = Field(default_factory=list)
+    source_state: str = "UNKNOWN"
+    operational_review: dict[str, object] | None = None
     review_id: UUID
     revision: int
     contract_instrument_version_id: UUID
@@ -277,6 +289,9 @@ class ContractChangeApplicabilityResponse(BaseModel):
 
 
 class ContractChangeActionResponse(BaseModel):
+    source_reasons: list[str] = Field(default_factory=list)
+    source_state: str = "UNKNOWN"
+    operational_details: dict[str, object] | None = None
     action_id: UUID
     revision: int
     applicability_review_id: UUID
@@ -361,6 +376,9 @@ class ContractChangeExternalConfirmationResponse(BaseModel):
 
 
 class ContractChangeActionExecutionResponse(BaseModel):
+    source_reasons: list[str] = Field(default_factory=list)
+    source_state: str = "UNKNOWN"
+    operational_publication: dict[str, object] | None = None
     act_id: UUID
     action_id: UUID
     c4_relation_id: UUID
@@ -384,6 +402,12 @@ class ContractChangeActionExecutionResponse(BaseModel):
 
 
 class ContractChangeEventResponse(BaseModel):
+    operational_timeline: list[dict[str, object]] = Field(default_factory=list)
+    recorded_at: str | None = None
+    source_reasons: list[str] = Field(default_factory=list)
+    source_state: str = "UNKNOWN"
+    current_operational_context: dict[str, object] | None = None
+    operational_context: dict[str, object] | None = None
     event_id: UUID
     case_id: UUID
     handover_snapshot_id: UUID
@@ -417,6 +441,7 @@ class ContractChangeEventResponse(BaseModel):
 
 
 class CaseContractChangeEventListResponse(BaseModel):
+    truncated: bool = False
     case_id: UUID
     events: list[ContractChangeEventResponse] = Field(default_factory=list)
 

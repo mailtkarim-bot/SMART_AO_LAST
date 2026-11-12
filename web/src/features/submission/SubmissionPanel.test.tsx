@@ -15,6 +15,9 @@ const evidenceForm: PanelProps["evidenceForm"] = {
 
 function renderPanel(overrides: Partial<PanelProps> = {}) {
   const props: PanelProps = {
+    finalControl: null, onLoadFinalControl: vi.fn(), signatureConfirmed: false,
+    setSignatureConfirmed: vi.fn(), signatureRationale: "", setSignatureRationale: vi.fn(),
+    signatureBusy: false, signatureIntent: null,
     preparationPackageId: "preparation-1",
     preparationRevision: "1",
     submissionPackageId: "",
@@ -105,6 +108,7 @@ describe("SubmissionPanel integration", () => {
     const onRequestSignature = vi.fn();
     const onLoadSignature = vi.fn();
     renderPanel({
+      signatureConfirmed: true,
       signatureId: "signature-1",
       signatureStatus: "SIGNED",
       signatureProvider: "TEST_PROVIDER",
@@ -219,4 +223,72 @@ describe("SubmissionPanel integration", () => {
     expect(screen.getByText("Réception partielle · v3")).toBeInTheDocument();
     expect(screen.getByText(/Rapprochement incomplet/i)).toBeInTheDocument();
   });
+});
+
+it('exposes each selected annex and hash without inferring P5 authorization or signature',()=>{
+ renderPanel({submissionPackageId:'submission-1',submissionManifest:{submission_package_id:'submission-1',package_version:3,state:'PRET_CONTROLE',manifest_sha256:'c'.repeat(64),authorization_status:'NOT_AUTHORIZED',external_submission:'NOT_PERFORMED',manifest:{entries:[{kind:'SOURCE_ANNEX',archive_path:'annexes/proof-1.pdf',document_id:'proof-1',sha256:'b'.repeat(64),requirement_ids:['req-1'],signature:'UNKNOWN'}]}}});
+ expect(screen.getByText(/Annexe incluse dans le paquet exact.*annexes\/proof-1.pdf/)).toBeInTheDocument();
+ expect(screen.getByText(/Document proof-1.*SHA-256/)).toHaveTextContent('b'.repeat(64));
+ expect(screen.getByText(/Exigences.*req-1.*Signature.*UNKNOWN/)).toBeInTheDocument();
+ expect(screen.getByText(/P5 à autoriser/)).toBeInTheDocument();
+});
+
+it('shows final-control gaps independently of a recorded signature and P5', () => {
+  renderPanel({
+    submissionPackageId: 'submission-1',
+    finalControl: {
+      submission_package_id: 'submission-1', package_version: 3, manifest_sha256: 'd'.repeat(64),
+      dce_version_id: 'dce-1', state: 'PARTIAL', source_state: 'CURRENT',
+      local_delivery_mode: 'LOCAL_ZIP', buyer_formats_state: 'OBSERVATIONS_AVAILABLE',
+      format_comparisons: [{requirement_id:'format-rule-1',source_excerpt:'Le mémoire technique doit être remis au format PDF.',
+        source_locator:'RC · ligne 10',source_anchor:{source_sha256:'d'.repeat(64)},confirmation:'CONFIRMED',
+        scope:'TECHNICAL_RESPONSE',requested:'PDF',files:[],state:'OBSERVED_MISMATCH',reason_code:'MIME_DIFFERS',
+        applicability:'UNKNOWN',conformity:'UNKNOWN'},
+        {requirement_id:'format-rule-2',source_excerpt:'Le format PDF est obligatoire.',source_locator:'RC · ligne 12',
+        source_anchor:null,confirmation:'CONFIRMED',scope:'UNSPECIFIED',requested:'PDF',files:[],
+        state:'UNKNOWN',reason_code:'TARGET_SCOPE_UNKNOWN',applicability:'UNKNOWN',conformity:'UNKNOWN'}],
+      buyer_names_sizes_state:'OBSERVATIONS_AVAILABLE',
+      name_size_comparisons:[{requirement_id:'name-rule-1',source_excerpt:'Le mémoire technique doit être nommé «Memoire.pdf».',
+        source_locator:'RC · ligne 20',source_anchor:{source_sha256:'e'.repeat(64)},confirmation:'CONFIRMED',
+        scope:'TECHNICAL_RESPONSE',criterion:'EXACT_NAME',requested_name:'Memoire.pdf',max_bytes:null,
+        files:[{archive_path:'technical-response.md',document_id:'document-1',sha256:'a'.repeat(64),byte_size:42,
+          requirement_ids:[],presence:'VERIFIED_SOURCE',signature:'UNKNOWN'}],
+        state:'OBSERVED_MISMATCH',reason_code:'NAME_DIFFERS',applicability:'UNKNOWN',conformity:'UNKNOWN'},
+        {requirement_id:'size-rule-1',source_excerpt:'La taille du KBIS ne doit pas dépasser 10 Mo.',
+         source_locator:'RC · ligne 21',source_anchor:null,confirmation:'CONFIRMED',scope:'UNSPECIFIED',
+         criterion:'UNKNOWN',requested_name:null,max_bytes:null,files:[],state:'UNKNOWN',
+         reason_code:'SIZE_UNIT_UNKNOWN',applicability:'UNKNOWN',conformity:'UNKNOWN'}],
+      files: [{ archive_path: 'technical-response.md', document_id: 'document-1', sha256: 'a'.repeat(64),
+        byte_size: null, requirement_ids: [], presence: 'VERIFIED_SOURCE', signature: 'UNKNOWN' },
+        {archive_path:'annexes/kbis.pdf',document_id:'kbis-1',sha256:'b'.repeat(64),byte_size:50,
+         requirement_ids:['requirement-1'],presence:'VERIFIED_SOURCE',signature:'UNKNOWN',
+         document_kind:'KBIS',media_type:'application/pdf',validity:'UNKNOWN'}],
+      requirements: [{ requirement_id: 'requirement-1', document_family: 'RC', source_state: 'CURRENT',
+        confirmation: 'CONFIRMED', source_locator: 'page:2', source_anchor: null, source_excerpt: 'Joindre une attestation.',
+        lot_candidates: [1], applicability: 'UNKNOWN', coverage: 'UNKNOWN', signature: 'UNKNOWN',
+        response_state: 'MISSING', pieces: [] }],
+      missing_cited_annexes: [], entries_without_exported_file: ['OFFICIAL_PRICING_VERSION'],
+      patron_review_ids: ['review-1'], p5_authorization_status: 'RECORDED', p5_authorization_id: 'p5-1',
+      signature_visibility: 'RESTRICTED', signature_records: [],
+      inventory: 'CURRENT_NON_FINANCIAL_SIGNALS_ONLY', signature_requirement: 'UNKNOWN',
+      signature_verification: 'UNKNOWN', signer_authority: 'UNKNOWN', conformity: 'UNKNOWN',
+      external_submission: 'NOT_PERFORMED',
+    },
+  });
+  expect(screen.getByRole('heading', { name: 'Contrôle final du pli exact' })).toBeInTheDocument();
+  expect(screen.getByText('Joindre une attestation.')).toBeInTheDocument();
+  expect(screen.getByText(/Nature : KBIS/)).toBeInTheDocument();
+  expect(screen.getByRole('heading',{name:'Formats demandés et pli exact'})).toBeInTheDocument();
+  expect(screen.getByRole('heading',{name:'Noms et tailles des fichiers'})).toBeInTheDocument();
+  expect(screen.getByText(/Nom demandé : Memoire.pdf/)).toBeInTheDocument();
+  expect(screen.getByText(/Unité de taille ambiguë/)).toBeInTheDocument();
+  expect(screen.getByText(/Nom exporté : technical-response.md · Taille : 42 octets/)).toBeInTheDocument();
+  expect(screen.getByText('Le mémoire technique doit être remis au format PDF.')).toBeInTheDocument();
+  expect(screen.getAllByText(/Écart observé/)).toHaveLength(2);
+  expect(screen.getByText(/Portée de la demande non établie/)).toBeInTheDocument();
+  expect(screen.getByText(/Format : PDF/)).toBeInTheDocument();
+  expect(screen.getAllByText(/Validité : UNKNOWN/).length).toBeGreaterThan(0);
+  expect(screen.getByText(/Réponse manquante/)).toBeInTheDocument();
+  expect(screen.getByText(/Validité cryptographique : UNKNOWN/)).toBeInTheDocument();
+  expect(screen.getByText(/Référence sans fichier exporté : OFFICIAL_PRICING_VERSION/)).toBeInTheDocument();
 });

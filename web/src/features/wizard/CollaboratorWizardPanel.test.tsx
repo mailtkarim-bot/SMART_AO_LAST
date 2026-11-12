@@ -134,7 +134,7 @@ function renderPanel(
     onResolveTaskBlocker: vi.fn(),
     ...overrides,
   };
-  return render(<CollaboratorWizardPanel {...props} />);
+  return { ...render(<CollaboratorWizardPanel {...props} />), props };
 }
 
 describe("CollaboratorWizardPanel", () => {
@@ -211,6 +211,8 @@ describe("CollaboratorWizardPanel", () => {
 
     expect(screen.getAllByText("SOURCES_CURRENT").length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Révision 2/).length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: /Créer le brouillon/ })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Contribution humaine — exigence 1"), { target: { value: "Nous maintenons les accès sans fermeture." } });
     expect(screen.getByRole("button", { name: /Créer le brouillon/ })).toBeEnabled();
     expect(screen.queryByText(/private-plan-id|private-proposal-id|a{20}/)).not.toBeInTheDocument();
   });
@@ -351,4 +353,52 @@ describe("CollaboratorWizardPanel", () => {
     await waitFor(() => expect(screen.getByText(/État :/)).toHaveTextContent("CONFIRMED"));
     expect(onRecordResult).toHaveBeenCalledTimes(1);
   });
+});
+
+it('requires an exact assembled response choice before freezing its bytes', () => {
+  const onCreateSnapshot = vi.fn();
+  const exactPlan = { plan_id:'plan-1', version:1, package_id:'package-1', dce_version_id:'dce-1',
+    state:'SOURCES_CURRENT' as const, content:{schema_version:1 as const,case_id:'case-1',package_id:'package-1',dce_version_id:'dce-1',items:[]}, plan_sha256:'f'.repeat(64) };
+  const draft = {...packageProjection.response_drafts[0],content_sha256:'a'.repeat(64),
+    response_plan_id:'plan-1', response_plan_version:1, content:'Deux contributions et manques UNKNOWN.'};
+  const view=renderPanel({wizardPackage:{...packageProjection,response_drafts:[draft]},
+    wizardResponsePlan:{...responsePlan,exactPlan}, isWizardResponsePlanCurrent:false,
+    canCreateWizardSnapshot:true,onCreateSnapshot,contributionOwnerKey:'owner-1'});
+  const create=screen.getByRole('button',{name:'Créer le snapshot choisi'});
+  expect(create).toBeDisabled();
+  fireEvent.click(screen.getByRole('radio',{name:/Choisir le brouillon/}));
+  fireEvent.click(create);
+  expect(onCreateSnapshot).toHaveBeenCalledWith({draft_id:'draft-1',version:1,content_sha256:'a'.repeat(64)});
+  view.rerender(<CollaboratorWizardPanel {...view.props} contributionOwnerKey="owner-2"/>);
+  expect(screen.getByRole('button',{name:'Créer le snapshot choisi'})).toBeDisabled();
+  expect(screen.getByRole('radio',{name:/Choisir le brouillon/})).not.toBeChecked();
+});
+
+it('hides a loaded private preview as soon as the Case changes',()=>{
+  const view=renderPanel({wizardPackage:packageProjection,wizardPreviewContent:'PRIVATE OLD RESPONSE',wizardPreviewDocumentId:'doc-old'});
+  expect(screen.getByText('PRIVATE OLD RESPONSE')).toBeInTheDocument();
+  view.rerender(<CollaboratorWizardPanel {...view.props} wizardCaseId="case-2"/>);
+  expect(screen.queryByText('PRIVATE OLD RESPONSE')).not.toBeInTheDocument();
+});
+
+it('requires justification and confirmation before freezing chosen source annexes',async()=>{
+ const {createApiClient}=await import('../../infrastructure/api');
+ const {BuyerDocxIntentStore}=await import('./BuyerDocxIntentStore');
+ const selected={draft_id:'draft-1',version:1,content_sha256:'a'.repeat(64)};
+ const annex={requirement_id:'requirement-1',section_code:'METHOD',document_id:'proof-1',sha256:'b'.repeat(64),inclusion:'UNKNOWN' as const};
+ const api={...createApiClient('', ''),readResponseCoverage:vi.fn().mockResolvedValue({package_id:'package-1',selected_response:selected,dce_version_id:'dce-1',content_format:'MARKDOWN',coverage:'UNKNOWN',signature:'UNKNOWN',annexes:'UNKNOWN',inventory:'CURRENT_NON_FINANCIAL_SIGNALS_ONLY',cited_annexes:[annex],requirements:[{requirement_id:'requirement-1',document_family:'RC',source_state:'CURRENT_SOURCE',confirmation:'CONFIRMED',source_locator:'Ligne1',source_anchor:null,lot_candidates:[1],response_state:'TEXT_WITH_GAPS',pieces:[]}]})};
+ const onCreateSnapshot=vi.fn();
+ const exactPlan={plan_id:'plan-1',version:1,package_id:'package-1',dce_version_id:'dce-1',state:'SOURCES_CURRENT' as const,content:{schema_version:1 as const,case_id:'case-1',package_id:'package-1',dce_version_id:'dce-1',items:[]},plan_sha256:'f'.repeat(64)};
+ const draft={...packageProjection.response_drafts[0],...selected,response_plan_id:'plan-1',response_plan_version:1,content:'Réponse source liée.'};
+ renderPanel({wizardPackage:{...packageProjection,response_drafts:[draft]},wizardResponsePlan:{...responsePlan,exactPlan},canCreateWizardSnapshot:true,onCreateSnapshot,contributionOwnerKey:'owner',buyerDocxTools:{api,store:new BuyerDocxIntentStore(),onRecorded:vi.fn()}});
+ fireEvent.click(screen.getByRole('radio',{name:/Choisir le brouillon/}));
+ fireEvent.click(screen.getByRole('button',{name:'Vérifier les liens de la pièce choisie'}));
+ fireEvent.click(await screen.findByRole('checkbox',{name:/Retenir cette annexe/}));
+ const create=screen.getByRole('button',{name:'Créer le snapshot choisi'});
+ expect(create).toBeDisabled();
+ fireEvent.change(screen.getByLabelText('Justification du choix des annexes'),{target:{value:'Assurance liée à cette exigence.'}});
+ expect(create).toBeDisabled();
+ fireEvent.click(screen.getByRole('checkbox',{name:/Je confirme ces annexes/}));
+ fireEvent.click(create);
+ expect(onCreateSnapshot).toHaveBeenCalledWith(selected,[{requirement_id:'requirement-1',document_id:'proof-1',sha256:'b'.repeat(64)}],'Assurance liée à cette exigence.');
 });

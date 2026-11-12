@@ -1,0 +1,240 @@
+{
+  "synthetic": true,
+  "reference_kind": "CODEX_CALIBRATION_NOT_HUMAN_GOLDEN",
+  "scope": "Candidate family occurrences only, not document presence or applicability. Joins here are test inputs; production adapter must prove them.",
+  "cases": [
+    {
+      "id": "three-pages",
+      "texts": [
+        "Le DCE comprend :",
+        "- CCAP",
+        "- CCTP"
+      ],
+      "joins": [
+        "\n",
+        "\n"
+      ],
+      "expected_families": [
+        "CCAP",
+        "CCTP"
+      ],
+      "scope": "QUALIFIED_LAYOUT",
+      "ambiguous_family": null
+    },
+    {
+      "id": "four-pages",
+      "texts": [
+        "Le DCE comprend :",
+        "- CCAP",
+        "- CCTP",
+        "- BPU"
+      ],
+      "joins": [
+        "\n",
+        "\n",
+        "\n"
+      ],
+      "expected_families": [
+        "CCAP",
+        "CCTP",
+        "BPU"
+      ],
+      "scope": "QUALIFIED_LAYOUT",
+      "ambiguous_family": null
+    },
+    {
+      "id": "same-page-lines",
+      "texts": [
+        "Le DCE comprend :\n- CCAP",
+        "\n- CCTP"
+      ],
+      "joins": [
+        ""
+      ],
+      "expected_families": [
+        "CCAP",
+        "CCTP"
+      ],
+      "scope": "QUALIFIED_LAYOUT",
+      "ambiguous_family": null
+    },
+    {
+      "id": "split-word",
+      "texts": [
+        "Le DCE comprend :\n- CC",
+        "AP\n- CCTP"
+      ],
+      "joins": [
+        ""
+      ],
+      "expected_families": [
+        "CCAP",
+        "CCTP"
+      ],
+      "scope": "QUALIFIED_LAYOUT",
+      "ambiguous_family": null
+    },
+    {
+      "id": "split-heading",
+      "texts": [
+        "Le DCE com",
+        "prend :\n- CCAP"
+      ],
+      "joins": [
+        ""
+      ],
+      "expected_families": [
+        "CCAP"
+      ],
+      "scope": "QUALIFIED_LAYOUT",
+      "ambiguous_family": null
+    },
+    {
+      "id": "negative-heading",
+      "texts": [
+        "Le DCE ne comprend pas :",
+        "- CCAP",
+        "- CCTP"
+      ],
+      "joins": [
+        "\n",
+        "\n"
+      ],
+      "expected_families": [
+        "CCAP",
+        "CCTP"
+      ],
+      "scope": "QUALIFIED_LAYOUT",
+      "ambiguous_family": null
+    },
+    {
+      "id": "local-negation",
+      "texts": [
+        "Le DCE comprend :",
+        "- CCAP non applicable",
+        "- CCTP"
+      ],
+      "joins": [
+        "\n",
+        "\n"
+      ],
+      "expected_families": [
+        "CCAP",
+        "CCTP"
+      ],
+      "scope": "QUALIFIED_LAYOUT",
+      "ambiguous_family": "CCAP"
+    },
+    {
+      "id": "blank-break",
+      "texts": [
+        "Le DCE comprend :",
+        "- CCAP\n",
+        "- CCTP"
+      ],
+      "joins": [
+        "\n",
+        "\n"
+      ],
+      "expected_families": [
+        "CCAP"
+      ],
+      "scope": "QUALIFIED_LAYOUT",
+      "ambiguous_family": null
+    },
+    {
+      "id": "prose-break",
+      "texts": [
+        "Le DCE comprend :",
+        "- CCAP\nAutre section",
+        "- CCTP"
+      ],
+      "joins": [
+        "\n",
+        "\n"
+      ],
+      "expected_families": [
+        "CCAP"
+      ],
+      "scope": "QUALIFIED_LAYOUT",
+      "ambiguous_family": null
+    },
+    {
+      "id": "autonomous",
+      "texts": [
+        "Le DCE comprend :",
+        "- CCAP fourni"
+      ],
+      "joins": [
+        "\n"
+      ],
+      "expected_families": [
+        "CCAP"
+      ],
+      "scope": "QUALIFIED_LAYOUT",
+      "ambiguous_family": null
+    },
+    {
+      "id": "not-a-document-heading",
+      "texts": [
+        "Matériaux fournis :",
+        "- CCAP"
+      ],
+      "joins": [
+        "\n"
+      ],
+      "expected_families": [],
+      "scope": "QUALIFIED_LAYOUT",
+      "ambiguous_family": null
+    },
+    {
+      "id": "table-not-qualified",
+      "texts": [
+        "Le DCE comprend :",
+        "| CCAP | CCTP |"
+      ],
+      "joins": [
+        "\n"
+      ],
+      "expected_families": [
+        "CCAP",
+        "CCTP"
+      ],
+      "scope": "UNQUALIFIED_LAYOUT",
+      "ambiguous_family": null
+    },
+    {
+      "id": "repeated-caption-not-qualified",
+      "texts": [
+        "Le DCE comprend :",
+        "Composition du dossier — suite\n- CCAP",
+        "- CCTP"
+      ],
+      "joins": [
+        "\n",
+        "\n"
+      ],
+      "expected_families": [
+        "CCAP",
+        "CCTP"
+      ],
+      "scope": "UNQUALIFIED_LAYOUT",
+      "ambiguous_family": null
+    },
+    {
+      "id": "lot-heading-not-qualified",
+      "texts": [
+        "Le DCE comprend pour le lot 2 :",
+        "- CCAP"
+      ],
+      "joins": [
+        "\n"
+      ],
+      "expected_families": [
+        "CCAP"
+      ],
+      "scope": "UNQUALIFIED_HEADING",
+      "ambiguous_family": null
+    }
+  ]
+}

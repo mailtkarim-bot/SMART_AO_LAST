@@ -13,6 +13,7 @@ from app.modules.patron_action.application.case_interview_commands import Record
 from app.modules.patron_action.domain.case_interview import build_case_interview
 from app.modules.patron_action.infrastructure.models.case_interview import CaseInterviewRecord
 from app.modules.patron_action.infrastructure.models.rex import CaseRexRecord
+from app.modules.patron_action.public.execution_rex import published_execution_origin
 from app.platform.events.dispatcher import (
     CommandContext,
     CommandExecutionError,
@@ -81,6 +82,16 @@ class RecordCaseInterviewHandler(CommandHandler):
                     "consequence": row.consequence,
                     "follow_up": row.follow_up,
                     "source_locator": row.source_locator,
+                    **(
+                        {
+                            "execution_exit_act_id": str(row.execution_exit_act_id),
+                            "execution_source": published_execution_origin(
+                                row.execution_source_json
+                            ),
+                        }
+                        if row.execution_exit_act_id
+                        else {}
+                    ),
                 }
                 for row in rex_rows
             ],

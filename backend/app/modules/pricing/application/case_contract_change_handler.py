@@ -49,6 +49,73 @@ from app.platform.events.dispatcher import (
 
 
 class CaseContractChangeHandler(CommandHandler):
+    def __init__(self, storage=None):
+        self._storage = storage
+
+    def _operational_context(self, session, command, context, value, snapshot_id):
+        from app.modules.pricing.infrastructure.operational_change_sources import capture_context
+
+        result = capture_context(
+            session,
+            tenant_id=context.tenant_id,
+            case_id=command.case_id,
+            snapshot_id=snapshot_id,
+            value=value,
+            actor_id=context.actor_id,
+            now=context.received_at,
+            storage=self._storage,
+        )
+        from app.modules.pricing.infrastructure.operational_change_sources import declared_contract
+
+        result.update(
+            declared_contract(
+                session,
+                tenant_id=context.tenant_id,
+                case_id=command.case_id,
+                instrument_id=command.contract_instrument_version_id,
+            )
+        )
+        return result
+
+    def _current_operational_event(self, session, command, context):
+        from app.modules.pricing.infrastructure.operational_change_sources import context_state
+
+        event = session.scalar(
+            sa.select(CaseContractChangeEventRecord).where(
+                CaseContractChangeEventRecord.tenant_id == context.tenant_id,
+                CaseContractChangeEventRecord.case_id == command.case_id,
+                CaseContractChangeEventRecord.id == command.event_id,
+            )
+        )
+        if event is None:
+            raise CommandExecutionError("CONTRACT_CHANGE_EVENT_NOT_FOUND_OR_FORBIDDEN")
+        review = session.scalar(
+            sa.select(CaseContractChangeApplicabilityRecord)
+            .where(
+                CaseContractChangeApplicabilityRecord.tenant_id == context.tenant_id,
+                CaseContractChangeApplicabilityRecord.case_id == command.case_id,
+                CaseContractChangeApplicabilityRecord.event_id == event.id,
+            )
+            .order_by(CaseContractChangeApplicabilityRecord.revision.desc())
+            .limit(1)
+        )
+        captured = (
+            review.operational_review_json if review else None
+        ) or event.operational_context_json
+        state, reasons = context_state(
+            session,
+            tenant_id=context.tenant_id,
+            case_id=command.case_id,
+            context=captured,
+            storage=self._storage,
+            lock=True,
+        )
+        if state != "CURRENT" and not (
+            state == "REVIEW_REQUIRED" and set(reasons) <= {"CONTRACT_LINK_UNKNOWN"}
+        ):
+            raise CommandExecutionError("OPERATIONAL_CHANGE_SOURCE_CONFLICT")
+        return event, review
+
     def execute(
         self,
         *,
@@ -115,7 +182,25 @@ class CaseContractChangeHandler(CommandHandler):
             )
             if instrument is None:
                 raise CommandExecutionError("CONTRACT_INSTRUMENT_NOT_FOUND_OR_FORBIDDEN")
+        operational = None
+        if command.operational_context is not None:
+            from app.modules.pricing.infrastructure.operational_change_sources import (
+                require_publishable,
+            )
+
+            operational = self._operational_context(
+                session, command, context, command.operational_context, snapshot.id
+            )
+            if operational["publish"]:
+                require_publishable(
+                    command.summary,
+                    command.scope_note,
+                    command.issuer,
+                    command.source_refs,
+                    command.evidence_refs,
+                )
         record = CaseContractChangeEventRecord(
+            operational_context_json=operational,
             id=command.event_id,
             tenant_id=context.tenant_id,
             case_id=command.case_id,
@@ -159,10 +244,45 @@ class CaseContractChangeHandler(CommandHandler):
                 CaseContractChangeEventRecord.id == command.event_id,
             )
         )
-        if event is None or event.handover_snapshot_id != command.handover_snapshot_id:
+        if event is None:
+            raise CommandExecutionError("CONTRACT_CHANGE_EVENT_NOT_FOUND_OR_FORBIDDEN")
+        operational = None
+        if command.operational_review is not None:
+            from app.modules.pricing.infrastructure.operational_change_sources import (
+                require_publishable,
+            )
+
+            original = session.scalar(
+                sa.select(CaseHandoverSnapshotRecord).where(
+                    CaseHandoverSnapshotRecord.tenant_id == context.tenant_id,
+                    CaseHandoverSnapshotRecord.case_id == command.case_id,
+                    CaseHandoverSnapshotRecord.id == event.handover_snapshot_id,
+                )
+            )
+            target = session.scalar(
+                sa.select(CaseHandoverSnapshotRecord).where(
+                    CaseHandoverSnapshotRecord.tenant_id == context.tenant_id,
+                    CaseHandoverSnapshotRecord.case_id == command.case_id,
+                    CaseHandoverSnapshotRecord.id == command.handover_snapshot_id,
+                )
+            )
+            if (
+                original is None
+                or target is None
+                or (original.outcome_id, original.lot_reference, original.manifest_sha256)
+                != (target.outcome_id, target.lot_reference, target.manifest_sha256)
+            ):
+                raise CommandExecutionError("HANDOVER_REQUALIFICATION_SCOPE_MISMATCH")
+            operational = self._operational_context(
+                session, command, context, command.operational_review, target.id
+            )
+            if operational["publish"]:
+                require_publishable(command.delta_note, command.evidence_refs)
+        elif event.handover_snapshot_id != command.handover_snapshot_id:
             raise CommandExecutionError("CONTRACT_CHANGE_EVENT_NOT_FOUND_OR_FORBIDDEN")
         if (
-            event.contract_instrument_version_id is not None
+            command.operational_review is None
+            and event.contract_instrument_version_id is not None
             and event.contract_instrument_version_id != command.contract_instrument_version_id
         ):
             raise CommandExecutionError("CONTRACT_VERSION_MISMATCH")
@@ -189,11 +309,12 @@ class CaseContractChangeHandler(CommandHandler):
             raise CommandExecutionError("CONTRACT_CHANGE_APPLICABILITY_VERSION_CONFLICT")
         revision = current_revision + 1
         record = CaseContractChangeApplicabilityRecord(
+            operational_review_json=operational,
             id=command.review_id,
             tenant_id=context.tenant_id,
             case_id=command.case_id,
             event_id=event.id,
-            handover_snapshot_id=event.handover_snapshot_id,
+            handover_snapshot_id=command.handover_snapshot_id,
             contract_instrument_version_id=command.contract_instrument_version_id,
             revision=revision,
             decision=command.decision,
@@ -267,7 +388,19 @@ class CaseContractChangeHandler(CommandHandler):
         if command.expected_revision != current_revision:
             raise CommandExecutionError("CONTRACT_CHANGE_ACTION_VERSION_CONFLICT")
         revision = current_revision + 1
+        operational = None
+        if command.operational_details is not None:
+            from app.modules.pricing.infrastructure.operational_change_sources import (
+                publication,
+                require_publishable,
+            )
+
+            self._current_operational_event(session, command, context)
+            if command.operational_details.publish:
+                require_publishable(command.action_summary, command.due_date_absence_reason)
+            operational = publication(command.operational_details, context)
         record = CaseContractChangeActionRecord(
+            operational_details_json=operational,
             id=command.action_id,
             tenant_id=context.tenant_id,
             case_id=command.case_id,
@@ -690,7 +823,27 @@ class CaseContractChangeHandler(CommandHandler):
         if command.expected_revision != current_revision:
             raise CommandExecutionError("C5_ACTION_EXECUTION_VERSION_CONFLICT")
 
+        operational = None
+        if command.operational_publication is not None:
+            from app.modules.pricing.infrastructure.operational_change_sources import (
+                publication,
+                require_publishable,
+            )
+
+            _, current_review = self._current_operational_event(session, command, context)
+            if (
+                current_review is None
+                or action.applicability_id != current_review.id
+                or relation.applicability_id != action.applicability_id
+            ):
+                raise CommandExecutionError("OPERATIONAL_CHANGE_SOURCE_CONFLICT")
+            if command.operational_publication.publish:
+                require_publishable(
+                    command.declared_summary, command.unknown_reason, command.evidence_refs
+                )
+            operational = publication(command.operational_publication, context)
         record = CaseContractChangeActionExecutionRecord(
+            operational_publication_json=operational,
             id=command.act_id,
             tenant_id=context.tenant_id,
             case_id=command.case_id,

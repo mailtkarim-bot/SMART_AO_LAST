@@ -1,3 +1,4 @@
+import { controlFixture } from "./finalControl.testdata";
 import type { Dispatch, SetStateAction } from "react";
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -25,7 +26,7 @@ type SubmissionApi = Pick<
   | "recordSubmissionEvidence"
 >;
 type SignatureApi = SubmissionApi &
-  Pick<ApiClient, "requestSubmissionSignature" | "getSubmissionSignature">;
+  Pick<ApiClient, "requestSubmissionSignature" | "getSubmissionSignature" | "getSubmissionFinalControl">;
 
 const packageReceipt = (replayed = false): SubmissionPackageReceipt => ({
   status: "SUCCEEDED",
@@ -648,7 +649,7 @@ describe("useSubmissionActions", () => {
     });
 
     expect(result.current.submissionAuthorized).toBe(false);
-    expect(result.current.submissionManifest?.submission_package_id).toBe("submission-package-1");
+    expect(result.current.submissionManifest).toBeNull();
   });
 
   it("releases a P5 intent only after a definitive client refusal", async () => {
@@ -856,7 +857,8 @@ describe("useSubmissionActions", () => {
       getSubmissionEvidence: vi.fn(),
       downloadSubmissionPackage: vi.fn(),
       recordSubmissionEvidence: vi.fn(),
-      requestSubmissionSignature: vi.fn().mockResolvedValue(signatureReceipt()),
+      getSubmissionFinalControl: vi.fn().mockResolvedValue({ ...controlFixture("submission-package-1"), package_version: 2 }),
+      requestSubmissionSignature: vi.fn().mockImplementation((_id, _version, metadata) => Promise.resolve({ ...signatureReceipt(), aggregate_refs: [{ aggregate_type: "SubmissionSignature", aggregate_id: metadata.signature_id, aggregate_revision: 1 }] })),
       getSubmissionSignature: vi.fn(),
     } satisfies SignatureApi;
     const setMessage = vi.fn() as unknown as Dispatch<SetStateAction<HookMessage | null>>;
@@ -866,17 +868,20 @@ describe("useSubmissionActions", () => {
       result.current.setSubmissionPackageId(" submission-package-1 ");
       result.current.setSignaturePackageVersion("2");
     });
+    await act(async () => result.current.loadFinalControl());
+    act(() => result.current.setSignatureRationale("Pièce exacte relue, demande synthétique."));
+    act(() => result.current.setSignatureConfirmed(true));
     await act(async () => {
       await result.current.requestSignature();
     });
 
-    expect(api.requestSubmissionSignature).toHaveBeenCalledWith("submission-package-1", 2);
-    expect(result.current.signatureId).toBe("signature-1");
+    expect(api.requestSubmissionSignature).toHaveBeenCalledWith("submission-package-1", 2, expect.objectContaining({ expected_manifest_sha256: "c".repeat(64), rationale: "Pièce exacte relue, demande synthétique." }));
+    expect(result.current.signatureId).toBe(api.requestSubmissionSignature.mock.calls[0][2].signature_id);
     expect(result.current.signatureStatus).toBe("REQUESTED");
     expect(result.current.signatureRevision).toBe(1);
     expect(setMessage).toHaveBeenCalledWith({
       tone: "success",
-      text: "Demande de signature enregistrée. Aucun dépôt externe n’a été effectué.",
+      text: "Demande enregistrée. Relisez le contrôle pour connaître les faits de signature. Aucun dépôt effectué.",
     });
   });
 
@@ -888,15 +893,16 @@ describe("useSubmissionActions", () => {
       getSubmissionEvidence: vi.fn(),
       downloadSubmissionPackage: vi.fn(),
       recordSubmissionEvidence: vi.fn(),
+      getSubmissionFinalControl: vi.fn().mockResolvedValue({ ...controlFixture("submission-package-1"), package_version: 2 }),
       requestSubmissionSignature: vi.fn(),
       getSubmissionSignature: vi.fn().mockResolvedValue(signatureProjection()),
     } satisfies SignatureApi;
     const setMessage = vi.fn() as unknown as Dispatch<SetStateAction<HookMessage | null>>;
     const { result } = renderSubmissionHook(api, setMessage);
 
-    act(() => {
-      result.current.setSignatureId("signature-1");
-    });
+    act(() => result.current.setSubmissionPackageId("submission-package-1"));
+    await act(async () => result.current.loadFinalControl());
+    act(() => result.current.setSignatureId("signature-1"));
     await act(async () => {
       await result.current.loadSignature();
     });

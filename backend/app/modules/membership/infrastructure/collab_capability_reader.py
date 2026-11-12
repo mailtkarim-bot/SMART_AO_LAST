@@ -7,6 +7,9 @@ from uuid import UUID
 import sqlalchemy as sa
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.modules.enterprise.infrastructure.document_verification import (
+    document_verification_status_expression,
+)
 from app.modules.enterprise.infrastructure.models import (
     CaseCapabilityGapRecord,
     CaseCapabilityProposalRecord,
@@ -348,6 +351,7 @@ class SqlAlchemyCollaboratorCapabilityReader(CollaboratorCapabilityReader):
                 EnterpriseCapabilityProofLinkRecord,
                 EnterpriseDocumentRecord,
                 EnterpriseDocumentUploadRecord,
+                document_verification_status_expression().label("current_verification_status"),
             )
             .join(
                 EnterpriseCapabilityRecord,
@@ -395,10 +399,16 @@ class SqlAlchemyCollaboratorCapabilityReader(CollaboratorCapabilityReader):
         states: dict[UUID, list[str]] = {}
         capabilities: dict[UUID, UUID] = {}
         proof_refs: dict[UUID, list[tuple[UUID, str]]] = {}
-        for version, capability, link, document, upload in rows:
+        for version, capability, link, document, upload, current_status in rows:
             capabilities[version.id] = capability.id
             state = _source_evidence_state(
-                capability, version, link, document, upload, evaluated_at
+                capability,
+                version,
+                link,
+                document,
+                upload,
+                evaluated_at,
+                verification_status=current_status,
             )
             states.setdefault(version.id, []).append(state)
             if state == "CURRENT" and document is not None:
@@ -431,8 +441,15 @@ def _source_evidence_state(
     document: EnterpriseDocumentRecord | None,
     upload: EnterpriseDocumentUploadRecord | None,
     evaluated_at: datetime,
+    *,
+    verification_status: str | None = None,
 ) -> Literal["CURRENT", "EXPIRED", "UNKNOWN"]:
     """Metadata eligibility only; never retrieval, reservation or external confirmation."""
+    status = (
+        verification_status
+        if verification_status is not None
+        else (document.verification_status if document is not None else None)
+    )
     if (
         capability.state != "ACTIVE"
         or version.valid_from > evaluated_at
@@ -442,11 +459,11 @@ def _source_evidence_state(
         or upload is None
         or upload.scan_verdict != "CLEAN"
         or document.issued_at > evaluated_at
-        or document.verification_status not in {"VALIDATED", "EXPIRED"}
+        or status not in {"VALIDATED", "EXPIRED"}
     ):
         return "UNKNOWN"
     if (
-        document.verification_status == "EXPIRED"
+        status == "EXPIRED"
         or (version.valid_until is not None and version.valid_until <= evaluated_at)
         or (document.expires_at is not None and document.expires_at <= evaluated_at)
     ):

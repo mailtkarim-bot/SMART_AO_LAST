@@ -36,85 +36,88 @@ class SqlAlchemyPricingScenarioReader:
         self, *, tenant_id: UUID, case_id: UUID
     ) -> tuple[PricingScenarioProjection, ...]:
         with self._session_factory() as session:
-            latest_version = (
-                sa.select(sa.func.max(PricingScenarioTransitionRecord.version))
-                .where(
-                    PricingScenarioTransitionRecord.tenant_id == tenant_id,
-                    PricingScenarioTransitionRecord.scenario_id == PricingScenarioRecord.id,
-                )
-                .correlate(PricingScenarioRecord)
-                .scalar_subquery()
+            return self.list_for_case_in_session(session, tenant_id=tenant_id, case_id=case_id)
+
+    def list_for_case_in_session(
+        self, session: Session, *, tenant_id: UUID, case_id: UUID, limit: int | None = None
+    ) -> tuple[PricingScenarioProjection, ...]:
+        latest_version = (
+            sa.select(sa.func.max(PricingScenarioTransitionRecord.version))
+            .where(
+                PricingScenarioTransitionRecord.tenant_id == tenant_id,
+                PricingScenarioTransitionRecord.scenario_id == PricingScenarioRecord.id,
             )
-            latest_state = (
-                sa.select(PricingScenarioTransitionRecord.to_state)
-                .where(
-                    PricingScenarioTransitionRecord.tenant_id == tenant_id,
-                    PricingScenarioTransitionRecord.scenario_id == PricingScenarioRecord.id,
-                    PricingScenarioTransitionRecord.version == latest_version,
-                )
-                .correlate(PricingScenarioRecord)
-                .scalar_subquery()
+            .correlate(PricingScenarioRecord)
+            .scalar_subquery()
+        )
+        latest_state = (
+            sa.select(PricingScenarioTransitionRecord.to_state)
+            .where(
+                PricingScenarioTransitionRecord.tenant_id == tenant_id,
+                PricingScenarioTransitionRecord.scenario_id == PricingScenarioRecord.id,
+                PricingScenarioTransitionRecord.version == latest_version,
             )
-            rows = session.execute(
-                sa.select(PricingScenarioRecord, FinancialReportSnapshotRecord)
-                .add_columns(
-                    sa.func.coalesce(latest_version, PricingScenarioRecord.version).label(
-                        "current_version"
-                    ),
-                    sa.func.coalesce(latest_state, PricingScenarioRecord.state).label(
-                        "current_state"
-                    ),
+            .correlate(PricingScenarioRecord)
+            .scalar_subquery()
+        )
+        rows = session.execute(
+            sa.select(PricingScenarioRecord, FinancialReportSnapshotRecord)
+            .add_columns(
+                sa.func.coalesce(latest_version, PricingScenarioRecord.version).label(
+                    "current_version"
+                ),
+                sa.func.coalesce(latest_state, PricingScenarioRecord.state).label("current_state"),
+            )
+            .outerjoin(
+                FinancialReportSnapshotRecord,
+                sa.and_(
+                    FinancialReportSnapshotRecord.tenant_id == tenant_id,
+                    FinancialReportSnapshotRecord.id == PricingScenarioRecord.source_snapshot_id,
+                    FinancialReportSnapshotRecord.case_id == case_id,
+                    FinancialReportSnapshotRecord.state == "PUBLISHED",
+                ),
+            )
+            .where(
+                PricingScenarioRecord.tenant_id == tenant_id,
+                PricingScenarioRecord.case_id == case_id,
+            )
+            .order_by(PricingScenarioRecord.created_at.desc(), PricingScenarioRecord.id)
+            .limit(limit)
+        ).all()
+        source_ids = {snapshot.id for _, snapshot, _, _ in rows if snapshot is not None}
+        lines_by_source: dict[UUID, list[tuple[str, int]]] = {
+            source_id: [] for source_id in source_ids
+        }
+        if source_ids:
+            for source_id, category, amount in session.execute(
+                sa.select(
+                    FinancialReportLineRecord.snapshot_id,
+                    FinancialReportLineRecord.category,
+                    FinancialReportLineRecord.amount_minor,
+                ).where(
+                    FinancialReportLineRecord.tenant_id == tenant_id,
+                    FinancialReportLineRecord.snapshot_id.in_(source_ids),
                 )
-                .outerjoin(
-                    FinancialReportSnapshotRecord,
-                    sa.and_(
-                        FinancialReportSnapshotRecord.tenant_id == tenant_id,
-                        FinancialReportSnapshotRecord.id
-                        == PricingScenarioRecord.source_snapshot_id,
-                        FinancialReportSnapshotRecord.case_id == case_id,
-                        FinancialReportSnapshotRecord.state == "PUBLISHED",
-                    ),
+            ):
+                lines_by_source[source_id].append((category, amount))
+        reasons = {}
+        for record, snapshot, _, _ in rows:
+            reason = (
+                "SOURCE_NOT_RESOLVED"
+                if snapshot is None
+                else qualify_declared_scenario_source(
+                    lines_by_source[snapshot.id],
+                    {
+                        category: getattr(snapshot, f"{category.lower()}_total_minor")
+                        for category in BASE_MARGIN_CATEGORIES
+                    },
+                    source_revision=snapshot.aggregate_revision,
+                    expected_revision=record.source_snapshot_revision,
                 )
-                .where(
-                    PricingScenarioRecord.tenant_id == tenant_id,
-                    PricingScenarioRecord.case_id == case_id,
-                )
-                .order_by(PricingScenarioRecord.created_at.desc())
-            ).all()
-            source_ids = {snapshot.id for _, snapshot, _, _ in rows if snapshot is not None}
-            lines_by_source: dict[UUID, list[tuple[str, int]]] = {
-                source_id: [] for source_id in source_ids
-            }
-            if source_ids:
-                for source_id, category, amount in session.execute(
-                    sa.select(
-                        FinancialReportLineRecord.snapshot_id,
-                        FinancialReportLineRecord.category,
-                        FinancialReportLineRecord.amount_minor,
-                    ).where(
-                        FinancialReportLineRecord.tenant_id == tenant_id,
-                        FinancialReportLineRecord.snapshot_id.in_(source_ids),
-                    )
-                ):
-                    lines_by_source[source_id].append((category, amount))
-            reasons = {}
-            for record, snapshot, _, _ in rows:
-                reason = (
-                    "SOURCE_NOT_RESOLVED"
-                    if snapshot is None
-                    else qualify_declared_scenario_source(
-                        lines_by_source[snapshot.id],
-                        {
-                            category: getattr(snapshot, f"{category.lower()}_total_minor")
-                            for category in BASE_MARGIN_CATEGORIES
-                        },
-                        source_revision=snapshot.aggregate_revision,
-                        expected_revision=record.source_snapshot_revision,
-                    )
-                )
-                reasons[record.id] = reason or (
-                    "SCENARIO_RATE_UNKNOWN" if record.sales_total_minor == 0 else None
-                )
+            )
+            reasons[record.id] = reason or (
+                "SCENARIO_RATE_UNKNOWN" if record.sales_total_minor == 0 else None
+            )
         return tuple(
             project_pricing_scenario(
                 scenario_id=record.id,

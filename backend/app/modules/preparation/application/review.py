@@ -11,6 +11,9 @@ from uuid import UUID, uuid4
 import sqlalchemy as sa
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.modules.enterprise.infrastructure.document_verification import (
+    document_verification_status_expression,
+)
 from app.modules.enterprise.infrastructure.models import (
     EnterpriseCapabilityRecord,
     EnterpriseCapabilityVersionRecord,
@@ -73,6 +76,7 @@ _REVIEW_COMMANDS = frozenset(
         "AddPreparationCorrection",
         "CreatePreparationResponsePlan",
         "CreateTechnicalResponseDraft",
+        "CreateBuyerDocxResponseDraft",
     }
 )
 _ALLOWED_SECTION_CODES = frozenset(
@@ -109,6 +113,7 @@ class PreparationReviewService:
         is_collaborator_write = command.command_type in {
             "CreatePreparationResponsePlan",
             "CreateTechnicalResponseDraft",
+            "CreateBuyerDocxResponseDraft",
         } or (command.command_type == "RequestPreparationReview" and not c10_review_request)
         is_patron_review = (
             command.command_type
@@ -142,7 +147,11 @@ class PreparationReviewService:
             if command.command_type == "RequestPreparationReview"
             else Capability.PREPARATION_DOCUMENT_WRITE
             if command.command_type
-            in {"CreateTechnicalResponseDraft", "CreatePreparationResponsePlan"}
+            in {
+                "CreateTechnicalResponseDraft",
+                "CreatePreparationResponsePlan",
+                "CreateBuyerDocxResponseDraft",
+            }
             else Capability.PREPARATION_REVIEW_DECIDE
         )
         decision = self._policy.authorize(
@@ -299,24 +308,70 @@ class PreparationReviewService:
                 raise PermissionError("NOT_FOUND_OR_FORBIDDEN")
             return package.aggregate_revision
 
+    def read_response_draft_bytes(
+        self, *, actor: ActorContext, package_id: UUID, draft_id: UUID, version: int, now: datetime
+    ):
+        drafts = self.read_response_drafts(actor=actor, package_id=package_id, now=now)
+        draft = next((d for d in drafts if d.draft_id == draft_id and d.version == version), None)
+        if draft is None:
+            raise PermissionError("NOT_FOUND_OR_FORBIDDEN")
+        from app.modules.preparation.infrastructure.response_artifact import read_response_artifact
+
+        content, _ = read_response_artifact(self._storage, draft)
+        return draft, content
+
+    def read_buyer_docx_inputs(
+        self, *, actor: ActorContext, package_id: UUID, source_response, now: datetime
+    ):
+        self.read_response_plans(actor=actor, package_id=package_id, now=now)
+        from app.modules.preparation.infrastructure.buyer_docx_sources import (
+            inspect_buyer_docx_inputs,
+        )
+
+        with self._session_factory() as session:
+            return inspect_buyer_docx_inputs(
+                session,
+                tenant_id=actor.tenant_id,
+                package_id=package_id,
+                source_response=source_response,
+                storage=self._storage,
+            )
+
     def read_verified_response_drafts(
         self, *, actor: ActorContext, package_id: UUID, now: datetime
     ) -> tuple[tuple[TechnicalResponseDraftRecord, str], ...]:
         result = []
         for draft in self.read_response_drafts(actor=actor, package_id=package_id, now=now):
             try:
-                content = self._storage.read(storage_key=draft.storage_key)
-                text = content.decode("utf-8")
+                from app.modules.preparation.infrastructure.response_artifact import (
+                    read_response_artifact,
+                )
+
+                content, text = read_response_artifact(self._storage, draft)
             except Exception as error:
                 raise PermissionError("RESPONSE_DRAFT_UNKNOWN") from error
-            if (
-                len(content) > _MAX_RESPONSE_DRAFT_BYTES
-                or hashlib.sha256(content).hexdigest() != draft.content_sha256
-                or contains_forbidden_text(text)
-            ):
+            if hashlib.sha256(
+                content
+            ).hexdigest() != draft.content_sha256 or contains_forbidden_text(text):
                 raise PermissionError("RESPONSE_DRAFT_UNKNOWN")
             result.append((draft, text))
         return tuple(result)
+
+    def read_response_coverage(self, *, actor, package_id, selection, now):
+        if actor.actor_kind is ActorKind.COLLABORATEUR:
+            self.read_response_plans(actor=actor, package_id=package_id, now=now)
+        else:
+            self.read_response_drafts(actor=actor, package_id=package_id, now=now)
+        from app.modules.preparation.infrastructure.response_coverage import read_response_coverage
+
+        with self._session_factory() as session:
+            return read_response_coverage(
+                session,
+                tenant_id=actor.tenant_id,
+                package_id=package_id,
+                selection=selection,
+                storage=self._storage,
+            )
 
     def read_response_plans(
         self, *, actor: ActorContext, package_id: UUID, now: datetime
@@ -423,7 +478,36 @@ class PreparationReviewHandler:
         self._source_reader = source_reader
         self._source_storage = source_storage
 
+    def read_final_response_coverage(self, *, session, context, package_id, selection):
+        from app.modules.preparation.infrastructure.response_coverage import read_response_coverage
+
+        return read_response_coverage(
+            session,
+            tenant_id=context.tenant_id,
+            package_id=package_id,
+            selection=selection,
+            storage=self._storage,
+        )
+
+    def read_source_document_bytes(self, *, storage_key: str, max_bytes: int) -> bytes:
+        if self._source_storage is None:
+            raise CommandExecutionError("ANNEX_SOURCE_UNKNOWN")
+        try:
+            return self._source_storage.read_verified_bytes(
+                storage_key=storage_key, max_bytes=max_bytes
+            )
+        except (OSError, ValueError) as error:
+            raise CommandExecutionError("ANNEX_SOURCE_UNKNOWN") from error
+
     def execute(self, *, session: Session, command, context: CommandContext) -> HandlerOutcome:
+        if command.command_type == "CreateBuyerDocxResponseDraft":
+            from app.modules.preparation.application.buyer_docx_handler import (
+                BuyerDocxResponseDraftHandler,
+            )
+
+            return BuyerDocxResponseDraftHandler(self).execute(
+                session=session, command=command, context=context
+            )
         if command.command_type == "RequestPreparationReview":
             return self._request(session=session, command=command, context=context)
         if command.command_type == "DecidePreparationReview":
@@ -831,16 +915,55 @@ class PreparationReviewHandler:
         if plan is None or latest_plan_version != plan.version:
             raise CommandExecutionError("RESPONSE_PLAN_UNKNOWN")
         try:
-            content = self._storage.read(storage_key=draft.storage_key)
-            decoded = content.decode("utf-8")
+            from app.modules.preparation.infrastructure.response_artifact import (
+                read_response_artifact,
+            )
+
+            content, decoded = read_response_artifact(self._storage, draft)
         except Exception as error:
             raise CommandExecutionError("RESPONSE_DRAFT_UNKNOWN") from error
-        if (
-            len(content) > _MAX_RESPONSE_DRAFT_BYTES
-            or hashlib.sha256(content).hexdigest() != expected_sha256
-            or contains_forbidden_text(decoded)
+        if hashlib.sha256(content).hexdigest() != expected_sha256 or contains_forbidden_text(
+            decoded
         ):
             raise CommandExecutionError("RESPONSE_DRAFT_UNKNOWN")
+        from app.modules.preparation.infrastructure.contribution_sources import (
+            validate_contribution_sources,
+        )
+
+        if getattr(draft, "content_format", "MARKDOWN") == "DOCX":
+            from app.modules.preparation.infrastructure.buyer_docx_sources import (
+                validate_buyer_docx_sources,
+            )
+
+            validate_buyer_docx_sources(
+                session,
+                tenant_id=context.tenant_id,
+                package=package,
+                draft=draft,
+                storage=self._storage,
+            )
+        else:
+            validate_contribution_sources(
+                session,
+                tenant_id=context.tenant_id,
+                case_id=package.case_id,
+                dce_version_id=package.dce_version_id,
+                content=decoded,
+            )
+        from app.modules.preparation.infrastructure.contribution_sources import (
+            CONTRIBUTION_SOURCE_PREFIX,
+        )
+
+        if (
+            getattr(draft, "content_format", "MARKDOWN") == "DOCX"
+            or CONTRIBUTION_SOURCE_PREFIX in decoded
+        ):
+            current_plan, facts = self.current_response_plan(
+                session=session, package=package, command=None, context=context
+            )
+            self.reread_response_plan_sources(
+                session=session, plan=current_plan, source_facts=facts, tenant_id=package.tenant_id
+            )
         return draft
 
     def _decide(
@@ -970,6 +1093,8 @@ class PreparationReviewHandler:
                 version=latest.target_draft_version,
                 expected_sha256=latest.target_content_sha256,
             )
+            if source_draft.content_format == "DOCX":
+                raise CommandExecutionError("BUYER_DOCX_REFILL_REQUIRED")
             sections = list(source_draft.section_codes_json)
             refs = [UUID(item) for item in source_draft.source_refs_json]
             plan, source_facts = self.current_response_plan(
@@ -994,6 +1119,33 @@ class PreparationReviewHandler:
             )
             if contains_forbidden_text(command.corrected_content):
                 raise CommandExecutionError("FINANCIAL_DATA_FORBIDDEN")
+            from app.modules.preparation.infrastructure.contribution_sources import (
+                CONTRIBUTION_SOURCE_PREFIX,
+                validate_contribution_sources,
+            )
+
+            original_content = self._storage.read(storage_key=source_draft.storage_key).decode(
+                "utf-8"
+            )
+            original_sources = [
+                line
+                for line in original_content.splitlines()
+                if line.startswith(CONTRIBUTION_SOURCE_PREFIX)
+            ]
+            corrected_sources = [
+                line
+                for line in command.corrected_content.splitlines()
+                if line.startswith(CONTRIBUTION_SOURCE_PREFIX)
+            ]
+            if original_sources != corrected_sources:
+                raise CommandExecutionError("CONTRIBUTION_SOURCE_UNKNOWN")
+            validate_contribution_sources(
+                session,
+                tenant_id=context.tenant_id,
+                case_id=package.case_id,
+                dce_version_id=package.dce_version_id,
+                content=command.corrected_content,
+            )
             corrected_version = source_draft.version + 1
             corrected_bytes = command.corrected_content.encode("utf-8")
             if len(corrected_bytes) > _MAX_RESPONSE_DRAFT_BYTES:
@@ -1323,6 +1475,30 @@ class PreparationReviewHandler:
             source_facts=source_facts,
             tenant_id=package.tenant_id,
         )
+        contribution_sources = None
+        if command.contributions is not None:
+            expected_pairs = {
+                (UUID(item["requirement_id"]), item["section_code"])
+                for item in response_plan.content_json["items"]
+            }
+            contributed_pairs = [
+                (item.requirement_id, item.section_code) for item in command.contributions
+            ]
+            if set(contributed_pairs) != expected_pairs or len(contributed_pairs) != len(
+                expected_pairs
+            ):
+                raise CommandExecutionError("RESPONSE_PLAN_MISMATCH")
+            from app.modules.preparation.infrastructure.contribution_sources import (
+                contribution_source_snapshots,
+            )
+
+            contribution_sources = contribution_source_snapshots(
+                session,
+                tenant_id=context.tenant_id,
+                case_id=package.case_id,
+                dce_version_id=package.dce_version_id,
+                contributions=command.contributions,
+            )
         content = self._build_response_plan_content(
             session=session,
             plan=response_plan,
@@ -1330,6 +1506,8 @@ class PreparationReviewHandler:
             proof_counts=proof_counts,
             tenant_id=package.tenant_id,
             draft_version=version,
+            contributions=command.contributions,
+            contribution_sources=contribution_sources,
         ).encode("utf-8")
         if len(content) > _MAX_RESPONSE_DRAFT_BYTES:
             raise CommandExecutionError("RESPONSE_DRAFT_TOO_LARGE")
@@ -1445,8 +1623,9 @@ class PreparationReviewHandler:
             .where(
                 EnterpriseDocumentRecord.tenant_id == tenant_id,
                 EnterpriseDocumentRecord.id.in_(proof_hashes),
-                EnterpriseDocumentRecord.verification_status == "VALIDATED",
+                document_verification_status_expression() == "VALIDATED",
             )
+            .with_for_update(read=True, nowait=True, of=EnterpriseDocumentRecord)
         ).all()
         if len(rows) != len(proof_hashes):
             raise CommandExecutionError("RESPONSE_PLAN_UNKNOWN")
@@ -1483,6 +1662,8 @@ class PreparationReviewHandler:
         proof_counts: dict[UUID, int],
         tenant_id: UUID,
         draft_version: int,
+        contributions=None,
+        contribution_sources=None,
     ) -> str:
         capability_version_ids = {fact.capability_version_id for fact in source_facts.values()}
         rows = session.execute(
@@ -1513,7 +1694,7 @@ class PreparationReviewHandler:
             proposal_id = UUID(item["source_proposal_id"])
             fact = source_facts.get(proposal_id)
             capability = capabilities.get(fact.capability_version_id) if fact is not None else None
-            if capability is None or proposal_id not in proof_counts:
+            if fact is None or capability is None or proposal_id not in proof_counts:
                 raise CommandExecutionError("RESPONSE_PLAN_UNKNOWN")
             items.append(
                 ResponsePlanDraftItem(
@@ -1523,6 +1704,36 @@ class PreparationReviewHandler:
                     capability_title=capability.title,
                     capability_version_number=capability.version_number,
                     verified_source_count=proof_counts[proposal_id],
+                    source_snapshot=json.dumps(
+                        {
+                            "buyer": contribution_sources.get(UUID(item["requirement_id"]), {})
+                            if contribution_sources
+                            else {},
+                            "enterprise": next(
+                                source
+                                for source in plan.source_evidence_json
+                                if source["source_proposal_id"] == str(proposal_id)
+                            ),
+                            "source_proposal_id": str(proposal_id),
+                            "capability_version_id": str(fact.capability_version_id),
+                            "response_plan_id": str(plan.plan_id),
+                            "response_plan_version": plan.version,
+                            "human_content_present": any(
+                                c.requirement_id == UUID(item["requirement_id"])
+                                and c.section_code == item["section_code"]
+                                and c.content
+                                for c in contributions
+                            ),
+                            "section_code": item["section_code"],
+                            "applicability": "UNKNOWN",
+                            "coverage": "UNKNOWN",
+                        },
+                        ensure_ascii=False,
+                        sort_keys=True,
+                        default=str,
+                    )
+                    if contributions is not None
+                    else None,
                 )
             )
         try:
@@ -1530,6 +1741,7 @@ class PreparationReviewHandler:
                 plan_version=plan.version,
                 draft_version=draft_version,
                 items=tuple(items),
+                contributions=tuple(contributions) if contributions is not None else None,
             )
         except ValueError as error:
             raise CommandExecutionError("RESPONSE_PLAN_UNKNOWN") from error

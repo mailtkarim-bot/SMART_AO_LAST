@@ -81,7 +81,9 @@ def _snapshot(*, fingerprint: str = FINGERPRINT, references: tuple = ("verified-
                 context_fingerprint=fingerprint,
             ),
         ),
-        context_references=tuple(SimpleNamespace(id=ref) for ref in references),
+        context_references=tuple(
+            SimpleNamespace(id=ref, aggregate_type="DCE_REQUIREMENT") for ref in references
+        ),
     )
 
 

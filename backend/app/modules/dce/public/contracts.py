@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
 from uuid import UUID
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
@@ -203,6 +203,7 @@ class CaseDceSourceLocatorResponse(PublicResponseModel):
         "pymupdf_block",
         "ocr_page",
         "docx_paragraph",
+        "docx_table_cell",
         "xlsx_cell",
         "text_line",
         "docling_markdown",
@@ -224,6 +225,74 @@ class CaseDceSourceAnchorResponse(PublicResponseModel):
     locator: CaseDceSourceLocatorResponse | None
 
 
+class CaseDceValueEvidenceResponse(PublicResponseModel):
+    field: Literal["DOCUMENT", "DATE", "TIME", "TIMEZONE", "LOT"]
+    value: str = Field(min_length=1, max_length=80)
+    start_byte_offset: int = Field(ge=0)
+    end_byte_offset: int = Field(gt=0)
+
+    @model_validator(mode="after")
+    def validate_region(self) -> CaseDceValueEvidenceResponse:
+        if self.end_byte_offset <= self.start_byte_offset:
+            raise ValueError("SOURCE_REGION_REQUIRED")
+        return self
+
+
+class CaseDceStructuredCandidateResponse(PublicResponseModel):
+    projector_version: Literal["1"] = "1"
+    state: Literal["UNKNOWN", "CANDIDATES_ONLY", "REVIEW_REQUIRED"] = "UNKNOWN"
+    reason_code: str = Field(default="UNPROVEN_SOURCE", pattern=r"^[A-Z0-9_]{1,64}$")
+    source_fragment_id: UUID | None = None
+    documents: list[
+        Literal["DC1", "DC2", "DC4", "DUME", "MEMOIRE_TECHNIQUE", "AE", "BPU", "DPGF"]
+    ] = Field(default_factory=list, max_length=8)
+    document_state: Literal["CANDIDATE", "UNKNOWN"] = "UNKNOWN"
+    date_iso: str | None = Field(default=None, pattern=r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
+    date_state: Literal["CANDIDATE", "UNKNOWN"] = "UNKNOWN"
+    time_local: str | None = Field(default=None, pattern=r"^[0-9]{2}:[0-9]{2}$")
+    time_state: Literal["CANDIDATE", "UNKNOWN"] = "UNKNOWN"
+    timezone: str | None = Field(default=None, pattern=r"^UTC(?:[+-][0-9]{2}:[0-9]{2})?$")
+    timezone_state: Literal["CANDIDATE", "UNKNOWN"] = "UNKNOWN"
+    lot_numbers: list[Annotated[int, Field(ge=1, le=999)]] = Field(
+        default_factory=list, max_length=64
+    )
+    lot_state: Literal["CANDIDATE", "UNKNOWN"] = "UNKNOWN"
+    applicability: Literal["UNKNOWN"] = "UNKNOWN"
+    evidence: list[CaseDceValueEvidenceResponse] = Field(default_factory=list, max_length=64)
+
+    @model_validator(mode="after")
+    def validate_candidate_states(self) -> CaseDceStructuredCandidateResponse:
+        fields = (
+            (self.document_state, bool(self.documents)),
+            (self.date_state, self.date_iso is not None),
+            (self.time_state, self.time_local is not None),
+            (self.timezone_state, self.timezone is not None),
+            (self.lot_state, bool(self.lot_numbers)),
+        )
+        if any((state == "CANDIDATE") != known for state, known in fields):
+            raise ValueError("CANDIDATE_VALUE_STATE_MISMATCH")
+        if self.state != "CANDIDATES_ONLY" and (self.evidence or any(known for _, known in fields)):
+            raise ValueError("UNKNOWN_VALUES_MUST_REMAIN_UNKNOWN")
+        if self.state == "CANDIDATES_ONLY" and (
+            not self.evidence or self.source_fragment_id is None
+        ):
+            raise ValueError("CANDIDATE_SOURCE_REQUIRED")
+        declared: set[tuple[str, str]] = {("DOCUMENT", code) for code in self.documents}
+        declared.update(("LOT", str(number)) for number in self.lot_numbers)
+        declared.update(
+            (field, value)
+            for field, value in (
+                ("DATE", self.date_iso),
+                ("TIME", self.time_local),
+                ("TIMEZONE", self.timezone),
+            )
+            if value is not None
+        )
+        if declared != {(e.field, e.value) for e in self.evidence}:
+            raise ValueError("CANDIDATE_VALUE_EVIDENCE_MISMATCH")
+        return self
+
+
 class CaseDceReadingRequirementResponse(PublicResponseModel):
     requirement_id: UUID
     confirmation_revision: int | None
@@ -234,6 +303,135 @@ class CaseDceReadingRequirementResponse(PublicResponseModel):
     document_family: str
     source_locator_label: str
     source_anchor: CaseDceSourceAnchorResponse | None = None
+    structured_candidate: CaseDceStructuredCandidateResponse | None = None
+
+    @model_validator(mode="after")
+    def validate_structured_provenance(self) -> CaseDceReadingRequirementResponse:
+        candidate = self.structured_candidate
+        if (
+            candidate is not None
+            and candidate.state == "CANDIDATES_ONLY"
+            and (
+                self.source_anchor is None
+                or self.source_anchor.locator_state != "RESOLVED"
+                or candidate.source_fragment_id != self.source_anchor.source_anchor_id
+            )
+        ):
+            raise ValueError("STRUCTURED_SOURCE_ANCHOR_REQUIRED")
+        return self
+
+
+class CaseDceDocumentCoverageResponse(PublicResponseModel):
+    document_id: UUID
+    extraction_id: UUID | None
+    document_family: Literal[
+        "RC",
+        "CCAP",
+        "CCTP",
+        "AE",
+        "BPU",
+        "DPGF",
+        "PLAN",
+        "ANNEX",
+        "RECTIFICATION",
+        "SOURCE_UNCLASSIFIED",
+    ]
+    extraction_status: Literal[
+        "NOT_STARTED",
+        "COMPLETED",
+        "REVIEW_REQUIRED",
+        "UNSUPPORTED",
+        "REJECTED_LIMIT",
+        "FAILED_SAFE",
+    ]
+
+
+class CaseDceCoverageExceptionResponse(PublicResponseModel):
+    observation_id: UUID
+    kind: Literal["ARCHIVE_ENTRY", "DECLARED_MISSING"]
+    state: Literal[
+        "NOT_EXTRACTED",
+        "NESTED_ARCHIVE",
+        "DIRECTORY",
+        "EXCLUDED_UNSAFE",
+        "EXCLUDED_COMPRESSION",
+        "EXCLUDED_SYMLINK",
+        "EXCLUDED_ENCRYPTED",
+        "EXCLUDED_LIMIT",
+        "UNREADABLE",
+        "INVENTORY_LIMIT",
+        "DECLARED_MISSING",
+    ]
+    document_id: UUID | None
+    extraction_id: UUID | None
+    entry_path: list[int] = Field(max_length=4)
+    document_family: str
+    source_state: Literal["RESOLVED", "UNKNOWN"]
+    lot_applicability: Literal["UNKNOWN"]
+    criticality: Literal["UNKNOWN"]
+
+
+class CaseDceAnnouncementAnchorResponse(PublicResponseModel):
+    fragment_id: UUID
+    fragment_ordinal: int = Field(ge=1)
+    locator_label: str
+    part: int = Field(ge=1)
+    kind: Literal["HEADING", "BRIDGE", "SOURCE"]
+    start_byte_offset: int = Field(ge=0)
+    end_byte_offset: int = Field(gt=0)
+
+
+class CaseDceAnnouncementResponse(PublicResponseModel):
+    candidate_id: UUID
+    document_family: str
+    claim: Literal[
+        "PROVIDED_SIGNAL",
+        "NOT_PROVIDED_SIGNAL",
+        "SUBMISSION_SIGNAL",
+        "NOT_REQUIRED_SIGNAL",
+        "PROHIBITED_SUBMISSION_SIGNAL",
+        "AMBIGUOUS",
+    ]
+    lot_numbers: list[int]
+    source_document_id: UUID
+    source_extraction_id: UUID
+    source_fragment_id: UUID
+    source_locator_label: str
+    source_locator_state: Literal["RESOLVED", "UNKNOWN"]
+    start_byte_offset: int = Field(ge=0)
+    end_byte_offset: int = Field(gt=0)
+    context_fragment_id: UUID | None = None
+    context_locator_label: str | None = None
+    context_start_byte_offset: int | None = None
+    context_end_byte_offset: int | None = None
+    family_candidate_document_ids: list[UUID]
+    presence_status: Literal["UNKNOWN"]
+    applicability: Literal["UNKNOWN"]
+    criticality: Literal["UNKNOWN"]
+    conflict_state: Literal["UNKNOWN", "CONFLICTING_CANDIDATES"]
+    rule_version: Literal["1", "2", "3"]
+    anchor_chain: list[CaseDceAnnouncementAnchorResponse] = Field(
+        default_factory=list, max_length=64
+    )
+
+
+class CaseDceCoverageResponse(PublicResponseModel):
+    case_scope_kind: Literal["SINGLE_LOT", "MULTI_LOT", "TRANCHE", "VARIANT", "CUSTOM"]
+    documents: list[CaseDceDocumentCoverageResponse]
+    exceptions: list[CaseDceCoverageExceptionResponse] = Field(default_factory=list)
+    announcements: list[CaseDceAnnouncementResponse] = Field(default_factory=list)
+    announcement_scan_state: Literal[
+        "UNKNOWN", "REVIEW_REQUIRED", "CANDIDATES_ONLY", "REJECTED_LIMIT"
+    ] = "UNKNOWN"
+    total_documents: int = Field(ge=0)
+    completed_extractions: int = Field(ge=0)
+    unread_documents: int = Field(ge=0)
+    inventory_scope: Literal["ADMITTED_DOCUMENTS_ONLY"]
+    inventory_completeness: Literal["UNKNOWN"]
+    lot_applicability: Literal["UNKNOWN"]
+    critical_unread_documents: None
+    status: Literal["REVIEW_REQUIRED"]
+    analysis_complete: Literal[False]
 
 
 class CaseDceReadingResponse(PublicResponseModel):
@@ -246,11 +444,13 @@ class CaseDceReadingResponse(PublicResponseModel):
     dce: CaseDceReadingDceResponse
     counters: CaseDceReadingCountersResponse
     requirements: list[CaseDceReadingRequirementResponse]
+    coverage: CaseDceCoverageResponse | None = None
 
 
 class AssignedCaseResponse(PublicResponseModel):
     """Closed Case list item returned after server-side ReBAC filtering."""
 
+    aggregate_revision: int = Field(default=0, ge=0)
     case_id: UUID
     work_label: str
     case_lifecycle: str

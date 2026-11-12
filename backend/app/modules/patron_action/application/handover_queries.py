@@ -19,6 +19,11 @@ class CaseHandoverSnapshotProjection:
     revision: int
     created_at: datetime
     snapshot_json: dict[str, object]
+    view_sha256: str | None = None
+    source_state: str = "UNKNOWN"
+    source_reasons: tuple[str, ...] = ()
+    receipts: tuple[dict[str, object], ...] = ()
+    receipts_truncated: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -32,6 +37,7 @@ class CaseHandoverOfferDocumentCandidate:
     technical_source_sha256: str | None
     technical_document_sha256: str | None
     technical_document_storage_key: str | None
+    technical_document_format: str = "MARKDOWN"
 
 
 class CaseHandoverReader(Protocol):
@@ -42,6 +48,20 @@ class CaseHandoverReader(Protocol):
     def offer_document_candidate(
         self, *, tenant_id: UUID, case_id: UUID, snapshot_id: UUID
     ) -> CaseHandoverOfferDocumentCandidate | None: ...
+
+    def condition_options(self, *, tenant_id: UUID, case_id: UUID) -> dict[str, object]: ...
+
+    def snapshot_for_case(
+        self, *, tenant_id: UUID, case_id: UUID, snapshot_id: UUID
+    ) -> CaseHandoverSnapshotProjection | None: ...
+
+    def list_contract_options(
+        self, *, tenant_id: UUID, case_id: UUID
+    ) -> tuple[dict[str, object], ...]: ...
+
+    def history_for_case(
+        self, *, tenant_id: UUID, case_id: UUID, before_snapshot_id: UUID | None = None
+    ) -> tuple[CaseHandoverSnapshotProjection, ...]: ...
 
     def list_offer_options(
         self, *, tenant_id: UUID, case_id: UUID
@@ -67,5 +87,6 @@ def technical_document_source(
                 "version": str(version),
                 "kind": str(entry.get("kind", "")),
                 "sha256": str(entry["sha256"]),
+                **({"content_format": "DOCX"} if entry.get("content_format") == "DOCX" else {}),
             }
     return None

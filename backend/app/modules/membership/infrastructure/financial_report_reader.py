@@ -34,24 +34,61 @@ class SqlAlchemyFinancialReportReader:
         self, *, tenant_id: UUID, case_id: UUID, report_id: UUID, state: str
     ) -> FinancialReportProjection | None:
         with self._session_factory() as session:
-            snapshot = session.scalar(
-                sa.select(FinancialReportSnapshotRecord).where(
-                    FinancialReportSnapshotRecord.tenant_id == tenant_id,
-                    FinancialReportSnapshotRecord.case_id == case_id,
-                    FinancialReportSnapshotRecord.id == report_id,
-                    FinancialReportSnapshotRecord.state == state,
+            return self.get_in_session(
+                session, tenant_id=tenant_id, case_id=case_id, report_id=report_id, state=state
+            )
+
+    def list_published_in_session(
+        self, session: Session, *, tenant_id: UUID, case_id: UUID, limit: int
+    ) -> tuple[FinancialReportProjection, ...]:
+        ids = session.scalars(
+            sa.select(FinancialReportSnapshotRecord.id)
+            .where(
+                FinancialReportSnapshotRecord.tenant_id == tenant_id,
+                FinancialReportSnapshotRecord.case_id == case_id,
+                FinancialReportSnapshotRecord.state == "PUBLISHED",
+            )
+            .order_by(
+                FinancialReportSnapshotRecord.published_at.desc(), FinancialReportSnapshotRecord.id
+            )
+            .limit(limit)
+        )
+        return tuple(
+            report
+            for report_id in ids
+            if (
+                report := self.get_in_session(
+                    session,
+                    tenant_id=tenant_id,
+                    case_id=case_id,
+                    report_id=report_id,
+                    state="PUBLISHED",
                 )
             )
-            if snapshot is None:
-                return None
-            lines = session.scalars(
-                sa.select(FinancialReportLineRecord)
-                .where(
-                    FinancialReportLineRecord.tenant_id == tenant_id,
-                    FinancialReportLineRecord.snapshot_id == snapshot.id,
-                )
-                .order_by(FinancialReportLineRecord.created_at, FinancialReportLineRecord.id)
-            ).all()
+            is not None
+        )
+
+    def get_in_session(
+        self, session: Session, *, tenant_id: UUID, case_id: UUID, report_id: UUID, state: str
+    ) -> FinancialReportProjection | None:
+        snapshot = session.scalar(
+            sa.select(FinancialReportSnapshotRecord).where(
+                FinancialReportSnapshotRecord.tenant_id == tenant_id,
+                FinancialReportSnapshotRecord.case_id == case_id,
+                FinancialReportSnapshotRecord.id == report_id,
+                FinancialReportSnapshotRecord.state == state,
+            )
+        )
+        if snapshot is None:
+            return None
+        lines = session.scalars(
+            sa.select(FinancialReportLineRecord)
+            .where(
+                FinancialReportLineRecord.tenant_id == tenant_id,
+                FinancialReportLineRecord.snapshot_id == snapshot.id,
+            )
+            .order_by(FinancialReportLineRecord.created_at, FinancialReportLineRecord.id)
+        ).all()
         return FinancialReportProjection(
             report_id=snapshot.id,
             case_id=snapshot.case_id,

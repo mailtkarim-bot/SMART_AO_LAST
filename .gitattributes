@@ -1,0 +1,3 @@
+# Markdown hard breaks and RFC 4180 CSV archives intentionally use trailing CR/spaces.
+*.md whitespace=-blank-at-eol
+*.csv whitespace=cr-at-eol

@@ -288,6 +288,9 @@ class PricingImportRowRecord(TenantScopedRecord, Base):
     unit_price_minor: Mapped[int | None] = mapped_column(sa.BigInteger)
     total_minor: Mapped[int | None] = mapped_column(sa.BigInteger)
     error_codes_json: Mapped[list[str]] = mapped_column(JSONB, nullable=False)
+    source_locator_json: Mapped[dict | None] = mapped_column(
+        JSONB(none_as_null=True), nullable=True
+    )
 
 
 class PricingImportTransitionRecord(TenantScopedRecord, Base):

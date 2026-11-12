@@ -1,0 +1,13 @@
+Consultation synthétique pour rénover une médiathèque.
+Le DC1 est exigé pour le lot 3.
+Le formulaire DC2 est requis pour le lot 7.
+Une visite des sites du lot 3 est exigée.
+Pour le lot 7, la visite du site est facultative.
+Pour le lot 7, les visites de chantier ne sont pas requises.
+Un mémoire technique est requis pour les lots 3 et 7.
+Date et heure limites de dépôt des offres : 18 décembre 2026 à 16h30 UTC.
+Le profil d'acheteur https://achat.example.test/mediatheque reçoit les offres.
+Le format PDF est exigé pour les documents de réponse.
+Critère prix (35%) et valeur technique (65%).
+Aucune négociation ne sera menée.
+La validité des offres est fixée à 90 jours.

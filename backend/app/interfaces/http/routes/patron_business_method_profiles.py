@@ -155,6 +155,38 @@ def build_patron_business_method_profile_router(
         )
 
     @router.get(
+        "/cases/{case_id}/business-method-profile/adoptions",
+        response_model=list[BusinessMethodProfileAdoptionResponse],
+    )
+    def get_adoption_history(
+        case_id: UUID,
+        authorization: str | None = Header(default=None),
+    ) -> list[BusinessMethodProfileAdoptionResponse]:
+        try:
+            rows = service.adoption_history(
+                actor=actor(authorization), case_id=case_id, now=datetime.now(tz=UTC)
+            )
+        except PermissionError as error:
+            code = str(error)
+            raise HTTPException(
+                status_code=404 if code == "NOT_FOUND_OR_FORBIDDEN" else 403,
+                detail="NOT_FOUND_OR_FORBIDDEN"
+                if code == "NOT_FOUND_OR_FORBIDDEN"
+                else "FORBIDDEN",
+            ) from error
+        return [
+            BusinessMethodProfileAdoptionResponse(
+                adoption_id=row.adoption_id,
+                case_id=row.case_id,
+                adoption_revision=row.adoption_revision,
+                profile_version_id=row.profile_version_id,
+                profile_version=row.profile_version,
+                profile_content_sha256=row.profile_content_sha256,
+            )
+            for row in rows
+        ]
+
+    @router.get(
         "/cases/{case_id}/business-method-profile/adoption",
         response_model=BusinessMethodProfileAdoptionResponse | None,
     )

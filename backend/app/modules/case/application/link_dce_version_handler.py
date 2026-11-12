@@ -12,6 +12,7 @@ from app.modules.case.infrastructure.models.case import (
     CaseDceApplicabilityHistoryRecord,
     CaseRecord,
 )
+from app.modules.dce.infrastructure.models.consultation import ConsultationRecord
 from app.modules.dce.infrastructure.models.dce_version import DceVersionRecord
 from app.platform.events.dispatcher import CommandContext, HandlerOutcome, PendingDomainEvent
 
@@ -26,6 +27,24 @@ class LinkCaseDceVersionHandler:
         command: LinkCaseDceVersionCommand,
         context: CommandContext,
     ) -> HandlerOutcome:
+        consultation_id = session.scalar(
+            sa.select(CaseRecord.consultation_id).where(
+                CaseRecord.tenant_id == context.tenant_id,
+                CaseRecord.id == command.case_id,
+            )
+        )
+        if consultation_id is None:
+            raise ValueError("CASE_NOT_FOUND_OR_FORBIDDEN")
+        consultation = session.scalar(
+            sa.select(ConsultationRecord)
+            .where(
+                ConsultationRecord.tenant_id == context.tenant_id,
+                ConsultationRecord.id == consultation_id,
+            )
+            .with_for_update()
+        )
+        if consultation is None:
+            raise ValueError("DCE_CONSULTATION_MISMATCH")
         case = session.scalar(
             sa.select(CaseRecord)
             .where(
@@ -33,6 +52,7 @@ class LinkCaseDceVersionHandler:
                 CaseRecord.id == command.case_id,
             )
             .with_for_update()
+            .execution_options(populate_existing=True)
         )
         version = session.scalar(
             sa.select(DceVersionRecord)
@@ -51,7 +71,10 @@ class LinkCaseDceVersionHandler:
             raise ValueError("VERSION_CONFLICT")
         if version is None:
             raise ValueError("DCE_VERSION_NOT_FOUND_OR_FORBIDDEN")
-        if case.consultation_id is None or version.consultation_id != case.consultation_id:
+        if (
+            case.consultation_id != consultation_id
+            or version.consultation_id != case.consultation_id
+        ):
             raise ValueError("DCE_CONSULTATION_MISMATCH")
         if version.lifecycle != "ADMITTED" or version.integrity != "VERIFIED":
             raise ValueError("DCE_VERSION_NOT_ADMISSIBLE")

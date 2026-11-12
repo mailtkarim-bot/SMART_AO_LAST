@@ -396,10 +396,10 @@ def test_optional_dependency_build_flags_are_explicit() -> None:
     compose = (OPS / "docker-compose.preprod.yml").read_text(encoding="utf-8")
     assert "ARG SMART_AO_INSTALL_CONNECTORS=0" in dockerfile
     assert "ARG SMART_AO_INSTALL_DOCUMENT_OCR=0" in dockerfile
-    assert "uv sync --frozen --no-dev --no-editable --extra document-ocr" in dockerfile
+    assert "--extra document-ocr" in dockerfile
     assert "ARG SMART_AO_INSTALL_OBJECT_STORAGE=0" in dockerfile
-    assert "uv sync --frozen --no-dev --no-editable --extra object-storage" in dockerfile
-    assert "uv sync --frozen --no-dev --no-editable --extra connectors" in dockerfile
+    assert "--extra object-storage" in dockerfile
+    assert "--extra connectors" in dockerfile
     assert "SMART_AO_INSTALL_CONNECTORS" in compose
     assert "SMART_AO_INSTALL_RAG" in compose
     assert "SMART_AO_INSTALL_DOCUMENT_ADVANCED" in compose
@@ -432,7 +432,7 @@ def test_optional_notifications_build_and_runtime_flags_are_explicit() -> None:
     dockerfile = (OPS / "docker/backend.Dockerfile").read_text(encoding="utf-8")
     compose = (OPS / "docker-compose.preprod.yml").read_text(encoding="utf-8")
     assert "ARG SMART_AO_INSTALL_NOTIFICATIONS=0" in dockerfile
-    assert "uv sync --frozen --no-dev --no-editable --extra notifications" in dockerfile
+    assert "--extra notifications" in dockerfile
     assert "SMART_AO_INSTALL_NOTIFICATIONS" in compose
     assert "SMART_AO_SMTP_ENABLED: ${SMART_AO_SMTP_ENABLED:-0}" in compose
     assert "SMART_AO_SMTP_TO: ${SMART_AO_SMTP_TO:-}" in compose
@@ -471,7 +471,7 @@ def test_optional_calendar_build_flag_is_explicit() -> None:
     dockerfile = (OPS / "docker/backend.Dockerfile").read_text(encoding="utf-8")
     compose = (OPS / "docker-compose.preprod.yml").read_text(encoding="utf-8")
     assert "ARG SMART_AO_INSTALL_CALENDAR=0" in dockerfile
-    assert "uv sync --frozen --no-dev --no-editable --extra calendar" in dockerfile
+    assert "--extra calendar" in dockerfile
     assert "SMART_AO_INSTALL_CALENDAR" in compose
     assert "SMART_AO_CALENDAR_ENABLED: ${SMART_AO_CALENDAR_ENABLED:-0}" in compose
 

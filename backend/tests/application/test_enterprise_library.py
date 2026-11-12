@@ -195,6 +195,7 @@ def test_patron_creates_company_and_registers_enterprise_documents(
     projection = service.read_company(actor=actor, now=NOW)
     assert created.result_code == "ENTERPRISE_COMPANY_CREATED"
     assert [document.verification_revision for document in projection.documents] == [0, 0, 0]
+    assert all(document.sha256 == "a" * 64 for document in projection.documents)
     assert [item.result_code for item in documents] == [
         "ENTERPRISE_DOCUMENT_REGISTERED",
         "ENTERPRISE_DOCUMENT_REGISTERED",

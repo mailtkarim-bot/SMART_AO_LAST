@@ -74,6 +74,7 @@ def _seed_principal(
     *,
     role: str = "PATRON_ADMIN",
     tenant_id: UUID | None = None,
+    now: datetime = NOW,
 ) -> tuple[UUID, UUID, UUID]:
     create_tenant = tenant_id is None
     tenant_id = tenant_id or uuid4()
@@ -89,7 +90,7 @@ def _seed_principal(
                 id=identity_id,
                 email_normalized=f"user-{identity_id}@example.test",
                 lifecycle="ACTIVE",
-                email_verified_at=NOW,
+                email_verified_at=now,
             )
         )
         connection.execute(
@@ -99,7 +100,7 @@ def _seed_principal(
                 identity_id=identity_id,
                 role=role,
                 state="ACTIVE",
-                activated_at=NOW,
+                activated_at=now,
                 revoked_at=None,
             )
         )
@@ -112,11 +113,11 @@ def _seed_principal(
                 state="ACTIVE",
                 auth_strength="MFA",
                 token_version=1,
-                issued_at=NOW,
-                last_seen_at=NOW,
-                expires_at=NOW + timedelta(hours=8),
-                absolute_expires_at=NOW + timedelta(hours=12),
-                mfa_verified_at=NOW,
+                issued_at=now,
+                last_seen_at=now,
+                expires_at=now + timedelta(hours=8),
+                absolute_expires_at=now + timedelta(hours=12),
+                mfa_verified_at=now,
                 revoked_at=None,
                 revoke_reason=None,
             )
@@ -180,8 +181,9 @@ def _client(
     session_factory: sessionmaker[Session],
     *,
     dce_upload_service_factory=None,
+    clock=None,
 ) -> tuple[TestClient, JwtAccessTokenCodec]:
-    clock = FixedClock()
+    clock = clock or FixedClock()
     tokens = JwtAccessTokenCodec(
         signing_key="test-only-signing-key-at-least-32-bytes",
         issuer="smart-ao-test",

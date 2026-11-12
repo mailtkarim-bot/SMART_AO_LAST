@@ -30,10 +30,13 @@ from app.modules.pricing.infrastructure.models.contract_instrument_version impor
 
 
 class SqlAlchemyCaseContractChangeReader(CaseContractChangeReader):
-    def __init__(self, session_factory: sessionmaker[Session]) -> None:
+    def __init__(self, session_factory: sessionmaker[Session], *, storage=None) -> None:
         self._session_factory = session_factory
+        self._storage = storage
 
-    def list_for_case(self, *, tenant_id: UUID, case_id: UUID) -> tuple[dict[str, object], ...]:
+    def list_for_case(
+        self, *, tenant_id: UUID, case_id: UUID, _published_only=False
+    ) -> tuple[dict[str, object], ...]:
         with self._session_factory() as session:
             events = tuple(
                 session.scalars(
@@ -41,12 +44,17 @@ class SqlAlchemyCaseContractChangeReader(CaseContractChangeReader):
                     .where(
                         CaseContractChangeEventRecord.tenant_id == tenant_id,
                         CaseContractChangeEventRecord.case_id == case_id,
+                        CaseContractChangeEventRecord.operational_context_json["publish"]
+                        .as_boolean()
+                        .is_(True)
+                        if _published_only
+                        else sa.true(),
                     )
                     .order_by(
                         CaseContractChangeEventRecord.created_at,
                         CaseContractChangeEventRecord.id,
                     )
-                    .limit(100)
+                    .limit(101)
                 ).all()
             )
             if not events:
@@ -301,6 +309,8 @@ class SqlAlchemyCaseContractChangeReader(CaseContractChangeReader):
                 )
                 projections.append(
                     {
+                        "operational_context": event.operational_context_json,
+                        "recorded_at": event.created_at.isoformat(),
                         "event_id": str(event.id),
                         "case_id": str(case_id),
                         "handover_snapshot_id": str(event.handover_snapshot_id),
@@ -322,6 +332,8 @@ class SqlAlchemyCaseContractChangeReader(CaseContractChangeReader):
                         else "UNKNOWN",
                         "applicability_history": [
                             {
+                                "operational_review": review.operational_review_json,
+                                "handover_snapshot_id": str(review.handover_snapshot_id),
                                 "review_id": str(review.id),
                                 "revision": review.revision,
                                 "contract_instrument_version_id": str(
@@ -341,6 +353,7 @@ class SqlAlchemyCaseContractChangeReader(CaseContractChangeReader):
                         ],
                         "actions": [
                             {
+                                "operational_details": action.operational_details_json,
                                 "action_id": str(action.id),
                                 "revision": action.revision,
                                 "applicability_review_id": str(action.applicability_id),
@@ -379,6 +392,7 @@ class SqlAlchemyCaseContractChangeReader(CaseContractChangeReader):
                         ],
                         "action_execution_acts": [
                             {
+                                "operational_publication": act.operational_publication_json,
                                 "act_id": str(act.id),
                                 "action_id": str(act.action_id),
                                 "c4_relation_id": str(act.c4_relation_id),
@@ -473,7 +487,91 @@ class SqlAlchemyCaseContractChangeReader(CaseContractChangeReader):
                         ],
                     }
                 )
+            from app.modules.pricing.infrastructure.operational_change_sources import context_state
+
+            for row, event in zip(projections, events, strict=True):
+                history = reviews_by_event.get(event.id, [])
+                effective = (
+                    history[-1].operational_review_json if history else None
+                ) or event.operational_context_json
+                row["current_operational_context"] = effective
+                row["source_state"], row["source_reasons"] = context_state(
+                    session,
+                    tenant_id=tenant_id,
+                    case_id=case_id,
+                    context=effective,
+                    storage=self._storage,
+                )
+                row["origin_source_state"], row["origin_source_reasons"] = context_state(
+                    session,
+                    tenant_id=tenant_id,
+                    case_id=case_id,
+                    context=event.operational_context_json,
+                    storage=self._storage,
+                )
+                latest_id = str(history[-1].id) if history else None
+                for review in row["applicability_history"]:
+                    review["source_state"], _ = context_state(
+                        session,
+                        tenant_id=tenant_id,
+                        case_id=case_id,
+                        context=review["operational_review"],
+                        storage=self._storage,
+                    )
+                    if review["review_id"] != latest_id:
+                        review["source_state"] = "HISTORICAL"
+                for action in row["actions"]:
+                    action["source_state"] = (
+                        row["source_state"]
+                        if action["applicability_review_id"] == latest_id
+                        else "REVIEW_REQUIRED"
+                    )
+                for act in row["action_execution_acts"]:
+                    action = next(
+                        (a for a in row["actions"] if a["action_id"] == act["action_id"]), None
+                    )
+                    act["source_state"] = action["source_state"] if action else "REVIEW_REQUIRED"
+                if event.operational_context_json is not None and row["source_state"] != "CURRENT":
+                    for relation in row["action_impact_relations"]:
+                        relation["projection_state"] = "REVIEW_REQUIRED"
+                row["operational_timeline_origin"] = {
+                    "kind": "CHANGE_RECORDED",
+                    "recorded_at": event.created_at.isoformat(),
+                    "record_id": str(event.id),
+                    "source_state": row["origin_source_state"],
+                }
+                row["operational_timeline"] = sorted(
+                    [
+                        dict(
+                            kind=kind,
+                            recorded_at=item.get("recorded_at"),
+                            record_id=item.get(
+                                {
+                                    "APPLICABILITY": "review_id",
+                                    "ACTION": "action_id",
+                                    "EXECUTION_DECLARATION": "act_id",
+                                }[kind]
+                            ),
+                            revision=item.get("revision"),
+                            source_state=item.get("source_state", "UNKNOWN"),
+                        )
+                        for kind, key in [
+                            ("APPLICABILITY", "applicability_history"),
+                            ("ACTION", "actions"),
+                            ("EXECUTION_DECLARATION", "action_execution_acts"),
+                        ]
+                        for item in row[key]
+                    ],
+                    key=lambda item: (item["recorded_at"] or "", item["record_id"] or ""),
+                )
+                row["operational_timeline"] = sorted(
+                    [row.pop("operational_timeline_origin"), *row["operational_timeline"]],
+                    key=lambda item: (item.get("recorded_at") or "", item.get("record_id") or ""),
+                )
             return tuple(projections)
+
+    def list_operational_for_case(self, *, tenant_id, case_id):
+        return self.list_for_case(tenant_id=tenant_id, case_id=case_id, _published_only=True)
 
 
 def _instrument_projection(instrument: ContractInstrumentVersionRecord | None):

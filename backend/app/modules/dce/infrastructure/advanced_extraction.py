@@ -13,6 +13,7 @@ from typing import Any
 from app.modules.dce.application.extraction import (
     ExtractionLimitError,
     ExtractionProjection,
+    _enforce_pdf_content_coverage,
     _fragmentize,
 )
 
@@ -40,7 +41,7 @@ class PyMuPdfAdvancedExtractionAdapter:
     """Extract PDF text blocks with page and bounding-box provenance."""
 
     extractor_id = "smart-ao-pymupdf"
-    extractor_version = "1"
+    extractor_version = "2"
 
     def extract(self, *, media_type: str, source_bytes: bytes) -> ExtractionProjection:
         if media_type != "application/pdf":
@@ -69,12 +70,15 @@ class PyMuPdfAdvancedExtractionAdapter:
                         )
                     )
         fragments = _fragmentize(entries)
-        return ExtractionProjection(
-            status="COMPLETED" if fragments else "FAILED_SAFE",
-            failure_code=None if fragments else "EMPTY_EXTRACTED_TEXT",
-            fragments=fragments,
-            extractor_id=self.extractor_id,
-            extractor_version=self.extractor_version,
+        return _enforce_pdf_content_coverage(
+            ExtractionProjection(
+                status="COMPLETED" if fragments else "FAILED_SAFE",
+                failure_code=None if fragments else "EMPTY_EXTRACTED_TEXT",
+                fragments=fragments,
+                extractor_id=self.extractor_id,
+                extractor_version=self.extractor_version,
+            ),
+            source_bytes=source_bytes,
         )
 
 
@@ -347,7 +351,10 @@ class CompositeAdvancedDocumentExtractionAdapter:
             native = self._pdf.extract(media_type=media_type, source_bytes=source_bytes)
             if native.status == "COMPLETED" or self._ocr is None:
                 return native
-            return self._ocr.extract(media_type=media_type, source_bytes=source_bytes)
+            return _enforce_pdf_content_coverage(
+                self._ocr.extract(media_type=media_type, source_bytes=source_bytes),
+                source_bytes=source_bytes,
+            )
         if self._ocr is not None and media_type in _SUPPORTED_OCR_MEDIA_TYPES:
             return self._ocr.extract(media_type=media_type, source_bytes=source_bytes)
         return self._docling.extract(media_type=media_type, source_bytes=source_bytes)

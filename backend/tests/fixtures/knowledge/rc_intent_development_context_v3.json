@@ -1,0 +1,491 @@
+{
+  "schema_version": 3,
+  "kind": "rc_intent_development_context",
+  "synthetic": true,
+  "held_out": false,
+  "training_only": true,
+  "contract": "rc_intent_context_contract_v3.json",
+  "cases": [
+    {
+      "id": "prefix-purpose",
+      "text": "Pour préparer notre offre, le DC1 est-il requis pour le lot 421 ?",
+      "query_sha256": "68311ee0d371e1b18d4f90bf15696d3d06fbdb7cea862cd72ea2d47fbc1e4294",
+      "expected_intent": {
+        "subject": "DC1",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED",
+        "scope_state": "CANDIDATE",
+        "lot": 421
+      },
+      "expected_reason": "UNIQUE_EXPLICIT_REQUEST",
+      "expected_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 31,
+          "end_byte": 34,
+          "excerpt": "DC1"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 42,
+          "end_byte": 48,
+          "excerpt": "requis"
+        },
+        {
+          "signal": "LOT",
+          "start_byte": 57,
+          "end_byte": 64,
+          "excerpt": "lot 421"
+        }
+      ],
+      "expected_contexts": [
+        {
+          "signal": "NEUTRAL_CONTEXT",
+          "start_byte": 0,
+          "end_byte": 28,
+          "excerpt": "Pour préparer notre offre, "
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "suffix-accent",
+      "text": "Le DC2 est-il obligatoire, pour rédiger notre réponse ?",
+      "query_sha256": "88305b7c803c3ca017924f312db112adc67f93e3b73d9ec0a30a72e47fff32bc",
+      "expected_intent": {
+        "subject": "DC2",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "UNIQUE_EXPLICIT_REQUEST",
+      "expected_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 3,
+          "end_byte": 6,
+          "excerpt": "DC2"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 14,
+          "end_byte": 25,
+          "excerpt": "obligatoire"
+        }
+      ],
+      "expected_contexts": [
+        {
+          "signal": "NEUTRAL_CONTEXT",
+          "start_byte": 25,
+          "end_byte": 56,
+          "excerpt": ", pour rédiger notre réponse "
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "prefix-unicode",
+      "text": "À titre de précision : la visite médicale est-elle obligatoire ?",
+      "query_sha256": "ecd4b744aecef78d7debe0b236fecbd602ba2dd0c0c5f722e70d6b7abe19e000",
+      "expected_intent": {
+        "subject": "VISIT_MEDICAL",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "UNIQUE_EXPLICIT_REQUEST",
+      "expected_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 28,
+          "end_byte": 44,
+          "excerpt": "visite médicale"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 54,
+          "end_byte": 65,
+          "excerpt": "obligatoire"
+        }
+      ],
+      "expected_contexts": [
+        {
+          "signal": "NEUTRAL_CONTEXT",
+          "start_byte": 0,
+          "end_byte": 25,
+          "excerpt": "À titre de précision : "
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "prefix-dash",
+      "text": "Dans le cadre de notre candidature — les variantes sont-elles permises ?",
+      "query_sha256": "19a8eec1651c2e8ecf52e299ccb82defe805c975ede07a400b4c595149072f6c",
+      "expected_intent": {
+        "subject": "VARIANTS",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "UNIQUE_EXPLICIT_REQUEST",
+      "expected_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 43,
+          "end_byte": 52,
+          "excerpt": "variantes"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 64,
+          "end_byte": 72,
+          "excerpt": "permises"
+        }
+      ],
+      "expected_contexts": [
+        {
+          "signal": "NEUTRAL_CONTEXT",
+          "start_byte": 0,
+          "end_byte": 39,
+          "excerpt": "Dans le cadre de notre candidature — "
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "suffix-memory",
+      "text": "Le mémoire technique est-il exigé, pour constituer notre dossier ?",
+      "query_sha256": "3f1e6e1ba492c71b407d7ab8b3fda6fa6784ba4dea3aac13d20697390a2ca316",
+      "expected_intent": {
+        "subject": "MEMOIRE_TECHNIQUE",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "UNIQUE_EXPLICIT_REQUEST",
+      "expected_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 3,
+          "end_byte": 21,
+          "excerpt": "mémoire technique"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 29,
+          "end_byte": 35,
+          "excerpt": "exigé"
+        }
+      ],
+      "expected_contexts": [
+        {
+          "signal": "NEUTRAL_CONTEXT",
+          "start_byte": 35,
+          "end_byte": 67,
+          "excerpt": ", pour constituer notre dossier "
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "both",
+      "text": "Pour information, une visite de site est-elle nécessaire, pour organiser notre réponse ?",
+      "query_sha256": "ae567bd685a3441bc8bb9c9a437f24d981b9ad945b83378078325151512eb262",
+      "expected_intent": {
+        "subject": "VISIT_SITE",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "UNIQUE_EXPLICIT_REQUEST",
+      "expected_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 22,
+          "end_byte": 36,
+          "excerpt": "visite de site"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 46,
+          "end_byte": 57,
+          "excerpt": "nécessaire"
+        }
+      ],
+      "expected_contexts": [
+        {
+          "signal": "NEUTRAL_CONTEXT",
+          "start_byte": 0,
+          "end_byte": 18,
+          "excerpt": "Pour information, "
+        },
+        {
+          "signal": "NEUTRAL_CONTEXT",
+          "start_byte": 57,
+          "end_byte": 89,
+          "excerpt": ", pour organiser notre réponse "
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "nominal-purpose",
+      "text": "Pour la rédaction de notre offre, faut-il joindre le DC2 ?",
+      "query_sha256": "5cff30df27106ca55c7c7ace930fa0caf97d77c037a8e55665bdf96545df3708",
+      "expected_intent": {
+        "subject": "DC2",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "UNIQUE_EXPLICIT_REQUEST",
+      "expected_anchors": [
+        {
+          "signal": "DEMAND",
+          "start_byte": 35,
+          "end_byte": 50,
+          "excerpt": "faut-il joindre"
+        },
+        {
+          "signal": "SUBJECT",
+          "start_byte": 54,
+          "end_byte": 57,
+          "excerpt": "DC2"
+        }
+      ],
+      "expected_contexts": [
+        {
+          "signal": "NEUTRAL_CONTEXT",
+          "start_byte": 0,
+          "end_byte": 35,
+          "excerpt": "Pour la rédaction de notre offre, "
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "generic-visit",
+      "text": "Les visites sont-elles obligatoires, pour compléter notre candidature ?",
+      "query_sha256": "8fc7da4e39359529a6d6bae8d6ba1efccdbc8db7c934d07e7876c14558187c12",
+      "expected_intent": {
+        "subject": "VISIT",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "UNIQUE_EXPLICIT_REQUEST",
+      "expected_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 4,
+          "end_byte": 11,
+          "excerpt": "visites"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 23,
+          "end_byte": 35,
+          "excerpt": "obligatoires"
+        }
+      ],
+      "expected_contexts": [
+        {
+          "signal": "NEUTRAL_CONTEXT",
+          "start_byte": 35,
+          "end_byte": 71,
+          "excerpt": ", pour compléter notre candidature "
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "time-retained",
+      "text": "Pour préparer notre offre, à quelle date faut-il réaliser la visite de site ?",
+      "query_sha256": "13b5035c5675d012e455243ba959c47a160438d2085ed4eebe305d7e84ff564c",
+      "expected_intent": {
+        "subject": "VISIT_SITE",
+        "demand": "DATE_TIME",
+        "coverage": "UNSUPPORTED",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "UNSUPPORTED_TIME",
+      "expected_anchors": [
+        {
+          "signal": "DEMAND",
+          "start_byte": 28,
+          "end_byte": 42,
+          "excerpt": "à quelle date"
+        },
+        {
+          "signal": "SUBJECT",
+          "start_byte": 64,
+          "end_byte": 78,
+          "excerpt": "visite de site"
+        }
+      ],
+      "expected_contexts": [
+        {
+          "signal": "NEUTRAL_CONTEXT",
+          "start_byte": 0,
+          "end_byte": 28,
+          "excerpt": "Pour préparer notre offre, "
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "condition-retained",
+      "text": "Pour information, le DC2 est-il requis si le titulaire change ?",
+      "query_sha256": "fe9e15a48e13acd8cc04e152016c81f2738107638ed95e81956a8de10380eac3",
+      "expected_intent": {
+        "subject": "DC2",
+        "demand": "OBLIGATION",
+        "coverage": "UNSUPPORTED",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "UNSUPPORTED_CONDITION",
+      "expected_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 21,
+          "end_byte": 24,
+          "excerpt": "DC2"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 32,
+          "end_byte": 38,
+          "excerpt": "requis"
+        }
+      ],
+      "expected_contexts": [
+        {
+          "signal": "NEUTRAL_CONTEXT",
+          "start_byte": 0,
+          "end_byte": 18,
+          "excerpt": "Pour information, "
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "unknown-subject-inversion",
+      "text": "La pièce justificative est-elle obligatoire ?",
+      "query_sha256": "325d31092c59a5561ec5270fe1be5295c86dc5b04655da6585caac711827c7e9",
+      "expected_intent": {
+        "subject": "UNKNOWN",
+        "demand": "UNKNOWN",
+        "coverage": "UNKNOWN",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "UNKNOWN_SUBJECT",
+      "expected_anchors": [],
+      "expected_contexts": [],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "statement",
+      "text": "Le DC1 est requis.",
+      "query_sha256": "92084bc8066f3c8ba8d70a3f43655b582bdb604d7213febf217c1965f8505058",
+      "expected_intent": {
+        "subject": "DC1",
+        "demand": "UNKNOWN",
+        "coverage": "UNKNOWN",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "INSUFFICIENT_EVIDENCE",
+      "expected_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 3,
+          "end_byte": 6,
+          "excerpt": "DC1"
+        }
+      ],
+      "expected_contexts": [],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "metalinguistic",
+      "text": "Expliquez le mot obligatoire du DC2.",
+      "query_sha256": "ec127296e3eafc5eb0119a540a2ed52e10ef6c5d5d33f85552e07330e5e11dca",
+      "expected_intent": {
+        "subject": "DC2",
+        "demand": "UNKNOWN",
+        "coverage": "UNKNOWN",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "NON_ACTIVE_REQUEST",
+      "expected_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 32,
+          "end_byte": 35,
+          "excerpt": "DC2"
+        }
+      ],
+      "expected_contexts": [],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "explicit-reference",
+      "text": "Ce formulaire est-il requis ?",
+      "query_sha256": "828a4563433a02d160b63b588e621f1f50d95594d6d743a8ea0eb287e78fb780",
+      "expected_intent": {
+        "subject": "UNKNOWN",
+        "demand": "UNKNOWN",
+        "coverage": "UNKNOWN",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "UNRESOLVED_REFERENCE",
+      "expected_anchors": [],
+      "expected_contexts": [],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "object-reference",
+      "text": "Où doit-on le fournir ?",
+      "query_sha256": "3cffe7b0e4f86610dff5a7603696fcf62ca0d2680d08facf55d5327a7a26df3f",
+      "expected_intent": {
+        "subject": "UNKNOWN",
+        "demand": "UNKNOWN",
+        "coverage": "UNKNOWN",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "UNRESOLVED_REFERENCE",
+      "expected_anchors": [],
+      "expected_contexts": [],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    }
+  ]
+}

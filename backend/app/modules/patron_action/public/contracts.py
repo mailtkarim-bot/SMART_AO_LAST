@@ -264,6 +264,7 @@ class CaseTeachingApplicabilityResponse(BaseModel):
     source_expires_on: date
     source_validity_at_recording: Literal["USABLE", "EXPIRED"]
     source_validity_current: Literal["USABLE", "EXPIRED"]
+    context_state: Literal["CURRENT", "UNKNOWN", "REVIEW_REQUIRED"] = "UNKNOWN"
     source_snapshot: dict[str, object]
     actor_id: UUID
     recorded_at: datetime

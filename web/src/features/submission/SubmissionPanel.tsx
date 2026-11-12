@@ -1,3 +1,5 @@
+import { SubmissionFinalControl } from "./SubmissionFinalControl";
+import type { SubmissionFinalControl as FinalControl } from "../../shared/types";
 import type { Dispatch, SetStateAction } from "react";
 import { useSubmissionActions } from "./useSubmissionActions";
 import type {
@@ -19,6 +21,7 @@ export function SubmissionWorkspace({ api, setMessage }: {
     onLoadEvidence={() => void actions.loadSubmissionEvidence()}
     onRequestSignature={() => void actions.requestSignature()}
     onLoadSignature={() => void actions.loadSignature()}
+    onLoadFinalControl={() => void actions.loadFinalControl()}
     onExport={() => void actions.exportSubmissionPackage()}
     onRecordEvidence={() => void actions.recordSubmissionEvidence()}
   />;
@@ -32,6 +35,14 @@ export type SubmissionEvidenceForm = {
 };
 
 type SubmissionPanelProps = {
+  finalControl: FinalControl | null;
+  onLoadFinalControl: () => void;
+  signatureConfirmed: boolean;
+  setSignatureConfirmed: Dispatch<SetStateAction<boolean>>;
+  signatureRationale: string;
+  setSignatureRationale: Dispatch<SetStateAction<string>>;
+  signatureBusy: boolean;
+  signatureIntent: { packageId: string; version: number; metadata: { expected_manifest_sha256: string } } | null;
   preparationPackageId: string;
   preparationRevision: string;
   submissionPackageId: string;
@@ -71,6 +82,8 @@ type SubmissionPanelProps = {
 };
 
 export function SubmissionPanel({
+  finalControl, onLoadFinalControl, signatureConfirmed, setSignatureConfirmed,
+  signatureRationale, setSignatureRationale, signatureBusy, signatureIntent,
   preparationPackageId,
   preparationRevision,
   submissionPackageId,
@@ -119,6 +132,13 @@ export function SubmissionPanel({
           <span className="status-dot" />Dépôt externe non effectué
         </span>
       </div>
+      <div className="response-plan-actions">
+      <button className="secondary-button" type="button" onClick={onLoadFinalControl}
+        disabled={!submissionPackageId.trim() || signatureIntent !== null || signatureBusy}>
+        Contrôler les pièces du paquet exact
+      </button>
+      </div>
+      {finalControl?.submission_package_id === submissionPackageId.trim() && <SubmissionFinalControl report={finalControl} />}
       <div className="submission-grid">
         <div className="detail-panel">
           <div className="panel-heading">
@@ -193,6 +213,7 @@ export function SubmissionPanel({
                   {typeof submissionManifest.manifest.submission_mode === "string" && (
                     <small>Mode : {submissionManifest.manifest.submission_mode}</small>
                   )}
+                  {Array.isArray(submissionManifest.manifest.entries) && submissionManifest.manifest.entries.filter((item):item is Record<string,unknown>=>typeof item==="object"&&item!==null&&(item as Record<string,unknown>).kind==="SOURCE_ANNEX").map((item,index)=><div key={index}><strong>Annexe incluse dans le paquet exact : {String(item.archive_path)}</strong><p>Document {String(item.document_id)} · SHA-256 {String(item.sha256)}</p><p>Exigences : {Array.isArray(item.requirement_ids)?item.requirement_ids.join(", "):"UNKNOWN"} · Signature : UNKNOWN</p></div>)}
                   <small>
                     Exclus : {Array.isArray(submissionManifest.manifest.exclusions)
                       ? submissionManifest.manifest.exclusions.join(", ")
@@ -340,7 +361,7 @@ export function SubmissionPanel({
           <div className="panel-heading">
             <div>
               <h3>Signature électronique</h3>
-              <p>Le provider est configuré côté serveur; le navigateur ne fabrique aucune preuve.</p>
+              <p>Demande humaine distincte de P5. La signature et sa validité ne sont jamais présumées.</p>
             </div>
           </div>
           <label>
@@ -367,10 +388,25 @@ export function SubmissionPanel({
             {signatureProvider && <small>Provider : {signatureProvider}</small>}
             {signatureRevision !== null && <small>Révision signature : {signatureRevision}</small>}
           </div>
-          <button className="primary-button" type="button" onClick={onRequestSignature}>
-            Demander la signature <span>→</span>
+          <label>
+            <span>Motif de la demande de signature</span>
+            <textarea value={signatureRationale} maxLength={2000} rows={2}
+              disabled={signatureIntent !== null || signatureBusy}
+              onChange={event => setSignatureRationale(event.target.value)} />
+          </label>
+          <label>
+            <input type="checkbox" checked={signatureConfirmed}
+              disabled={signatureIntent !== null || signatureBusy}
+              onChange={event => setSignatureConfirmed(event.target.checked)} />
+            Je confirme la demande pour le paquet exact contrôlé, sans présumer la validité de la signature.
+          </label>
+          {signatureIntent && <p role="status">Demande figée pour {signatureIntent.packageId} · version {signatureIntent.version} · SHA-256 {signatureIntent.metadata.expected_manifest_sha256}. Reprenez la même demande si son résultat est inconnu.</p>}
+          <button className="primary-button" type="button" onClick={onRequestSignature}
+            disabled={signatureBusy || (signatureIntent === null && !signatureConfirmed)}>
+
+            {signatureBusy ? "Demande en cours" : signatureIntent ? "Reprendre la même demande" : "Demander la signature"} <span>→</span>
           </button>
-          <button className="secondary-button" type="button" onClick={onLoadSignature}>
+          <button className="secondary-button" type="button" onClick={onLoadSignature} disabled={signatureIntent !== null || signatureBusy}>
             Recharger l’état <span>↻</span>
           </button>
           <small className="invariant-note">

@@ -1,0 +1,539 @@
+{
+  "schema_version": 2,
+  "synthetic": true,
+  "held_out": false,
+  "training_only": true,
+  "kind": "rc_intent_development_compositional",
+  "contract": "rc_intent_compositional_contract_v2.json",
+  "cases": [
+    {
+      "id": "negative-local",
+      "text": "Le formulaire DC1, peut-on ne pas le fournir pour le lot 381 ?",
+      "query_sha256": "103759e7d53a3446fe9c07907c87e4b271f76d1472efda60e5c49aec434ff404",
+      "expected_intent": {
+        "subject": "DC1",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED",
+        "scope_state": "CANDIDATE",
+        "lot": 381
+      },
+      "expected_reason": "UNIQUE_EXPLICIT_REQUEST",
+      "expected_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 14,
+          "end_byte": 17,
+          "excerpt": "DC1"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 19,
+          "end_byte": 44,
+          "excerpt": "peut-on ne pas le fournir"
+        },
+        {
+          "signal": "LOT",
+          "start_byte": 53,
+          "end_byte": 60,
+          "excerpt": "lot 381"
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "negative-local-unscoped",
+      "text": "Le DC2, peut-on ne pas le remettre ?",
+      "query_sha256": "faabc1dea24daa50f7a1f661ecb3b39018a1327acb46e59c1f13ce8a2b3aa1de",
+      "expected_intent": {
+        "subject": "DC2",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "UNIQUE_EXPLICIT_REQUEST",
+      "expected_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 3,
+          "end_byte": 6,
+          "excerpt": "DC2"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 8,
+          "end_byte": 34,
+          "excerpt": "peut-on ne pas le remettre"
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "impersonal",
+      "text": "Est-il nécessaire de présenter un mémoire technique pour le lot 382 ?",
+      "query_sha256": "54b54a63c309d4d98734dbbc64c81b29a7587860425ad683b439222bc01ee8dd",
+      "expected_intent": {
+        "subject": "MEMOIRE_TECHNIQUE",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED",
+        "scope_state": "CANDIDATE",
+        "lot": 382
+      },
+      "expected_reason": "UNIQUE_EXPLICIT_REQUEST",
+      "expected_anchors": [
+        {
+          "signal": "DEMAND",
+          "start_byte": 0,
+          "end_byte": 32,
+          "excerpt": "Est-il nécessaire de présenter"
+        },
+        {
+          "signal": "SUBJECT",
+          "start_byte": 36,
+          "end_byte": 54,
+          "excerpt": "mémoire technique"
+        },
+        {
+          "signal": "LOT",
+          "start_byte": 63,
+          "end_byte": 70,
+          "excerpt": "lot 382"
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "impersonal-required",
+      "text": "Est-il indispensable de joindre le DC1 ?",
+      "query_sha256": "2c54ce644ad067d3f2c19400b1071883726c5eac633137f790bc4b3a2b5dfbea",
+      "expected_intent": {
+        "subject": "DC1",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "UNIQUE_EXPLICIT_REQUEST",
+      "expected_anchors": [
+        {
+          "signal": "DEMAND",
+          "start_byte": 0,
+          "end_byte": 31,
+          "excerpt": "Est-il indispensable de joindre"
+        },
+        {
+          "signal": "SUBJECT",
+          "start_byte": 35,
+          "end_byte": 38,
+          "excerpt": "DC1"
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "permission-negative",
+      "text": "Le DC1, est-il permis de ne pas le joindre ?",
+      "query_sha256": "285deb4a03a5cceb55f269f2d18b109a3f47ee7833b31e26817ffe4b66b2b833",
+      "expected_intent": {
+        "subject": "DC1",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "UNIQUE_EXPLICIT_REQUEST",
+      "expected_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 3,
+          "end_byte": 6,
+          "excerpt": "DC1"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 8,
+          "end_byte": 42,
+          "excerpt": "est-il permis de ne pas le joindre"
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "time-auxiliary",
+      "text": "À quelle date doit-on effectuer la visite médicale pour le lot 383 ?",
+      "query_sha256": "2143c048b486bca10d17ca6a367defb96f1537e66328f3e51e36185975e1adf7",
+      "expected_intent": {
+        "subject": "VISIT_MEDICAL",
+        "demand": "DATE_TIME",
+        "coverage": "UNSUPPORTED",
+        "scope_state": "CANDIDATE",
+        "lot": 383
+      },
+      "expected_reason": "UNSUPPORTED_TIME",
+      "expected_anchors": [
+        {
+          "signal": "DEMAND",
+          "start_byte": 0,
+          "end_byte": 14,
+          "excerpt": "À quelle date"
+        },
+        {
+          "signal": "SUBJECT",
+          "start_byte": 36,
+          "end_byte": 52,
+          "excerpt": "visite médicale"
+        },
+        {
+          "signal": "LOT",
+          "start_byte": 61,
+          "end_byte": 68,
+          "excerpt": "lot 383"
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "time-need",
+      "text": "Quand est-il nécessaire de réaliser la visite de chantier ?",
+      "query_sha256": "a6325105e652b83ed6d505ecb282cda0c8fa3cfe71518861e15b2dc896fbeed6",
+      "expected_intent": {
+        "subject": "VISIT_SITE",
+        "demand": "DATE_TIME",
+        "coverage": "UNSUPPORTED",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "UNSUPPORTED_TIME",
+      "expected_anchors": [
+        {
+          "signal": "DEMAND",
+          "start_byte": 0,
+          "end_byte": 5,
+          "excerpt": "Quand"
+        },
+        {
+          "signal": "SUBJECT",
+          "start_byte": 41,
+          "end_byte": 59,
+          "excerpt": "visite de chantier"
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "spatial",
+      "text": "Où est prévue la visite du site pour le lot 384 ?",
+      "query_sha256": "eec1d8750f29cad8d3941562837039d3930769746d3f3c5755b931e30170dbca",
+      "expected_intent": {
+        "subject": "VISIT_SITE",
+        "demand": "LOCATION",
+        "coverage": "UNSUPPORTED",
+        "scope_state": "CANDIDATE",
+        "lot": 384
+      },
+      "expected_reason": "UNSUPPORTED_LOCATION",
+      "expected_anchors": [
+        {
+          "signal": "DEMAND",
+          "start_byte": 0,
+          "end_byte": 3,
+          "excerpt": "Où"
+        },
+        {
+          "signal": "SUBJECT",
+          "start_byte": 19,
+          "end_byte": 33,
+          "excerpt": "visite du site"
+        },
+        {
+          "signal": "LOT",
+          "start_byte": 42,
+          "end_byte": 49,
+          "excerpt": "lot 384"
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "spatial-noun",
+      "text": "Quel est le lieu de la visite médicale ?",
+      "query_sha256": "b58f6fa61ef6765055f898dd3ba6852816defb1040dfdffb456f1ad4a1b94d06",
+      "expected_intent": {
+        "subject": "VISIT_MEDICAL",
+        "demand": "LOCATION",
+        "coverage": "UNSUPPORTED",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "UNSUPPORTED_LOCATION",
+      "expected_anchors": [
+        {
+          "signal": "DEMAND",
+          "start_byte": 12,
+          "end_byte": 16,
+          "excerpt": "lieu"
+        },
+        {
+          "signal": "SUBJECT",
+          "start_byte": 23,
+          "end_byte": 39,
+          "excerpt": "visite médicale"
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "complete-upstream-condition",
+      "text": "Si le titulaire change, faut-il fournir le DC2 pour le lot 385 ?",
+      "query_sha256": "4914f26393e192f4f007d07242f3099321905b94ed2cd6bb00b627fecd1ea889",
+      "expected_intent": {
+        "subject": "DC2",
+        "demand": "OBLIGATION",
+        "coverage": "UNSUPPORTED",
+        "scope_state": "CANDIDATE",
+        "lot": 385
+      },
+      "expected_reason": "UNSUPPORTED_CONDITION",
+      "expected_anchors": [
+        {
+          "signal": "DEMAND",
+          "start_byte": 24,
+          "end_byte": 39,
+          "excerpt": "faut-il fournir"
+        },
+        {
+          "signal": "SUBJECT",
+          "start_byte": 43,
+          "end_byte": 46,
+          "excerpt": "DC2"
+        },
+        {
+          "signal": "LOT",
+          "start_byte": 55,
+          "end_byte": 62,
+          "excerpt": "lot 385"
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "incomplete-clause",
+      "text": "Le DC1 est-il requis si le titulaire",
+      "query_sha256": "67164bf98f24266948a2b66e61fcd3e062c540d94cf7c26e3cf65cdc466d789f",
+      "expected_intent": {
+        "subject": "DC1",
+        "demand": "UNKNOWN",
+        "coverage": "UNKNOWN",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "TRUNCATED",
+      "expected_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 3,
+          "end_byte": 6,
+          "excerpt": "DC1"
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "incomplete-article",
+      "text": "Le DC2 est-il requis si le",
+      "query_sha256": "52686f13b042aea66ff168e76e2c00b9a64db0a2613126d51c4be392752ae148",
+      "expected_intent": {
+        "subject": "DC2",
+        "demand": "UNKNOWN",
+        "coverage": "UNKNOWN",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "TRUNCATED",
+      "expected_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 3,
+          "end_byte": 6,
+          "excerpt": "DC2"
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "pronoun-with-time",
+      "text": "Où doit-on le fournir ?",
+      "query_sha256": "3cffe7b0e4f86610dff5a7603696fcf62ca0d2680d08facf55d5327a7a26df3f",
+      "expected_intent": {
+        "subject": "UNKNOWN",
+        "demand": "UNKNOWN",
+        "coverage": "UNKNOWN",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "UNRESOLVED_REFERENCE",
+      "expected_anchors": [],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "signed-negative",
+      "text": "Le DC2 est-il obligatoire pour le lot -4 ?",
+      "query_sha256": "e1293cb783ffc7cf448152fb0eeed1ad75c0ee1d04088f92cb817cad9079f9bb",
+      "expected_intent": {
+        "subject": "DC2",
+        "demand": "UNKNOWN",
+        "coverage": "AMBIGUOUS",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "INVALID_LOT",
+      "expected_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 3,
+          "end_byte": 6,
+          "excerpt": "DC2"
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "signed-positive",
+      "text": "Le DC1 est-il obligatoire pour le lot +5 ?",
+      "query_sha256": "a32b60ca501e6751d680cbcaf67151067fdb52e154d8ba14c7609c457f84b536",
+      "expected_intent": {
+        "subject": "DC1",
+        "demand": "UNKNOWN",
+        "coverage": "AMBIGUOUS",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "INVALID_LOT",
+      "expected_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 3,
+          "end_byte": 6,
+          "excerpt": "DC1"
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "nonnumeric",
+      "text": "Le DC2 est-il requis pour le lot A ?",
+      "query_sha256": "a7db5c3da496a0b161aa752e794af8fc41aa51bb494fd210afb3dc32673487e3",
+      "expected_intent": {
+        "subject": "DC2",
+        "demand": "UNKNOWN",
+        "coverage": "AMBIGUOUS",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "INVALID_LOT",
+      "expected_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 3,
+          "end_byte": 6,
+          "excerpt": "DC2"
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "two-information-requests",
+      "text": "À quelle date faut-il réaliser la visite de site et est-elle obligatoire ?",
+      "query_sha256": "ddf166f3c6ea12e874e475770140d563cc5661e1f86df48073e49c2595867093",
+      "expected_intent": {
+        "subject": "VISIT_SITE",
+        "demand": "UNKNOWN",
+        "coverage": "AMBIGUOUS",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "MULTIPLE_DEMANDS",
+      "expected_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 36,
+          "end_byte": 50,
+          "excerpt": "visite de site"
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "unresolved-demonstrative",
+      "text": "Ce document doit-il être remis ?",
+      "query_sha256": "23034b5137ce51cb73375b102411b848bdbd0c82c30f60b79d2fa980e167e198",
+      "expected_intent": {
+        "subject": "UNKNOWN",
+        "demand": "UNKNOWN",
+        "coverage": "UNKNOWN",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "UNRESOLVED_REFERENCE",
+      "expected_anchors": [],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "financial-priority",
+      "text": "Le DC2 est-il requis si la DPGF...",
+      "query_sha256": "0b857aae26404d031d85e064d29e2d12447cec08da016332e92ad10944af6757",
+      "expected_intent": null,
+      "expected_reason": "FINANCIAL_SCOPE_REFUSED",
+      "expected_anchors": [],
+      "expected_refusal": "FINANCIAL_SCOPE_REFUSED",
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "question-on-conditions",
+      "text": "À quelles conditions faut-il fournir le DC2 ?",
+      "query_sha256": "43c062d16bfa65e1cbe024f8afa1599381b9f2087fee56bc88615033e5ff0bea",
+      "expected_intent": {
+        "subject": "DC2",
+        "demand": "OBLIGATION",
+        "coverage": "UNSUPPORTED",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "UNSUPPORTED_CONDITION",
+      "expected_anchors": [
+        {
+          "signal": "DEMAND",
+          "start_byte": 0,
+          "end_byte": 21,
+          "excerpt": "À quelles conditions"
+        },
+        {
+          "signal": "SUBJECT",
+          "start_byte": 41,
+          "end_byte": 44,
+          "excerpt": "DC2"
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    }
+  ]
+}

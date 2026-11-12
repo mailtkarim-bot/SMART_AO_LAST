@@ -1,3 +1,9 @@
+import type {SelectedResponseAnnex} from "../../shared/types";
+import { ResponseCoveragePanel } from "./ResponseCoveragePanel";
+import {ResponseDraftDownload} from "./ResponseDraftDownload";
+import type {ApiClient} from "../../infrastructure/api";
+import {BuyerDocxForm} from "./BuyerDocxForm";
+import type {BuyerDocxIntentStore} from "./BuyerDocxIntentStore";
 import { useEffect, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 
@@ -11,8 +17,11 @@ import type {
   RecordInformationResponseInput,
   ResolveTaskBlockerInput,
   CommandReceipt,
+  ResponseContribution,
+  SelectedResponseDraft,
 } from "../../shared/types";
 import type { ResponsePlanItemDraft, WizardResponsePlan } from "./useCollaboratorWizard";
+import { ResponseDraftContent } from "./ResponseDraftContent";
 import { TaskWorkflowPanel } from "./TaskWorkflowPanel";
 
 type WizardOutcome = "RECORDED" | "NOT_APPLICABLE" | "UNABLE_TO_COMPLETE";
@@ -28,6 +37,7 @@ const responsePlanSections: Array<[PreparationResponsePlanSection, string]> = [
 ];
 
 type CollaboratorWizardPanelProps = {
+  buyerDocxTools?: {api:ApiClient;store:BuyerDocxIntentStore;onRecorded:()=>void|Promise<void>};
   wizardCaseId: string;
   wizardPackageId: string;
   wizardPackage: PreparationPackage | null;
@@ -42,6 +52,8 @@ type CollaboratorWizardPanelProps = {
   wizardSnapshotBusy: boolean;
   wizardTransmissionBusy: boolean;
   wizardSnapshotRetryPending: boolean;
+  wizardSnapshotSelection?: SelectedResponseDraft | null;
+  wizardSnapshotAnnexes?: SelectedResponseAnnex[];
   wizardTransmissionRetryPending: boolean;
   canCreateWizardSnapshot: boolean;
   canTransmitWizardSnapshot: boolean;
@@ -72,9 +84,10 @@ type CollaboratorWizardPanelProps = {
   onCompleteTask: () => void;
   onEvaluateReadiness: () => void;
   onGenerateDocument: () => void;
-  onCreateResponseDraft: () => void;
+  onCreateResponseDraft: (contributions?: ResponseContribution[]) => void;
+  contributionOwnerKey?: string;
   onRetryResponseDraft: () => void;
-  onCreateSnapshot: () => void;
+  onCreateSnapshot: (selection?: SelectedResponseDraft, annexes?:SelectedResponseAnnex[], justification?:string) => void;
   onTransmitSnapshot: () => void;
   onPreviewDocument: (documentId: string) => void;
   onDownloadDocument: (documentId: string) => void;
@@ -87,7 +100,9 @@ type CollaboratorWizardPanelProps = {
 };
 
 export function CollaboratorWizardPanel({
+  buyerDocxTools,
   wizardCaseId,
+  contributionOwnerKey = "",
   wizardPackageId,
   wizardPackage,
   wizardTasks,
@@ -101,6 +116,8 @@ export function CollaboratorWizardPanel({
   wizardSnapshotBusy,
   wizardTransmissionBusy,
   wizardSnapshotRetryPending,
+  wizardSnapshotSelection = null,
+  wizardSnapshotAnnexes = [],
   wizardTransmissionRetryPending,
   canCreateWizardSnapshot,
   canTransmitWizardSnapshot,
@@ -162,6 +179,42 @@ export function CollaboratorWizardPanel({
     setCaptureState(result === false ? "PENDING" : "CONFIRMED");
   }
 
+  const contributionScope = JSON.stringify([contributionOwnerKey, wizardCaseId, wizardPackageId, wizardPackage?.package_id, wizardPackage?.dce_version_id, wizardResponsePlan.exactPlan?.plan_id, wizardResponsePlan.exactPlan?.version]);
+  const [contributionEntry, setContributionEntry] = useState<{ scope: string; values: Record<string, { content: string; missing: string }> }>({ scope: "", values: {} });
+  const contributionValues = contributionEntry.scope === contributionScope ? contributionEntry.values : {};
+  const contributionItems = wizardResponsePlan.exactPlan?.content.items ?? [];
+  const contributions: ResponseContribution[] = contributionItems.map((item) => ({ requirement_id: item.requirement_id, section_code: item.section_code, content: contributionValues[`${item.requirement_id}/${item.section_code}`]?.content ?? "", missing: contributionValues[`${item.requirement_id}/${item.section_code}`]?.missing ?? "" }));
+  const contributionsReady = contributions.length > 0 && contributions.every((item) => item.content.trim() || item.missing.trim());
+  const contributionContextCurrent = wizardPackage?.case_id === wizardCaseId && wizardPackage?.package_id === wizardPackageId && isWizardResponsePlanCurrent;
+  function updateContribution(key: string, patch: { content?: string; missing?: string }) {
+    setContributionEntry({ scope: contributionScope, values: { ...contributionValues, [key]: { ...(contributionValues[key] ?? { content: "", missing: "" }), ...patch } } });
+  }
+
+  const responseSelectionCurrent = wizardPackage?.case_id === wizardCaseId.trim()
+    && wizardPackage?.package_id === wizardPackageId.trim()
+    && wizardResponsePlan.readState === "READY" && !wizardResponsePlan.loading
+    && wizardResponsePlan.requestState === "IDLE"
+    && wizardResponsePlan.exactPlan?.package_id === wizardPackage.package_id
+    && wizardResponsePlan.exactPlan?.dce_version_id === wizardPackage.dce_version_id
+    && wizardResponsePlan.exactPlan?.state === "SOURCES_CURRENT";
+  const requiresResponseChoice = Boolean(wizardResponsePlan.exactPlan || wizardPackage?.response_drafts.some(draft => draft.response_plan_id));
+  const [responseChoice, setResponseChoice] = useState<{scope: string; key: string}>({scope:"",key:""});
+  const currentDrafts = (responseSelectionCurrent ? wizardPackage?.response_drafts.filter(draft =>
+    draft.response_plan_id === wizardResponsePlan.exactPlan?.plan_id
+    && draft.response_plan_version === wizardResponsePlan.exactPlan?.version
+    && /^[0-9a-f]{64}$/.test(draft.content_sha256 ?? "")
+    && !wizardPackage.response_drafts.some(other => other.draft_id === draft.draft_id && other.version > draft.version)
+  ) : []) ?? [];
+  const draftKey = (draft: {draft_id:string;version:number;content_sha256?:string|null}) => JSON.stringify([draft.draft_id,draft.version,draft.content_sha256]);
+  const chosenResponse = responseSelectionCurrent && responseChoice.scope === contributionScope
+    ? currentDrafts.find(draft => draftKey(draft) === responseChoice.key && typeof draft.content === "string") : undefined;
+
+  const annexKey = JSON.stringify([contributionScope,chosenResponse && draftKey(chosenResponse)]);
+  const [annexEntry,setAnnexEntry] = useState<{key:string;items:SelectedResponseAnnex[];note:string;confirmed:boolean}>({key:"",items:[],note:"",confirmed:false});
+  const selectedAnnexes = annexEntry.key===annexKey?annexEntry.items:[];
+  const annexNote = annexEntry.key===annexKey?annexEntry.note:"";
+  const annexConfirmed = annexEntry.key===annexKey && annexEntry.confirmed;
+  function setAnnexes(items:SelectedResponseAnnex[]){setAnnexEntry({key:annexKey,items,note:annexNote,confirmed:false})}
   const responsePlanStatus = isWizardResponsePlanCurrent && wizardResponsePlan.requestState === "IDLE" ? "SOURCES_CURRENT" : "UNKNOWN";
   const responsePlanControlsDisabled = wizardResponsePlan.loading
     || ["SUBMITTING", "UNKNOWN", "READING"].includes(wizardResponsePlan.requestState)
@@ -197,7 +250,7 @@ export function CollaboratorWizardPanel({
           Charger le wizard <span>→</span>
         </button>
       </div>
-      {!wizardPackage ? (
+      {!wizardPackage || wizardPackage.case_id !== wizardCaseId.trim() || wizardPackage.package_id !== wizardPackageId.trim() ? (
         <div className="empty-card">
           <strong>Le wizard est prêt à être chargé</strong>
           <p>
@@ -450,6 +503,17 @@ export function CollaboratorWizardPanel({
                     <p>Aucun plan exact n’a été relu. UNKNOWN reste opposable.</p>
                   )}
                 </div>
+                {contributionContextCurrent && <fieldset className="workflow-form" disabled={!canCreateWizardResponseDraft || responsePlanControlsDisabled || wizardResponsePlan.draftRequestState === "SUBMITTING"}>
+                  <legend>Contributions de réponse acheteur</legend>
+                  <p>Rédaction humaine à relire par le Patron sur son SHA-256 exact. Une saisie ne prouve pas la couverture. Indiquez explicitement chaque manque.</p>
+                  {contributions.map((item, index) => <div className="response-plan-item" key={`${item.requirement_id}/${item.section_code}`}>
+                    <strong>Exigence {index + 1} · {responsePlanSections.find(([code]) => code === item.section_code)?.[1]}</strong>
+                    <p>{wizardResponsePlan.requirements.find((requirement) => requirement.requirement_id === item.requirement_id)?.source_locator_label ?? "Source UNKNOWN"}</p>
+                    <label>Contribution humaine — exigence {index + 1}<textarea maxLength={12000} rows={5} value={item.content} onChange={(event) => updateContribution(`${item.requirement_id}/${item.section_code}`, { content: event.target.value })} /></label>
+                    <label>Manques à confirmer — exigence {index + 1}<textarea maxLength={2000} rows={2} value={item.missing} onChange={(event) => updateContribution(`${item.requirement_id}/${item.section_code}`, { missing: event.target.value })} /></label>
+                    <p>Couverture : UNKNOWN · {item.missing.trim() || (!item.content.trim() ? "Contenu non rédigé : préciser le manque avant enregistrement." : "Absence de manque non démontrée.")}</p>
+                  </div>)}
+                </fieldset>}
                 <div className="response-plan-draft-gate">
                   <div>
                     <strong>{canCreateWizardResponseDraft ? "Plan SOURCES_CURRENT relu" : "Création du brouillon verrouillée"}</strong>
@@ -471,7 +535,7 @@ export function CollaboratorWizardPanel({
                               ? "Les choix courants diffèrent du plan relu, ou le document technique manque. Relisez et vérifiez le plan avant de continuer."
                               : "UNKNOWN, source absente ou plan non relu : aucun brouillon ne peut être créé."}</p>
                   </div>
-                  <button className="secondary-button" type="button" disabled={!canCreateWizardResponseDraft || wizardResponsePlan.draftRequestState === "SUBMITTING"} onClick={onCreateResponseDraft}>Créer le brouillon de réponse</button>
+                  <button className="secondary-button" type="button" disabled={!canCreateWizardResponseDraft || !contributionContextCurrent || !contributionsReady || wizardResponsePlan.draftRequestState === "SUBMITTING"} onClick={() => onCreateResponseDraft(structuredClone(contributions))}>Créer le brouillon de réponse</button>
                   {canRetryWizardResponseDraft && <button className="secondary-button" type="button" onClick={onRetryResponseDraft}>Réessayer la relecture de source</button>}
                 </div>
               </section>
@@ -579,6 +643,37 @@ export function CollaboratorWizardPanel({
                   <p>Cette transmission ne dépose jamais le dossier sur un portail externe.</p>
                 </div>
               </div>
+              {buyerDocxTools && <BuyerDocxForm api={buyerDocxTools.api} store={buyerDocxTools.store}
+                ownerKey={contributionOwnerKey} caseId={wizardCaseId} packageId={wizardPackageId}
+                source={chosenResponse && chosenResponse.content_format!=="DOCX" ? {draft_id:chosenResponse.draft_id,version:chosenResponse.version,content_sha256:chosenResponse.content_sha256!}:null}
+                onRecorded={buyerDocxTools.onRecorded}/>}
+              {requiresResponseChoice && <fieldset style={{minWidth:0,overflowWrap:"anywhere"}} disabled={!responseSelectionCurrent || wizardSnapshotBusy || wizardSnapshotRetryPending || wizardTransmissionBusy || wizardTransmissionRetryPending}>
+                <legend>Réponse unique à figer</legend>
+                {wizardSnapshotRetryPending && wizardSnapshotSelection && <p>Intention figée · UNKNOWN : {wizardSnapshotSelection.draft_id} · version {wizardSnapshotSelection.version} · SHA-256 {wizardSnapshotSelection.content_sha256}. Le retry conserve exactement cette sélection.</p>}
+                <p>Choisissez les octets du plan enregistré. Les choix non enregistrés ne sont pas inclus. La revue Patron de ce SHA-256 reste obligatoire; la couverture reste UNKNOWN.</p>
+                {currentDrafts.map(draft => <div key={draftKey(draft)} className="response-plan-item">
+                  <label><input type="radio" name="assembled-response-choice" checked={chosenResponse === draft}
+                    disabled={typeof draft.content !== "string"}
+                    onChange={() => {setResponseChoice({scope:contributionScope,key:draftKey(draft)});setAnnexEntry({key:"",items:[],note:"",confirmed:false})}}/>
+                    <span>Choisir le brouillon {draft.draft_id} · version {draft.version} · {draft.section_codes.join(" · ")}</span>
+                  </label>
+                  <small>SHA-256 : {draft.content_sha256}</small>
+                  <details><summary>Relire l’assemblage exact, ses sources et ses manques</summary>
+                    <ResponseDraftContent content={draft.content ?? null} format={draft.content_format} provenance={draft.content_provenance}/>
+                    {buyerDocxTools && draft.content_format==="DOCX" && <ResponseDraftDownload api={buyerDocxTools.api} scopeKey={contributionScope} packageId={wizardPackageId} draft={draft} collaborator/>}
+                  </details>
+                </div>)}
+                {chosenResponse?.content_sha256 && buyerDocxTools && <ResponseCoveragePanel api={buyerDocxTools.api}
+                  packageId={wizardPackageId} scopeKey={contributionScope} collaborator
+                  selection={{draft_id:chosenResponse.draft_id,version:chosenResponse.version,content_sha256:chosenResponse.content_sha256}}
+                  selectedAnnexes={selectedAnnexes} onAnnexesChange={setAnnexes}/>}
+                {selectedAnnexes.length>0 && <div className="workflow-form"><p>{selectedAnnexes.length} lien(s) d’annexe choisi(s). Les droits administratifs restent nécessaires; la sélection ne les étend pas. Signature et couverture UNKNOWN.</p>
+                  <label>Justification du choix des annexes<textarea maxLength={2000} value={annexNote} onChange={event=>setAnnexEntry({key:annexKey,items:selectedAnnexes,note:event.target.value,confirmed:false})}/></label>
+                  <label className="capability-proposal-confirm"><input type="checkbox" checked={annexConfirmed} onChange={event=>setAnnexEntry({key:annexKey,items:selectedAnnexes,note:annexNote,confirmed:event.target.checked})}/>Je confirme ces annexes et leurs empreintes pour ce snapshot.</label>
+                </div>}
+                {wizardSnapshotRetryPending && wizardSnapshotAnnexes.map(item=><p key={item.requirement_id+item.document_id}>Annexe figée · {item.document_id} · SHA-256 {item.sha256}. Même sélection au retry.</p>)}
+                {!currentDrafts.length && <p>Aucun assemblage courant sélectionnable · UNKNOWN.</p>}
+              </fieldset>}
               <label>
                 <span>Identifiant du snapshot (laisser vide pour en générer un)</span>
                 <input
@@ -591,10 +686,11 @@ export function CollaboratorWizardPanel({
               <button
                 className="secondary-button"
                 type="button"
-                disabled={!canCreateWizardSnapshot}
-                onClick={onCreateSnapshot}
+                disabled={!canCreateWizardSnapshot || (requiresResponseChoice && !chosenResponse && !wizardSnapshotRetryPending) || (!wizardSnapshotRetryPending && selectedAnnexes.length>0 && (!annexConfirmed || !annexNote.trim()))}
+                onClick={() => {const selected=chosenResponse ? {draft_id:chosenResponse.draft_id,version:chosenResponse.version,content_sha256:chosenResponse.content_sha256!} : undefined;
+                  if(selectedAnnexes.length)onCreateSnapshot(selected,selectedAnnexes,annexNote);else onCreateSnapshot(selected)}}
               >
-                {wizardSnapshotBusy ? "Création en cours…" : wizardSnapshotRetryPending ? "Rejouer la même création" : "Créer le snapshot complet"}
+                {wizardSnapshotBusy ? "Création en cours…" : wizardSnapshotRetryPending ? "Rejouer la même création" : requiresResponseChoice ? "Créer le snapshot choisi" : "Créer le snapshot complet"}
               </button>
               {wizardSnapshotReceipt && <div className="workflow-response">
                 <strong>Snapshot créé · {wizardSnapshotReceipt.snapshot_id}</strong>

@@ -1,0 +1,281 @@
+{
+  "purpose": "FROZEN_HOLDOUT_V2_SYNTHETIC_ONLY",
+  "version": 1,
+  "documents": [
+    {
+      "file": "rc.txt",
+      "family": "RC",
+      "sha256": "753e2851ecdfbcb419561a32d9651f42c0abf13d511126fbd1d1bcd0df3dca56",
+      "facts": [
+        {
+          "line": 2,
+          "quote": "Le formulaire DC1 est requis au titre du lot 4.",
+          "expected_kind": "RC_DOCUMENT_CANDIDATURE",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 3,
+          "quote": "La candidature du lot 8 doit comprendre le DC2.",
+          "expected_kind": "RC_DOCUMENT_CANDIDATURE",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 4,
+          "quote": "Pour le lot 4, une visite des chantiers est obligatoire.",
+          "expected_kind": "RC_SITE_VISIT",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 5,
+          "quote": "La visite de chantier pour le lot 8 est facultative.",
+          "expected_kind": "RC_SITE_VISIT",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 6,
+          "quote": "Les visites du chantier ne sont pas exigées pour le lot 8.",
+          "expected_kind": "RC_SITE_VISIT",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 7,
+          "quote": "Pour les lots 4 et 8, le mémoire technique est obligatoire.",
+          "expected_kind": "RC_CONTENT_OFFER",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 8,
+          "quote": "La date limite de réception des offres est le 15 janvier 2027 à 10h15 UTC.",
+          "expected_kind": "RC_SUBMISSION_DEADLINE",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 9,
+          "quote": "Le dépôt dématérialisé s'effectue sur https://achat.example.test/centre.",
+          "expected_kind": "RC_RESPONSE_CHANNEL",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 10,
+          "quote": "Les offres doivent respecter le format PDF.",
+          "expected_kind": "RC_FILE_CONSTRAINT",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 11,
+          "quote": "Le critère prix (45%) complète la valeur technique (55%).",
+          "expected_kind": "RC_AWARD_CRITERION",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 12,
+          "quote": "La négociation est annoncée dans la procédure.",
+          "expected_kind": "RC_NEGOTIATION",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 13,
+          "quote": "Le délai de validité des offres est de 150 jours.",
+          "expected_kind": "RC_OFFER_VALIDITY",
+          "coverage": "SUPPORTED_SIGNAL"
+        }
+      ],
+      "financial_rag_evaluation": null
+    },
+    {
+      "file": "ccap.txt",
+      "family": "CCAP",
+      "sha256": "68c15eeffa4e7f137b6c9044d6bbab2a16b85c43ff126c78de48ca6493294026",
+      "facts": [
+        {
+          "line": 1,
+          "quote": "Les pénalités pour retard concernent les lots 4 et 8.",
+          "expected_kind": "CCAP_PENALTIES",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 2,
+          "quote": "Une retenue pour garantie de 4% concerne les lots 4 et 8.",
+          "expected_kind": "CCAP_RETENTION_GUARANTEE",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 3,
+          "quote": "La garantie financière doit être déclarée.",
+          "expected_kind": "CCAP_GUARANTEE",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 4,
+          "quote": "L'attestation d'assurance est exigée pour le lot 4.",
+          "expected_kind": "CCAP_INSURANCE",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 5,
+          "quote": "Les prestations de sous-traitance sont déclarées pour les lots 4 et 8.",
+          "expected_kind": "CCAP_SUBCONTRACTING",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 6,
+          "quote": "Le délai contractuel de paiement est de vingt-cinq jours.",
+          "axis": "CASH",
+          "expected_kind": null,
+          "coverage": "UNSUPPORTED_SEMANTICS"
+        },
+        {
+          "line": 7,
+          "quote": "Les réserves sont consignées au procès-verbal de réception.",
+          "axis": "RIGHTS",
+          "expected_kind": null,
+          "coverage": "UNSUPPORTED_SEMANTICS"
+        },
+        {
+          "line": 8,
+          "quote": "Le titulaire du lot 8 doit fournir un mémoire technique détaillé.",
+          "expected_kind": "RC_CONTENT_OFFER",
+          "coverage": "SUPPORTED_SIGNAL"
+        }
+      ],
+      "financial_rag_evaluation": null
+    },
+    {
+      "file": "cctp-lot-1.txt",
+      "family": "CCTP",
+      "sha256": "8fa20a644e47fcc9ff2257a1d2e30b1fdd719f5db83622e61cda52a4e14e126e",
+      "facts": [
+        {
+          "line": 1,
+          "quote": "Une certification est obligatoire pour le lot 4.",
+          "expected_kind": "CCAP_QUALIFICATIONS",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 2,
+          "quote": "Les variantes sont facultatives pour le lot 4.",
+          "expected_kind": "CCTP_VARIANTS",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 3,
+          "quote": "Lot 4 : poser une isolation acoustique sur les murs de l'atelier.",
+          "axis": "TECHNICAL",
+          "expected_kind": null,
+          "coverage": "UNSUPPORTED_SEMANTICS"
+        },
+        {
+          "line": 4,
+          "quote": "Lot 4 : interdire les livraisons pendant l'ouverture du centre.",
+          "axis": "CONSTRUCTIBILITY",
+          "expected_kind": null,
+          "coverage": "UNSUPPORTED_SEMANTICS"
+        }
+      ],
+      "financial_rag_evaluation": null
+    },
+    {
+      "file": "cctp-lot-2.txt",
+      "family": "CCTP",
+      "sha256": "430bde8ae9c54fe38db66a185650182396d7d028d433d46661bdd2503d6d99f6",
+      "facts": [
+        {
+          "line": 1,
+          "quote": "Une habilitation est requise pour le lot 8.",
+          "expected_kind": "CCAP_QUALIFICATIONS",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 2,
+          "quote": "Les options ne sont pas obligatoires pour le lot 8.",
+          "expected_kind": "CCTP_VARIANTS",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 3,
+          "quote": "Lot 8 : installer des prises étanches dans l'atelier.",
+          "axis": "TECHNICAL",
+          "expected_kind": null,
+          "coverage": "UNSUPPORTED_SEMANTICS"
+        },
+        {
+          "line": 4,
+          "quote": "Lot 8 : maintenir la ventilation pendant l'intervention.",
+          "axis": "TECHNICAL",
+          "expected_kind": null,
+          "coverage": "UNSUPPORTED_SEMANTICS"
+        }
+      ],
+      "financial_rag_evaluation": null
+    },
+    {
+      "file": "planning.txt",
+      "family": "PLANNING",
+      "sha256": "a715cf9731f6c83b24319723e59a573da9a306779038ac5f4979fb4ed7850dcd",
+      "facts": [
+        {
+          "line": 1,
+          "quote": "Lot 4 : exécution du 8 mars au 16 avril 2027.",
+          "axis": "CAPACITY",
+          "expected_kind": null,
+          "coverage": "UNSUPPORTED_SEMANTICS"
+        },
+        {
+          "line": 2,
+          "quote": "Lot 8 : démarrer après libération de l'atelier par le lot 4.",
+          "axis": "CAPACITY",
+          "expected_kind": null,
+          "coverage": "UNSUPPORTED_SEMANTICS"
+        },
+        {
+          "line": 3,
+          "quote": "Une équipe supplémentaire du lot 8 doit pouvoir intervenir en soirée.",
+          "axis": "CAPACITY",
+          "expected_kind": null,
+          "coverage": "UNSUPPORTED_SEMANTICS"
+        }
+      ],
+      "financial_rag_evaluation": null
+    },
+    {
+      "file": "pgc.txt",
+      "family": "OTHER",
+      "sha256": "14c960770d4e2db8018aac250610e6ba0db74c7c1fce0b3f4b660c8211eaa516",
+      "facts": [
+        {
+          "line": 1,
+          "quote": "Lot 4 : interrompre les travaux en cas de poussières non maîtrisées.",
+          "axis": "HSE",
+          "expected_kind": null,
+          "coverage": "UNSUPPORTED_SEMANTICS"
+        },
+        {
+          "line": 2,
+          "quote": "La circulation des agents du centre doit être protégée des engins.",
+          "axis": "HSE",
+          "expected_kind": null,
+          "coverage": "UNSUPPORTED_SEMANTICS"
+        }
+      ],
+      "financial_rag_evaluation": null
+    },
+    {
+      "file": "dpgf.txt",
+      "family": "DPGF",
+      "sha256": "cd4e201528d8b6fd130b3dc4bcdc8bfb7664afbeac21428d19e6c00772a14405",
+      "facts": [],
+      "financial_rag_evaluation": "NOT_EVALUABLE"
+    },
+    {
+      "file": "bordereau.txt",
+      "family": "OTHER",
+      "sha256": "e7a1304f559d646e87e85add8fd3980e0e5c8e69dca42d59e5cf59904b4537d0",
+      "facts": [],
+      "financial_rag_evaluation": null
+    }
+  ],
+  "lots": [
+    4,
+    8
+  ]
+}

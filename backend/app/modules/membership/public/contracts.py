@@ -56,6 +56,7 @@ class AssignmentHistoryResponse(PublicResponseModel):
 
 PatronAssignmentScopeAction = Literal[
     "case.dce.read",
+    "case.handover.receipt.write",
     "dce.requirement.confirm",
     "document.administrative.read",
     "preparation.transmit",

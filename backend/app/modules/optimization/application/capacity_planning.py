@@ -22,8 +22,9 @@ class CaseCapacityPlanInput:
     tenant_id: UUID
     case_id: UUID
     source_revision: int = 1
-    demands: tuple[ResourceDemand, ...] = ()
-    supplies: tuple[ResourceSupply, ...] = ()
+    # None is not loaded; an explicit empty tuple is a known empty set.
+    demands: tuple[ResourceDemand, ...] | None = None
+    supplies: tuple[ResourceSupply, ...] | None = None
 
     def __post_init__(self) -> None:
         if self.source_revision < 1:
@@ -79,14 +80,22 @@ class CaseCapacityPlanningService:
         plan_input = self._input_port.load(tenant_id=tenant_id, case_id=case_id)
         if plan_input.tenant_id != tenant_id or plan_input.case_id != case_id:
             raise CapacityInputScopeError("capacity input scope does not match request")
-        result = self._optimizer.solve(
-            demands=plan_input.demands,
-            supplies=plan_input.supplies,
-        )
+        if plan_input.demands is None or plan_input.supplies is None:
+            result = ResourceAssignmentResult(
+                status=SolverStatus.UNKNOWN,
+                solver_id=self._optimizer.solver_id,
+                assignments={},
+                unassigned_demand_ids=tuple(demand.id for demand in plan_input.demands or ()),
+            )
+        else:
+            result = self._optimizer.solve(
+                demands=plan_input.demands,
+                supplies=plan_input.supplies,
+            )
         return plan_input, _to_plan(
             tenant_id=tenant_id,
             case_id=case_id,
-            demands=plan_input.demands,
+            demands=plan_input.demands or (),
             result=result,
         )
 

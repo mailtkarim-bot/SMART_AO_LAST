@@ -786,7 +786,8 @@ def test_submission_manifest_rejects_invalid_proof_document(
         expires_at=NOW - timedelta(days=1) if expired else NOW + timedelta(days=1),
     )
     session = _EnterpriseBranchSession(
-        scalar_values=[capability, version, document], scalars_values=[[proposal], [link]]
+        scalar_values=[capability, version, document, verification_status],
+        scalars_values=[[proposal], [link]],
     )
     expected = "CAPABILITY_PROOF_EXPIRED" if expired else "CAPABILITY_PROOF_UNAUTHORIZED"
 
@@ -1143,3 +1144,64 @@ def test_prepare_handler_rejects_non_patron_context() -> None:
             command=command,
             context=_handler_context(actor_kind=ActorKind.COLLABORATEUR.value),
         )
+
+
+def test_final_control_keeps_legacy_unknown_and_does_not_create_a_human_act(
+    services, session_factory
+) -> None:
+    _, submission = services
+    actor, preparation_id, case_id = _prepare_generated_document(services, session_factory)
+    _publish_snapshot(session_factory, tenant_id=actor.tenant_id, case_id=case_id)
+    result = submission.prepare(
+        actor=actor,
+        command=PrepareSubmissionPackageCommand(
+            command_id=uuid4(),
+            idempotency_key=uuid4(),
+            preparation_package_id=preparation_id,
+            expected_preparation_revision=3,
+        ),
+        now=NOW,
+    )
+    package_id = UUID(result.aggregate_refs[0]["aggregate_id"])
+    with session_factory() as session:
+        before = session.scalar(sa.select(sa.func.count()).select_from(DomainEventRecord))
+    from app.modules.submission.infrastructure.models import SubmissionSignatureRecord
+
+    protected_id = uuid4()
+    with session_factory.begin() as session:
+        package = session.get(SubmissionPackageRecord, package_id)
+        session.add(
+            SubmissionSignatureRecord(
+                id=protected_id,
+                tenant_id=actor.tenant_id,
+                submission_package_id=package_id,
+                case_id=case_id,
+                provider="TEST_PROVIDER",
+                signer_membership_id=actor.membership_id,
+                expected_package_version=package.version,
+                manifest_sha256=package.manifest_sha256,
+                status="SIGNED",
+                actor_id=actor.actor_id,
+                membership_id=actor.membership_id,
+                command_id=uuid4(),
+                idempotency_key=uuid4(),
+            )
+        )
+    report = submission.read_final_control(actor=actor, submission_package_id=package_id, now=NOW)
+    assert report.state == "UNKNOWN"
+    assert report.source_state == report.conformity == report.signature_verification == "UNKNOWN"
+    assert report.p5_authorization_status == "NOT_RECORDED"
+    assert report.external_submission == "NOT_PERFORMED"
+    assert not report.requirements and not report.signature_records
+    assert str(protected_id) not in report.model_dump_json()
+    assert report.signature_visibility == "RESTRICTED"
+    assert all(item.presence == "UNKNOWN" for item in report.files)
+    with session_factory() as session:
+        assert session.scalar(sa.select(sa.func.count()).select_from(DomainEventRecord)) == before
+    _authorize_package(submission, actor, package_id)
+    after = submission.read_final_control(actor=actor, submission_package_id=package_id, now=NOW)
+    assert after.p5_authorization_status == "RECORDED"
+    assert after.conformity == after.signature_verification == "UNKNOWN"
+    other_tenant = replace(actor, tenant_id=uuid4())
+    with pytest.raises(PermissionError, match="NOT_FOUND_OR_FORBIDDEN"):
+        submission.read_final_control(actor=other_tenant, submission_package_id=package_id, now=NOW)

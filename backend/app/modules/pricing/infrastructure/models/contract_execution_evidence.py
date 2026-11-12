@@ -80,3 +80,5 @@ class ContractExecutionEvidenceRecord(TenantScopedRecord, Base):
     updated_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
     )
+
+    closure_review_json: Mapped[dict | None] = mapped_column(JSONB)

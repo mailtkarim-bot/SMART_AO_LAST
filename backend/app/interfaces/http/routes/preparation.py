@@ -5,6 +5,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Header, HTTPException, Response, status
 from fastapi.responses import JSONResponse, StreamingResponse
+from pydantic import ValidationError
 
 from app.interfaces.http.dependencies.auth import resolve_bearer_context as _resolve_context
 from app.interfaces.http.routes.consultations import ConsultationSecurityRuntime
@@ -18,6 +19,7 @@ from app.modules.preparation.application.plan_commands import (
 from app.modules.preparation.application.review import PreparationReviewService
 from app.modules.preparation.application.review_commands import (
     AddPreparationCorrectionCommand,
+    CreateBuyerDocxResponseDraftCommand,
     CreateTechnicalResponseDraftCommand,
     DecidePreparationReviewCommand,
     RequestPreparationReviewCommand,
@@ -25,6 +27,8 @@ from app.modules.preparation.application.review_commands import (
 from app.modules.preparation.application.service import PreparationService
 from app.modules.preparation.public.contracts import (
     AddPreparationCorrectionRequest,
+    BuyerDocxInputsRequest,
+    CreateBuyerDocxResponseDraftRequest,
     CreatePreparationResponsePlanRequest,
     CreateTechnicalResponseDraftRequest,
     DecidePreparationReviewRequest,
@@ -42,6 +46,8 @@ from app.modules.preparation.public.contracts import (
     PreparationReviewListResponse,
     PreparationReviewProjection,
     RequestPreparationReviewRequest,
+    ResponseCoverageProjection,
+    SelectedResponseDraft,
     TechnicalResponseDraftProjection,
 )
 from app.platform.events.dispatcher import (
@@ -56,6 +62,16 @@ def build_preparation_router(
 ) -> APIRouter:
     router = APIRouter(prefix="/api/v1/collaborator", tags=["preparation"])
 
+    @router.post(
+        "/preparation/{package_id}/response-coverage", response_model=ResponseCoverageProjection
+    )
+    def read_response_coverage(
+        package_id: UUID,
+        selection: SelectedResponseDraft,
+        authorization: str | None = Header(default=None),
+    ):
+        return _coverage_read(service, security_runtime, package_id, selection, authorization)
+
     @router.get("/preparation/{package_id}", response_model=PreparationPackageProjection)
     def read_package(
         package_id: UUID,
@@ -66,8 +82,10 @@ def build_preparation_router(
             context_resolver=security_runtime.context_resolver,
         )
         try:
-            package, readiness, documents, response_drafts = service.read_package(
-                actor=actor, package_id=package_id, now=datetime.now(tz=UTC)
+            package, readiness, documents, response_drafts, draft_contents = (
+                service.read_package_with_verified_drafts(
+                    actor=actor, package_id=package_id, now=datetime.now(tz=UTC)
+                )
             )
         except PermissionError as error:
             if str(error) == "NOT_FOUND_OR_FORBIDDEN":
@@ -102,6 +120,7 @@ def build_preparation_router(
                     document_id=document.id,
                     version=document.version,
                     document_kind=document.document_kind,
+                    content_format=getattr(document, "content_format", "MARKDOWN"),
                     state=document.state,
                     readiness_revision=_readiness_revision(document=document, readiness=readiness),
                 )
@@ -115,6 +134,12 @@ def build_preparation_router(
                     section_codes=list(draft.section_codes_json),
                     source_refs=list(draft.source_refs_json),
                     responsible_role=draft.responsible_role,
+                    content_sha256=getattr(draft, "content_sha256", None),
+                    content_format=getattr(draft, "content_format", "MARKDOWN"),
+                    content_provenance=getattr(draft, "content_provenance_json", None),
+                    response_plan_id=getattr(draft, "response_plan_id", None),
+                    response_plan_version=getattr(draft, "response_plan_version", None),
+                    content=draft_contents.get((draft.draft_id, draft.version)),
                 )
                 for draft in response_drafts
             ],
@@ -156,16 +181,32 @@ def build_preparation_router(
                 raise HTTPException(status_code=503, detail="DOCUMENT_UNAVAILABLE") from error
             raise
         disposition = "attachment" if download else "inline"
-        filename = f"{document.document_kind.lower()}-v{document.version}.md"
+        is_docx = getattr(document, "content_format", "MARKDOWN") == "DOCX"
+        extension = "docx" if is_docx else "md"
+        filename = f"{document.document_kind.lower()}-v{document.version}.{extension}"
         return StreamingResponse(
             iter((content,)),
-            media_type="text/markdown",
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            if is_docx
+            else "text/markdown",
             headers={
                 "Content-Disposition": f'{disposition}; filename="{filename}"',
                 "Cache-Control": "no-store",
                 "X-Content-Type-Options": "nosniff",
             },
         )
+
+    @router.get("/preparation/{package_id}/response-drafts/{draft_id}/versions/{version}/content")
+    def owned_response_content(
+        package_id: UUID,
+        draft_id: UUID,
+        version: int,
+        authorization: str | None = Header(default=None),
+    ):
+        actor = _resolve_context(
+            authorization=authorization, context_resolver=security_runtime.context_resolver
+        )
+        return _response_artifact_response(service, actor, package_id, draft_id, version)
 
     @router.post(
         "/cases/{case_id}/preparation/readiness",
@@ -233,6 +274,14 @@ def build_preparation_review_router(
 ) -> APIRouter:
     router = APIRouter(prefix="/api/v1/preparation", tags=["preparation-review"])
 
+    @router.post("/{package_id}/response-coverage", response_model=ResponseCoverageProjection)
+    def read_response_coverage(
+        package_id: UUID,
+        selection: SelectedResponseDraft,
+        authorization: str | None = Header(default=None),
+    ):
+        return _coverage_read(service, security_runtime, package_id, selection, authorization)
+
     @router.get(
         "/{package_id}/reviews",
         response_model=PreparationReviewListResponse,
@@ -292,6 +341,63 @@ def build_preparation_review_router(
             ],
         )
 
+    @router.get("/{package_id}/response-drafts/{draft_id}/versions/{version}/content")
+    def review_response_content(
+        package_id: UUID,
+        draft_id: UUID,
+        version: int,
+        authorization: str | None = Header(default=None),
+    ):
+        actor = _resolve_context(
+            authorization=authorization, context_resolver=security_runtime.context_resolver
+        )
+        return _response_artifact_response(service, actor, package_id, draft_id, version)
+
+    @router.post("/{package_id}/buyer-docx-inputs")
+    def buyer_docx_inputs(
+        package_id: UUID,
+        request: BuyerDocxInputsRequest,
+        authorization: str | None = Header(default=None),
+    ):
+        actor = _resolve_context(
+            authorization=authorization, context_resolver=security_runtime.context_resolver
+        )
+        try:
+            return service.read_buyer_docx_inputs(
+                actor=actor,
+                package_id=package_id,
+                source_response=request.source_response,
+                now=datetime.now(tz=UTC),
+            )
+        except PermissionError as error:
+            raise HTTPException(
+                status_code=404 if str(error) == "NOT_FOUND_OR_FORBIDDEN" else 403,
+                detail="NOT_FOUND_OR_FORBIDDEN",
+            ) from error
+        except (CommandExecutionError, ValueError) as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+
+    @router.post(
+        "/{package_id}/buyer-response-drafts",
+        response_model=PreparationCommandResponse,
+        status_code=201,
+    )
+    def create_buyer_docx(
+        package_id: UUID,
+        request: CreateBuyerDocxResponseDraftRequest,
+        authorization: str | None = Header(default=None),
+    ):
+        actor = _resolve_context(
+            authorization=authorization, context_resolver=security_runtime.context_resolver
+        )
+        return _dispatch_review(
+            service=service,
+            actor=actor,
+            command=CreateBuyerDocxResponseDraftCommand(
+                **request.model_dump(), package_id=package_id
+            ),
+        )
+
     @router.get(
         "/{package_id}/response-drafts",
         response_model=PreparationResponseDraftListResponse,
@@ -338,6 +444,8 @@ def build_preparation_review_router(
                     source_refs=list(draft.source_refs_json),
                     responsible_role=draft.responsible_role,
                     content_sha256=draft.content_sha256,
+                    content_format=getattr(draft, "content_format", "MARKDOWN"),
+                    content_provenance=getattr(draft, "content_provenance_json", None),
                     response_plan_id=draft.response_plan_id,
                     response_plan_version=draft.response_plan_version,
                     content=content,
@@ -457,10 +565,8 @@ def build_preparation_review_router(
             authorization=authorization,
             context_resolver=security_runtime.context_resolver,
         )
-        return _dispatch_review(
-            service=service,
-            actor=actor,
-            command=DecidePreparationReviewCommand(
+        try:
+            command = DecidePreparationReviewCommand(
                 command_id=request.command_id,
                 idempotency_key=request.idempotency_key,
                 correlation_id=request.correlation_id,
@@ -473,8 +579,12 @@ def build_preparation_review_router(
                 expected_review_revision=request.expected_review_revision,
                 decision_code=request.decision_code,
                 decision_note=request.decision_note,
-            ),
-        )
+            )
+        except ValidationError as error:
+            raise HTTPException(
+                status_code=422, detail="PREPARATION_REVIEW_INPUT_INVALID"
+            ) from error
+        return _dispatch_review(service=service, actor=actor, command=command)
 
     @router.post(
         "/{package_id}/reviews/{review_id}/corrections",
@@ -533,6 +643,7 @@ def build_preparation_review_router(
                 expected_package_revision=request.expected_package_revision,
                 section_codes=request.section_codes,
                 source_refs=request.source_refs,
+                contributions=request.contributions,
             ),
         )
 
@@ -618,4 +729,57 @@ def _dispatch(*, service: PreparationService, actor, command):
     return JSONResponse(
         status_code=status.HTTP_200_OK if result.replayed else status.HTTP_201_CREATED,
         content=response.model_dump(mode="json"),
+    )
+
+
+def _response_artifact_response(service, actor, package_id, draft_id, version):
+    try:
+        draft, content = service.read_response_draft_bytes(
+            actor=actor,
+            package_id=package_id,
+            draft_id=draft_id,
+            version=version,
+            now=datetime.now(tz=UTC),
+        )
+    except PermissionError as error:
+        raise HTTPException(
+            status_code=404 if str(error) == "NOT_FOUND_OR_FORBIDDEN" else 403,
+            detail="NOT_FOUND_OR_FORBIDDEN",
+        ) from error
+    except (OSError, ValueError) as error:
+        raise HTTPException(status_code=503, detail="RESPONSE_DRAFT_UNKNOWN") from error
+    docx = getattr(draft, "content_format", "MARKDOWN") == "DOCX"
+    return StreamingResponse(
+        iter((content,)),
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        if docx
+        else "text/markdown",
+        headers={
+            "Content-Disposition": (
+                f'attachment; filename="reponse-v{version}.{"docx" if docx else "md"}"'
+            ),
+            "Cache-Control": "no-store",
+            "X-Content-SHA256": draft.content_sha256,
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
+def _coverage_read(service, runtime, package_id, selection, authorization):
+    actor = _resolve_context(authorization=authorization, context_resolver=runtime.context_resolver)
+    try:
+        result = service.read_response_coverage(
+            actor=actor, package_id=package_id, selection=selection, now=datetime.now(tz=UTC)
+        )
+    except PermissionError as error:
+        raise HTTPException(
+            status_code=404 if str(error) == "NOT_FOUND_OR_FORBIDDEN" else 403,
+            detail="NOT_FOUND_OR_FORBIDDEN"
+            if str(error) == "NOT_FOUND_OR_FORBIDDEN"
+            else "FORBIDDEN",
+        ) from error
+    except CommandExecutionError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    return JSONResponse(
+        content=result.model_dump(mode="json"), headers={"Cache-Control": "no-store"}
     )

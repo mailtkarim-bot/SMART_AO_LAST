@@ -44,6 +44,7 @@ class EnterpriseDocumentProjection:
     expires_at: datetime | None
     verification_status: str
     verification_revision: int
+    sha256: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

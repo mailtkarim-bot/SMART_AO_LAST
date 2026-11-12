@@ -16,12 +16,14 @@ from app.modules.decision.application.ports import (
     DecisionContextReferenceDraft,
     DecisionContextReferenceSnapshot,
     DecisionContextSnapshot,
+    DecisionDceRequalification,
     DecisionDraft,
     DecisionLifecycleRepository,
     DecisionRepository,
     DecisionRootSnapshot,
     DecisionSnapshot,
 )
+from app.modules.decision.domain.decision import DecisionLifecycle
 from app.modules.decision.infrastructure.models.decision import (
     DecisionConditionRecord,
     DecisionContextRecord,
@@ -45,6 +47,7 @@ _DCE_VERSIONS_TABLE = sa.table(
     sa.column("tenant_id", PG_UUID(as_uuid=True)),
     sa.column("aggregate_revision", sa.Integer),
     sa.column("corpus_hash", sa.String(64)),
+    sa.column("integrity", sa.String(32)),
     sa.column("lifecycle", sa.String(32)),
 )
 _DCE_REQUIREMENTS_TABLE = sa.table(
@@ -119,11 +122,13 @@ class SqlAlchemyDecisionLifecycleRepository(DecisionLifecycleRepository):
     ) -> str | None:
         db_session = cast(Session, session)
         return db_session.scalar(
-            sa.select(_CASES_TABLE.c.scope_fingerprint).where(
+            sa.select(_CASES_TABLE.c.scope_fingerprint)
+            .where(
                 _CASES_TABLE.c.tenant_id == tenant_id,
                 _CASES_TABLE.c.id == case_id,
                 _CASES_TABLE.c.lifecycle == "ACTIVE",
             )
+            .with_for_update()
         )
 
     def active_decision_exists(
@@ -143,6 +148,97 @@ class SqlAlchemyDecisionLifecycleRepository(DecisionLifecycleRepository):
             )
             is not None
         )
+
+    def mark_changed_dce_review_required(
+        self, *, session, tenant_id, case_id, decision_key_hash, actor_id, now
+    ):
+        db = cast(Session, session)
+        current = db.scalar(
+            sa.select(_CASES_TABLE.c.applicable_dce_version_id)
+            .where(
+                _CASES_TABLE.c.tenant_id == tenant_id,
+                _CASES_TABLE.c.id == case_id,
+                _CASES_TABLE.c.lifecycle == "ACTIVE",
+            )
+            .with_for_update()
+        )
+        if (
+            current is None
+            or db.scalar(
+                sa.select(_DCE_VERSIONS_TABLE.c.id).where(
+                    _DCE_VERSIONS_TABLE.c.tenant_id == tenant_id,
+                    _DCE_VERSIONS_TABLE.c.id == current,
+                    _DCE_VERSIONS_TABLE.c.lifecycle == "ADMITTED",
+                    _DCE_VERSIONS_TABLE.c.integrity == "VERIFIED",
+                )
+            )
+            is None
+        ):
+            return None
+        previous = db.scalar(
+            sa.select(DecisionRecord)
+            .where(
+                DecisionRecord.tenant_id == tenant_id,
+                DecisionRecord.case_id == case_id,
+                DecisionRecord.decision_key_hash == decision_key_hash,
+                DecisionRecord.validity == "CURRENT",
+                DecisionRecord.lifecycle.notin_(("SUPERSEDED", "CANCELLED")),
+            )
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+        if (
+            previous is None
+            or previous.lifecycle != DecisionLifecycle.FINALIZED
+            or previous.selected_final_context_id is None
+        ):
+            return None
+        versions = set(
+            db.scalars(
+                sa.select(DecisionContextReferenceRecord.aggregate_id).where(
+                    DecisionContextReferenceRecord.tenant_id == tenant_id,
+                    DecisionContextReferenceRecord.decision_context_id
+                    == previous.selected_final_context_id,
+                    DecisionContextReferenceRecord.aggregate_type == "DCE_VERSION",
+                )
+            ).all()
+        )
+        versions.update(
+            db.scalars(
+                sa.select(_DCE_REQUIREMENTS_TABLE.c.dce_version_id)
+                .join(
+                    DecisionContextReferenceRecord,
+                    sa.and_(
+                        DecisionContextReferenceRecord.tenant_id
+                        == _DCE_REQUIREMENTS_TABLE.c.tenant_id,
+                        DecisionContextReferenceRecord.aggregate_id == _DCE_REQUIREMENTS_TABLE.c.id,
+                    ),
+                )
+                .where(
+                    _DCE_REQUIREMENTS_TABLE.c.tenant_id == tenant_id,
+                    DecisionContextReferenceRecord.decision_context_id
+                    == previous.selected_final_context_id,
+                    DecisionContextReferenceRecord.aggregate_type == "DCE_REQUIREMENT",
+                )
+            ).all()
+        )
+        if len(versions) != 1 or current in versions:
+            return None
+        old = next(iter(versions))
+        revision = SqlAlchemyDecisionRepository(db).update_root(
+            tenant_id=tenant_id,
+            aggregate_id=previous.id,
+            expected_revision=previous.aggregate_revision,
+            changes=dict(
+                validity="REVIEW_REQUIRED",
+                context_status="STALE",
+                review_required_reason=f"APPLICABLE_DCE_CHANGED:{old}->{current}",
+                review_required_at=now,
+                updated_by_actor_id=actor_id,
+            ),
+        )
+        db.flush()
+        return DecisionDceRequalification(previous.id, revision, old, current)
 
     def next_cycle_number(self, *, session: object, tenant_id: UUID, decision_key_hash: str) -> int:
         db_session = cast(Session, session)
@@ -220,6 +316,32 @@ class SqlAlchemyDecisionLifecycleRepository(DecisionLifecycleRepository):
         content_hash: str | None,
     ) -> bool:
         db_session = cast(Session, session)
+        if aggregate_type == "CAPACITY_RUN":
+            from app.modules.decision.infrastructure.capacity_reference import (
+                capacity_reference_is_current,
+            )
+
+            return capacity_reference_is_current(
+                db_session,
+                tenant_id=tenant_id,
+                case_id=case_id,
+                aggregate_id=aggregate_id,
+                aggregate_revision=aggregate_revision,
+                content_hash=content_hash,
+            )
+        if aggregate_type == "ANALYSIS_ASSESSMENT":
+            from app.modules.decision.infrastructure.analysis_reference import (
+                assessment_reference_is_current,
+            )
+
+            return assessment_reference_is_current(
+                db_session,
+                tenant_id=tenant_id,
+                case_id=case_id,
+                aggregate_id=aggregate_id,
+                aggregate_revision=aggregate_revision,
+                content_hash=content_hash,
+            )
         if aggregate_type == "CASE":
             if content_hash is not None:
                 return False

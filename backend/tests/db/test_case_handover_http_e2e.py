@@ -221,7 +221,9 @@ class FailOnceC5DeleteStorage:
         return await self.storage.delete_partials(storage_key=storage_key)
 
 
-def _seed_handover_sources(session_factory: sessionmaker[Session], tmp_path):
+def _seed_handover_sources(
+    session_factory: sessionmaker[Session], tmp_path, technical_content=None
+):
     storage = LocalGeneratedDocumentStorage(root=tmp_path / "generated")
     gate = _ReadySubmissionDecisionGateReader()
     dispatcher = CommandDispatcher(
@@ -230,7 +232,7 @@ def _seed_handover_sources(session_factory: sessionmaker[Session], tmp_path):
             **preparation_handlers(storage=storage, dce_reader=SqlAlchemyPreparationDceReader()),
             **submission_handlers(decision_gate_reader=gate),
             **case_outcome_handlers(),
-            **case_handover_handlers(),
+            **case_handover_handlers(storage=storage),
         },
     )
     preparation = PreparationService(
@@ -249,6 +251,39 @@ def _seed_handover_sources(session_factory: sessionmaker[Session], tmp_path):
     patron, preparation_id, case_id = _prepare_generated_document(
         (preparation, submission), session_factory
     )
+    if technical_content is not None:
+        from app.modules.preparation.infrastructure.models import GeneratedTechnicalDocumentRecord
+
+        with session_factory.begin() as session:
+            previous = session.scalar(
+                sa.select(GeneratedTechnicalDocumentRecord)
+                .where(
+                    GeneratedTechnicalDocumentRecord.tenant_id == patron.tenant_id,
+                    GeneratedTechnicalDocumentRecord.package_id == preparation_id,
+                )
+                .order_by(GeneratedTechnicalDocumentRecord.version.desc())
+                .limit(1)
+            )
+            document_id = uuid4()
+            key = f"handover-synthetic/{patron.tenant_id}/{document_id}.md"
+            digest = storage.write(storage_key=key, content=technical_content)
+            session.add(
+                GeneratedTechnicalDocumentRecord(
+                    id=document_id,
+                    tenant_id=patron.tenant_id,
+                    package_id=preparation_id,
+                    readiness_id=previous.readiness_id,
+                    version=previous.version + 1,
+                    document_kind="TECHNICAL_RESPONSE",
+                    state="GENERATED",
+                    content_sha256=digest,
+                    storage_key=key,
+                    actor_id=patron.actor_id,
+                    membership_id=patron.membership_id,
+                    command_id=uuid4(),
+                    correlation_id=None,
+                )
+            )
     with session_factory.begin() as session:
         case = session.scalar(
             sa.select(CaseRecord).where(

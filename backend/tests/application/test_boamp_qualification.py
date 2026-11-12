@@ -108,7 +108,7 @@ def test_patron_read_returns_closed_projection_and_tenant_scope() -> None:
     assert result[0].lot_scope_state.value == "UNKNOWN"
     assert result[0].lot_scope_source == "BOAMP"
     assert result[0].deadline_state.value == "EXPIRED"
-    assert result[0].unknowns == ()
+    assert {u["code"] for u in result[0].unknowns} == {"LOT_SCOPE", "DCE_NOT_RECEIVED"}
     assert result[0].source_captures[0].ingestion_run_id == run_id
     assert result[0].source_captures[0].source_mode == "REPLAY"
     assert result[0].source_captures[0].source_response_sha256 == response_hash
@@ -132,7 +132,11 @@ def test_patron_read_marks_missing_deadline_as_unknown() -> None:
     )[0]
 
     assert result.deadline_state.value == "MISSING"
-    assert result.unknowns == ()
+    assert {u["code"] for u in result.unknowns} == {
+        "LOT_SCOPE",
+        "DCE_NOT_RECEIVED",
+        "DEADLINE_MISSING",
+    }
 
     repository.states[repository.record.id] = BoampObservationState(case_id=uuid4())
     opened = service.read(

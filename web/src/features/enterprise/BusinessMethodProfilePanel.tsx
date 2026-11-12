@@ -31,6 +31,7 @@ export function BusinessMethodProfilePanel({
 }) {
   const [terminology, setTerminology] = useState<Partial<Record<BusinessMethodProfileTerm, string>>>({});
   const [checks, setChecks] = useState<Array<{ key: string; label: string; axis: BusinessMethodProfileAxis }>>([]);
+  const [confirmedAdoption, setConfirmedAdoption] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const selectedVersion = manager.versions.find(
     (item) => item.profile_version_id === manager.selectedVersionId,
@@ -52,6 +53,9 @@ export function BusinessMethodProfilePanel({
     manager.adoption.profile_version === selectedVersion.version &&
     manager.adoption.profile_content_sha256 === selectedVersion.content_sha256,
   );
+
+  const adoptionIntent = JSON.stringify([caseId, manager.adoption?.adoption_revision, selectedVersion?.profile_version_id, selectedVersion?.content_sha256]);
+  const adoptionConfirmed = confirmedAdoption === adoptionIntent;
 
   function validateDraft(): boolean {
     const incomplete = draft.additional_checks.find((item) =>
@@ -83,7 +87,7 @@ export function BusinessMethodProfilePanel({
   }
 
   async function submitAdoption() {
-    if (!canManage || !caseId || !selectedVersion) return;
+    if (!canManage || !caseId || !selectedVersion || !adoptionConfirmed) return;
     await manager.adopt(selectedVersion);
   }
 
@@ -94,10 +98,11 @@ export function BusinessMethodProfilePanel({
           <span className="section-kicker">C07 · MÉTHODE ENTREPRISE</span>
           <h2>Profil métier versionné</h2>
         </div>
-        <button className="secondary-button" type="button" onClick={manager.refresh} disabled={manager.status === "LOADING"}>
+        <button className="secondary-button" type="button" onClick={manager.refresh} disabled={manager.status === "LOADING" || manager.pendingPublish || manager.pendingAdoption}>
           {manager.status === "LOADING" ? "Chargement…" : "Actualiser"}
         </button>
       </div>
+      {(manager.pendingPublish || manager.pendingAdoption) && <div><p role="status">Acte en attente de reçu : conservez cet intent exact et réessayez. Aucun nouvel accord n’est déduit.</p><button className="secondary-button" type="button" disabled={manager.publishing || manager.adopting} onClick={() => void manager.resume()}>Réessayer le même acte</button></div>}
       {!canManage ? <p className="panel-empty">Lecture et modification réservées au Patron administrateur.</p> : !companyId ? (
         <div className="empty-card"><strong>Fiche entreprise requise</strong><p>Créez la fiche entreprise avant de publier une méthode.</p></div>
       ) : !caseId ? (
@@ -118,16 +123,26 @@ export function BusinessMethodProfilePanel({
           </article>
 
           <article className="detail-panel">
+            <h3>Historique des adoptions</h3>
+            {manager.history.length ? <ol>{manager.history.map((act) => <li key={act.adoption_id}>
+              Acte {act.adoption_id} · révision {act.adoption_revision} · profil v{act.profile_version} · {act.profile_version_id} · SHA-256 {act.profile_content_sha256}
+            </li>)}</ol> : <p>Aucun acte d’adoption relu pour cette Affaire.</p>}
+          </article>
+
+          <article className="detail-panel">
             <div className="panel-heading"><div><h3>Versions publiées</h3><p>Les versions sont immuables. L’adoption est un acte distinct, propre à l’Affaire.</p></div></div>
             {manager.versions.length === 0 ? <p className="panel-empty">Aucune version publiée.</p> : <>
               <label>Version à prévisualiser ou adopter
-                <select value={manager.selectedVersionId} onChange={(event) => manager.setSelectedVersionId(event.target.value)}>
+                <select disabled={manager.pendingAdoption || manager.adopting} value={manager.selectedVersionId} onChange={(event) => manager.setSelectedVersionId(event.target.value)}>
                   {manager.versions.map((version) => <option key={version.profile_version_id} value={version.profile_version_id}>v{version.version} · {version.content_sha256.slice(0, 12)}…</option>)}
                 </select>
               </label>
               {selectedVersion && <>
+                <details><summary>Profil courant avant adoption</summary><pre className="decision-json" aria-label="Profil actuellement adopté">{JSON.stringify(manager.versions.find((item) => item.profile_version_id === manager.adoption?.profile_version_id)?.profile ?? null, null, 2)}</pre></details>
                 <pre className="decision-json" aria-label="Aperçu de la version publiée">{JSON.stringify(selectedVersion.profile, null, 2)}</pre>
-                <button className="secondary-button" type="button" onClick={() => void submitAdoption()} disabled={manager.adopting || adoptedVersionMatchesSelection}>
+                <p>Passage de {manager.adoption ? `v${manager.adoption.profile_version}` : "aucun profil"} à v{selectedVersion.version}. Relisez le profil courant et la version proposée ; les pièces de la bibliothèque ne sont ni copiées ni validées par cet acte.</p>
+                <label><input type="checkbox" checked={adoptionConfirmed} onChange={(event) => setConfirmedAdoption(event.target.checked ? adoptionIntent : "")} />Je confirme l’adoption de cette version exacte pour cette Affaire.</label>
+                <button className="secondary-button" type="button" onClick={() => void submitAdoption()} disabled={manager.adopting || adoptedVersionMatchesSelection || !adoptionConfirmed}>
                   {manager.adopting ? "Adoption…" : adoptedVersionMatchesSelection ? "Version déjà adoptée" : `Adopter v${selectedVersion.version} pour l’Affaire`}
                 </button>
               </>}
@@ -136,6 +151,7 @@ export function BusinessMethodProfilePanel({
 
           <form className="detail-panel decision-form" onSubmit={(event) => void submitPublish(event)} aria-label="Publier une nouvelle version de profil métier">
             <div className="panel-heading"><div><h3>Préparer une nouvelle version</h3><p>Aperçu local avant publication serveur. Les contrôles supplémentaires sont informatifs.</p></div></div>
+            <fieldset disabled={manager.pendingPublish || manager.publishing}><legend>Vocabulaire et contrôles informatifs</legend>
             {TERMS.map(({ key, label }) => <label key={key}>{`Vocabulaire · ${label}`}
               <input maxLength={80} value={terminology[key] ?? ""} onChange={(event) => setTerminology((current) => ({ ...current, [key]: event.target.value }))} />
             </label>)}
@@ -148,6 +164,7 @@ export function BusinessMethodProfilePanel({
               </div>)}
               <button className="secondary-button" type="button" onClick={() => setChecks((current) => current.length < 40 ? [...current, { key: "", label: "", axis: "CONTRACT" }] : current)} disabled={checks.length >= 40}>Ajouter un contrôle informatif</button>
             </div>
+            </fieldset>
             <details><summary>Aperçu local du profil à publier</summary><pre className="decision-json" aria-label="Aperçu JSON local du profil">{JSON.stringify(draft, null, 2)}</pre></details>
             {formError && <p className="form-error" role="alert">{formError}</p>}
             <p className="panel-empty">Le serveur revalide le profil. Cette configuration ne change ni les permissions, ni les contrôles obligatoires, ni une décision déjà prise.</p>

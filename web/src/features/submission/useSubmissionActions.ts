@@ -1,3 +1,4 @@
+import type { SubmissionFinalControl, SubmissionSignatureIntentMetadata } from "../../shared/types";
 import { useLayoutEffect, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import type { ApiClient } from "../../infrastructure/api";
@@ -18,6 +19,10 @@ type SubmissionAuthorizationIntent = {
   metadata: { command_id: string; idempotency_key: string; authorization_id: string };
 };
 
+type SignatureIntent = {
+  packageId: string; version: number; metadata: SubmissionSignatureIntentMetadata;
+};
+
 type SubmissionActions = {
   preparationPackageId: string;
   preparationRevision: string;
@@ -31,6 +36,14 @@ type SubmissionActions = {
   submissionEvidence: SubmissionEvidenceProjection[];
   submissionExported: boolean;
   submissionExportState: "IDLE" | "EXPORTED" | "UNKNOWN";
+  finalControl: SubmissionFinalControl | null;
+  loadFinalControl: () => Promise<void>;
+  signatureConfirmed: boolean;
+  setSignatureConfirmed: Dispatch<SetStateAction<boolean>>;
+  signatureRationale: string;
+  setSignatureRationale: Dispatch<SetStateAction<string>>;
+  signatureBusy: boolean;
+  signatureIntent: SignatureIntent | null;
   signatureId: string;
   signaturePackageVersion: string;
   signatureStatus: "REQUESTED" | "SIGNED" | "REJECTED" | null;
@@ -59,9 +72,26 @@ type SubmissionActions = {
 
 export function useSubmissionActions(api: ApiClient, publishMessage: SetMessage): SubmissionActions {
   const activeScopeRef = useRef(true);
+  const scopeGeneration = useRef(0);
+  const controlReadGeneration = useRef(0);
+  const signatureReadGeneration = useRef(0);
+  const finalControlRef = useRef<SubmissionFinalControl | null>(null);
+  const [finalControl, setFinalControl] = useState<SubmissionFinalControl | null>(null);
+  const [signatureConfirmed, setSignatureConfirmed] = useState(false);
+  const [signatureRationale, setSignatureRationaleState] = useState("");
+  const setSignatureRationale: Dispatch<SetStateAction<string>> = action => {
+    setSignatureRationaleState(action); setSignatureConfirmed(false);
+  };
+  const signatureIntentRef = useRef<SignatureIntent | null>(null);
+  const [signatureIntent, setSignatureIntent] = useState<SignatureIntent | null>(null);
+  const signatureBusyRef = useRef(false);
+  const [signatureBusy, setSignatureBusy] = useState(false);
   useLayoutEffect(() => {
     activeScopeRef.current = true;
-    return () => { activeScopeRef.current = false; };
+    return () => {
+      activeScopeRef.current = false; scopeGeneration.current += 1;
+      controlReadGeneration.current += 1; signatureReadGeneration.current += 1;
+    };
   }, []);
   const setMessage: SetMessage = (message) => {
     if (activeScopeRef.current) publishMessage(message);
@@ -73,6 +103,11 @@ export function useSubmissionActions(api: ApiClient, publishMessage: SetMessage)
   const submissionPackageIdRef = useRef("");
   const setSubmissionPackageId: Dispatch<SetStateAction<string>> = (action) => {
     const next = typeof action === "function" ? action(submissionPackageIdRef.current) : action;
+    if (next.trim() !== submissionPackageIdRef.current.trim()) {
+      controlReadGeneration.current += 1; signatureReadGeneration.current += 1;
+      finalControlRef.current = null; setFinalControl(null); setSignatureConfirmed(false);
+      setSignatureStatus(null); setSignatureId(""); setSignatureProvider(""); setSignatureRevision(null);
+    }
     submissionPackageIdRef.current = next;
     setSubmissionPackageIdState(next);
   };
@@ -90,8 +125,20 @@ export function useSubmissionActions(api: ApiClient, publishMessage: SetMessage)
   const authorizationInFlightRef = useRef(false);
   const [submissionExported, setSubmissionExported] = useState(false);
   const [submissionExportState, setSubmissionExportState] = useState<"IDLE" | "EXPORTED" | "UNKNOWN">("IDLE");
-  const [signatureId, setSignatureId] = useState("");
-  const [signaturePackageVersion, setSignaturePackageVersion] = useState("1");
+  const [signatureId, setSignatureIdState] = useState("");
+  const signatureIdRef = useRef("");
+  const setSignatureId: Dispatch<SetStateAction<string>> = action => {
+    const next = typeof action === "function" ? action(signatureIdRef.current) : action;
+    if (next.trim() !== signatureIdRef.current.trim()) {
+      signatureReadGeneration.current += 1;
+      setSignatureStatus(null); setSignatureProvider(""); setSignatureRevision(null);
+    }
+    signatureIdRef.current = next; setSignatureIdState(next);
+  };
+  const [signaturePackageVersion, setSignaturePackageVersionState] = useState("1");
+  const setSignaturePackageVersion: Dispatch<SetStateAction<string>> = action => {
+    setSignaturePackageVersionState(action); setSignatureConfirmed(false);
+  };
   const [signatureStatus, setSignatureStatus] = useState<"REQUESTED" | "SIGNED" | "REJECTED" | null>(null);
   const [signatureProvider, setSignatureProvider] = useState("");
   const [signatureRevision, setSignatureRevision] = useState<number | null>(null);
@@ -337,50 +384,112 @@ export function useSubmissionActions(api: ApiClient, publishMessage: SetMessage)
     }
   }
 
-  async function requestSignature() {
-    if (!submissionPackageId.trim()) {
-      setMessage({ tone: "error", text: "Préparez ou renseignez un paquet avant de demander sa signature." });
+  async function loadFinalControl() {
+    if (signatureIntentRef.current) {
+      setMessage({ tone: "warning", text: "La demande de signature reste à confirmer. Reprenez la même intention." });
       return;
     }
-    const expectedVersion = Number(signaturePackageVersion);
-    if (!Number.isInteger(expectedVersion) || expectedVersion < 1) {
-      setMessage({ tone: "error", text: "La révision du paquet doit être un entier positif." });
-      return;
+    const id = submissionPackageIdRef.current.trim();
+    if (!id) {
+      setMessage({ tone: "error", text: "Sélectionnez un paquet pour contrôler ses pièces." }); return;
     }
+    const generation = ++controlReadGeneration.current;
+    finalControlRef.current = null; setFinalControl(null); setSignatureConfirmed(false);
     try {
-      const receipt = await api.requestSubmissionSignature(submissionPackageId.trim(), expectedVersion);
-      if (!activeScopeRef.current) return;
-      const nextSignatureId = receipt.aggregate_refs[0]?.aggregate_id;
-      if (nextSignatureId) setSignatureId(nextSignatureId);
-      setSignatureStatus("REQUESTED");
-      setSignatureRevision(1);
-      setMessage({
-        tone: "success",
-        text: receipt.replayed
-          ? "Demande de signature déjà enregistrée; état rechargé."
-          : "Demande de signature enregistrée. Aucun dépôt externe n’a été effectué.",
-      });
+      const report = await api.getSubmissionFinalControl(id);
+      if (!activeScopeRef.current || generation !== controlReadGeneration.current || submissionPackageIdRef.current.trim() !== id) return;
+      if (report.submission_package_id !== id || !/^[a-f0-9]{64}$/.test(report.manifest_sha256) || !Number.isInteger(report.package_version) || report.package_version < 1) throw new Error("Le contrôle reçu ne correspond pas au paquet exact.");
+      finalControlRef.current = report; setFinalControl(report);
+      setSignaturePackageVersionState(String(report.package_version));
+      setMessage({ tone: "success", text: "Contrôle relu : manques et inconnus restent visibles, sans acte automatique." });
     } catch (error) {
-      setMessage({ tone: "error", text: error instanceof Error ? error.message : "Impossible de demander la signature." });
+      if (!activeScopeRef.current || generation !== controlReadGeneration.current || submissionPackageIdRef.current.trim() !== id) return;
+      setMessage({ tone: "error", text: error instanceof Error ? error.message : "Contrôle indisponible. Relisez le paquet." });
+    }
+  }
+
+  function releaseSignatureIntent(intent: SignatureIntent) {
+    if (signatureIntentRef.current !== intent) return;
+    signatureIntentRef.current = null; setSignatureIntent(null); setSignatureConfirmed(false);
+  }
+
+  async function requestSignature() {
+    if (signatureBusyRef.current) return;
+    let intent = signatureIntentRef.current;
+    if (!intent) {
+      const control = finalControlRef.current;
+      const id = submissionPackageIdRef.current.trim();
+      const version = Number(signaturePackageVersion);
+      if (!signatureConfirmed || !signatureRationale.trim() || !control || control.source_state !== "CURRENT" || control.submission_package_id !== id || control.package_version !== version) {
+        setMessage({ tone: "error", text: "Relisez le contrôle du paquet exact, justifiez et confirmez la demande de signature." }); return;
+      }
+      intent = { packageId: id, version, metadata: {
+        command_id: crypto.randomUUID(), idempotency_key: crypto.randomUUID(), signature_id: crypto.randomUUID(),
+        expected_manifest_sha256: control.manifest_sha256, rationale: signatureRationale.trim(),
+      } };
+      signatureIntentRef.current = intent; setSignatureIntent(intent);
+    }
+    const frozen = intent;
+    const generation = scopeGeneration.current;
+    signatureBusyRef.current = true; setSignatureBusy(true);
+    try {
+      const receipt = await api.requestSubmissionSignature(frozen.packageId, frozen.version, frozen.metadata);
+      if (!activeScopeRef.current || generation !== scopeGeneration.current) return;
+      if (receipt.aggregate_refs[0]?.aggregate_id !== frozen.metadata.signature_id) throw new Error("Reçu de signature non rapproché : reprenez la même demande.");
+      if (submissionPackageIdRef.current.trim() === frozen.packageId) {
+        setSignatureId(frozen.metadata.signature_id); setSignatureStatus("REQUESTED"); setSignatureRevision(1);
+        finalControlRef.current = null; setFinalControl(null);
+      }
+      releaseSignatureIntent(frozen);
+      setMessage({ tone: "success", text: "Demande enregistrée. Relisez le contrôle pour connaître les faits de signature. Aucun dépôt effectué." });
+    } catch (error) {
+      if (!activeScopeRef.current || generation !== scopeGeneration.current) return;
+      const status = error instanceof Error ? (error as Error & { status?: number }).status : undefined;
+      if (status === 409) {
+        try {
+          const projection = await api.getSubmissionSignature(frozen.metadata.signature_id);
+          if (!activeScopeRef.current || generation !== scopeGeneration.current) return;
+          if (projection.signature_id === frozen.metadata.signature_id && projection.submission_package_id === frozen.packageId && projection.expected_package_version === frozen.version && projection.manifest_sha256 === frozen.metadata.expected_manifest_sha256) {
+            if (submissionPackageIdRef.current.trim() === frozen.packageId) {
+              setSignatureId(projection.signature_id); setSignatureStatus(projection.status);
+              setSignatureProvider(projection.provider); setSignatureRevision(projection.revision);
+              finalControlRef.current = null; setFinalControl(null);
+            }
+            releaseSignatureIntent(frozen);
+          }
+        } catch { /* Keep the same intent until a receipt or matching reconciliation. */ }
+      } else if (status !== undefined && status >= 400 && status < 500 && status !== 408 && status !== 429) {
+        releaseSignatureIntent(frozen);
+      }
+      setMessage({ tone: "error", text: error instanceof Error ? error.message : "Résultat de signature inconnu. Reprenez la même demande." });
+    } finally {
+      signatureBusyRef.current = false;
+      if (activeScopeRef.current && generation === scopeGeneration.current) setSignatureBusy(false);
     }
   }
 
   async function loadSignature() {
-    if (!signatureId.trim()) {
-      setMessage({ tone: "error", text: "Renseignez l’identifiant de signature à consulter." });
-      return;
+    if (signatureIntentRef.current) {
+      setMessage({ tone: "warning", text: "Demande inconnue : reprenez la même intention avant une lecture de rapprochement." }); return;
     }
+    const id = signatureId.trim();
+    const control = finalControlRef.current;
+    const packageId = submissionPackageIdRef.current.trim();
+    if (!id || !control || control.submission_package_id !== packageId || control.source_state !== "CURRENT") {
+      setMessage({ tone: "error", text: "Relisez le contrôle du paquet exact avant de consulter une signature." }); return;
+    }
+    const generation = ++signatureReadGeneration.current;
     try {
-      const projection = await api.getSubmissionSignature(signatureId.trim());
-      if (!activeScopeRef.current) return;
-      setSignatureId(projection.signature_id);
-      setSignatureStatus(projection.status);
-      setSignatureProvider(projection.provider);
-      setSignaturePackageVersion(String(projection.expected_package_version));
+      const projection = await api.getSubmissionSignature(id);
+      if (!activeScopeRef.current || generation !== signatureReadGeneration.current || signatureIdRef.current.trim() !== id || submissionPackageIdRef.current.trim() !== packageId) return;
+      if (projection.signature_id !== id || projection.submission_package_id !== packageId || projection.expected_package_version !== control.package_version || projection.manifest_sha256 !== control.manifest_sha256) throw new Error("La signature ne correspond pas au paquet exact sélectionné.");
+      setSignatureStatus(projection.status); setSignatureProvider(projection.provider);
       setSignatureRevision(projection.revision);
-      setMessage({ tone: "success", text: "État de signature rechargé. Le dépôt externe reste non effectué." });
+      setMessage({ tone: "success", text: "Fait de signature relu. Validité cryptographique et pouvoirs restent UNKNOWN." });
     } catch (error) {
-      setMessage({ tone: "error", text: error instanceof Error ? error.message : "Impossible de lire l’état de signature." });
+      if (!activeScopeRef.current || generation !== signatureReadGeneration.current || signatureIdRef.current.trim() !== id || submissionPackageIdRef.current.trim() !== packageId) return;
+      setSignatureStatus(null); setSignatureProvider(""); setSignatureRevision(null);
+      setMessage({ tone: "error", text: error instanceof Error ? error.message : "Signature inconnue." });
     }
   }
 
@@ -406,7 +515,11 @@ export function useSubmissionActions(api: ApiClient, publishMessage: SetMessage)
     }
   }
 
+  const visibleManifest = submissionManifest?.submission_package_id === submissionPackageId.trim()
+    ? submissionManifest : null;
   return {
+    finalControl, loadFinalControl, signatureConfirmed, setSignatureConfirmed,
+    signatureRationale, setSignatureRationale, signatureBusy, signatureIntent,
     preparationPackageId,
     preparationRevision,
     submissionPackageId,
@@ -414,8 +527,8 @@ export function useSubmissionActions(api: ApiClient, publishMessage: SetMessage)
     submissionAuthorizationRationale,
     submissionMode,
     candidatureOnlyReason,
-    submissionAuthorized,
-    submissionManifest,
+    submissionAuthorized: submissionAuthorized && visibleManifest !== null,
+    submissionManifest: visibleManifest,
     submissionEvidence,
     submissionExported,
     submissionExportState,

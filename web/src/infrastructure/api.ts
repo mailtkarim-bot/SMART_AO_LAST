@@ -1,5 +1,15 @@
+import type {CashView} from "../features/pricing/cashScheduleTypes";
+import type { SubmissionFinalControl, SubmissionSignatureIntentMetadata } from "../shared/types";
+import type { ResponseCoverage } from "../shared/types";
+import type {ClosureDossier, ClosureOperation, ClosureReceipt} from "../features/decision/closureTypes";
+import type {OperationalChangeView} from "../shared/types";
+import type {AnalysisDossierHistoryPage,AnalysisDossierInput,AnalysisDossierReceipt,AnalysisAssessmentInput,AnalysisAssessmentReceipt} from "../shared/types";
+import type {CardDecision} from "../features/decision/commitmentTypes";
 import type {
   AssignedCase,
+  HandoverContractOptions,
+  AcknowledgeHandoverInput,
+  CaseAnalysisSummary,
   CapabilityAssessments,
   CapabilityCandidate,
   ProposeCapabilityInput,
@@ -45,6 +55,9 @@ import type {
   PreparationReviewList,
   PreparationTransmissionList,
   CreatePreparationSnapshotInput,
+  BuyerDocxInputs,
+  CreateBuyerDocxResponseDraftInput,
+  SelectedResponseDraft,
   TransmitPreparationSnapshotInput,
   PreparationResponsePlanList,
   PreparationResponseDraftList,
@@ -83,6 +96,7 @@ import type {
   CaseExecutionResults,
   CaseHandoverOfferOptions,
   CaseHandoverSnapshots,
+  CaseHandoverSnapshotItem,
   CaseContractChangeEventList,
   CaseRexList,
   CaseInterviewList,
@@ -425,12 +439,17 @@ export function createApiClient(
       request<CaseExecutionResults>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/execution-results`),
     listCaseHandoverOfferOptions: (caseId: string) =>
       request<CaseHandoverOfferOptions>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/p7-handover-options`),
+    listCaseHandoverContracts: (caseId: string) => request<HandoverContractOptions>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/p7-handover/contracts`),
+    listCaseHandoverHistory: (caseId: string, before?:string) => request<CaseHandoverSnapshots>(`/api/v1/cases/${encodeURIComponent(caseId)}/p7-handover/history${before?`?before_snapshot_id=${encodeURIComponent(before)}`:""}`),
+    acknowledgeCaseHandover: (caseId:string,snapshotId:string,input:AcknowledgeHandoverInput) => request<RecordCaseHandoverReceipt>(`/api/v1/cases/${encodeURIComponent(caseId)}/p7-handover/${encodeURIComponent(snapshotId)}/receipts`,{method:"POST",body:JSON.stringify(input)}),
+    getCaseHandoverSnapshot: (caseId:string,snapshotId:string)=>request<CaseHandoverSnapshotItem>(`/api/v1/cases/${encodeURIComponent(caseId)}/p7-handover/${encodeURIComponent(snapshotId)}`),
     listCaseHandoverSnapshots: (caseId: string) =>
       request<CaseHandoverSnapshots>(`/api/v1/cases/${encodeURIComponent(caseId)}/p7-handover`),
     downloadCaseHandoverOffer: (caseId: string, snapshotId: string) =>
       requestBlob(`/api/v1/cases/${encodeURIComponent(caseId)}/p7-handover/${encodeURIComponent(snapshotId)}/offer-document`),
     recordCaseHandover: (caseId: string, input: RecordCaseHandoverInput) =>
       request<RecordCaseHandoverReceipt>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/p7-handover`, { method: "POST", body: JSON.stringify(input) }),
+    listOperationalCaseContractChangeEvents:(caseId:string)=>request<{case_id:string;events:OperationalChangeView[];truncated:boolean}>(`/api/v1/cases/${encodeURIComponent(caseId)}/contract-change-events`),
     listCaseContractChangeEvents: (caseId: string) =>
       request<CaseContractChangeEventList>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-change-events`),
     recordCaseContractChangeEvent: (caseId: string, input: RecordCaseContractChangeEventInput) =>
@@ -575,6 +594,13 @@ export function createApiClient(
           }),
         },
       ),
+    getCaseAnalysisDossierHistory: (caseId:string,before?:number) => request<AnalysisDossierHistoryPage>(`/api/v1/cases/${encodeURIComponent(caseId)}/analysis-dossier-history${before===undefined?"":`?before_revision=${before}`}`),
+    recordCaseAnalysisDossier: (caseId:string,input:AnalysisDossierInput) => request<AnalysisDossierReceipt>(`/api/v1/cases/${encodeURIComponent(caseId)}/analysis-dossier-reviews`,{method:"POST",body:JSON.stringify(input)}),
+    recordCaseAnalysisAssessment: (caseId:string,input:AnalysisAssessmentInput) => request<AnalysisAssessmentReceipt>(`/api/v1/cases/${encodeURIComponent(caseId)}/analysis-assessments`,{method:"POST",body:JSON.stringify(input)}),
+    getCaseAnalysisSummary: (caseId: string) =>
+      request<CaseAnalysisSummary>(`/api/v1/cases/${encodeURIComponent(caseId)}/analysis-summary`),
+    confirmDceRequirement: (requirementId: string, input: import("../features/decision/commitmentTypes").RequirementConfirmationInput) =>
+      request<CommandReceipt>(`/api/v1/dce-requirements/${encodeURIComponent(requirementId)}/confirmations`, {method: "POST", body: JSON.stringify(input)}),
     getCaseDceReading: (caseId: string) =>
       request<CaseDceReading>(
         `/api/v1/cases/${encodeURIComponent(caseId)}/dce-reading`,
@@ -631,9 +657,9 @@ export function createApiClient(
           method: "POST",
           body: JSON.stringify({
             ...input,
-            command_id: makeId(),
-            idempotency_key: makeId(),
-            correlation_id: makeId(),
+            command_id: input.command_id ?? makeId(),
+            idempotency_key: input.idempotency_key ?? makeId(),
+            correlation_id: input.correlation_id ?? makeId(),
           }),
         },
       ),
@@ -688,6 +714,10 @@ export function createApiClient(
     getContractQueryExportAudit: (caseId: string, exportId: string) =>
       request<ContractQueryExportAudit>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-query-exports/${encodeURIComponent(exportId)}/audit`),
     listPaymentCycles: (caseId: string) => request<PaymentCycle[]>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/payment-post-reception-cycles`),
+    getCashSchedule: (caseId:string) => request<CashView>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/cash-schedule`),
+    recordCashSchedule: (caseId:string,input:Record<string,unknown>) => request<{command_id:string;idempotency_key:string;revision_id:string;result_code:string;replayed:boolean}>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/cash-schedule`,{method:"POST",body:JSON.stringify(input)}),
+    getCaseClosure: (caseId: string) => request<ClosureDossier>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/closure`),
+    recordClosureOperation: (caseId: string, operation: ClosureOperation, input: Record<string,unknown>) => request<ClosureReceipt>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/closure/${operation}`, {method:"POST", body:JSON.stringify(input)}),
     recordPaymentCycle: (caseId: string, input: Record<string, unknown>) => request(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/payment-post-reception-cycles`, { method: "POST", body: JSON.stringify(input) }),
     qualifyPaymentCycle: (caseId: string, cycleId: string, input: Record<string, unknown>) => request(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/payment-cycles/${encodeURIComponent(cycleId)}/cash-assumptions`, { method: "POST", body: JSON.stringify(input) }),
     recordPaymentCycleReview: (cycleId: string, input: Record<string, unknown>) => request(`/api/v1/patron/payment-cycles/${encodeURIComponent(cycleId)}/reviews`, { method: "POST", body: JSON.stringify(input) }),
@@ -934,6 +964,10 @@ export function createApiClient(
           }),
         },
       ),
+    listBusinessMethodProfileAdoptions: (caseId: string) =>
+      request<BusinessMethodProfileAdoption[]>(
+        `/api/v1/patron/cases/${encodeURIComponent(caseId)}/business-method-profile/adoptions`,
+      ),
     getBusinessMethodProfileAdoption: (caseId: string) =>
       request<BusinessMethodProfileAdoption | null>(
         `/api/v1/patron/cases/${encodeURIComponent(caseId)}/business-method-profile/adoption`,
@@ -1031,6 +1065,16 @@ export function createApiClient(
         },
       );
     },
+    getCommitmentCard:(caseId:string)=>request<import("../features/decision/commitmentTypes").CommitmentCard>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/commitment-card`),
+    getCommitmentDecision:(caseId:string,decisionId:string)=>request<{case_id:string;decision:CardDecision}>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/commitment-card/decisions/${encodeURIComponent(decisionId)}`),
+    getCommitmentHistory:(caseId:string,beforeDecisionId:string)=>request<{case_id:string;history:CardDecision[];next_before_decision_id:string|null}>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/commitment-card/history?before_decision_id=${encodeURIComponent(beforeDecisionId)}`),
+    linkConditionAssessment:(caseId:string,decisionId:string,conditionId:string,input:import("../features/decision/commitmentTypes").AssessmentLinkInput)=>request<import("../features/decision/commitmentTypes").CardReceipt>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/decisions/${encodeURIComponent(decisionId)}/conditions/${encodeURIComponent(conditionId)}/assessment-links`,{method:"POST",body:JSON.stringify(input)}),
+    getDatedCapacity:(caseId:string)=>request<import("../features/capacity/types").CapacityProjection>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/capacity`),
+    recordDatedCapacity:(caseId:string,input:import("../features/capacity/types").CapacityInput)=>request<import("../features/capacity/types").CapacityReceipt>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/capacity`,{method:"POST",body:JSON.stringify(input)}),
+    getPricingPositions:(caseId:string,batchId:string,offset=0,search="")=>request<import("../shared/types").PricingPositions>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/pricing-import/${encodeURIComponent(batchId)}/positions?offset=${offset}&search=${encodeURIComponent(search)}`),
+    getPricingPosition:(caseId:string,batchId:string,positionId:string)=>request<import("../shared/types").PricingPositions>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/pricing-import/${encodeURIComponent(batchId)}/positions/${encodeURIComponent(positionId)}`),
+    recordPricingPosition:(caseId:string,batchId:string,positionId:string,input:import("../shared/types").PositionReviewInput)=>request<import("../shared/types").PositionReviewReceipt>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/pricing-import/${encodeURIComponent(batchId)}/positions/${encodeURIComponent(positionId)}/reviews`,{method:"POST",body:JSON.stringify(input)}),
+    getPricingPositionHistory:(caseId:string,batchId:string,positionId:string,before?:number)=>request<import("../shared/types").PositionHistory>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/pricing-import/${encodeURIComponent(batchId)}/positions/${encodeURIComponent(positionId)}/history${before===undefined?"":`?before_revision=${before}`}`),
     getPricingImport: (caseId: string, batchId: string) =>
       request<PricingImportBatchRead>(
         `/api/v1/patron/cases/${encodeURIComponent(caseId)}/pricing-import/${encodeURIComponent(batchId)}`,
@@ -1097,6 +1141,10 @@ export function createApiClient(
       request<SubmissionPackageManifestProjection>(
         `/api/v1/patron/submission-packages/${encodeURIComponent(submissionPackageId)}/manifest`,
       ),
+    getSubmissionFinalControl: (submissionPackageId: string) =>
+      request<SubmissionFinalControl>(
+        `/api/v1/patron/submission-packages/${encodeURIComponent(submissionPackageId)}/final-control`,
+      ),
     downloadSubmissionPackage: (submissionPackageId: string): Promise<Blob> =>
       requestBlob(
         `/api/v1/patron/submission-packages/${encodeURIComponent(submissionPackageId)}/export`,
@@ -1110,6 +1158,17 @@ export function createApiClient(
       request<PreparationTransmissionList>(
         `/api/v1/preparation/${encodeURIComponent(packageId)}/transmissions`,
       ),
+    inspectBuyerDocxInputs: (packageId:string,source:SelectedResponseDraft) =>
+      request<BuyerDocxInputs>(`/api/v1/preparation/${encodeURIComponent(packageId)}/buyer-docx-inputs`,
+        {method:"POST",body:JSON.stringify({source_response:source})}),
+    createBuyerDocxResponseDraft: (packageId:string,input:CreateBuyerDocxResponseDraftInput) =>
+      request<CommandReceipt>(`/api/v1/preparation/${encodeURIComponent(packageId)}/buyer-response-drafts`,
+        {method:"POST",body:JSON.stringify(input)}),
+    downloadResponseDraft: (packageId:string,draftId:string,version:number,collaborator=false) =>
+      requestBlob(`/api/v1/${collaborator?"collaborator/":""}preparation/${encodeURIComponent(packageId)}/response-drafts/${encodeURIComponent(draftId)}/versions/${version}/content`),
+    readResponseCoverage: (packageId: string, selection: SelectedResponseDraft, collaborator = false) =>
+      request<ResponseCoverage>(`/api/v1/${collaborator ? "collaborator/" : ""}preparation/${encodeURIComponent(packageId)}/response-coverage`,
+        {method: "POST", body: JSON.stringify(selection)}),
     listPreparationResponseDrafts: (packageId: string) =>
       request<PreparationResponseDraftList>(
         `/api/v1/preparation/${encodeURIComponent(packageId)}/response-drafts`,
@@ -1365,15 +1424,18 @@ export function createApiClient(
           }),
         },
       ),
-    requestSubmissionSignature: (submissionPackageId: string, expectedPackageVersion: number) =>
+    requestSubmissionSignature: (
+      submissionPackageId: string, expectedPackageVersion: number,
+      metadata?: SubmissionSignatureIntentMetadata,
+    ) =>
       request<SubmissionSignatureReceipt>(
         `/api/v1/patron/submission-packages/${encodeURIComponent(submissionPackageId)}/signatures`,
         {
           method: "POST",
           body: JSON.stringify({
-            command_id: makeId(),
-            idempotency_key: makeId(),
-            signature_id: makeId(),
+            ...(metadata ?? {
+              command_id: makeId(), idempotency_key: makeId(), signature_id: makeId(),
+            }),
             expected_package_version: expectedPackageVersion,
           }),
         },

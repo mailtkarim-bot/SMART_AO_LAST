@@ -14,7 +14,7 @@ SMART_AO V8 vise la maîtrise des engagements d'une Affaire BTP, de l'étude DCE
 
 ## Reprendre le codage
 
-Lire `AGENTS.md`, l'index actif et le début du plan global : une seule tranche active, ordre A0 → S0 (sources) → M0 (version de méthode) → A1 → M1 (éditeur) → B → C, critères de fin et limites de preuve. Vérifier `git status` et HEAD avant toute modification ; le checkout contient du travail local non qualifié. Ne pas supposer une suite verte à partir d'un ancien handoff. Aucun push ; NO-GO public maintenu.
+Lire `AGENTS.md`, l’index actif et le [plan de livraison](docs/Actifs/00_Pilotage_et_audits/SMART_AO_PLAN_GLOBAL_CONCEPTION_REALISATION_CHECKLIST_v0.1.md). Une seule file : R0 consolidation/CI → R1 parcours local complet → R2 pilote → R3 exploitation. Les recettes synthétiques ne constituent pas une admission en production. La consolidation Git et le push sont autorisés par la demande Owner du12/11/2026 ; le GO public reste séparé.
 
 ## Démarrage local prévu
 

@@ -7,6 +7,17 @@ import type {
 } from "../../shared/types";
 import { CaseContractChangePanel } from "./CaseContractChangePanel";
 
+function approveAndClick(element:HTMLElement){
+ if(element instanceof HTMLButtonElement&&element.type==='submit'){
+  const form=element.closest('form');
+  const why=form?.querySelector<HTMLTextAreaElement>('textarea[name="change_justification"]');
+  const confirmed=form?.querySelector<HTMLInputElement>('input[name="change_human_confirmed"]');
+  if(why)fireEvent.change(why,{target:{value:'Sources exactes relues pour cet acte.'}});
+  if(confirmed&&!confirmed.checked)fireEvent.click(confirmed);
+ }
+ fireEvent.click(element);
+}
+
 const handover = {
   snapshot_id: "handover-1",
   outcome_id: "won-1",
@@ -66,7 +77,7 @@ test("keeps a sourced change UNKNOWN until Patron applicability, then records ac
         action_execution_acts: [],
         evidence_objects: [],
       }];
-      return { result_code: "CASE_CONTRACT_CHANGE_EVENT_RECORDED" };
+      return { status: "SUCCEEDED", result_code: "CASE_CONTRACT_CHANGE_EVENT_RECORDED" };
     }),
     recordCaseContractChangeApplicability: vi.fn(async (_caseId, eventId, input) => {
       const event = events.find((item) => item.event_id === eventId)!;
@@ -92,7 +103,7 @@ test("keeps a sourced change UNKNOWN until Patron applicability, then records ac
           },
         }],
       }];
-      return { result_code: "CASE_CONTRACT_CHANGE_APPLICABILITY_RECORDED" };
+      return { status: "SUCCEEDED", result_code: "CASE_CONTRACT_CHANGE_APPLICABILITY_RECORDED" };
     }),
     recordCaseContractChangeAction: vi.fn(async (_caseId, eventId, input) => {
       const event = events.find((item) => item.event_id === eventId)!;
@@ -110,13 +121,13 @@ test("keeps a sourced change UNKNOWN until Patron applicability, then records ac
           recorded_at: "2026-10-01T14:00:00Z",
         }],
       }];
-      return { result_code: "CASE_CONTRACT_CHANGE_ACTION_RECORDED" };
+      return { status: "SUCCEEDED", result_code: "CASE_CONTRACT_CHANGE_ACTION_RECORDED" };
     }),
     recordCaseContractChangeEngagementLink: vi.fn(async () => ({
-      result_code: "CASE_CONTRACT_CHANGE_ENGAGEMENT_LINK_RECORDED",
+      status:"SUCCEEDED", result_code: "CASE_CONTRACT_CHANGE_ENGAGEMENT_LINK_RECORDED",
     })),
     recordCaseContractChangeImpactDeclaration: vi.fn(async () => ({
-      result_code: "CASE_CONTRACT_CHANGE_IMPACT_DECLARED",
+      status:"SUCCEEDED", result_code: "CASE_CONTRACT_CHANGE_IMPACT_DECLARED",
     })),
   } as unknown as ApiClient;
 
@@ -136,8 +147,9 @@ test("keeps a sourced change UNKNOWN until Patron applicability, then records ac
   fireEvent.change(screen.getByLabelText("Preuves de réception/événement, une par ligne"), {
     target: { value: "document://os/14" },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Enregistrer l’événement sourcé" }));
+  approveAndClick(screen.getByRole("button", { name: "Enregistrer l’événement sourcé" }));
   expect(await screen.findByText(/Applicabilité à cette passation : UNKNOWN/)).toBeInTheDocument();
+  expect(screen.getByRole("form",{name:"Enregistrer un événement contractuel sourcé"}).querySelector('input[name="change_human_confirmed"]')).not.toBeChecked();
   expect(screen.queryByRole("button", { name: /Enregistrer l’action et la preuve/ })).not.toBeInTheDocument();
 
   fireEvent.change(screen.getByLabelText(/Version contrat retenue par le Patron/), {
@@ -158,7 +170,7 @@ test("keeps a sourced change UNKNOWN until Patron applicability, then records ac
   fireEvent.change(screen.getByLabelText("Sources/preuves de la décision, une par ligne"), {
     target: { value: "document://review/01" },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Enregistrer la revue Patron" }));
+  approveAndClick(screen.getByRole("button", { name: "Enregistrer la revue Patron" }));
   expect(await screen.findByText(/Applicabilité à cette passation : APPLICABLE_TO_HANDOVER/)).toBeInTheDocument();
   expect(api.recordCaseContractChangeApplicability).toHaveBeenCalledWith("case-1", "os-event", expect.objectContaining({
     delta_state: "DECLARED",
@@ -175,7 +187,7 @@ test("keeps a sourced change UNKNOWN until Patron applicability, then records ac
   fireEvent.change(screen.getByLabelText("Motif d’échéance inconnue"), {
     target: { value: "Aucune échéance validée." },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Enregistrer l’action et la preuve" }));
+  approveAndClick(screen.getByRole("button", { name: "Enregistrer l’action et la preuve" }));
   await waitFor(() => expect(api.recordCaseContractChangeAction).toHaveBeenCalledWith(
     "case-1",
     "os-event",
@@ -236,20 +248,21 @@ test("shows the frozen A1 sources and records the Patron selection for a C1 even
     listCaseHandoverSnapshots: vi.fn().mockResolvedValue({ case_id: "case-1", items: [handover] }),
     listCaseContractChangeEvents: vi.fn().mockResolvedValue({ case_id: "case-1", events: [event] }),
     recordCaseContractChangeEngagementLink: vi.fn(async () => ({
-      result_code: "CASE_CONTRACT_CHANGE_ENGAGEMENT_LINK_RECORDED",
+      status:"SUCCEEDED", result_code: "CASE_CONTRACT_CHANGE_ENGAGEMENT_LINK_RECORDED",
     })),
   } as unknown as ApiClient;
+  vi.mocked(api.recordCaseContractChangeEngagementLink).mockRejectedValueOnce(new Error("lost transport"));
   render(<CaseContractChangePanel api={api} caseId="case-1" versions={[]} />);
 
   expect(await screen.findByText(/exigence requirement-1 r3 · impact impact-1 r2/)).toBeInTheDocument();
   fireEvent.change(screen.getByLabelText("État du lien A1/C1 os-1"), {
     target: { value: "LINKED" },
   });
-  fireEvent.click(screen.getByLabelText("Sélectionner la condition A1 condition-1"));
+  approveAndClick(screen.getByLabelText("Sélectionner la condition A1 condition-1"));
   fireEvent.change(screen.getByLabelText("Justification Patron"), {
     target: { value: "Le Patron relie l’OS à la condition ouverte." },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Enregistrer le lien Patron A1/C1" }));
+  approveAndClick(screen.getByRole("button", { name: "Enregistrer le lien Patron A1/C1" }));
   await waitFor(() => expect(api.recordCaseContractChangeEngagementLink).toHaveBeenCalledWith(
     "case-1",
     "os-1",
@@ -261,6 +274,11 @@ test("shows the frozen A1 sources and records the Patron selection for a C1 even
       unknown_reason: null,
     }),
   ));
+  expect(await screen.findByText('UNKNOWN · intention de changement figée')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button',{name:'Réessayer exactement cet acte'}));
+  await waitFor(()=>expect(api.recordCaseContractChangeEngagementLink).toHaveBeenCalledTimes(2));
+  expect(vi.mocked(api.recordCaseContractChangeEngagementLink).mock.calls[1]).toEqual(vi.mocked(api.recordCaseContractChangeEngagementLink).mock.calls[0]);
+  expect(await screen.findByText("Relecture de l’acte exact nécessaire")).toBeInTheDocument();
   vi.unstubAllGlobals();
 });
 
@@ -318,9 +336,10 @@ test("records a human C3 impact on the current C2 source without calculation", a
     listCaseHandoverSnapshots: vi.fn().mockResolvedValue({ case_id: "case-1", items: [handover] }),
     listCaseContractChangeEvents: vi.fn().mockResolvedValue({ case_id: "case-1", events: [event] }),
     recordCaseContractChangeImpactDeclaration: vi.fn(async () => ({
-      result_code: "CASE_CONTRACT_CHANGE_IMPACT_DECLARED",
+      status:"SUCCEEDED", result_code: "CASE_CONTRACT_CHANGE_IMPACT_DECLARED",
     })),
   } as unknown as ApiClient;
+  vi.mocked(api.recordCaseContractChangeImpactDeclaration).mockRejectedValueOnce(new Error("lost transport"));
   render(<CaseContractChangePanel api={api} caseId="case-1" versions={[]} />);
 
   fireEvent.change(await screen.findByLabelText("État de l’impact C3 os-1"), {
@@ -344,7 +363,7 @@ test("records a human C3 impact on the current C2 source without calculation", a
   fireEvent.change(screen.getByLabelText("Justification Patron C3"), {
     target: { value: "Le Patron saisit cette valeur telle que déclarée." },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Enregistrer l’impact Patron C3" }));
+  approveAndClick(screen.getByRole("button", { name: "Enregistrer l’impact Patron C3" }));
 
   await waitFor(() => expect(api.recordCaseContractChangeImpactDeclaration).toHaveBeenCalledWith(
     "case-1",
@@ -362,6 +381,11 @@ test("records a human C3 impact on the current C2 source without calculation", a
       impact_summary: "Mobilisation supplémentaire déclarée.",
     }),
   ));
+  expect(await screen.findByText('UNKNOWN · intention de changement figée')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button',{name:'Réessayer exactement cet acte'}));
+  await waitFor(()=>expect(api.recordCaseContractChangeImpactDeclaration).toHaveBeenCalledTimes(2));
+  expect(vi.mocked(api.recordCaseContractChangeImpactDeclaration).mock.calls[1]).toEqual(vi.mocked(api.recordCaseContractChangeImpactDeclaration).mock.calls[0]);
+  expect(await screen.findByText("Relecture de l’acte exact nécessaire")).toBeInTheDocument();
   vi.unstubAllGlobals();
 });
 
@@ -408,16 +432,16 @@ test("links a recorded C1 action to an exact current C3 act without marking it e
     listCaseHandoverSnapshots: vi.fn().mockResolvedValue({ case_id: "case-1", items: [handover] }),
     listCaseContractChangeEvents: vi.fn().mockResolvedValue({ case_id: "case-1", events: [event] }),
     recordCaseContractChangeActionImpactRelation: vi.fn(async () => ({
-      result_code: "CASE_CONTRACT_CHANGE_ACTION_IMPACT_RELATED",
+      status:"SUCCEEDED", result_code: "CASE_CONTRACT_CHANGE_ACTION_IMPACT_RELATED",
     })),
   } as unknown as ApiClient;
   render(<CaseContractChangePanel api={api} caseId="case-1" versions={[]} />);
 
-  fireEvent.click(await screen.findByLabelText("Sélectionner l’impact C3 c3-declaration-1"));
+  approveAndClick(await screen.findByLabelText("Sélectionner l’impact C3 c3-declaration-1"));
   fireEvent.change(screen.getByLabelText("Justification Patron C4"), {
     target: { value: "L’action traite explicitement cet impact inconnu." },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Enregistrer la liaison Patron C4" }));
+  approveAndClick(screen.getByRole("button", { name: "Enregistrer la liaison Patron C4" }));
 
   await waitFor(() => expect(api.recordCaseContractChangeActionImpactRelation).toHaveBeenCalledWith(
     "case-1", "os-1", "action-1", expect.objectContaining({
@@ -427,7 +451,7 @@ test("links a recorded C1 action to an exact current C3 act without marking it e
       rationale: "L’action traite explicitement cet impact inconnu.",
     }),
   ));
-  expect(screen.getByText(/état RECORDED/)).toBeInTheDocument();
+  expect(await screen.findByText(/état RECORDED/)).toBeInTheDocument();
   expect(screen.getByText(/ne prouve ni son exécution ni sa clôture/)).toBeInTheDocument();
   vi.unstubAllGlobals();
 });
@@ -463,7 +487,7 @@ test("records a C5 declaration against the exact C4 relation and keeps evidence 
     prepareCaseContractChangeEvidenceUpload: vi.fn().mockResolvedValue({ state: "AWAITING_UPLOAD" }),
     uploadCaseContractChangeEvidence: vi.fn().mockResolvedValue({ state: "CLEAN", sha256: "d".repeat(64) }),
     recordCaseContractChangeActionExecution: vi.fn(async () => ({
-      result_code: "CASE_CONTRACT_CHANGE_ACTION_EXECUTION_DECLARED",
+      status:"SUCCEEDED", result_code: "CASE_CONTRACT_CHANGE_ACTION_EXECUTION_DECLARED",
     })),
   } as unknown as ApiClient;
   render(<CaseContractChangePanel api={api} caseId="case-1" versions={[]} />);
@@ -481,7 +505,7 @@ test("records a C5 declaration against the exact C4 relation and keeps evidence 
   fireEvent.change(screen.getByLabelText("Ou joindre une nouvelle pièce d’exécution"), {
     target: { files: [new File(["%PDF-1.7 local test"], "execution.pdf", { type: "application/pdf" })] },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Enregistrer l’acte C5" }));
+  approveAndClick(screen.getByRole("button", { name: "Enregistrer l’acte C5" }));
 
   await waitFor(() => expect(api.recordCaseContractChangeActionExecution).toHaveBeenCalledWith(
     "case-1", "os-1", "action-1", expect.objectContaining({
@@ -500,6 +524,27 @@ test("records a C5 declaration against the exact C4 relation and keeps evidence 
   expect(api.uploadCaseContractChangeEvidence).toHaveBeenCalledWith(
     "case-1", "os-1", "action-1", "c5-id", expect.any(String), expect.any(File),
   );
-  expect(screen.getByText(/état C1 RECORDED/)).toBeInTheDocument();
+  expect(await screen.findByText(/état C1 RECORDED/)).toBeInTheDocument();
   vi.unstubAllGlobals();
+});
+
+test.each([true,false])("suspends change reads and forms while sources are uncertain (manage=%s)", canManage => {
+  const api={listCaseContractChangeEvents:vi.fn().mockResolvedValue({case_id:"case-1",events:[],truncated:false}),listCaseHandoverSnapshots:vi.fn().mockResolvedValue({case_id:"case-1",items:[]}),listOperationalCaseContractChangeEvents:vi.fn().mockResolvedValue({case_id:"case-1",events:[],truncated:false})} as unknown as ApiClient;
+  render(<CaseContractChangePanel api={api} caseId="case-1" versions={[]} canManage={canManage} sourceReadBlocked/>);
+  expect(screen.getByRole("status")).toHaveTextContent("Sources en cours de reprise");
+  expect(api.listCaseContractChangeEvents).not.toHaveBeenCalled();
+  expect(api.listOperationalCaseContractChangeEvents).not.toHaveBeenCalled();
+  expect(screen.queryByRole("form")).not.toBeInTheDocument();
+});
+
+test("rereads the new operational source scope and ignores the late previous reply", async () => {
+  let finish!:(value:unknown)=>void;
+  const get=vi.fn().mockImplementationOnce(()=>new Promise(resolve=>{finish=resolve;})).mockResolvedValue({case_id:"case-1",events:[],truncated:false});
+  const api={listOperationalCaseContractChangeEvents:get} as unknown as ApiClient;
+  const {rerender}=render(<CaseContractChangePanel api={api} caseId="case-1" versions={[]} canManage={false} ownerKey="responsable" scopeKey="v1"/>);
+  rerender(<CaseContractChangePanel api={api} caseId="case-1" versions={[]} canManage={false} ownerKey="responsable" scopeKey="v2"/>);
+  await waitFor(()=>expect(get).toHaveBeenCalledTimes(2));
+  finish({case_id:"foreign-case",events:[],truncated:false});
+  await screen.findByText("UNKNOWN · aucun changement opérationnel publié.");
+  expect(screen.queryByText(/UNAVAILABLE/)).not.toBeInTheDocument();
 });

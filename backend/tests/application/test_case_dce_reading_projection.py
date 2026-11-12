@@ -186,6 +186,10 @@ def test_case_dce_reading_projection_is_tenant_scoped_closed_and_deterministic(
     assert projection.availability is CaseDceReadingAvailability.AVAILABLE
     assert projection.reading is not None
     assert tenant_denied is None
+    assert projection.reading.coverage is not None
+    assert projection.reading.coverage.documents[0].document_id == document_id
+    assert projection.reading.coverage.completed_extractions == 1
+    assert projection.reading.coverage.analysis_complete is False
     assert projection.reading.dce_version_id == dce_version_id
     assert projection.reading.counters.total == len(projection.reading.requirements)
     assert projection.reading.counters.confirmed == 1
@@ -318,3 +322,128 @@ def _forbidden_keys(value: object) -> set[str]:
     if isinstance(value, (tuple, list)):
         return set().union(*(_forbidden_keys(item) for item in value)) if value else set()
     return set()
+
+
+@pytest.mark.parametrize("refusal_offset", [0, 1])
+def test_document_coverage_uses_latest_refusal_and_is_tenant_version_scoped(
+    session_factory,
+    tmp_path,
+    refusal_offset,
+):
+    from datetime import timedelta
+
+    from app.modules.dce.infrastructure.models.dce_extraction import DceDocumentExtractionRecord
+    from app.modules.dce.infrastructure.models.dce_version import DceDocumentRecord
+    from app.modules.dce.infrastructure.quarantine import LocalQuarantineStorageAdapter
+
+    tenant_id, document_id, version_id = _seed_admitted_document(
+        session_factory,
+        storage=LocalQuarantineStorageAdapter(root=tmp_path),
+        source_bytes=b"synthetic",
+    )
+    with session_factory.begin() as session:
+        document = session.get(DceDocumentRecord, document_id)
+        assert document is not None
+        # The higher UUID success must lose even when the refusal has the same timestamp.
+        for run_id, state, offset in [
+            (UUID(int=100), "COMPLETED", 0),
+            (UUID(int=1), "UNSUPPORTED", refusal_offset),
+        ]:
+            session.add(
+                DceDocumentExtractionRecord(
+                    id=run_id,
+                    tenant_id=tenant_id,
+                    dce_version_id=version_id,
+                    dce_document_id=document_id,
+                    input_sha256=document.sha256,
+                    extractor_id="synthetic",
+                    extractor_version=str(run_id),
+                    status=state,
+                    fragment_count=0,
+                    extracted_char_count=0,
+                    failure_code=None if state == "COMPLETED" else "UNSUPPORTED",
+                    created_at=NOW + timedelta(seconds=offset),
+                )
+            )
+    with session_factory() as session:
+        reader = SqlAlchemyCaseDceReadingReader(session)
+        coverage = reader._read_coverage(
+            tenant_id=tenant_id, dce_version_id=version_id, case_scope_kind="SINGLE_LOT"
+        )
+        assert coverage.documents[0].extraction_id == UUID(int=1)
+        assert coverage.documents[0].extraction_status == "UNSUPPORTED"
+        assert coverage.unread_documents == 1
+        assert coverage.lot_applicability == "UNKNOWN"
+        assert not _forbidden_keys(asdict(coverage))
+        assert coverage == reader._read_coverage(
+            tenant_id=tenant_id, dce_version_id=version_id, case_scope_kind="SINGLE_LOT"
+        )
+        for tenant, version in [(uuid4(), version_id), (tenant_id, uuid4())]:
+            denied = reader._read_coverage(
+                tenant_id=tenant, dce_version_id=version, case_scope_kind="CUSTOM"
+            )
+            assert denied.documents == ()
+            assert denied.total_documents == 0
+
+
+@pytest.mark.parametrize("mismatch", ["hash", "fragments"])
+def test_document_coverage_rejects_inconsistent_postgresql_extraction(
+    session_factory,
+    tmp_path,
+    mismatch,
+):
+    from app.modules.dce.infrastructure.models.dce_extraction import (
+        DceDocumentExtractionFragmentRecord,
+        DceDocumentExtractionRecord,
+    )
+    from app.modules.dce.infrastructure.models.dce_version import DceDocumentRecord
+    from app.modules.dce.infrastructure.quarantine import LocalQuarantineStorageAdapter
+
+    tenant_id, document_id, version_id = _seed_admitted_document(
+        session_factory,
+        storage=LocalQuarantineStorageAdapter(root=tmp_path),
+        source_bytes=b"synthetic evidence",
+    )
+    extraction_id = uuid4()
+    with session_factory.begin() as session:
+        document = session.get(DceDocumentRecord, document_id)
+        assert document is not None
+        session.add(
+            DceDocumentExtractionRecord(
+                id=extraction_id,
+                tenant_id=tenant_id,
+                dce_version_id=version_id,
+                dce_document_id=document_id,
+                input_sha256="0" * 64 if mismatch == "hash" else document.sha256,
+                extractor_id="synthetic",
+                extractor_version="1",
+                status="COMPLETED",
+                fragment_count=1 if mismatch == "hash" else 2,
+                extracted_char_count=8,
+                failure_code=None,
+                created_at=NOW,
+            )
+        )
+        session.flush()
+        session.add(
+            DceDocumentExtractionFragmentRecord(
+                id=uuid4(),
+                tenant_id=tenant_id,
+                extraction_id=extraction_id,
+                ordinal=1,
+                locator_json={"kind": "text_line", "line": 1},
+                text="synthetic",
+                text_sha256="1" * 64,
+            )
+        )
+    with session_factory() as session:
+        coverage = SqlAlchemyCaseDceReadingReader(session)._read_coverage(
+            tenant_id=tenant_id,
+            dce_version_id=version_id,
+            case_scope_kind="CUSTOM",
+        )
+        assert coverage.completed_extractions == 0
+        assert coverage.unread_documents == 1
+        assert coverage.documents[0].extraction_status == "REVIEW_REQUIRED"
+        assert coverage.documents[0].extraction_id == extraction_id
+        assert not coverage.analysis_complete

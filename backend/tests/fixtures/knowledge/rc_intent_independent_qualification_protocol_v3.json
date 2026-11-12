@@ -1,0 +1,34 @@
+{
+  "schema_version": 3,
+  "kind": "rc_context_intent_qualification",
+  "mechanism": "rc-context-v3",
+  "anchor_convention": "lexical-cue-v3",
+  "stage": "INTENT_CONTEXT_ONLY_NOT_RETRIEVAL",
+  "challenge_file": "backend/tests/fixtures/knowledge/rc_intent_independent_challenge_v3.sealed.json",
+  "challenge_sha256": "96aedd3f1a6c259dbe33e19d9d7b6398482ea4e4bde509c4df1658c661d89f6d",
+  "contract_file": "backend/tests/fixtures/knowledge/rc_intent_context_contract_v3.json",
+  "contract_sha256": "23dfe48110c41e5f761c9cfec10a63643cfac66327ca439e5a31a28d6e7dc236",
+  "counts": {
+    "COVERED": 16,
+    "UNSUPPORTED": 4,
+    "AMBIGUOUS": 5,
+    "UNKNOWN": 6,
+    "FINANCIAL": 1
+  },
+  "gates": {
+    "all_positive_exact": true,
+    "all_structural_refusal_exact": true,
+    "all_unsupported_exact": true,
+    "financial_exact": true,
+    "max_promotions": 0,
+    "max_invalid_anchors": 0,
+    "max_anchor_mismatches": 0,
+    "max_context_mismatches": 0
+  },
+  "repetitions": 4,
+  "warm_repetitions": 3,
+  "p95_ms_max": 1500,
+  "baseline": "Frozen v2 may be measured on this SAME new challenge after freeze; baseline ignores context-specific fields and does not qualify contextual evidence.",
+  "independence": "Fresh author and reviewer read contracts only, no candidate/development/old challenges/reports. Refusal metadata corrected before any runtime, no text or semantic/context correction. Procedural separation, no statistical guarantee.",
+  "scope": "No active source/encoder/retrieval/model/SQL integration; no post-observation tuning."
+}

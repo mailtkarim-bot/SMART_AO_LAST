@@ -138,3 +138,40 @@ def test_service_preserves_repository_replay() -> None:
 def test_command_rejects_non_positive_expected_revision() -> None:
     with pytest.raises(ValueError, match="positive"):
         _command(expected_revision=0)
+
+
+def test_run_preserves_missing_capacity_inputs_and_distinguishes_known_empty_hash() -> None:
+    class InputPort:
+        def __init__(self, value: CaseCapacityPlanInput) -> None:
+            self.value = value
+
+        def load(self, *, tenant_id: UUID, case_id: UUID) -> CaseCapacityPlanInput:
+            assert self.value.tenant_id == tenant_id
+            assert self.value.case_id == case_id
+            return self.value
+
+    repository = FakeRepository()
+    port = InputPort(CaseCapacityPlanInput(tenant_id=TENANT_ID, case_id=CASE_ID, source_revision=4))
+    service = CapacityRunService(
+        planner=CaseCapacityPlanningService(input_port=port), repository=repository
+    )
+    command = _command()
+    first = service.execute(command)
+    service.execute(command)
+    missing = repository.records[0]
+
+    assert first.status is SolverStatus.UNKNOWN
+    assert missing.input_snapshot == {"demands": None, "supplies": None}
+    assert missing.result_snapshot == {"assignments": [], "unassigned_demand_ids": []}
+    assert repository.records[1].input_sha256 == missing.input_sha256
+    assert repository.records[1].command_id == command.command_id
+    assert repository.records[1].idempotency_key == command.idempotency_key
+
+    port.value = CaseCapacityPlanInput(
+        tenant_id=TENANT_ID, case_id=CASE_ID, source_revision=4, demands=(), supplies=()
+    )
+    service.execute(_command())
+    known_empty = repository.records[2]
+    assert known_empty.status is SolverStatus.OPTIMAL
+    assert known_empty.input_snapshot == {"demands": [], "supplies": []}
+    assert known_empty.input_sha256 != missing.input_sha256

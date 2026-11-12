@@ -1,0 +1,350 @@
+{
+  "synthetic": true,
+  "held_out": false,
+  "source": "Independent of historical challenge; expectations from development tests before outputs",
+  "cases": [
+    {
+      "id": "dev-positive-1",
+      "text": "Chaque candidat doit-il remettre un formulaire DC1 signé ?",
+      "expected": {
+        "covered": true,
+        "subject": "DC1",
+        "lot": null,
+        "actor": "Chaque candidat",
+        "object": "un formulaire DC1 signé",
+        "request": "doit-il remettre",
+        "action": "remettre",
+        "contexts": []
+      },
+      "query_sha256": "767f6f191b540a2f4153f71e20c27db0993539f5e1fde234a6c639b5ed752316"
+    },
+    {
+      "id": "dev-positive-2",
+      "text": "Le soumissionnaire doit-il joindre le DC2 renseigné au dossier ?",
+      "expected": {
+        "covered": true,
+        "subject": "DC2",
+        "lot": null,
+        "actor": "Le soumissionnaire",
+        "object": "le DC2 renseigné",
+        "request": "doit-il joindre",
+        "action": "joindre",
+        "contexts": []
+      },
+      "query_sha256": "9fbfff76072287dec672958b74f2f42ca98fe5ca02fee756cc45230f5a487a84"
+    },
+    {
+      "id": "dev-positive-3",
+      "text": "Pour préparer sa candidature, le candidat doit-il fournir le DC1 pour le lot 18 ?",
+      "expected": {
+        "covered": true,
+        "subject": "DC1",
+        "lot": 18,
+        "actor": "le candidat",
+        "object": "le DC1",
+        "request": "doit-il fournir",
+        "action": "fournir",
+        "contexts": [
+          {
+            "excerpt": "Pour préparer sa candidature, ",
+            "owner": "le candidat"
+          }
+        ]
+      },
+      "query_sha256": "9e75cc48e97828e979678142eb02b5c657072addceca0af17a2fdb0cbf2c8ac1"
+    },
+    {
+      "id": "dev-positive-4",
+      "text": "Pour constituer son dossier, chaque titulaire doit-il présenter un mémoire technique ?",
+      "expected": {
+        "covered": true,
+        "subject": "MEMOIRE_TECHNIQUE",
+        "lot": null,
+        "actor": "chaque titulaire",
+        "object": "un mémoire technique",
+        "request": "doit-il présenter",
+        "action": "présenter",
+        "contexts": [
+          {
+            "excerpt": "Pour constituer son dossier, ",
+            "owner": "chaque titulaire"
+          }
+        ]
+      },
+      "query_sha256": "03907f5790aa34274c15d9568be69ec725d3393e5cdcf5dc610095f32250f9f8"
+    },
+    {
+      "id": "dev-positive-5",
+      "text": "Pour le lot n° 21, l’employeur doit-il effectuer une visite médicale ?",
+      "expected": {
+        "covered": true,
+        "subject": "VISIT_MEDICAL",
+        "lot": 21,
+        "actor": "l’employeur",
+        "object": "une visite médicale",
+        "request": "doit-il effectuer",
+        "action": "effectuer",
+        "contexts": []
+      },
+      "query_sha256": "32531c231331a0bb3db586772c4a0e12f2d22a3f81c117217d401214ffc7c2a9"
+    },
+    {
+      "id": "dev-positive-6",
+      "text": "Les opérateurs doivent-ils réaliser la visite du site pour le lot 24 ?",
+      "expected": {
+        "covered": true,
+        "subject": "VISIT_SITE",
+        "lot": 24,
+        "actor": "Les opérateurs",
+        "object": "la visite du site",
+        "request": "doivent-ils réaliser",
+        "action": "réaliser",
+        "contexts": []
+      },
+      "query_sha256": "308f03e62bfc0e108c8594fe2a1ae0450e26d36561d0e64b1e6bbc098ad16f9c"
+    },
+    {
+      "id": "dev-positive-7",
+      "text": "Le candidat ne doit-il pas remettre le DC2 ?",
+      "expected": {
+        "covered": true,
+        "subject": "DC2",
+        "lot": null,
+        "actor": "Le candidat",
+        "object": "le DC2",
+        "request": "ne doit-il pas remettre",
+        "action": "remettre",
+        "contexts": []
+      },
+      "query_sha256": "3275b6652324648920b49e195c61d963c430e88c6a2274a582d298dc226f0785"
+    },
+    {
+      "id": "dev-positive-8",
+      "text": "Le titulaire est-il tenu de proposer une variante ?",
+      "expected": {
+        "covered": true,
+        "subject": "VARIANTS",
+        "lot": null,
+        "actor": "Le titulaire",
+        "object": "une variante",
+        "request": "est-il tenu de proposer",
+        "action": "proposer",
+        "contexts": []
+      },
+      "query_sha256": "aee6d3fca0a18cd60a0b2adbe5879b9cb70cc006bb751631aba3e1f60f7ff046"
+    },
+    {
+      "id": "dev-positive-9",
+      "text": "Pour rédiger notre offre, chaque candidat doit joindre le DC1 à sa candidature ?",
+      "expected": {
+        "covered": true,
+        "subject": "DC1",
+        "lot": null,
+        "actor": "chaque candidat",
+        "object": "le DC1",
+        "request": "doit joindre",
+        "action": "joindre",
+        "contexts": [
+          {
+            "excerpt": "Pour rédiger notre offre, ",
+            "owner": null
+          }
+        ]
+      },
+      "query_sha256": "54d7c9b3104538ad615157be618f8ca78a87083ed0dd46b0cabf6342b7406532"
+    },
+    {
+      "id": "dev-refusal-1",
+      "text": "Pour préparer sa candidature, le DC1 est-il requis ?",
+      "expected": {
+        "covered": false
+      },
+      "query_sha256": "d0bfe9fa3b5e78eb37ac00e6125112a913b43f4ffd938188badd2e430a271812"
+    },
+    {
+      "id": "dev-refusal-2",
+      "text": "Pour préparer sa candidature et son mémoire, le candidat doit-il fournir le DC1 ?",
+      "expected": {
+        "covered": false
+      },
+      "query_sha256": "6ab2bb48b24e64cb2ca349d70fce68af592c61ce8c7b2230645595c28125ee53"
+    },
+    {
+      "id": "dev-refusal-3",
+      "text": "Le candidat doit-il remettre le DC1 et le DC2 ?",
+      "expected": {
+        "covered": false
+      },
+      "query_sha256": "17b4174fb8a2b9c57609a1a94530dc22fced0b7d0a7ef5c41ddfd9da1b17cd41"
+    },
+    {
+      "id": "dev-refusal-4",
+      "text": "Le candidat doit-il remettre le DC1 et effectuer une visite ?",
+      "expected": {
+        "covered": false
+      },
+      "query_sha256": "b40be0b96dcee749a580ff58f033ad620e8a379ccdc88507d4434cea3575bb0d"
+    },
+    {
+      "id": "dev-refusal-5",
+      "text": "Le candidat doit-il remettre le DC1 si une variante est proposée ?",
+      "expected": {
+        "covered": false
+      },
+      "query_sha256": "aa0158c28215198a18469299ea19739f0c0cae0ddd173dd4f8a1817ef1a6e75b"
+    },
+    {
+      "id": "dev-refusal-6",
+      "text": "Si le titulaire change, le candidat doit-il remettre le DC1 ?",
+      "expected": {
+        "covered": false
+      },
+      "query_sha256": "22b43c04bef292edfd26dcdc086cd8cb2670478fdb015e6fd9f267ef505b55f1"
+    },
+    {
+      "id": "dev-refusal-7",
+      "text": "Le candidat doit-il remettre le DC1 sauf pour le lot 19 ?",
+      "expected": {
+        "covered": false
+      },
+      "query_sha256": "6d333fda60413e59d8c1e8676f955b3a1d2244d86a1fd5dfc49fb4343aabcd2e"
+    },
+    {
+      "id": "dev-refusal-8",
+      "text": "Le candidat doit-il remettre le certificat DC2 ?",
+      "expected": {
+        "covered": false
+      },
+      "query_sha256": "6d984f3f4c8fe721813a22eb350ec671bca2297aeefe1c06b4a5fa21a82a7a86"
+    },
+    {
+      "id": "dev-refusal-9",
+      "text": "Le candidat doit-il remettre un dossier contenant le DC1 ?",
+      "expected": {
+        "covered": false
+      },
+      "query_sha256": "4925506d1353e1773a97e9327993c6851f54546f4255bb37683e1d6e287b8c3a"
+    },
+    {
+      "id": "dev-refusal-10",
+      "text": "Le candidat doit-il effectuer le DC1 ?",
+      "expected": {
+        "covered": false
+      },
+      "query_sha256": "3e333f0c73a620b2ef3c40e76c4e929a4fe43e0378a41a03a956bafcd9ae41b3"
+    },
+    {
+      "id": "dev-refusal-11",
+      "text": "Le candidat doit-il joindre la visite médicale ?",
+      "expected": {
+        "covered": false
+      },
+      "query_sha256": "ba96476db0cb8930f5713ba8c11204349268a4e5081ca1c7b4c33c7bef43687b"
+    },
+    {
+      "id": "dev-refusal-12",
+      "text": "Le candidat doit-il effectuer une visite virtuelle ?",
+      "expected": {
+        "covered": false
+      },
+      "query_sha256": "a4af83532aafe5689f7b75841a0061a1dd97fb99e24b4f068b564dcb7ecbd96f"
+    },
+    {
+      "id": "dev-refusal-13",
+      "text": "Le candidat doit-il remettre le DC1 périmé ?",
+      "expected": {
+        "covered": false
+      },
+      "query_sha256": "5a4fbd6e8e60f811de506be619d6d889931c87b4104743c5a70e2ca9a4444517"
+    },
+    {
+      "id": "dev-refusal-14",
+      "text": "Le candidat doit-il ne pas remettre le DC1 ?",
+      "expected": {
+        "covered": false
+      },
+      "query_sha256": "655e8f6ebd0088489684a4995288340635cac998559ec1ae3f898ec78ff9958e"
+    },
+    {
+      "id": "dev-refusal-15",
+      "text": "Les candidats doit-il remettre le DC1 ?",
+      "expected": {
+        "covered": false
+      },
+      "query_sha256": "6775e548cbe5071ac8ff824915aa4c018c86e467f65b5bda36ad7a160bc72def"
+    },
+    {
+      "id": "dev-refusal-16",
+      "text": "Le candidat doit-il remettre le DC1 pour le lot A ?",
+      "expected": {
+        "covered": false
+      },
+      "query_sha256": "d83e8f6e89ab44739d8053060a77024f044cfdf85fdbd2334e9c81bac359ada9"
+    },
+    {
+      "id": "dev-refusal-17",
+      "text": "Le candidat doit-il remettre le DC1 pour les lots 1 et 2 ?",
+      "expected": {
+        "covered": false
+      },
+      "query_sha256": "6fced719484a89a022a6bb0e027ba9d1d0706e9fc0553dacb481cffdc4288d8a"
+    },
+    {
+      "id": "dev-refusal-18",
+      "text": "Le candidat doit-il remettre le DC1 pour le lot -2 ?",
+      "expected": {
+        "covered": false
+      },
+      "query_sha256": "07010dd3b57a221284fba5846620ccff29ceb53c07c78bd6702d5826268156f2"
+    },
+    {
+      "id": "dev-refusal-19",
+      "text": "Le candidat doit-il remettre le DC1 pour le lot 2 bis ?",
+      "expected": {
+        "covered": false
+      },
+      "query_sha256": "10475293d78df406eb205fddd49349ef23c85127db3e0c5f815160d8faae61ec"
+    },
+    {
+      "id": "dev-refusal-20",
+      "text": "Le candidat doit-il remettre le DC1 pour le lot 2.5 ?",
+      "expected": {
+        "covered": false
+      },
+      "query_sha256": "34658a76d9ade8e78c4ebe0490ad21ae6dc301a2f712567d3595778684f8521a"
+    },
+    {
+      "id": "dev-refusal-21",
+      "text": "Le candidat doit-il remettre son document ?",
+      "expected": {
+        "covered": false
+      },
+      "query_sha256": "015290476ed56a58761fe6f00822c2bd0ac0a1a2e53e658a8ab57cb967fb6258"
+    },
+    {
+      "id": "dev-refusal-22",
+      "text": "Pour préparer son offre du lot 18, le candidat doit-il remettre le DC1 ?",
+      "expected": {
+        "covered": false
+      },
+      "query_sha256": "0a9508c03a44323722d41a4abc735b09468a20c532c310945603cadfadd6dee8"
+    },
+    {
+      "id": "dev-refusal-23",
+      "text": "Le candidat doit-il remettre le DC1 pour préparer sa réponse sans engagement ?",
+      "expected": {
+        "covered": false
+      },
+      "query_sha256": "653f6f63bcc430b71639cce1f83b0cf10593b54cc937c962171724e89b5eb90e"
+    },
+    {
+      "id": "dev-financial",
+      "text": "Le candidat doit-il joindre la DPGF ?",
+      "expected": {
+        "covered": false,
+        "financial": true
+      },
+      "query_sha256": "357833910658d19bbf447a0b2e2a2ea3e2bf783bddcf37e9f4ef0986f62e6bd1"
+    }
+  ]
+}

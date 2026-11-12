@@ -850,11 +850,19 @@ def test_response_plan_is_versioned_scope_checked_and_preserves_unknown(
     assert origin == {
         **source_ref,
         "transmission_id": str(transmission_id),
-        "technical_document_id": str(generated_document_id),
-        "technical_document_version": 1,
+        "technical_document_id": delivery["snapshot_manifest"]["documents"][0]["document_id"],
+        "technical_document_version": delivery["snapshot_manifest"]["documents"][0]["version"],
         "readiness": delivery["snapshot_manifest"]["readiness"],
         "response_drafts": delivery["snapshot_manifest"]["response_drafts"],
     }
+    with session_factory() as session:
+        published = session.get(
+            GeneratedTechnicalDocumentRecord, UUID(origin["technical_document_id"])
+        )
+        assert published.version == 2
+        assert published.content_sha256 == origin["response_drafts"][0]["content_sha256"]
+        assert published.content_sha256 != generated_document_sha256
+        published_document_storage_key = published.storage_key
     assert "storage_key" not in candidate_manifest.text
     assert candidate_manifest.headers["Cache-Control"] == "no-store"
     assert (
@@ -1103,16 +1111,21 @@ def test_response_plan_is_versioned_scope_checked_and_preserves_unknown(
     assert refused_draft_export.status_code == 422, refused_draft_export.text
     assert export_side_effect_counts() == refused_export_side_effects
     reviewed_draft_bytes_path.write_bytes(original_draft)
-    generated_document_path = quarantine_root / (
-        f"generated-documents/{actor.tenant_id}/{package_id}/{generated_document_id}.md"
+    generated_document_path = quarantine_root / published_document_storage_key
+    original_published_document = generated_document_path.read_bytes()
+    assert (
+        hashlib.sha256(original_published_document).hexdigest()
+        == origin["response_drafts"][0]["content_sha256"]
     )
     generated_document_path.write_bytes(b"altered generated document after P5")
     refused_document_export = receipt_client.get(
         f"/api/v1/patron/submission-packages/{candidate_id}/export", headers=receipt_headers
     )
-    assert refused_document_export.status_code == 422, refused_document_export.text
+    assert refused_document_export.status_code == 422, (
+        f"Unexpected export status {refused_document_export.status_code}"
+    )
     assert export_side_effect_counts() == refused_export_side_effects
-    generated_document_path.write_bytes(generated_document_bytes)
+    generated_document_path.write_bytes(original_published_document)
     source_path.write_bytes(b"altered after exact P5 authorization")
     refused_export = receipt_client.get(
         f"/api/v1/patron/submission-packages/{candidate_id}/export", headers=receipt_headers
@@ -1236,7 +1249,11 @@ def test_response_plan_is_versioned_scope_checked_and_preserves_unknown(
         assert sorted(bundle.namelist()) == ["manifest.json", "technical-response.md"]
         exported_manifest_bytes = bundle.read("manifest.json")
         assert json.loads(exported_manifest_bytes) == candidate_read["manifest"]
-        assert bundle.read("technical-response.md") == generated_document_bytes
+        assert bundle.read("technical-response.md") == original_published_document
+        assert (
+            hashlib.sha256(bundle.read("technical-response.md")).hexdigest()
+            == origin["response_drafts"][0]["content_sha256"]
+        )
     assert b"storage_key" not in exported_manifest_bytes
     assert b"sales_total_minor" not in exported_manifest_bytes
     with session_factory() as session:

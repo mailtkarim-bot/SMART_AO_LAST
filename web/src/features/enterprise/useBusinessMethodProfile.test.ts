@@ -17,6 +17,7 @@ const content: BusinessMethodProfileContent = {
 function apiWith(publishBusinessMethodProfile: ReturnType<typeof vi.fn>): ApiClient {
   return {
     listBusinessMethodProfileVersions: vi.fn().mockResolvedValue({ company_id: "company-1", versions: [] }),
+    listBusinessMethodProfileAdoptions: vi.fn().mockResolvedValue([]),
     getBusinessMethodProfileAdoption: vi.fn().mockResolvedValue(null),
     publishBusinessMethodProfile,
     adoptBusinessMethodProfile: vi.fn(),
@@ -52,7 +53,8 @@ describe("useBusinessMethodProfile", () => {
   it("masque le profil adopté de l’ancienne Affaire pendant le changement de périmètre", async () => {
     const api = {
       listBusinessMethodProfileVersions: vi.fn().mockResolvedValue({ company_id: "company-1", versions: [] }),
-      getBusinessMethodProfileAdoption: vi.fn(async (caseId: string) => ({
+      listBusinessMethodProfileAdoptions: vi.fn().mockResolvedValue([]),
+    getBusinessMethodProfileAdoption: vi.fn(async (caseId: string) => ({
         adoption_id: `adoption-${caseId}`,
         case_id: caseId,
         adoption_revision: 1,
@@ -73,4 +75,47 @@ describe("useBusinessMethodProfile", () => {
     expect(result.current.adoption).toBeNull();
     await waitFor(() => expect(result.current.adoption?.case_id).toBe("case-2"));
   });
+});
+
+
+it("refuse un nouvel intent de publication tant que le précédent reste UNKNOWN", async () => {
+  const publish = vi.fn().mockRejectedValue(new Error("Résultat inconnu"));
+  const api = apiWith(publish);
+  const setMessage = vi.fn();
+  const { result } = renderHook(() => useBusinessMethodProfile(api, setMessage, "company-1", "case-1"));
+  await waitFor(() => expect(result.current.status).toBe("AVAILABLE"));
+  await act(async () => { await result.current.publish(content); });
+  await act(async () => { await result.current.publish({ ...content, terminology: { lot: "Autre" } }); });
+  expect(publish).toHaveBeenCalledTimes(1);
+});
+
+
+it("bloque double clic et GET de réconciliation pendant l’acte non résolu", async () => {
+  let resolve!: (receipt: unknown) => void;
+  const publish = vi.fn(() => new Promise((done) => { resolve = done; }));
+  const api = apiWith(publish);
+  const setMessage = vi.fn();
+  const { result } = renderHook(() => useBusinessMethodProfile(api, setMessage, "company-1", "case-1"));
+  await waitFor(() => expect(result.current.status).toBe("AVAILABLE"));
+  let first!: Promise<boolean>;
+  act(() => { first = result.current.publish(content); void result.current.publish(content); });
+  act(() => result.current.refresh());
+  expect(publish).toHaveBeenCalledTimes(1);
+  expect(api.listBusinessMethodProfileVersions).toHaveBeenCalledTimes(1);
+  await act(async () => { resolve({ aggregate_refs: [{ aggregate_type: "BusinessMethodProfile", aggregate_id: "profile-1", aggregate_revision: 1, content_hash: "a".repeat(64) }] }); await first; });
+});
+
+
+it("reprend l’intent UNKNOWN original après un aller-retour de périmètre", async () => {
+  const publish = vi.fn().mockRejectedValueOnce(new Error("UNKNOWN")).mockResolvedValue({aggregate_refs:[{aggregate_type:"BusinessMethodProfile",aggregate_id:"profile-1",aggregate_revision:1,content_hash:"a".repeat(64)}]});
+  const api = apiWith(publish);const setMessage = vi.fn();
+  const { result, rerender } = renderHook(({ company }) => useBusinessMethodProfile(api,setMessage,company,"case-1"),{initialProps:{company:"company-1"}});
+  await waitFor(()=>expect(result.current.status).toBe("AVAILABLE"));
+  await act(async()=>{await result.current.publish(content);});
+  const first=publish.mock.calls[0][1];
+  rerender({company:"company-2"});await waitFor(()=>expect(result.current.status).toBe("AVAILABLE"));
+  rerender({company:"company-1"});
+  await act(async()=>{await result.current.publish(content);});
+  expect(publish).toHaveBeenCalledTimes(2);
+  expect(publish.mock.calls[1][1]).toEqual(first);
 });

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 
 import type {
@@ -69,6 +70,7 @@ export function EnterpriseLibraryPanel({
   onUploadDocument,
   onVerifyDocument,
 }: EnterpriseLibraryPanelProps) {
+  const [validityReadAt] = useState(() => Date.now());
   return (
     <section className="section-block">
       <div className="section-heading">
@@ -236,6 +238,7 @@ export function EnterpriseLibraryPanel({
                 {enterpriseCompany.documents.length > 1 ? "s" : ""}
               </span>
             </div>
+            <p>Échéances comparées à l’ouverture de cette vue. La présence d’une pièce ou une vérification interne ne vaut pas validité officielle. L’adoption du profil de méthode ne transfère pas ces pièces dans l’Affaire.</p>
             {enterpriseCompany.documents.length === 0 ? (
               <p className="panel-empty">
                 Aucune pièce enregistrée. Le parcours d’upload privé reste piloté par les routes
@@ -250,6 +253,13 @@ export function EnterpriseLibraryPanel({
                       <small>
                         Émis le {formatDate(document.issued_at)}
                         {document.expires_at ? ` · Expire le ${formatDate(document.expires_at)}` : ""}
+                        {" · "}{!document.expires_at || !Number.isFinite(Date.parse(document.expires_at))
+                          ? "Validité déclarée : UNKNOWN"
+                          : Date.parse(document.expires_at) <= validityReadAt
+                            ? "Échéance déclarée dépassée : EXPIRED"
+                            : "Échéance déclarée non dépassée ; validité officielle UNKNOWN"}
+                      </small>
+                      <small>Source : {document.document_id} · SHA-256 : {document.sha256 ?? "UNKNOWN"} · Revue humaine r{document.verification_revision}
                       </small>
                     </div>
                     <span className={`state-badge state-${document.verification_status.toLowerCase()}`}>

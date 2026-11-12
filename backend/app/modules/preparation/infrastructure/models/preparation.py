@@ -197,6 +197,11 @@ class GeneratedTechnicalDocumentRecord(TenantScopedRecord, Base):
         sa.UniqueConstraint("tenant_id", "id", name="uq_generated_docs__tenant_id"),
         sa.UniqueConstraint("tenant_id", "package_id", "version", name="uq_generated_doc_version"),
         sa.CheckConstraint("version > 0", name="version_positive"),
+        sa.CheckConstraint("content_format IN ('MARKDOWN', 'DOCX')", name="content_format"),
+        sa.CheckConstraint(
+            "content_format <> 'DOCX' OR document_kind = 'TECHNICAL_RESPONSE'",
+            name="docx_technical_only",
+        ),
         sa.CheckConstraint(
             "document_kind IN ('TECHNICAL_RESPONSE', 'DC1', 'DC2', 'DC4')",
             name="document_kind",
@@ -212,6 +217,9 @@ class GeneratedTechnicalDocumentRecord(TenantScopedRecord, Base):
     document_kind: Mapped[str] = mapped_column(sa.String(32), nullable=False)
     state: Mapped[str] = mapped_column(sa.String(16), nullable=False)
     content_sha256: Mapped[str] = mapped_column(sa.CHAR(64), nullable=False)
+    content_format: Mapped[str] = mapped_column(
+        sa.String(16), nullable=False, server_default="MARKDOWN"
+    )
     storage_key: Mapped[str] = mapped_column(sa.String(700), nullable=False)
     actor_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     membership_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
@@ -419,6 +427,13 @@ class TechnicalResponseDraftRecord(TenantScopedRecord, Base):
         sa.UniqueConstraint("tenant_id", "id", name="uq_technical_draft__tenant_id"),
         sa.UniqueConstraint("tenant_id", "draft_id", "version", name="uq_technical_draft__version"),
         sa.CheckConstraint("version > 0", name="version_positive"),
+        sa.CheckConstraint("content_format IN ('MARKDOWN', 'DOCX')", name="content_format"),
+        sa.CheckConstraint(
+            "(content_format = 'MARKDOWN' AND content_provenance_json IS NULL) OR "
+            "(content_format = 'DOCX' AND content_provenance_json IS NOT NULL "
+            "AND jsonb_typeof(content_provenance_json) = 'object')",
+            name="content_provenance",
+        ),
         sa.CheckConstraint(
             "state IN ("
             "'DRAFT', 'SUBMITTED_FOR_REVIEW', 'RETURNED_WITH_CORRECTIONS', "
@@ -450,6 +465,10 @@ class TechnicalResponseDraftRecord(TenantScopedRecord, Base):
     source_refs_json: Mapped[list[str]] = mapped_column(JSONB, nullable=False)
     responsible_role: Mapped[str] = mapped_column(sa.String(32), nullable=False)
     content_sha256: Mapped[str] = mapped_column(sa.CHAR(64), nullable=False)
+    content_format: Mapped[str] = mapped_column(
+        sa.String(16), nullable=False, server_default="MARKDOWN"
+    )
+    content_provenance_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     storage_key: Mapped[str] = mapped_column(sa.String(700), nullable=False)
     actor_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     membership_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)

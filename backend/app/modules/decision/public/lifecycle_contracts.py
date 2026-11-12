@@ -17,6 +17,8 @@ class DecisionContextReferenceRequest(BaseModel):
         "PRICING_SCENARIO",
         "BUSINESS_METHOD_PROFILE",
         "CONTRACT_BASELINE_IMPACT",
+        "ANALYSIS_ASSESSMENT",
+        "CAPACITY_RUN",
     ]
     aggregate_id: UUID
     aggregate_revision: int = Field(ge=0)
@@ -30,6 +32,14 @@ class DecisionContextReferenceRequest(BaseModel):
 
     @model_validator(mode="after")
     def require_profile_hash(self) -> DecisionContextReferenceRequest:
+        if self.aggregate_type == "CAPACITY_RUN" and (
+            self.aggregate_revision < 1 or self.content_hash is None
+        ):
+            raise ValueError("capacity references require revision and input hash")
+        if self.aggregate_type == "ANALYSIS_ASSESSMENT" and (
+            self.aggregate_revision < 1 or self.content_hash is None
+        ):
+            raise ValueError("analysis assessment references require revision and source hash")
         if self.aggregate_type == "BUSINESS_METHOD_PROFILE" and (
             self.aggregate_revision < 1 or self.content_hash is None
         ):

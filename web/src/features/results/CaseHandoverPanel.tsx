@@ -1,209 +1,283 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { ApiClient } from "../../infrastructure/api";
-import type {
-  CaseHandoverOfferOption,
-  CaseHandoverSnapshotItem,
-  RecordCaseHandoverInput,
-} from "../../shared/types";
-
-type ReadState = "LOADING" | "READY" | "UNAVAILABLE";
-type Failure = "UNCONFIRMED" | "REJECTED";
-const commandIds = () => ({
+import type { CaseHandoverSnapshotItem, CaseHandoverOfferOption, HandoverContractOptions, HandoverOperationalReview } from "../../shared/types";
+import { HandoverIntentStore, type HandoverIntent } from "./HandoverIntentStore";
+import { HandoverReviewForm } from "./HandoverReviewForm";
+import { HandoverSnapshotRead } from "./HandoverSnapshotRead";
+const ids = () => ({
   command_id: crypto.randomUUID(),
   idempotency_key: crypto.randomUUID(),
-  correlation_id: crypto.randomUUID(),
+  correlation_id: crypto.randomUUID()
 });
-
-function offerLabel(option: CaseHandoverOfferOption) {
-  return "Lot " + option.lot_reference + " · paquet P5 v" + option.package_version
-    + " · " + option.manifest_sha256.slice(0, 12);
+const apiKeys = new WeakMap<object, string>();
+let apiSequence = 0;
+function apiKey(api: ApiClient) {
+  let key = apiKeys.get(api);
+  if (!key) {
+    key = `connection-${++apiSequence}`;
+    apiKeys.set(api, key);
+  }
+  return key;
 }
-
-export function CaseHandoverPanel({
-  api,
-  caseId,
-  canManage,
-}: {
+type Props = {
   api: ApiClient;
   caseId: string;
   canManage: boolean;
+  canReceive?: boolean;
+  ownerKey?: string;
+  pendingStore?: HandoverIntentStore;
+  scopeKey?: string;
+  sourceReadBlocked?: boolean;
+};
+export function CaseHandoverPanel(props: Props) {
+  const [localStore] = useState(() => new HandoverIntentStore());
+  const owner = props.ownerKey ?? JSON.stringify([apiKey(props.api), props.canManage, props.canReceive ?? false]);
+  const scope = JSON.stringify([owner, props.caseId]);
+  if (props.sourceReadBlocked) return <section className="section-block decision-section handover-panel" aria-label="Passation P7 au Conducteur"><h2>Passation au Conducteur</h2><p role="status">Sources en cours de reprise : passation suspendue jusqu’à la relecture du DCE. Aucun accord ni reçu reconduit.</p></section>;
+  return <HandoverScope key={JSON.stringify([scope, props.scopeKey, props.canManage, props.canReceive])} {...props} scope={scope} store={props.pendingStore ?? localStore} />;
+}
+function HandoverScope({
+  api,
+  caseId,
+  canManage,
+  canReceive = false,
+  scope,
+  store
+}: Props & {
+  scope: string;
+  store: HandoverIntentStore;
 }) {
   const [items, setItems] = useState<CaseHandoverSnapshotItem[]>([]);
   const [options, setOptions] = useState<CaseHandoverOfferOption[]>([]);
-  const [readState, setReadState] = useState<ReadState>("LOADING");
+  const [contracts, setContracts] = useState<HandoverContractOptions | null>(null);
+  const [selected, setSelected] = useState('');
+  const [readState, setReadState] = useState<'LOADING' | 'READY' | 'UNAVAILABLE'>('LOADING');
   const [optionsLoaded, setOptionsLoaded] = useState(false);
-  const [selected, setSelected] = useState("");
-  const [pending, setPending] = useState<{ caseId: string; selected: string; input: RecordCaseHandoverInput } | null>(null);
-  const [failure, setFailure] = useState<{ key: string; kind: Failure } | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [downloadingSnapshot, setDownloadingSnapshot] = useState<string | null>(null);
-  const [message, setMessage] = useState("");
-  const activeCaseId = useRef(caseId);
+  const [message, setMessage] = useState('');
+  const [history, setHistory] = useState<CaseHandoverSnapshotItem[]>([]);
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [historyStarted, setHistoryStarted] = useState(false);
+  const [historyBusy, setHistoryBusy] = useState(false);
+  const [downloading, setDownloading] = useState<string | null>(null);
+  const [editorEpoch, setEditorEpoch] = useState(0);
+  const mounted = useRef(true);
+  const reads = useRef(0);
+  const posting = useRef(false);
   useLayoutEffect(() => {
-    activeCaseId.current = caseId;
+    mounted.current = true;
     return () => {
-      activeCaseId.current = "";
+      mounted.current = false;
     };
-  }, [caseId]);
-
-  async function refresh(targetCaseId = caseId) {
-    if (!targetCaseId) {
-      setItems([]);
-      setOptions([]);
-      setReadState("UNAVAILABLE");
-      setOptionsLoaded(true);
-      return;
-    }
-    setReadState((current) => (current === "READY" ? current : "LOADING"));
+  }, []);
+  const pending = useSyncExternalStore(store.subscribe, store.getSnapshot).get(scope);
+  const locked = !!pending;
+  const uncertain = pending?.phase === 'UNKNOWN' || pending?.phase === 'SENDING';
+  const choice = options.find(o => `${o.outcome_id}:${o.submission_package_id}` === selected);
+  async function refresh() {
+    const sequence = ++reads.current;
+    const current = () => mounted.current && sequence === reads.current;
     try {
-      const snapshots = await api.listCaseHandoverSnapshots(targetCaseId);
-      if (activeCaseId.current !== targetCaseId) return;
-      if (snapshots.case_id !== targetCaseId) throw new Error("Case mismatch");
-      setItems(snapshots.items);
-      setReadState("READY");
+      const response = await api.listCaseHandoverSnapshots(caseId);
+      if (!current()) return false;
+      if (response.case_id !== caseId) throw Error('HANDOVER_CASE_MISMATCH');
+      setItems(response.items);
+      setReadState('READY');
+      const saved = store.getSnapshot().get(scope);
+      if (saved && (saved.phase === 'READ_REQUIRED' || saved.phase === 'CONFLICT')) {
+        const intent = saved.intent;
+        let candidates = response.items;
+        const match = (row: CaseHandoverSnapshotItem) => intent.kind === 'PUBLISH' ? row.snapshot_id === intent.input.snapshot_id && row.outcome_id === intent.input.outcome_id && row.submission_package_id === intent.input.submission_package_id && (!intent.input.operational_review || row.manifest_sha256 === intent.input.operational_review.expected_offer_manifest_sha256) : row.snapshot_id === intent.snapshotId && !!row.receipts?.some(receipt => receipt.receipt_id === intent.input.receipt_id && receipt.view_sha256 === intent.input.expected_view_sha256);
+        if (!candidates.some(match)) {
+          try {
+            const exact = await api.getCaseHandoverSnapshot(caseId, intent.kind === 'PUBLISH' ? intent.input.snapshot_id : intent.snapshotId);
+            if (!current()) return false;
+            candidates = [...candidates, exact];
+          } catch {/* A missing read never confirms the act. */}
+        }
+        const found = candidates.some(match);
+        if (found) {
+          store.remove(scope);
+          setMessage('Acte exact relu depuis le serveur.');
+          setEditorEpoch(v => v + 1);
+        } else if (saved.phase === 'CONFLICT') {
+          store.remove(scope);
+          setMessage('Conflit confirmé : relisez les sources avant une nouvelle intention.');
+          setEditorEpoch(v => v + 1);
+        } else setMessage('Reçu obtenu, projection exacte encore indisponible. Relisez sans créer de nouvel acte.');
+      }
     } catch {
-      if (activeCaseId.current !== targetCaseId) return;
-      setReadState("UNAVAILABLE");
+      if (current()) {
+        setReadState('UNAVAILABLE');
+        setItems([]);
+      }
+      return false;
     }
     if (canManage) {
       try {
-        const offerOptions = await api.listCaseHandoverOfferOptions(targetCaseId);
-        if (activeCaseId.current !== targetCaseId) return;
-        if (offerOptions.case_id !== targetCaseId) throw new Error("Case mismatch");
-        setOptions(offerOptions.items);
+        const response = await api.listCaseHandoverOfferOptions(caseId);
+        if (!current()) return false;
+        if (response.case_id !== caseId) throw Error('HANDOVER_CASE_MISMATCH');
+        setOptions(response.items);
+        setOptionsLoaded(true);
       } catch {
-        if (activeCaseId.current !== targetCaseId) return;
-        setOptions([]);
+        if (current()) {
+          setOptions([]);
+          setOptionsLoaded(false);
+        }
       }
-      setOptionsLoaded(true);
+      try {
+        const response = await api.listCaseHandoverContracts(caseId);
+        if (!current()) return false;
+        if (response.case_id !== caseId) throw Error('HANDOVER_CASE_MISMATCH');
+        setContracts(response);
+      } catch {
+        if (current()) setContracts(null);
+      }
     }
+    return true;
   }
-
   useEffect(() => {
-    setItems([]);
-    setOptions([]);
-    setSelected("");
-    setPending(null);
-    setFailure(null);
-    setSubmitting(false);
-    setDownloadingSnapshot(null);
-    setMessage("");
-    setOptionsLoaded(!canManage);
-    void refresh(caseId);
-    // Refresh is intentionally scoped to the confirmed Case and actor surface.
+    if (!uncertain) void refresh();else setReadState('LOADING'); /* scope owns and cancels these reads */
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [caseId, canManage]);
-
-  const selectedOption = options.find(
-    (option) => option.outcome_id + ":" + option.submission_package_id === selected,
-  );
-  const activeKey = selectedOption
-    ? selectedOption.outcome_id + ":" + selectedOption.submission_package_id
-    : "";
-
-  async function transmit() {
-    if (!canManage || !selectedOption || submitting) return;
-    const submittedCaseId = caseId;
-    const input = pending?.caseId === caseId && pending.selected === selected
-      ? pending.input
-      : {
-          ...commandIds(),
-          snapshot_id: crypto.randomUUID(),
-          outcome_id: selectedOption.outcome_id,
-          submission_package_id: selectedOption.submission_package_id,
-        };
-    if (!pending || pending.caseId !== caseId || pending.selected !== selected) {
-      setPending({ caseId, selected, input });
-    }
-    setSubmitting(true);
-    setFailure(null);
-    setMessage("");
+  }, []);
+  async function execute(intent: HandoverIntent) {
+    if (posting.current) return;
+    const previous = store.getSnapshot().get(scope);
+    if (previous && JSON.stringify(previous.intent) !== JSON.stringify(intent)) return;
+    posting.current = true;
+    store.put(scope, {
+      intent,
+      phase: 'SENDING'
+    });
+    setMessage('');
     try {
-      const result = await api.recordCaseHandover(submittedCaseId, input);
-      if (activeCaseId.current !== submittedCaseId) return;
-      await refresh(submittedCaseId);
-      setPending(null);
-      setMessage(result.replayed
-        ? "Rejeu confirmé : la même passation est conservée."
-        : "Passation P7 enregistrée et disponible au Conducteur affecté.");
+      const receipt = intent.kind === 'PUBLISH' ? await api.recordCaseHandover(intent.caseId, intent.input) : await api.acknowledgeCaseHandover(intent.caseId, intent.snapshotId, intent.input);
+      const expected = intent.kind === 'PUBLISH' ? 'CASE_HANDOVER_SNAPSHOT_RECORDED' : 'CASE_HANDOVER_RECEIPT_RECORDED';
+      if (receipt.status !== 'SUCCEEDED' || receipt.result_code !== expected
+        || receipt.command_id !== intent.input.command_id
+        || receipt.idempotency_key !== intent.input.idempotency_key) throw Error('DISCORDANT_HANDOVER_RECEIPT');
+      store.put(scope, {
+        intent,
+        phase: 'READ_REQUIRED'
+      });
+      if (mounted.current) await refresh();
     } catch (error) {
-      if (activeCaseId.current !== submittedCaseId) return;
-      const status = (error as { status?: number })?.status;
-      if (status !== undefined && status >= 400 && status < 500) {
-        setPending(null);
-        setFailure({ key: activeKey, kind: "REJECTED" });
-      } else {
-        setFailure({ key: activeKey, kind: "UNCONFIRMED" });
+      const failure = error as { status?: number; detail?: string };
+      const status = failure?.status;
+      const terminalConflict = status === 409 && [
+        'VERSION_CONFLICT', 'HANDOVER_OUTCOME_STALE', 'HANDOVER_CASE_CONTEXT_CONFLICT',
+        'HANDOVER_OFFER_VERSION_CONFLICT', 'HANDOVER_CONTRACT_VERSION_CONFLICT',
+        'HANDOVER_CONTRACT_SUPERSEDED', 'HANDOVER_VIEW_CONFLICT'
+      ].includes(failure.detail ?? '');
+      const phase = terminalConflict ? 'CONFLICT' : status === 409 ? 'UNKNOWN' : status !== undefined && status >= 400 && status < 500 && status !== 401 && status !== 403 && previous?.phase !== 'UNKNOWN' ? 'REJECTED' : 'UNKNOWN';
+      store.put(scope, {
+        intent,
+        phase
+      });
+      if (mounted.current) {
+        setMessage(phase === 'REJECTED' ? 'Refus confirmé : corrigez la revue avant une nouvelle intention.' : phase === 'CONFLICT' ? 'Conflit confirmé : relecture nécessaire.' : 'Résultat non confirmé. Réessayez uniquement le même acte, avec les mêmes identifiants.');
+        if (phase === 'CONFLICT') await refresh();
       }
     } finally {
-      if (activeCaseId.current === submittedCaseId) setSubmitting(false);
+      posting.current = false;
     }
   }
-
-  async function downloadOffer(snapshotId: string) {
-    if (downloadingSnapshot) return;
-    setDownloadingSnapshot(snapshotId);
+  function publish(review: HandoverOperationalReview) {
+    if (!canManage || !choice || locked) return;
+    void execute({
+      kind: 'PUBLISH',
+      caseId,
+      selected,
+      input: {
+        ...ids(),
+        snapshot_id: crypto.randomUUID(),
+        outcome_id: choice.outcome_id,
+        submission_package_id: choice.submission_package_id,
+        ...(review ? {
+          operational_review: review
+        } : {})
+      }
+    });
+  }
+  function receive(row: CaseHandoverSnapshotItem, kind: 'RECEIVED' | 'RECEIVED_WITH_GAPS', note: string) {
+    if (!canReceive || !row.view_sha256 || locked) return;
+    void execute({
+      kind: 'RECEIVE',
+      caseId,
+      snapshotId: row.snapshot_id,
+      input: {
+        ...ids(),
+        receipt_id: crypto.randomUUID(),
+        expected_snapshot_revision: row.revision,
+        expected_view_sha256: row.view_sha256,
+        receipt_kind: kind,
+        note,
+        human_confirmed: true
+      }
+    });
+  }
+  async function download(row: CaseHandoverSnapshotItem) {
+    if (downloading) return;
+    setDownloading(row.snapshot_id);
     try {
-      const blob = await api.downloadCaseHandoverOffer(caseId, snapshotId);
-      if (activeCaseId.current !== caseId) return;
+      const blob = await api.downloadCaseHandoverOffer(caseId, row.snapshot_id);
+      if (!mounted.current) return;
       const url = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = "offre-technique.md";
-      anchor.click();
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = blob.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ? 'offre-technique.docx' : 'offre-technique.md';
+      a.click();
       URL.revokeObjectURL(url);
     } catch {
-      if (activeCaseId.current === caseId) {
-        setMessage("Téléchargement indisponible · vérifiez les droits Conducteur et l’intégrité du P5.");
-      }
+      if (mounted.current) setMessage('Téléchargement indisponible · vérifiez les droits Conducteur et l’intégrité du P5.');
     } finally {
-      if (activeCaseId.current === caseId) setDownloadingSnapshot(null);
+      if (mounted.current) setDownloading(null);
     }
   }
+  async function readHistory() {
+    if (historyBusy) return;
+    setHistoryBusy(true);
+    try {
+      const result = await api.listCaseHandoverHistory(caseId, cursor ?? undefined);
+      if (!mounted.current) return;
+      if (result.case_id !== caseId) throw Error('HANDOVER_CASE_MISMATCH');
+      setHistory(previous => [...previous, ...result.items.filter(row => !previous.some(p => p.snapshot_id === row.snapshot_id))]);
+      setCursor(result.next_cursor ?? null);
+      setHistoryStarted(true);
+    } catch {
+      if (mounted.current) setMessage('Historique indisponible · UNKNOWN.');
+    } finally {
+      if (mounted.current) setHistoryBusy(false);
+    }
+  }
+  return <section className="section-block decision-section handover-panel" aria-label="Passation P7 au Conducteur">
+ <div className="section-heading"><h2>Passation au Conducteur</h2></div><p>P7 conserve l’offre attribuée, ses références et les conditions ouvertes. Cette passation ne crée pas un ordre de service.</p><p>Les données financières privées et le contenu financier du paquet P5 ne sont pas inclus. Lecture réservée au Patron et au Responsable affecté.</p>
+ {message && <p role="status">{message}</p>}
+ {pending && <div role="status"><strong>{pending.phase === 'SENDING' ? 'Acte en cours…' : pending.phase === 'UNKNOWN' ? 'UNKNOWN · intention figée' : pending.phase === 'REJECTED' ? 'Refus confirmé' : 'Relecture de l’acte nécessaire'}</strong>
+ {pending.phase === 'UNKNOWN' && <button className="secondary-button" type="button" onClick={() => void execute(pending.intent)}>Réessayer la même passation</button>}
+ {(pending.phase === 'READ_REQUIRED' || pending.phase === 'CONFLICT') && <button className="secondary-button" type="button" onClick={() => void refresh()}>Relire l’acte exact</button>}
+ {pending.phase === 'REJECTED' && <button className="secondary-button" type="button" onClick={() => {
+        store.remove(scope);
+        setEditorEpoch(v => v + 1);
+        setMessage('');
+      }}>Reprendre la revue</button>}
+ </div>}
+ {canManage && <fieldset disabled={locked}><legend>Offre gagnée exacte</legend><label>Offre gagnée exacte à transmettre<select value={selected} disabled={!optionsLoaded} onChange={e => {
+          setSelected(e.target.value);
+          setEditorEpoch(v => v + 1);
+          setMessage('');
+        }}><option value="">Choisir une attribution WON et son paquet P5 autorisé</option>{options.map(o => <option key={`${o.outcome_id}:${o.submission_package_id}`} value={`${o.outcome_id}:${o.submission_package_id}`}>Lot {o.lot_reference} · paquet P5 v{o.package_version} · {o.manifest_sha256.slice(0, 12)}</option>)}</select></label>
+ {optionsLoaded && options.length === 0 && <p>UNKNOWN · aucune offre P5 autorisée reliée à une attribution WON de cette Affaire.</p>}
+ {choice && contracts && !contracts.truncated && <HandoverReviewForm key={`${selected}/${choice.manifest_sha256}/${contracts.source_context_sha256}/${editorEpoch}/${items.filter(i => i.outcome_id === choice.outcome_id).map(i => i.revision).join('/')}/${JSON.stringify(contracts.condition_options)}/${contracts.items.map(c => c.record_sha256).join('/')}`} contracts={contracts.items} conditions={contracts.condition_options} expectedRevision={Math.max(0, ...items.filter(i => i.outcome_id === choice.outcome_id).map(i => i.revision))} sourceContextSha={contracts.source_context_sha256} offerSha={choice.manifest_sha256} disabled={locked} onSubmit={publish} />}
+ {choice && !contracts && <p>Revue contractuelle UNKNOWN · source ou droits financiers indisponibles. Aucune publication de texte privé.</p>}
+ {contracts?.truncated && <p>Liste contractuelle ou conditions tronquée · UNKNOWN. La revue structurée reste verrouillée.</p>}
 
-  return (
-    <section className="section-block decision-section" aria-label="Passation P7 au Conducteur">
-      <div className="section-heading">
-        <div><span className="section-kicker">VERTICALE B · P7</span><h2>Passation au Conducteur</h2></div>
-      </div>
-      <p>P7 conserve l’offre attribuée, ses références et les conditions ouvertes. Cette passation ne crée pas un ordre de service.</p>
-      <p>Les données financières privées et le contenu financier du paquet P5 ne sont pas inclus. La lecture est réservée au Patron et au Responsable affecté à l’Affaire.</p>
-      {canManage && <>
-        <label>Offre gagnée exacte à transmettre
-          <select aria-label="Offre gagnée exacte à transmettre" value={selected} disabled={!optionsLoaded || submitting || !!pending} onChange={(event) => { setSelected(event.target.value); setFailure(null); }}>
-            <option value="">Choisir une attribution WON et son paquet P5 autorisé</option>
-            {options.map((option) => <option key={option.outcome_id + ":" + option.submission_package_id} value={option.outcome_id + ":" + option.submission_package_id}>{offerLabel(option)}</option>)}
-          </select>
-        </label>
-        {optionsLoaded && options.length === 0 && <p>UNKNOWN · aucune offre P5 autorisée reliée à une attribution WON de cette Affaire.</p>}
-        <button type="button" disabled={!selectedOption || submitting || (!!pending && (pending.caseId !== caseId || pending.selected !== selected))} onClick={() => void transmit()}>
-          {submitting ? "Transmission…" : failure?.key === activeKey && failure.kind === "UNCONFIRMED" ? "Réessayer la même passation" : "Transmettre au Conducteur"}
-        </button>
-        {failure?.key === activeKey && <p role="alert">{failure.kind === "REJECTED" ? "Refus confirmé par le serveur ; aucune nouvelle passation n’a été enregistrée." : "Résultat non confirmé · le rejeu réutilise les mêmes identifiants."}</p>}
-        {message && <p role="status">{message}</p>}
-      </>}
-      {readState === "LOADING" && <p>Lecture serveur de la passation…</p>}
-      {readState === "UNAVAILABLE" && <p role="status">UNAVAILABLE · aucune passation confirmée n’est affichée. Vérifiez l’affectation Responsable si vous êtes Conducteur.</p>}
-      {readState === "READY" && items.length === 0 && <p>UNKNOWN · aucune passation P7 n’a encore été enregistrée.</p>}
-      {readState === "READY" && items.map((item) => {
-        const snapshot = item.snapshot;
-        return <article className="detail-panel" key={item.snapshot_id}>
-          <h3>Lot {item.lot_reference} · passation P7 révision {item.revision}</h3>
-          <p>Source d’attribution : {snapshot.award.source_locator ?? "UNKNOWN · aucune référence"}</p>
-          <p>Offre P5 exacte : version {snapshot.offer.package_version} · SHA-256 {snapshot.offer.manifest_sha256}</p>
-          <p>Document technique : {snapshot.offer.technical_document_id} · v{snapshot.offer.technical_document_version} · SHA-256 {snapshot.offer.technical_document_sha256}</p>
-          {snapshot.offer.technical_document_kind === "TECHNICAL_RESPONSE" && <button type="button" disabled={!!downloadingSnapshot} onClick={() => void downloadOffer(item.snapshot_id)}>{downloadingSnapshot === item.snapshot_id ? "Téléchargement…" : "Télécharger l’offre technique exacte"}</button>}
-          <p>Contenu financier : non inclus. P7 ≠ ordre de service.</p>
-          <p>Rapprochement contrat / offre : {snapshot.contract_comparison.state} · {snapshot.contract_comparison.reason}</p>
-          {snapshot.decision.conditions_state === "UNKNOWN"
-            ? <p>UNKNOWN · état des conditions de décision indisponible au moment de la passation.</p>
-            : snapshot.decision.open_conditions.length === 0
-              ? <p>Aucune condition de GO n’était ouverte dans le contexte décisionnel figé.</p>
-              : <div><h4>Conditions ouvertes au moment de la passation</h4><ul>{snapshot.decision.open_conditions.map((condition) => <li key={condition.condition_id}>{condition.label}{condition.due_at ? " · échéance déclarée : " + condition.due_at : " · échéance UNKNOWN"}</li>)}</ul></div>}
-          <p>Sources contractuelles reliées : {snapshot.decision.condition_sources.length}</p>
-          <small>Snapshot {item.snapshot_id} · enregistré le {item.created_at}</small>
-        </article>;
-      })}
-    </section>
-  );
+ </fieldset>}
+ {!uncertain && <button className="secondary-button" type="button" onClick={() => void refresh()}>Relire la passation</button>}
+ {readState === 'LOADING' && <p>Lecture serveur de la passation…</p>}
+ {readState === 'UNAVAILABLE' && <p role="status">UNAVAILABLE · aucune passation confirmée n’est affichée. Vérifiez l’affectation Responsable si vous êtes Conducteur.</p>}
+ {!uncertain && readState === 'READY' && items.length === 0 && <p>UNKNOWN · aucune passation P7 n’a encore été enregistrée.</p>}
+ {!uncertain && readState === 'READY' && items.map(row => <HandoverSnapshotRead key={`${row.snapshot_id}/${row.view_sha256 ?? 'legacy'}`} item={row} canReceive={canReceive} disabled={locked || !!downloading} onDownload={() => void download(row)} onReceive={(kind, note) => receive(row, kind, note)} />)}
+ {!uncertain && <><button className="secondary-button" type="button" disabled={historyBusy || historyStarted && !cursor} onClick={() => void readHistory()}>{historyStarted ? 'Lire les révisions précédentes' : 'Lire l’historique de passation'}</button>{history.map(row => <HandoverSnapshotRead key={`history/${row.snapshot_id}`} item={row} canReceive={false} disabled={locked || !!downloading} onDownload={() => void download(row)} onReceive={() => undefined} />)}</>}
+ </section>;
 }

@@ -102,6 +102,12 @@ def test_case_reader_attaches_source_anchor_without_changing_legacy_locator_labe
     )
     row = SimpleNamespace(
         id=uuid4(),
+        current_analysis=False,
+        current_materialization=False,
+        current_extraction=False,
+        source_lifecycle="ADMITTED",
+        source_integrity="VERIFIED",
+        value_version="5",
         requirement_type="ADMINISTRATIVE",
         directive_signal="REQUIRED",
         uncertainty_status="TO_CONFIRM",
@@ -171,3 +177,81 @@ def test_reader_counters_classify_all_closed_outcomes():
     assert counters.review_required == 1
     assert counters.not_applicable == 1
     assert counters.pending_human_confirmation == 1
+
+
+@pytest.mark.parametrize(
+    ("status", "matches", "fragments", "expected"),
+    [
+        (None, False, 0, "NOT_STARTED"),
+        ("COMPLETED", True, 1, "COMPLETED"),
+        ("COMPLETED", False, 1, "REVIEW_REQUIRED"),
+        ("COMPLETED", True, 0, "REVIEW_REQUIRED"),
+        ("UNSUPPORTED", True, 0, "UNSUPPORTED"),
+        ("FAILED_SAFE", True, 0, "FAILED_SAFE"),
+        ("REJECTED_LIMIT", True, 0, "REJECTED_LIMIT"),
+        ("REVIEW_REQUIRED", True, 1, "REVIEW_REQUIRED"),
+    ],
+)
+def test_coverage_never_confuses_extraction_with_complete_analysis(
+    status, matches, fragments, expected
+):
+    document_id, extraction_id = uuid4(), uuid4()
+    row = SimpleNamespace(
+        document_id=document_id,
+        extraction_id=extraction_id if status else None,
+        classification="RC",
+        status=status,
+        input_matches=matches,
+        fragment_count=fragments,
+        actual_fragment_count=fragments,
+    )
+    session = SimpleNamespace(
+        execute=lambda statement: (
+            [row] if "actual_fragment_count" in statement.selected_columns else []
+        ),
+        scalars=lambda statement: [],
+    )
+    coverage = SqlAlchemyCaseDceReadingReader(session)._read_coverage(
+        tenant_id=uuid4(),
+        dce_version_id=uuid4(),
+        case_scope_kind="SINGLE_LOT",
+    )
+    assert coverage.documents[0].document_id == document_id
+    assert coverage.documents[0].extraction_status == expected
+    assert coverage.completed_extractions == int(expected == "COMPLETED")
+    assert coverage.unread_documents == int(expected != "COMPLETED")
+    assert coverage.inventory_scope == "ADMITTED_DOCUMENTS_ONLY"
+    assert coverage.lot_applicability == "UNKNOWN"
+    assert coverage.critical_unread_documents is None
+    assert coverage.analysis_complete is False
+    assert coverage.status == "REVIEW_REQUIRED"
+
+
+def test_empty_inventory_is_unknown_and_fragment_count_mismatch_requires_review():
+    session = SimpleNamespace(execute=lambda statement: [], scalars=lambda statement: [])
+    coverage = SqlAlchemyCaseDceReadingReader(session)._read_coverage(
+        tenant_id=uuid4(),
+        dce_version_id=uuid4(),
+        case_scope_kind="CUSTOM",
+    )
+    assert coverage.total_documents == 0
+    assert coverage.inventory_completeness == "UNKNOWN"
+    assert not coverage.analysis_complete
+    row = SimpleNamespace(
+        document_id=uuid4(),
+        extraction_id=uuid4(),
+        classification=None,
+        status="COMPLETED",
+        input_matches=True,
+        fragment_count=2,
+        actual_fragment_count=1,
+    )
+    session.execute = lambda statement: (
+        [row] if "actual_fragment_count" in statement.selected_columns else []
+    )
+    coverage = SqlAlchemyCaseDceReadingReader(session)._read_coverage(
+        tenant_id=uuid4(),
+        dce_version_id=uuid4(),
+        case_scope_kind="CUSTOM",
+    )
+    assert coverage.documents[0].extraction_status == "REVIEW_REQUIRED"

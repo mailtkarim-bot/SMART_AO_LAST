@@ -18,6 +18,8 @@ class PreparationRequirementInput:
     requirement_type: str
     directive_signal: str
     confirmation_outcome: str | None
+    confirmation_id: UUID | None = None
+    confirmation_revision: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -26,6 +28,7 @@ class PreparationDceInput:
 
     analysis_readiness: str
     requirements: tuple[PreparationRequirementInput, ...]
+    source_manifest_sha256: str | None = None
 
 
 class PreparationDceReader(Protocol):
@@ -81,6 +84,8 @@ class PreparationResponsePlanSourceReader(Protocol):
 
 
 class PreparationPrivateSourceDigestReader(Protocol):
-    """Re-read one authorized private source without returning its bytes to the command."""
+    """Read authorized proof digests or bounded bytes; storage keys stay internal."""
 
     def read_digest(self, *, storage_key: str, max_bytes: int) -> tuple[int, str]: ...
+
+    def read_verified_bytes(self, *, storage_key: str, max_bytes: int) -> bytes: ...

@@ -82,6 +82,21 @@ class PatronDecisionFinalizationService:
                 session_id=actor.session_id,
                 case_id=command.case_id,
                 correlation_id=actor.correlation_id,
+                financial_access_verified=self._policy.authorize(
+                    context=actor,
+                    request=AuthorizationRequest(
+                        action=Capability.PRICING_READ,
+                        resource=AuthorizationResource(
+                            resource_type="DECISION",
+                            resource_id=command.decision_id,
+                            tenant_id=actor.tenant_id,
+                            case_id=command.case_id,
+                            classification=DataClassification.FINANCIAL_PRIVATE,
+                        ),
+                        evaluated_at=now,
+                        mfa_required=True,
+                    ),
+                ).allowed,
             ),
         )
 
@@ -99,6 +114,21 @@ class FinalizeGoNoGoDecisionHandler:
         self._repository_factory = repository_factory
         self._verified_context_reader = verified_context_reader
         self._condition_repository = condition_repository
+
+    def authorize_context(self, *, session, command, context):
+        if context.financial_access_verified:
+            return
+        snapshot = self._repository_factory(session).get(
+            tenant_id=context.tenant_id, aggregate_id=command.decision_id
+        )
+        if (
+            snapshot is not None
+            and snapshot.root.case_id == command.case_id
+            and any(
+                ref.aggregate_type == "ANALYSIS_ASSESSMENT" for ref in snapshot.context_references
+            )
+        ):
+            raise CommandExecutionError("FINANCIAL_SCOPE_FORBIDDEN")
 
     def execute(self, *, session: Any, command, context: CommandContext) -> HandlerOutcome:
         tenant_id = UUID(str(context.tenant_id))
@@ -126,6 +156,10 @@ class FinalizeGoNoGoDecisionHandler:
             or root.validity != "CURRENT"
             or root.context_status != "FROZEN"
         ):
+            if any(
+                ref.aggregate_type == "ANALYSIS_ASSESSMENT" for ref in snapshot.context_references
+            ):
+                raise CommandExecutionError("STALE_DECISION_CONTEXT")
             raise CommandExecutionError("DECISION_NOT_READY_FOR_FINALIZATION")
         if not snapshot.contexts:
             raise CommandExecutionError("DECISION_CONTEXT_REQUIRED")
@@ -137,6 +171,11 @@ class FinalizeGoNoGoDecisionHandler:
             raise CommandExecutionError("STALE_DECISION_CONTEXT")
         if not snapshot.context_references:
             raise CommandExecutionError("DECISION_CONTEXT_REFERENCES_REQUIRED")
+        if (
+            any(ref.aggregate_type == "ANALYSIS_ASSESSMENT" for ref in snapshot.context_references)
+            and not context.financial_access_verified
+        ):
+            raise CommandExecutionError("FINANCIAL_SCOPE_FORBIDDEN")
         if command.outcome != "CONDITIONAL_GO" and command.conditions:
             raise CommandExecutionError("CONDITIONS_ONLY_FOR_CONDITIONAL_GO")
         if command.outcome == "CONDITIONAL_GO" and not command.conditions:

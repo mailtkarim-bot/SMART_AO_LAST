@@ -325,6 +325,14 @@ input:focus, select:focus, textarea:focus { border-color: #2745c7; box-shadow: 0
 @media (max-width: 560px) { .boamp-detail-heading { align-items: flex-start; flex-direction: column; } .boamp-score-block { justify-items: start; min-width: 0; } .boamp-score-note { text-align: left; } .boamp-facts > div { align-items: flex-start; } .boamp-facts dd { max-width: 58%; } .boamp-source-status .section-actions { align-items: stretch; flex-direction: column; } }
 
 /* DCE reading and sourced knowledge */
+.dce-reading-panel .rc-requirement-row { display: grid; grid-template-columns: minmax(0, 1fr); }
+.rc-requirement-row > .state-badge { justify-self: start; max-width: 100%; overflow-wrap: anywhere; }
+.rc-candidate-values { min-width: 0; overflow-wrap: anywhere; }
+.rc-candidate-values dl { display: grid; gap: .6rem; margin: .75rem 0; }
+.rc-candidate-values dl > div { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: .5rem; }
+.rc-candidate-values dt, .rc-candidate-values dd { margin: 0; font-size: .8rem; line-height: 1.6; }
+.rc-candidate-values summary { min-height: 44px; padding: .75rem 0; cursor: pointer; }
+.dce-reading-panel .requirement-row > div { min-width: 0; overflow-wrap: anywhere; }
 .dce-knowledge-layout { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(20rem, 0.75fr); gap: 1rem; }
 .dce-reading-panel, .knowledge-search-panel { min-width: 0; padding: 1.25rem; border: 1px solid #e0e7f0; border-radius: 0.75rem; background: #fff; }
 .dce-reading-heading, .knowledge-result-top, .subheading { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
@@ -416,6 +424,7 @@ input:focus, select:focus, textarea:focus { border-color: #2745c7; box-shadow: 0
 .response-plan-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; padding: 9px 0; border-top: 1px solid #f0f3f7; color: #53637d; font-size: 10px; }
 .response-plan-row strong, .response-plan-row small { display: block; }
 .response-plan-row small { margin-top: 3px; color: #5c6d86; }
+.response-plan-row > button { align-self: flex-start; }
 .response-plan-row > span { color: #536bdc; font-size: 10px; text-align: right; }
 .review-draft-content { flex-basis: 100%; max-height: 420px; overflow: auto; margin: 0; padding: 12px; border: 1px solid #dfe6f0; border-radius: 7px; background: #f7f9fc; color: #34445e; font: 11px/1.55 ui-monospace, SFMono-Regular, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
 .correction-inline label { flex-basis: 100%; display: grid; gap: 6px; }
@@ -610,3 +619,28 @@ input:focus, select:focus, textarea:focus { border-color: #2745c7; box-shadow: 0
 .capability-proposal-status p { color: #46556d; font-size: 13px; line-height: 1.7; }
 .capability-proposal-status.error strong { color: #9b1c1c; }
 @media (max-width: 600px) { .capability-proposal { padding: 18px 16px; } .capability-proposal-actions { flex-direction: column; align-items: stretch; } }
+
+/* Exact handover hashes and native fieldsets must remain readable on narrow screens. */
+.handover-panel { min-width: 0; overflow-wrap: anywhere; }
+.handover-panel fieldset { min-width: 0; margin-inline: 0; }
+.handover-panel .review-card { min-width: 0; font-size: .875rem; line-height: 1.55; }
+.handover-panel .workflow-form label { font-size: .8125rem; }
+.handover-panel input[type="checkbox"] { width: auto; justify-self: start; }
+.handover-panel button { max-width: 100%; white-space: normal; }
+.handover-panel dl > div { margin-block: 1rem; }
+.handover-panel dt { font-weight: 700; }
+.handover-panel dd { margin-inline-start: 0; }
+
+.response-coverage { min-width: 0; overflow-wrap: anywhere; }
+.response-coverage > button, .response-coverage select { min-height: 44px; max-width: 100%; }
+
+/* Exact profile and document references remain readable on narrow screens. */
+#business-method-profile-section { min-width: 0; overflow-wrap: anywhere; }
+#business-method-profile-section .decision-facts > div { min-width: 0; max-width: 100%; }
+#business-method-profile-section pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.enterprise-document-row > div { min-width: 0; }
+.enterprise-document-row small { overflow-wrap: anywhere; }
+
+.dce-opening-section, .dce-opening-section fieldset { min-width: 0; overflow-wrap: anywhere; }
+.dce-opening-section .dce-meta span { min-width: 0; max-width: 100%; }
+.dce-opening-section input[type="checkbox"] { width: auto; justify-self: start; }

@@ -377,3 +377,45 @@ def test_baseline_impact_can_be_referenced_only_by_its_tenant_case_revision(
             aggregate_revision=1,
             content_hash=None,
         )
+
+
+def test_adoption_history_preserves_rollback_and_does_not_inherit_publication(
+    database_engine, session_factory
+):
+    _, company_id, case_id, actor, service = _seed(database_engine, session_factory)
+    refs = []
+    for version, word in enumerate(("Zone", "Lot")):
+        result = service.publish(
+            actor=actor,
+            now=NOW,
+            command=PublishBusinessMethodProfileRequest(
+                command_id=uuid4(),
+                idempotency_key=uuid4(),
+                expected_version=version,
+                profile=BusinessMethodProfileContent(terminology={"lot": word}),
+            ).to_command(company_id=company_id),
+        )
+        refs.append(result.aggregate_refs[0])
+    assert service.current_adoption(actor=actor, case_id=case_id, now=NOW) is None
+    for revision, ref in enumerate((refs[0], refs[1], refs[0])):
+        command = AdoptBusinessMethodProfileRequest(
+            command_id=uuid4(),
+            idempotency_key=uuid4(),
+            expected_adoption_revision=revision,
+            profile_version_id=ref["aggregate_id"],
+            profile_version=ref["aggregate_revision"],
+            profile_content_sha256=ref["content_hash"],
+        ).to_command(case_id=case_id)
+        service.adopt(actor=actor, command=command, now=NOW)
+        assert service.adopt(actor=actor, command=command, now=NOW).replayed
+    rows = service.adoption_history(actor=actor, case_id=case_id, now=NOW)
+    assert [row.adoption_revision for row in rows] == [1, 2, 3]
+    assert [row.profile_version for row in rows] == [1, 2, 1]
+    assert rows[0].profile_content_sha256 == rows[2].profile_content_sha256
+    assert len({row.adoption_id for row in rows}) == 3
+    with pytest.raises(PermissionError, match="NOT_FOUND_OR_FORBIDDEN"):
+        service.adoption_history(actor=replace(actor, tenant_id=uuid4()), case_id=case_id, now=NOW)
+    with pytest.raises(PermissionError, match="PATRON_REQUIRED"):
+        service.adoption_history(
+            actor=replace(actor, actor_kind=ActorKind.COLLABORATEUR), case_id=case_id, now=NOW
+        )

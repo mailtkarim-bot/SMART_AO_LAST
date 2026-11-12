@@ -144,6 +144,9 @@ class SubmissionSignatureHandler:
             raise CommandExecutionError("NOT_FOUND_OR_FORBIDDEN")
         if package.version != command.expected_package_version:
             raise CommandExecutionError("VERSION_CONFLICT")
+        expected_hash = getattr(command, "expected_manifest_sha256", None)
+        if expected_hash is not None and expected_hash != package.manifest_sha256:
+            raise CommandExecutionError("SUBMISSION_MANIFEST_HASH_MISMATCH")
         record = SubmissionSignatureRecord(
             id=command.signature_id,
             tenant_id=context.tenant_id,
@@ -181,6 +184,11 @@ class SubmissionSignatureHandler:
                         "provider": record.provider,
                         "manifest_sha256": record.manifest_sha256,
                         "status": record.status,
+                        **(
+                            {"rationale": command.rationale}
+                            if getattr(command, "rationale", None)
+                            else {}
+                        ),
                     },
                 ),
             ),

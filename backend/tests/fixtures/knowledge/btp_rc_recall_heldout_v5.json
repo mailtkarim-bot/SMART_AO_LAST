@@ -1,0 +1,424 @@
+{
+  "schema_version": 1,
+  "synthetic": true,
+  "held_out": true,
+  "tenant_id": "00000000-0000-0000-0000-000000000dad",
+  "case_id": "00000000-0000-0000-0000-000000000dae",
+  "version_id": "00000000-0000-0000-0000-000000000daf",
+  "documents": [
+    {
+      "id": "00000000-0000-0000-0000-000000001389",
+      "tenant_id": "00000000-0000-0000-0000-000000000dad",
+      "case_id": "00000000-0000-0000-0000-000000000dae",
+      "version_id": "00000000-0000-0000-0000-000000000daf",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 1,
+      "family": "RC",
+      "text": "Lot 105 : la visite est obligatoire."
+    },
+    {
+      "id": "00000000-0000-0000-0000-00000000138a",
+      "tenant_id": "00000000-0000-0000-0000-000000000dad",
+      "case_id": "00000000-0000-0000-0000-000000000dae",
+      "version_id": "00000000-0000-0000-0000-000000000daf",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 2,
+      "family": "RC",
+      "text": "Lot 106 : la visite est facultative."
+    },
+    {
+      "id": "00000000-0000-0000-0000-00000000138b",
+      "tenant_id": "00000000-0000-0000-0000-000000000dad",
+      "case_id": "00000000-0000-0000-0000-000000000dae",
+      "version_id": "00000000-0000-0000-0000-000000000daf",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 3,
+      "family": "RC",
+      "text": "Lot 107 : la visite n’est pas exigée."
+    },
+    {
+      "id": "00000000-0000-0000-0000-00000000138c",
+      "tenant_id": "00000000-0000-0000-0000-000000000dad",
+      "case_id": "00000000-0000-0000-0000-000000000dae",
+      "version_id": "00000000-0000-0000-0000-000000000daf",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 4,
+      "family": "RC",
+      "text": "Lot 108 : le DC2 est exigé."
+    },
+    {
+      "id": "00000000-0000-0000-0000-00000000138d",
+      "tenant_id": "00000000-0000-0000-0000-000000000dad",
+      "case_id": "00000000-0000-0000-0000-000000000dae",
+      "version_id": "00000000-0000-0000-0000-000000000daf",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 5,
+      "family": "RC",
+      "text": "Lot 109 : aucun DC2 n'est requis."
+    },
+    {
+      "id": "00000000-0000-0000-0000-00000000138e",
+      "tenant_id": "00000000-0000-0000-0000-000000000dad",
+      "case_id": "00000000-0000-0000-0000-000000000dae",
+      "version_id": "00000000-0000-0000-0000-000000000daf",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 6,
+      "family": "RC",
+      "text": "Lot 110 : les variantes sont permises."
+    },
+    {
+      "id": "00000000-0000-0000-0000-00000000138f",
+      "tenant_id": "00000000-0000-0000-0000-000000000dad",
+      "case_id": "00000000-0000-0000-0000-000000000dae",
+      "version_id": "00000000-0000-0000-0000-000000000daf",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 7,
+      "family": "RC",
+      "text": "Lot 111 : les variantes sont interdites."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000001390",
+      "tenant_id": "00000000-0000-0000-0000-000000000dad",
+      "case_id": "00000000-0000-0000-0000-000000000dae",
+      "version_id": "00000000-0000-0000-0000-000000000daf",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 8,
+      "family": "RC",
+      "text": "Lot 112 : le mémoire technique est exigé."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000001391",
+      "tenant_id": "00000000-0000-0000-0000-000000000dad",
+      "case_id": "00000000-0000-0000-0000-000000000dae",
+      "version_id": "00000000-0000-0000-0000-000000000daf",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 9,
+      "family": "RC",
+      "text": "Lot 113 : le mémoire technique est facultatif."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000001392",
+      "tenant_id": "00000000-0000-0000-0000-000000000dad",
+      "case_id": "00000000-0000-0000-0000-000000000dae",
+      "version_id": "00000000-0000-0000-0000-000000000daf",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 10,
+      "family": "RC",
+      "text": "Lot 114 : le DC1 est obligatoire sauf dispense."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000001393",
+      "tenant_id": "00000000-0000-0000-0000-000000000dad",
+      "case_id": "00000000-0000-0000-0000-000000000dae",
+      "version_id": "00000000-0000-0000-0000-000000000daf",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 11,
+      "family": "RC",
+      "text": "Lot 115 : la DPGF est obligatoire."
+    },
+    {
+      "id": "00000000-0000-0000-0000-0000000013ec",
+      "tenant_id": "00000000-0000-0000-0000-00000000270f",
+      "case_id": "00000000-0000-0000-0000-000000000dae",
+      "version_id": "00000000-0000-0000-0000-000000000daf",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 1,
+      "family": "RC",
+      "text": "Lot 106 : la visite est obligatoire."
+    },
+    {
+      "id": "00000000-0000-0000-0000-0000000013ed",
+      "tenant_id": "00000000-0000-0000-0000-000000000dad",
+      "case_id": "00000000-0000-0000-0000-00000000270f",
+      "version_id": "00000000-0000-0000-0000-000000000daf",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 1,
+      "family": "RC",
+      "text": "Lot 106 : la visite est obligatoire."
+    },
+    {
+      "id": "00000000-0000-0000-0000-0000000013ee",
+      "tenant_id": "00000000-0000-0000-0000-000000000dad",
+      "case_id": "00000000-0000-0000-0000-000000000dae",
+      "version_id": "00000000-0000-0000-0000-00000000270f",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 1,
+      "family": "RC",
+      "text": "Lot 106 : la visite est obligatoire."
+    },
+    {
+      "id": "00000000-0000-0000-0000-0000000013ef",
+      "tenant_id": "00000000-0000-0000-0000-000000000dad",
+      "case_id": "00000000-0000-0000-0000-000000000dae",
+      "version_id": "00000000-0000-0000-0000-000000000daf",
+      "classification": "FINANCIAL_PRIVATE",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 1,
+      "family": "RC",
+      "text": "Lot 106 : la visite est obligatoire."
+    },
+    {
+      "id": "00000000-0000-0000-0000-0000000013f0",
+      "tenant_id": "00000000-0000-0000-0000-000000000dad",
+      "case_id": "00000000-0000-0000-0000-000000000dae",
+      "version_id": "00000000-0000-0000-0000-000000000daf",
+      "classification": "PERSONAL_DATA",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 1,
+      "family": "RC",
+      "text": "Lot 106 : la visite est obligatoire."
+    },
+    {
+      "id": "00000000-0000-0000-0000-0000000013f1",
+      "tenant_id": "00000000-0000-0000-0000-000000000dad",
+      "case_id": "00000000-0000-0000-0000-000000000dae",
+      "version_id": "00000000-0000-0000-0000-000000000daf",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": false,
+      "extraction_status": "COMPLETED",
+      "page": 1,
+      "family": "RC",
+      "text": "Lot 106 : la visite est obligatoire."
+    },
+    {
+      "id": "00000000-0000-0000-0000-0000000013f2",
+      "tenant_id": "00000000-0000-0000-0000-000000000dad",
+      "case_id": "00000000-0000-0000-0000-000000000dae",
+      "version_id": "00000000-0000-0000-0000-000000000daf",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "REVIEW_REQUIRED",
+      "page": 1,
+      "family": "RC",
+      "text": "Lot 106 : la visite est obligatoire."
+    }
+  ],
+  "queries": [
+    {
+      "id": "j5-visit",
+      "text": "La visite est-elle obligatoire ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000001389",
+        "00000000-0000-0000-0000-00000000138a",
+        "00000000-0000-0000-0000-00000000138b"
+      ],
+      "critical": true,
+      "review_required": true,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": null,
+      "expected_query_anchor": null,
+      "expected_refusal": null
+    },
+    {
+      "id": "j5-obligations",
+      "text": "Quelles sont les obligations de visite ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000001389",
+        "00000000-0000-0000-0000-00000000138a",
+        "00000000-0000-0000-0000-00000000138b"
+      ],
+      "critical": true,
+      "review_required": true,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": null,
+      "expected_query_anchor": null,
+      "expected_refusal": null
+    },
+    {
+      "id": "j5-dc2",
+      "text": "Le DC2 est-il requis ?",
+      "expected": [
+        "00000000-0000-0000-0000-00000000138c",
+        "00000000-0000-0000-0000-00000000138d"
+      ],
+      "critical": true,
+      "review_required": true,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": null,
+      "expected_query_anchor": null,
+      "expected_refusal": null
+    },
+    {
+      "id": "j5-variants",
+      "text": "Les variantes sont-elles permises ?",
+      "expected": [
+        "00000000-0000-0000-0000-00000000138e",
+        "00000000-0000-0000-0000-00000000138f"
+      ],
+      "critical": true,
+      "review_required": true,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": null,
+      "expected_query_anchor": null,
+      "expected_refusal": null
+    },
+    {
+      "id": "j5-memory",
+      "text": "Le mémoire technique est-il exigé ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000001390",
+        "00000000-0000-0000-0000-000000001391"
+      ],
+      "critical": true,
+      "review_required": true,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": null,
+      "expected_query_anchor": null,
+      "expected_refusal": null
+    },
+    {
+      "id": "j5-lot106",
+      "text": "La visite est-elle obligatoire pour le lot 106 ?",
+      "expected": [
+        "00000000-0000-0000-0000-00000000138a"
+      ],
+      "critical": true,
+      "review_required": false,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": 106,
+      "expected_query_anchor": "lot 106",
+      "expected_refusal": null
+    },
+    {
+      "id": "j5-lot110",
+      "text": "Les variantes sont-elles permises pour le lot 110 ?",
+      "expected": [
+        "00000000-0000-0000-0000-00000000138e"
+      ],
+      "critical": true,
+      "review_required": false,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": 110,
+      "expected_query_anchor": "lot 110",
+      "expected_refusal": null
+    },
+    {
+      "id": "j5-condition",
+      "text": "Le DC1 est-il obligatoire pour le lot 114 ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000001392"
+      ],
+      "critical": true,
+      "review_required": true,
+      "expected_conflicts": [],
+      "expected_unknown": true,
+      "expected_query_lot": 114,
+      "expected_query_anchor": "lot 114",
+      "expected_refusal": null
+    },
+    {
+      "id": "j5-ambiguous",
+      "text": "Visite des lots 105 et 106 ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000001389",
+        "00000000-0000-0000-0000-00000000138a"
+      ],
+      "critical": true,
+      "review_required": true,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": null,
+      "expected_query_anchor": null,
+      "expected_refusal": null
+    },
+    {
+      "id": "j5-medical",
+      "text": "La visite médicale est-elle obligatoire ?",
+      "expected": [],
+      "critical": false,
+      "review_required": false,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": null,
+      "expected_query_anchor": null,
+      "expected_refusal": null
+    },
+    {
+      "id": "j5-hour",
+      "text": "À quelle heure la visite doit-elle commencer ?",
+      "expected": [],
+      "critical": false,
+      "review_required": false,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": null,
+      "expected_query_anchor": null,
+      "expected_refusal": null
+    },
+    {
+      "id": "j5-ral",
+      "text": "Quelle couleur RAL pour le portail ?",
+      "expected": [],
+      "critical": false,
+      "review_required": false,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": null,
+      "expected_query_anchor": null,
+      "expected_refusal": null
+    },
+    {
+      "id": "j5-dpgf",
+      "text": "La DPGF est-elle requise pour le lot 115 ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000001393"
+      ],
+      "critical": true,
+      "review_required": false,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": 115,
+      "expected_query_anchor": "lot 115",
+      "expected_refusal": "FINANCIAL_SCOPE_REFUSED"
+    },
+    {
+      "id": "j5-margin",
+      "text": "Quelle marge privée pour le lot 110 ?",
+      "expected": [],
+      "critical": false,
+      "review_required": false,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": 110,
+      "expected_query_anchor": "lot 110",
+      "expected_refusal": "FINANCIAL_SCOPE_REFUSED"
+    }
+  ]
+}

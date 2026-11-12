@@ -164,6 +164,42 @@ class BusinessMethodProfileService:
             profile_content_sha256=row.profile_content_sha256,
         )
 
+    def adoption_history(
+        self, *, actor: ActorContext, case_id: UUID, now
+    ) -> tuple[BusinessMethodProfileAdoptionProjection, ...]:
+        self._authorize_case(actor=actor, case_id=case_id, now=now, write=False)
+        with self._session_factory() as session:
+            case_exists = session.scalar(
+                sa.select(CaseRecord.id).where(
+                    CaseRecord.tenant_id == actor.tenant_id,
+                    CaseRecord.id == case_id,
+                )
+            )
+            if case_exists is None:
+                raise PermissionError("NOT_FOUND_OR_FORBIDDEN")
+            rows = session.scalars(
+                sa.select(CaseBusinessMethodProfileAdoptionRecord)
+                .where(
+                    CaseBusinessMethodProfileAdoptionRecord.tenant_id == actor.tenant_id,
+                    CaseBusinessMethodProfileAdoptionRecord.case_id == case_id,
+                )
+                .order_by(
+                    CaseBusinessMethodProfileAdoptionRecord.adoption_revision,
+                    CaseBusinessMethodProfileAdoptionRecord.id,
+                )
+            ).all()
+        return tuple(
+            BusinessMethodProfileAdoptionProjection(
+                adoption_id=row.id,
+                case_id=row.case_id,
+                adoption_revision=row.adoption_revision,
+                profile_version_id=row.profile_version_id,
+                profile_version=row.profile_version,
+                profile_content_sha256=row.profile_content_sha256,
+            )
+            for row in rows
+        )
+
     def _authorize_company(
         self, *, actor: ActorContext, company_id: UUID, now, write: bool
     ) -> None:

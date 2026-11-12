@@ -2,8 +2,20 @@ from datetime import datetime
 from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_serializer,
+    model_validator,
+)
 
+from app.modules.pricing.public.operational_change_contracts import (
+    OperationalActionDetails,
+    OperationalChangeContext,
+    OperationalPublication,
+)
 from app.platform.events.command_contracts import ApplicationCommand
 
 ChangeKind = Literal["ORDER_OF_SERVICE", "CHANGE_REQUEST", "ADDENDUM", "SCHEDULE_CHANGE"]
@@ -11,8 +23,24 @@ HandoverApplicability = Literal["APPLICABLE_TO_HANDOVER", "NOT_APPLICABLE", "NEE
 CASE_CONTRACT_CHANGE_EVIDENCE_RETENTION_TOPIC = "case_contract_change_evidence_retention"
 
 
-class RecordCaseContractChangeEventCommand(ApplicationCommand):
+class OperationalChangeCommand(ApplicationCommand):
+    @model_serializer(mode="wrap")
+    def preserve_legacy_hash(self, handler):
+        body = handler(self)
+        for name in (
+            "operational_context",
+            "operational_review",
+            "operational_details",
+            "operational_publication",
+        ):
+            if body.get(name) is None:
+                body.pop(name, None)
+        return body
+
+
+class RecordCaseContractChangeEventCommand(OperationalChangeCommand):
     command_type = "RecordCaseContractChangeEvent"
+    operational_context: OperationalChangeContext | None = None
 
     event_id: UUID
     case_id: UUID
@@ -38,8 +66,9 @@ class RecordCaseContractChangeEventCommand(ApplicationCommand):
         return value
 
 
-class RecordCaseContractChangeApplicabilityCommand(ApplicationCommand):
+class RecordCaseContractChangeApplicabilityCommand(OperationalChangeCommand):
     command_type = "RecordCaseContractChangeApplicability"
+    operational_review: OperationalChangeContext | None = None
 
     review_id: UUID
     case_id: UUID
@@ -64,8 +93,9 @@ class RecordCaseContractChangeApplicabilityCommand(ApplicationCommand):
         return self
 
 
-class RecordCaseContractChangeActionCommand(ApplicationCommand):
+class RecordCaseContractChangeActionCommand(OperationalChangeCommand):
     command_type = "RecordCaseContractChangeAction"
+    operational_details: OperationalActionDetails | None = None
 
     action_id: UUID
     case_id: UUID
@@ -146,10 +176,11 @@ class ExpireCaseContractChangeEvidenceUploadCommand(ApplicationCommand):
     evidence_object_id: UUID
 
 
-class RecordCaseContractChangeActionExecutionCommand(ApplicationCommand):
+class RecordCaseContractChangeActionExecutionCommand(OperationalChangeCommand):
     """C5 human declaration; references alone never establish retrieved evidence."""
 
     command_type = "RecordCaseContractChangeActionExecution"
+    operational_publication: OperationalPublication | None = None
 
     act_id: UUID
     case_id: UUID

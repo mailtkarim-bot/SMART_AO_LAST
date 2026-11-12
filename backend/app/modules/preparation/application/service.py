@@ -8,6 +8,9 @@ from uuid import UUID
 import sqlalchemy as sa
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.modules.enterprise.infrastructure.document_verification import (
+    current_document_verification_status,
+)
 from app.modules.enterprise.infrastructure.models import (
     CaseCapabilityGapRecord,
     CaseCapabilityProposalRecord,
@@ -201,6 +204,59 @@ class PreparationService:
             )
             return package, readiness, documents, drafts
 
+    def read_package_with_verified_drafts(
+        self, *, actor: ActorContext, package_id: UUID, now: datetime
+    ) -> tuple[
+        PreparationPackageRecord,
+        PreparationReadinessRecord | None,
+        tuple[GeneratedTechnicalDocumentRecord, ...],
+        tuple[TechnicalResponseDraftRecord, ...],
+        dict[tuple[UUID, int], str | None],
+    ]:
+        """Expose owned draft bytes only after the existing assignment/tenant authorization."""
+        package, readiness, documents, drafts = self.read_package(
+            actor=actor, package_id=package_id, now=now
+        )
+        contents: dict[tuple[UUID, int], str | None] = {}
+        for draft in drafts:
+            text = None
+            try:
+                from app.modules.preparation.infrastructure.response_artifact import (
+                    read_response_artifact,
+                )
+
+                _, text = read_response_artifact(self._storage, draft)
+            except Exception:
+                # A missing or unreadable historical artifact remains UNKNOWN in the read model.
+                pass
+            contents[(draft.draft_id, draft.version)] = text
+        return package, readiness, documents, drafts, contents
+
+    def read_response_draft_bytes(
+        self, *, actor: ActorContext, package_id: UUID, draft_id: UUID, version: int, now: datetime
+    ):
+        _, _, _, drafts = self.read_package(actor=actor, package_id=package_id, now=now)
+        draft = next((d for d in drafts if d.draft_id == draft_id and d.version == version), None)
+        if draft is None:
+            raise PermissionError("NOT_FOUND_OR_FORBIDDEN")
+        from app.modules.preparation.infrastructure.response_artifact import read_response_artifact
+
+        content, _ = read_response_artifact(self._storage, draft)
+        return draft, content
+
+    def read_response_coverage(self, *, actor, package_id, selection, now):
+        self.read_package(actor=actor, package_id=package_id, now=now)
+        from app.modules.preparation.infrastructure.response_coverage import read_response_coverage
+
+        with self._session_factory() as session:
+            return read_response_coverage(
+                session,
+                tenant_id=actor.tenant_id,
+                package_id=package_id,
+                selection=selection,
+                storage=self._storage,
+            )
+
     def read_generated_document(
         self, *, actor: ActorContext, package_id: UUID, document_id: UUID, now: datetime
     ) -> tuple[GeneratedTechnicalDocumentRecord, bytes]:
@@ -372,6 +428,79 @@ class PreparationHandler:
             self._ensure_assignment(session=session, package=package, context=context)
             if package.aggregate_revision != command.expected_revision:
                 raise CommandExecutionError("VERSION_CONFLICT")
+        facts = self._current_readiness(session=session, package=package, context=context)
+        requirements, tasks = facts["requirements"], facts["tasks"]
+        blocker_codes, warning_codes = facts["blocker_codes"], facts["warning_codes"]
+        manifest_hash, state = facts["manifest_hash"], facts["state"]
+        revision = package.aggregate_revision + 1
+        readiness = PreparationReadinessRecord(
+            id=command.command_id,
+            tenant_id=context.tenant_id,
+            package_id=package.id,
+            revision=revision,
+            state=state,
+            blocker_codes_json=sorted(blocker_codes),
+            warning_codes_json=sorted(warning_codes),
+            checked_requirement_count=len(requirements),
+            checked_task_count=len(tasks),
+            input_manifest_sha256=manifest_hash,
+            evaluator_id="deterministic-preparation-readiness",
+            evaluator_version="2",
+            actor_id=context.actor_id,
+            membership_id=context.membership_id,
+            command_id=command.command_id,
+            correlation_id=command.correlation_id,
+        )
+        session.add(readiness)
+        package.aggregate_revision = revision
+        package.state = "BLOCKED" if state == "BLOCKED" else "READY"
+        return HandlerOutcome(
+            result_code="PREPARATION_READINESS_EVALUATED",
+            aggregate_refs=(
+                {
+                    "aggregate_type": "PreparationPackage",
+                    "aggregate_id": str(package.id),
+                    "aggregate_revision": revision,
+                },
+            ),
+            events=(
+                PendingDomainEvent(
+                    aggregate_type="PreparationPackage",
+                    aggregate_id=package.id,
+                    aggregate_revision=revision,
+                    event_type="PreparationReadinessEvaluated",
+                    payload={
+                        "package_id": str(package.id),
+                        "readiness_id": str(readiness.id),
+                        "state": state,
+                        "blocker_codes": sorted(blocker_codes),
+                        "warning_codes": sorted(warning_codes),
+                    },
+                ),
+            ),
+        )
+
+    def _current_readiness(self, *, session, package, context):
+        from app.modules.case.infrastructure.models.case import CaseRecord
+
+        try:
+            case = session.scalar(
+                sa.select(CaseRecord)
+                .where(CaseRecord.tenant_id == context.tenant_id, CaseRecord.id == package.case_id)
+                .with_for_update(nowait=True)
+            )
+        except sa.exc.OperationalError as error:
+            raise CommandExecutionError("VERSION_CONFLICT") from error
+        if case is None:
+            raise CommandExecutionError("NOT_FOUND_OR_FORBIDDEN")
+        case_context = dict(
+            dce_version_id=str(case.applicable_dce_version_id)
+            if case.applicable_dce_version_id
+            else None,
+            scope_fingerprint=case.scope_fingerprint,
+            lifecycle=case.lifecycle,
+            dce_freshness=case.dce_freshness,
+        )
         dce = self._dce_reader.read(
             session=session,
             tenant_id=UUID(str(context.tenant_id)),
@@ -382,7 +511,12 @@ class PreparationHandler:
             raise CommandExecutionError("DCE_NOT_FOUND_OR_FORBIDDEN")
         blocker_codes: set[str] = set()
         warning_codes: set[str] = set()
-        if dce.analysis_readiness != "READY_FOR_ANALYSIS":
+        if (
+            dce.analysis_readiness != "READY_FOR_ANALYSIS"
+            or case.lifecycle != "ACTIVE"
+            or case.dce_freshness != "CURRENT"
+            or case.applicable_dce_version_id != package.dce_version_id
+        ):
             blocker_codes.add("DCE_NOT_READY")
         requirements = dce.requirements
         for requirement in requirements:
@@ -461,7 +595,12 @@ class PreparationHandler:
                 ):
                     proof_states.append("UNAUTHORIZED")
                     continue
-                if document.verification_status != "VALIDATED":
+                if (
+                    current_document_verification_status(
+                        session, tenant_id=context.tenant_id, document_id=document.id
+                    )
+                    != "VALIDATED"
+                ):
                     proof_states.append("UNAUTHORIZED")
                     continue
                 if document.expires_at is not None and document.expires_at <= context.received_at:
@@ -507,12 +646,27 @@ class PreparationHandler:
             warning_codes.add("CAPABILITY_GAP_IMPORTANT")
 
         state = "BLOCKED" if blocker_codes else "READY_WITH_WARNINGS" if warning_codes else "READY"
-        revision = package.aggregate_revision + 1
-        manifest = {
+        manifest: dict[str, object] = {
+            "case_context": case_context,
             "case_id": str(package.case_id),
             "assignment_id": str(package.assignment_id),
             "dce_version_id": str(package.dce_version_id),
-            "requirements": sorted(str(item.requirement_id) for item in requirements),
+            "requirements": sorted(
+                (
+                    {
+                        "requirement_id": str(item.requirement_id),
+                        "requirement_type": item.requirement_type,
+                        "directive_signal": item.directive_signal,
+                        "confirmation_outcome": item.confirmation_outcome,
+                        "confirmation_id": str(item.confirmation_id)
+                        if item.confirmation_id
+                        else None,
+                        "confirmation_revision": item.confirmation_revision,
+                    }
+                    for item in requirements
+                ),
+                key=lambda item: str(item["requirement_id"]),
+            ),
             "tasks": sorted(str(item.id) for item in tasks),
             "capability_assessments": proposal_proof_manifest,
             "gaps": sorted(
@@ -529,54 +683,19 @@ class PreparationHandler:
             "blockers": sorted(blocker_codes),
             "warnings": sorted(warning_codes),
         }
+        if getattr(dce, "source_manifest_sha256", None) is not None:
+            manifest["source_manifest_sha256"] = dce.source_manifest_sha256
         manifest_hash = hashlib.sha256(
             json.dumps(manifest, sort_keys=True, separators=(",", ":")).encode()
         ).hexdigest()
-        readiness = PreparationReadinessRecord(
-            id=command.command_id,
-            tenant_id=context.tenant_id,
-            package_id=package.id,
-            revision=revision,
+        return dict(
+            dce=dce,
+            requirements=requirements,
+            tasks=tasks,
+            blocker_codes=blocker_codes,
+            warning_codes=warning_codes,
+            manifest_hash=manifest_hash,
             state=state,
-            blocker_codes_json=sorted(blocker_codes),
-            warning_codes_json=sorted(warning_codes),
-            checked_requirement_count=len(requirements),
-            checked_task_count=len(tasks),
-            input_manifest_sha256=manifest_hash,
-            evaluator_id="deterministic-preparation-readiness",
-            evaluator_version="1",
-            actor_id=context.actor_id,
-            membership_id=context.membership_id,
-            command_id=command.command_id,
-            correlation_id=command.correlation_id,
-        )
-        session.add(readiness)
-        package.aggregate_revision = revision
-        package.state = "BLOCKED" if state == "BLOCKED" else "READY"
-        return HandlerOutcome(
-            result_code="PREPARATION_READINESS_EVALUATED",
-            aggregate_refs=(
-                {
-                    "aggregate_type": "PreparationPackage",
-                    "aggregate_id": str(package.id),
-                    "aggregate_revision": revision,
-                },
-            ),
-            events=(
-                PendingDomainEvent(
-                    aggregate_type="PreparationPackage",
-                    aggregate_id=package.id,
-                    aggregate_revision=revision,
-                    event_type="PreparationReadinessEvaluated",
-                    payload={
-                        "package_id": str(package.id),
-                        "readiness_id": str(readiness.id),
-                        "state": state,
-                        "blocker_codes": sorted(blocker_codes),
-                        "warning_codes": sorted(warning_codes),
-                    },
-                ),
-            ),
         )
 
     def _generate(
@@ -610,15 +729,10 @@ class PreparationHandler:
             raise CommandExecutionError("READINESS_NOT_FOUND")
         if readiness.state == "BLOCKED":
             raise CommandExecutionError("PREPARATION_BLOCKED")
-        dce = self._dce_reader.read(
-            session=session,
-            tenant_id=UUID(str(context.tenant_id)),
-            dce_version_id=package.dce_version_id,
-            as_of=context.received_at,
-        )
-        if dce is None:
-            raise CommandExecutionError("DCE_NOT_FOUND_OR_FORBIDDEN")
-        requirements = dce.requirements
+        facts = self._current_readiness(session=session, package=package, context=context)
+        if facts["state"] == "BLOCKED" or facts["manifest_hash"] != readiness.input_manifest_sha256:
+            raise CommandExecutionError("PREPARATION_READINESS_STALE")
+        requirements = facts["requirements"]
         version = (
             session.scalar(
                 sa.select(

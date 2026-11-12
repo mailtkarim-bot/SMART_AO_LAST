@@ -89,7 +89,17 @@ class LocalQuarantineStorageAdapter(DceQuarantineStoragePort):
         return await asyncio.to_thread(path.read_bytes)
 
     def read_digest(self, *, storage_key: str, max_bytes: int) -> tuple[int, str]:
-        """Re-read one private object and recalculate its size and SHA-256."""
+        digest = hashlib.sha256()
+        byte_size = 0
+        for chunk in self._verified_chunks(storage_key=storage_key, max_bytes=max_bytes):
+            byte_size += len(chunk)
+            digest.update(chunk)
+        return byte_size, digest.hexdigest()
+
+    def read_verified_bytes(self, *, storage_key: str, max_bytes: int) -> bytes:
+        return b"".join(self._verified_chunks(storage_key=storage_key, max_bytes=max_bytes))
+
+    def _verified_chunks(self, *, storage_key: str, max_bytes: int):
         if max_bytes <= 0:
             raise ValueError("private document read limit must be positive")
         relative = PurePosixPath(storage_key)
@@ -109,14 +119,13 @@ class LocalQuarantineStorageAdapter(DceQuarantineStoragePort):
             before = os.fstat(descriptor)
             if not stat.S_ISREG(before.st_mode) or before.st_size > max_bytes:
                 raise ValueError("private document exceeds configured read limit")
-            digest = hashlib.sha256()
             byte_size = 0
             with os.fdopen(descriptor, "rb", closefd=False) as handle:
                 while chunk := handle.read(min(64 * 1024, max_bytes - byte_size + 1)):
                     byte_size += len(chunk)
                     if byte_size > max_bytes:
                         raise ValueError("private document exceeds configured read limit")
-                    digest.update(chunk)
+                    yield chunk
                 after = os.fstat(descriptor)
             if (
                 byte_size != before.st_size
@@ -125,7 +134,6 @@ class LocalQuarantineStorageAdapter(DceQuarantineStoragePort):
                 or before.st_mtime_ns != after.st_mtime_ns
             ):
                 raise ValueError("private document changed while it was read")
-            return byte_size, digest.hexdigest()
         finally:
             os.close(descriptor)
 

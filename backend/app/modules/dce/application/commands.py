@@ -7,10 +7,19 @@ outside the public payload and are supplied by the server-side command context.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
+from pydantic import (
+    AwareDatetime,
+    BaseModel,
+    ConfigDict,
+    Field,
+    SerializerFunctionWrapHandler,
+    StringConstraints,
+    model_serializer,
+    model_validator,
+)
 
 from app.platform.events.command_contracts import ApplicationCommand
 
@@ -116,8 +125,31 @@ class DceExtractionFragmentInput(BaseModel):
 
     ordinal: int = Field(gt=0)
     locator_json: dict[str, object]
-    text: str = Field(min_length=1, max_length=8_000)
+    text: Annotated[str, StringConstraints(strip_whitespace=False)] = Field(
+        min_length=1, max_length=8_000
+    )
     text_sha256: str = Field(min_length=64, max_length=64, pattern=r"^[0-9a-fA-F]{64}$")
+
+
+class DceArchiveEntryInput(BaseModel):
+    """Private ordinal anchor; names/content are never projected into knowledge."""
+
+    model_config = ConfigDict(extra="forbid")
+    entry_path: list[Annotated[int, Field(strict=True, gt=0)]] = Field(max_length=4)
+    entry_name_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    entry_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    state: Literal[
+        "NOT_EXTRACTED",
+        "NESTED_ARCHIVE",
+        "DIRECTORY",
+        "EXCLUDED_UNSAFE",
+        "EXCLUDED_COMPRESSION",
+        "EXCLUDED_SYMLINK",
+        "EXCLUDED_ENCRYPTED",
+        "EXCLUDED_LIMIT",
+        "UNREADABLE",
+        "INVENTORY_LIMIT",
+    ]
 
 
 class RecordDceDocumentExtractionCommand(ApplicationCommand):
@@ -137,8 +169,25 @@ class RecordDceDocumentExtractionCommand(ApplicationCommand):
     failure_code: str | None = Field(default=None, max_length=120)
     fragments: list[DceExtractionFragmentInput] = Field(default_factory=list, max_length=500_000)
 
+    archive_entries: list[DceArchiveEntryInput] = Field(default_factory=list, max_length=1001)
+
+    @model_serializer(mode="wrap")
+    def preserve_legacy_intent_hash(self, handler: SerializerFunctionWrapHandler) -> dict:
+        serialized = handler(self)
+        if not self.archive_entries:
+            serialized.pop("archive_entries", None)
+        return serialized
+
     @model_validator(mode="after")
     def validate_terminal_projection(self) -> RecordDceDocumentExtractionCommand:
+        if self.archive_entries and (
+            self.extractor_id != "smart-ao-archive-inventory"
+            or self.extractor_version != "1"
+            or self.status != "UNSUPPORTED"
+            or self.failure_code != "ARCHIVE_MEMBERS_NOT_ADMITTED"
+            or self.fragments
+        ):
+            raise ValueError("archive inventory cannot become extracted source text")
         if self.status == "COMPLETED":
             if self.failure_code is not None or not self.fragments:
                 raise ValueError("completed extraction requires fragments and no failure code")
@@ -182,7 +231,7 @@ class DceRcRequirementObservationInput(BaseModel):
             r"RC_RESPONSE_CHANNEL|RC_FILE_CONSTRAINT|RC_SITE_VISIT|"
             r"RC_AWARD_CRITERION|RC_NEGOTIATION|RC_OFFER_VALIDITY|"
             r"CCAP_PENALTIES|CCAP_RETENTION_GUARANTEE|CCAP_GUARANTEE|"
-            r"CCAP_INSURANCE|CCTP_VARIANTS|CCAP_SUBCONTRACTING|CCAP_QUALIFICATIONS)$"
+            r"CCAP_INSURANCE|CCTP_VARIANTS|CCAP_SUBCONTRACTING|CCAP_QUALIFICATIONS|DCE_TECHNICAL_PRESCRIPTION|DCE_LOGISTICS_CONSTRAINT|DCE_SCHEDULE_CONSTRAINT|DCE_HSE_CONSTRAINT|DCE_PAYMENT_TERM|DCE_ACCEPTANCE_TERM)$"
         )
     )
     directive: str = Field(pattern=r"^(REQUIRED_SIGNAL|OPTIONAL_SIGNAL|UNSPECIFIED)$")
@@ -328,7 +377,7 @@ class DceRequirementInput(BaseModel):
         pattern=(
             r"^(CANDIDATURE_DOCUMENT|OFFER_DOCUMENT|SUBMISSION_DEADLINE_SIGNAL|"
             r"SUBMISSION_CHANNEL|FILE_CONSTRAINT|SITE_VISIT|AWARD_CRITERION_SIGNAL|"
-            r"NEGOTIATION_SIGNAL|OFFER_VALIDITY_SIGNAL|CONTRACT_RISK_SIGNAL)$"
+            r"NEGOTIATION_SIGNAL|OFFER_VALIDITY_SIGNAL|CONTRACT_RISK_SIGNAL|TECHNICAL_PRESCRIPTION|LOGISTICS_CONSTRAINT|SCHEDULE_CONSTRAINT|HSE_CONSTRAINT|PAYMENT_TERM_SIGNAL|ACCEPTANCE_TERM_SIGNAL)$"
         )
     )
     directive_signal: str = Field(pattern=r"^(REQUIRED_SIGNAL|OPTIONAL_SIGNAL|UNSPECIFIED)$")
@@ -525,6 +574,7 @@ class ReportAssignmentUnavailabilityCommand(ApplicationCommand):
 
 AssignmentScopeAction = Literal[
     "case.dce.read",
+    "case.handover.receipt.write",
     "dce.requirement.confirm",
     "document.administrative.read",
     "preparation.transmit",
@@ -539,7 +589,7 @@ AssignmentScopeClassification = Literal["INTERNAL_OPERATIONAL"]
 class AssignmentScopeCommand(ApplicationCommand):
     """Closed, canonical collaborator scope carried by a patron command."""
 
-    scope_actions: list[AssignmentScopeAction] = Field(min_length=1, max_length=8)
+    scope_actions: list[AssignmentScopeAction] = Field(min_length=1, max_length=9)
     scope_classifications: list[AssignmentScopeClassification] = Field(min_length=1, max_length=1)
 
     @model_validator(mode="after")
@@ -730,3 +780,32 @@ class RegisterDceVersionCommand(ApplicationCommand):
     provenance_url: str | None = Field(default=None, max_length=2_000)
     source_received_at: datetime
     documents: list[DceDocumentAdmissionInput] = Field(min_length=1)
+    predecessor_dce_version_id: UUID | None = None
+    expected_predecessor_revision: int | None = Field(default=None, ge=0)
+    replacement_reason: str | None = Field(default=None, min_length=3, max_length=2000)
+
+    @model_validator(mode="after")
+    def validate_explicit_replacement(self) -> RegisterDceVersionCommand:
+        values = (
+            self.predecessor_dce_version_id,
+            self.expected_predecessor_revision,
+            self.replacement_reason,
+        )
+        if any(value is not None for value in values):
+            if any(value is None for value in values) or self.provenance_channel != "RECTIFICATION":
+                raise ValueError("replacement requires exact predecessor, revision and reason")
+            if self.predecessor_dce_version_id == self.dce_version_id:
+                raise ValueError("a version cannot replace itself")
+        return self
+
+    @model_serializer(mode="wrap")
+    def preserve_legacy_intent_hash(self, handler: SerializerFunctionWrapHandler) -> dict:
+        serialized = handler(self)
+        if self.predecessor_dce_version_id is None:
+            for field in (
+                "predecessor_dce_version_id",
+                "expected_predecessor_revision",
+                "replacement_reason",
+            ):
+                serialized.pop(field, None)
+        return serialized

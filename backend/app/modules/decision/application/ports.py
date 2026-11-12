@@ -380,6 +380,14 @@ class DecisionConditionRepository(Protocol):
     def transition(self, *, session: object, draft: DecisionConditionTransitionDraft) -> None: ...
 
 
+@dataclass(frozen=True, slots=True)
+class DecisionDceRequalification:
+    decision_id: UUID
+    aggregate_revision: int
+    predecessor_dce_version_id: UUID
+    successor_dce_version_id: UUID
+
+
 class DecisionLifecycleRepository(Protocol):
     """Persists Decision roots and their immutable frozen contexts."""
 
@@ -392,6 +400,17 @@ class DecisionLifecycleRepository(Protocol):
     def active_decision_exists(
         self, *, session: object, tenant_id: UUID, decision_key_hash: str
     ) -> bool: ...
+
+    def mark_changed_dce_review_required(
+        self,
+        *,
+        session: object,
+        tenant_id: UUID,
+        case_id: UUID,
+        decision_key_hash: str,
+        actor_id: UUID,
+        now: datetime,
+    ) -> DecisionDceRequalification | None: ...
 
     def next_cycle_number(
         self, *, session: object, tenant_id: UUID, decision_key_hash: str

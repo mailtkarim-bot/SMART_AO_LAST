@@ -2,6 +2,9 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import App from "./App";
+import * as openingHooks from "../features/dce/useDceOpening";
+import * as analysisHooks from "../features/dce/useCaseAnalysisSummary";
+import {analysisFixture} from "../features/dce/analysisFixture.test-helper";
 import type {
   AssignedCase,
   CaseExecutionResults,
@@ -47,6 +50,10 @@ vi.mock("../features/auth/useAuthentication", () => {
     getCaseDceReading: () => Promise.reject(Object.assign(new Error("missing DCE"), { status: 404 })),
     searchCaseKnowledge: () => Promise.resolve({ case_id: "case-1", query: "", results: [] }),
     listPricingScenarios: () => Promise.resolve([]),
+    getCommitmentCard: (caseId:string) => Promise.resolve({case_id:caseId,case_scope_fingerprint:"a".repeat(64),dce_version_id:null,source_context_state:"UNKNOWN",axes:["COMMERCIAL","CANDIDATURE","TECHNICAL","CONSTRUCTIBILITY","CONTRACT","PRICE","CASH","CAPACITY","PARTNERS","HSE","DOCUMENTS","RIGHTS"].map(code=>({code,label:code,status:"UNKNOWN"})),points:[],coverage:null,dossier_review:null,references:[],truncated:false,analysis_complete:false,gate_effect:"NONE",current_decision:null,history:[],history_has_more:false}),
+    getCashSchedule: (caseId:string) => Promise.resolve({case_id:caseId,revision:0,view_sha256:'a'.repeat(64),current:null,history:[],sources:[],history_truncated:false,catalog_truncated:false}),
+    getCaseClosure: (caseId:string) => Promise.resolve({case_id:caseId,dossier_sha256:'a'.repeat(64),dce_version_id:null,case_source:{},reference_options:[],contract_versions:[],lot_references:[],change_actions:[],acts:[],obligations:[],cycles:[],facts:[],rex:[],interviews:[],reuse_history:[],contract_replacements:[],open_obligation_ids:[],financial_observations:{collection_state:'UNKNOWN',settlement_state:'UNKNOWN',comparisons:[]},legal_effect_state:'UNKNOWN',external_receipt_state:'UNKNOWN',completeness_state:'REVIEW_REQUIRED'}),
+    getDatedCapacity: (caseId:string) => Promise.resolve({case_id:caseId,context_sha256:"a".repeat(64),revision:0,current:null,history:[],history_has_more:false,state:"UNKNOWN",coverage_state:"UNKNOWN",reservation_state:"NOT_RESERVED"}),
     getCapabilityAssessments: () => Promise.resolve({proposals:[],gaps:[]}),
     getCapabilityCandidates: () => Promise.resolve([]),
     getCaseResolution: (caseId: string) => Promise.resolve({ case_id: caseId, work_label: "Affaire synthétique", coverage: "PARTIAL", items: [], economic_coverage: null }),
@@ -171,6 +178,45 @@ describe("App readiness integration", () => {
     authSessionGenerationRef.current = 1;
     authTenantRef.current = "entreprise-test";
     overridesRef.current = {};
+  });
+
+  it("masque une synthèse V1 mise en cache dès que l’admission devient UNKNOWN",async()=>{
+    Object.defineProperty(HTMLElement.prototype,"scrollIntoView",{configurable:true,value:vi.fn()});
+    let pending=false;
+    const opening=vi.spyOn(openingHooks,"useDceOpening").mockImplementation(()=>({consultation:null,dceVersionMetadata:null,inventory:null,loading:false,busy:false,sourceChannel:"MANUAL_UPLOAD",file:null,files:[],step:"IDLE",pending,replacementReason:"",replacementConfirmed:false,openSpace:vi.fn(),admitSelectedFile:vi.fn(),setSourceChannel:vi.fn(),setFile:vi.fn(),setFiles:vi.fn(),setReplacementReason:vi.fn(),setReplacementConfirmed:vi.fn()} as unknown as ReturnType<typeof openingHooks.useDceOpening>));
+    const summary={...analysisFixture(),case_id:CASE.case_id};
+    const analysis=vi.spyOn(analysisHooks,"useCaseAnalysisSummary").mockReturnValue({summary,loading:false,error:null,refresh:vi.fn()});
+    overridesRef.current={...baseOverrides(),getCaseDceReading:async()=>({case_id:CASE.case_id,work_label:CASE.work_label,case_lifecycle:"ACTIVE",commercial_stage:"ANALYSIS",dce_freshness:"CURRENT",availability:"AVAILABLE",dce:{dce_version_id:"version-a",lifecycle:"ADMITTED",integrity:"VERIFIED",classification_readiness:"CLASSIFIED",analysis_readiness:"READY_FOR_ANALYSIS",source_received_at:"2026-11-03T00:00:00Z"},requirements:[],counters:{total:0,pending_human_confirmation:0,confirmed:0,review_required:0,not_applicable:0}})};
+    let view:Awaited<ReturnType<typeof renderApp>>|undefined;
+    try{view=await renderApp();fireEvent.click(screen.getByRole("button",{name:/Lecture DCE/}));await screen.findByRole("table",{name:/Douze axes/});pending=true;view.rerender(<App/>);expect(screen.queryByRole("table",{name:/Douze axes/})).toBeNull();}
+    finally{view?.unmount();analysis.mockRestore();opening.mockRestore();}
+  });
+
+  it("ne relit pas automatiquement une source dont l’acte UNKNOWN est restauré", async () => {
+    const spy = vi.spyOn(openingHooks, "useDceOpening").mockImplementation((_api, _message, selected) => ({
+      consultation: null, dceVersionMetadata: null, inventory: null, loading: false, busy: false,
+      sourceChannel: "MANUAL_UPLOAD", file: null, files: [], step: "IDLE", pending: selected?.case_id === CASE.case_id,
+      replacementReason: "", replacementConfirmed: false, openSpace: vi.fn(), admitSelectedFile: vi.fn(),
+      setSourceChannel: vi.fn(), setFile: vi.fn(), setFiles: vi.fn(), setReplacementReason: vi.fn(), setReplacementConfirmed: vi.fn(),
+    } as unknown as ReturnType<typeof openingHooks.useDceOpening>));
+    const getCaseDceReading = vi.fn().mockRejectedValue(Object.assign(new Error("not available"), { status: 404 }));
+    overridesRef.current = { ...baseOverrides(), getCaseDceReading };
+    let view: Awaited<ReturnType<typeof renderApp>> | undefined;
+    try {
+      view = await renderApp();
+      expect(getCaseDceReading).not.toHaveBeenCalled();
+    } finally { view?.unmount(); spy.mockRestore(); }
+  });
+
+  it("opens the newly created BOAMP Case even when another Case was selected",async()=>{
+    let created=false;
+    const cash=vi.fn((caseId:string)=>Promise.resolve({case_id:caseId,revision:0,view_sha256:'a'.repeat(64),current:null,history:[],sources:[],history_truncated:false,catalog_truncated:false}));
+    const signal={observation_id:'obs-local',source_notice_id:'SYNTH-1',title:'Signal BOAMP synthétique',observed_at:'2026-11-03T00:00:00Z',publication_date:null,response_deadline:null,department_codes:[],market_types:[],source_status:null,source_captures:[],score_version:'BOAMP_PUBLIC_V1',score:50,score_explanation:{factors:[]},fingerprint_sha256:'b'.repeat(64),p0_state:'TARGETED',p0_decision:'QUALIFIED',p0_reason_code:'RELEVANT_PUBLIC_SIGNAL',p0_qualification_id:'q-local',p0_decided_at:null,p1_state:'NOT_OPEN',p1_case_id:null,p1_opened_at:null,lot_scope_state:'UNKNOWN',lot_references:[],lot_scope_source:'BOAMP',deadline_state:'MISSING',deadline_source:null,deadline_source_timezone:null,deadline_normalized_timezone:'UTC',unknowns:[]};
+    overridesRef.current={...baseOverrides(),getCashSchedule:cash,listAssignedCases:()=>Promise.resolve(created?[CASE,{...CASE,case_id:'case-boamp-new',work_label:'Affaire BOAMP nouvelle'}]:[CASE]),listBoampObservations:()=>Promise.resolve({observations:[{...signal,p1_state:created?'OPEN_WITH_UNKNOWNS':'NOT_OPEN',p1_case_id:created?'case-boamp-new':null}]}),createCaseFromBoampObservation:async(_id:string,input:Record<string,string>)=>{created=true;return{status:'SUCCEEDED',command_id:input.command_id,idempotency_key:input.idempotency_key,result_code:'CASE_CREATED',case_id:'case-boamp-new',version:1,event_ids:[],replayed:false};}};
+    await renderApp();
+    fireEvent.click(await screen.findByLabelText('Je confirme l’ouverture d’une Affaire avec les inconnues affichées.'));
+    fireEvent.click(screen.getByRole('button',{name:/Créer une affaire/}));
+    await waitFor(()=>expect(cash).toHaveBeenLastCalledWith('case-boamp-new'));
   });
 
   it("clears the submission manifest when the authenticated tenant changes", async () => {
@@ -876,6 +922,14 @@ describe("App error visibility", () => {
     expect(screen.queryByText("Ventes")).toBeNull();
   });
 
+  it("fige aussi les contrôles Decision existants pendant un acte de carte UNKNOWN",async()=>{
+    overridesRef.current={...baseOverrides(),createDecision:vi.fn().mockRejectedValue(Object.assign(Error("Réponse perdue"),{status:503}))};
+    await renderApp();connect();
+    fireEvent.click(await screen.findByRole("button",{name:"Créer un brouillon de décision"}));
+    await screen.findByText(/UNKNOWN — résultat de l’acte inconnu/);
+    expect(screen.queryByRole("button",{name:"Créer le brouillon Decision"})).toBeNull();
+  });
+
   it("affiche une erreur visible quand le chargement des scénarios de chiffrage échoue", async () => {
     overridesRef.current = {
       ...baseOverrides(),
@@ -1014,6 +1068,7 @@ describe("App error visibility", () => {
       getEnterpriseCompany: async () => company,
       listEnterpriseCapabilities: async () => ({ capabilities: [] }),
       listBusinessMethodProfileVersions: async () => ({ company_id: "company-1", versions: [] }),
+      listBusinessMethodProfileAdoptions: vi.fn().mockResolvedValue([]),
       getBusinessMethodProfileAdoption: async () => adoption,
       getDecisionDossier: async () => decision,
       freezeDecisionContext: freeze,

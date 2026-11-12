@@ -59,6 +59,23 @@ class PatronDecisionDossierService:
             raise PermissionError(decision.code)
 
         lookup = self._reader.read(tenant_id=actor.tenant_id, case_id=case_id)
+        if any(ref.aggregate_type == "ANALYSIS_ASSESSMENT" for ref in lookup.references):
+            private = self._policy.authorize(
+                context=actor,
+                request=AuthorizationRequest(
+                    action=Capability.PRICING_READ,
+                    resource=AuthorizationResource(
+                        resource_type="DECISION_DOSSIER",
+                        resource_id=case_id,
+                        tenant_id=actor.tenant_id,
+                        classification=DataClassification.FINANCIAL_PRIVATE,
+                        case_id=case_id,
+                    ),
+                    evaluated_at=now,
+                ),
+            )
+            if not private.allowed:
+                raise PermissionError(private.code)
         if lookup.decision is None:
             raise PermissionError("NOT_FOUND_OR_FORBIDDEN")
         if lookup.context is None:

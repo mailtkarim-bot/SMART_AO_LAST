@@ -521,6 +521,64 @@ def test_a1_http_postgres_chain_is_idempotent_tenant_scoped_and_does_not_promote
     assert link["contract_impact_id"] == str(proof_id)
     assert link["profile_version_id"] == profile_version_id
 
+    # L04 composes native relations without assigning the registering actor as owner.
+    from app.modules.case.infrastructure.analysis_follow_up_reader import attach_analysis_follow_ups
+
+    with Session(database_engine) as session:
+        requirement = session.get(DceRequirementRecord, requirement_id)
+        item = dict(
+            item_id=requirement_id,
+            kind="REQUIREMENT",
+            native_state="CONFIRMED",
+            source_state="CURRENT_SOURCE",
+        )
+        attach_analysis_follow_ups(
+            session,
+            tenant_id=tenant_id,
+            case_id=case_id,
+            version=requirement.dce_version_id,
+            requirements=[item],
+            risks=[],
+        )
+        condition_follows = [f for f in item["follow_ups"] if f["kind"] == "CONDITION"]
+        assert len(condition_follows) == 1
+        assert condition_follows[0]["record_id"] == condition_id
+        assert condition_follows[0]["responsible_actor_id"] == actor.actor_id
+        assert condition_follows[0]["consequence"] == "Réexamen Patron"
+        assert condition_follows[0]["relation_id"] == UUID(link_body["link_id"])
+        nested = session.begin_nested()
+        session.execute(
+            update(DecisionRecord)
+            .where(DecisionRecord.id == decision_id)
+            .values(validity="INVALIDATED")
+        )
+        attach_analysis_follow_ups(
+            session,
+            tenant_id=tenant_id,
+            case_id=case_id,
+            version=requirement.dce_version_id,
+            requirements=[item],
+            risks=[],
+        )
+        assert not [f for f in item["follow_ups"] if f["kind"] == "CONDITION"]
+        nested.rollback()
+        nested = session.begin_nested()
+        session.execute(
+            update(CaseRecord)
+            .where(CaseRecord.id == case_id)
+            .values(aggregate_revision=CaseRecord.aggregate_revision + 1)
+        )
+        attach_analysis_follow_ups(
+            session,
+            tenant_id=tenant_id,
+            case_id=case_id,
+            version=requirement.dce_version_id,
+            requirements=[item],
+            risks=[],
+        )
+        assert not [f for f in item["follow_ups"] if f["kind"] == "CONDITION"]
+        nested.rollback()
+
     profile_two = BusinessMethodProfileContent.model_validate(
         {
             "terminology": {"lot": "Zone travaux"},

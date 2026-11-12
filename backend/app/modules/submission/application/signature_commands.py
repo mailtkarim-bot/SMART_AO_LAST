@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import Field, SerializerFunctionWrapHandler, model_serializer
 
 from app.platform.events.command_contracts import ApplicationCommand
 
@@ -13,8 +13,18 @@ class RequestSubmissionSignatureCommand(ApplicationCommand):
     signature_id: UUID
     submission_package_id: UUID
     expected_package_version: int = Field(ge=1)
+    expected_manifest_sha256: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
+    rationale: str | None = Field(default=None, min_length=1, max_length=2000)
     signer_membership_id: UUID
     provider: str = Field(min_length=2, max_length=64, pattern=r"^[A-Z][A-Z0-9_.-]+$")
+
+    @model_serializer(mode="wrap")
+    def preserve_legacy_intent_hash(self, handler: SerializerFunctionWrapHandler) -> dict:
+        data = handler(self)
+        for field in ("expected_manifest_sha256", "rationale"):
+            if getattr(self, field) is None:
+                data.pop(field, None)
+        return data
 
 
 class RecordSubmissionSignatureCommand(ApplicationCommand):

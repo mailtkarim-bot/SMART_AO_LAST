@@ -42,8 +42,14 @@ from app.modules.pricing.infrastructure.models.partner_offer_scope_review import
     PartnerOfferScopeReviewOfferRecord,
     PartnerOfferScopeReviewRecord,
 )
+from app.modules.pricing.infrastructure.models.position_review import (
+    PricingPositionCostReferenceRecord,
+    PricingPositionReviewRecord,
+)
 
 __all__ = [
+    "PricingPositionReviewRecord",
+    "PricingPositionCostReferenceRecord",
     "FinancialReportLineRecord",
     "FinancialReportPublicationRecord",
     "FinancialReportSnapshotRecord",

@@ -37,6 +37,17 @@ class TransitionPostReceptionObligationHandler(CommandHandler):
         context: CommandContext,
     ) -> HandlerOutcome:
         tenant_id = UUID(str(context.tenant_id))
+        from app.modules.case.infrastructure.models.case import CaseRecord
+
+        if (
+            session.scalar(
+                sa.select(CaseRecord.id)
+                .where(CaseRecord.tenant_id == tenant_id, CaseRecord.id == command.case_id)
+                .with_for_update()
+            )
+            is None
+        ):
+            raise CommandExecutionError("POST_RECEPTION_OBLIGATION_NOT_FOUND_OR_FORBIDDEN")
         obligation = session.scalar(
             sa.select(PostReceptionObligationRecord)
             .where(

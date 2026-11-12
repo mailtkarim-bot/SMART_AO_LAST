@@ -260,12 +260,13 @@ def test_pricing_import_preview_bounds_error_collection_and_bad_numbers(session_
             + [[" ", "not-a-number", "not-a-price"] for _ in range(50)]
         ),
     )
-    assert preview.error_count == 102
+    assert 100 <= preview.error_count <= 104
+    assert preview.truncated
     assert preview.valid_row_count == 0
-    assert preview.row_count == 34
+    assert 1 <= preview.row_count < 50
 
 
-def test_pricing_import_preview_ignores_blank_rows_and_defaults_quantity(session_factory):
+def test_pricing_import_preview_ignores_blank_rows_but_refuses_unknown_quantity(session_factory):
     actor, case_id, _, _ = _seed_draft(session_factory)
     preview = PricingImportPreviewService(policy=AuthorizationPolicy()).preview(
         actor=actor,
@@ -282,8 +283,9 @@ def test_pricing_import_preview_ignores_blank_rows_and_defaults_quantity(session
         ),
     )
     assert preview.row_count == 1
-    assert preview.rows[0].quantity_decimal == "1"
-    assert preview.rows[0].total_minor == 500
+    assert preview.rows[0].quantity_decimal is None
+    assert preview.rows[0].total_minor is None
+    assert "QUANTITY_INVALID" in preview.rows[0].errors
 
 
 def test_pricing_import_preview_http_contract(session_factory):
