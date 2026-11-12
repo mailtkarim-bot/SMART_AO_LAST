@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
 import tomllib
@@ -62,8 +63,11 @@ def test_backend_build_synchronizes_the_union_of_requested_extras_once(
         "PATH": f"{tools}:{os.environ['PATH']}",
         "SMART_AO_SYNC_PROOF_OUTPUT": str(output),
     }
+    # Docker's absolute interpreter must never invoke the host installer.
+    shell = block.group()[4:].replace("\\\n", " ")
+    shell = shell.replace("/usr/local/bin/python", shlex.quote(str(tools / "python")))
     result = subprocess.run(
-        ["/bin/sh", "-c", block.group()[4:].replace("\\\n", " ")],
+        ["/bin/sh", "-c", shell],
         env=env,
         capture_output=True,
         text=True,
