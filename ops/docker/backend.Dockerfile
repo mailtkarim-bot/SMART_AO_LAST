@@ -52,6 +52,8 @@ RUN python -m pip install --no-cache-dir --upgrade pip==26.2.0 \
         set -- "$@" --extra calendar; \
     fi \
     && uv sync --frozen --no-dev --no-editable "$@" \
+    && /usr/local/bin/python -m pip uninstall --yes pip \
+    && /usr/local/bin/python -c "import importlib.util; assert importlib.util.find_spec('pip') is None" \
     && chown -R smartao:smartao /app
 
 USER smartao
