@@ -115,7 +115,10 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id", name="pk_boamp_opportunity_observations"),
         sa.UniqueConstraint("tenant_id", "id", name="uq_boamp_observations_tenant_id"),
         sa.UniqueConstraint(
-            "tenant_id", "source", "source_notice_id", "fingerprint_sha256",
+            "tenant_id",
+            "source",
+            "source_notice_id",
+            "fingerprint_sha256",
             name="uq_boamp_observations_source_fingerprint",
         ),
         sa.CheckConstraint("source = 'BOAMP'", name="boamp_observations_source"),
@@ -219,13 +222,9 @@ def downgrade() -> None:
         "DROP TRIGGER IF EXISTS boamp_ingestion_links_append_only "
         "ON boamp_ingestion_observation_links"
     )
+    op.execute("DROP TRIGGER IF EXISTS boamp_ingestion_runs_append_only ON boamp_ingestion_runs")
     op.execute(
-        "DROP TRIGGER IF EXISTS boamp_ingestion_runs_append_only "
-        "ON boamp_ingestion_runs"
-    )
-    op.execute(
-        "DROP TRIGGER IF EXISTS boamp_observations_append_only "
-        "ON boamp_opportunity_observations"
+        "DROP TRIGGER IF EXISTS boamp_observations_append_only ON boamp_opportunity_observations"
     )
     op.execute("DROP FUNCTION IF EXISTS prevent_boamp_observation_mutation()")
     op.drop_index("ix_boamp_links_tenant_run", table_name="boamp_ingestion_observation_links")

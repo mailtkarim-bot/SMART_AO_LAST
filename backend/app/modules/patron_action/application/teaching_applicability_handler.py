@@ -19,6 +19,7 @@ from app.modules.patron_action.infrastructure.models.rex import CaseRexRecord
 from app.modules.patron_action.infrastructure.models.teaching_applicability import (
     CaseTeachingApplicabilityRecord,
 )
+from app.modules.patron_action.public.execution_rex import published_execution_origin
 from app.platform.events.dispatcher import (
     CommandContext,
     CommandExecutionError,
@@ -94,6 +95,49 @@ class RecordCaseTeachingApplicabilityHandler(CommandHandler):
         if source_rex is None or not _snapshot_matches_record(selected_snapshot, source_rex):
             raise CommandExecutionError("SOURCE_SNAPSHOT_MISMATCH")
 
+        if source_rex.execution_exit_act_id is not None:
+            from app.modules.pricing.infrastructure.case_closure_reader import (
+                closure_dossier,
+                source_context_state,
+            )
+
+            if getattr(command, "expected_target_dossier_sha256", None) is None or not getattr(
+                command, "human_confirmed", False
+            ):
+                raise CommandExecutionError("EXECUTION_REX_HUMAN_CONTEXT_REQUIRED")
+            # Same lock order for source and target prevents crossed reuse deadlocks.
+            for lock_case_id in sorted({command.source_case_id, command.target_case_id}, key=str):
+                session.scalar(
+                    sa.select(CaseRecord)
+                    .where(CaseRecord.tenant_id == tenant_id, CaseRecord.id == lock_case_id)
+                    .with_for_update()
+                )
+            source_dossier = closure_dossier(session, tenant_id, command.source_case_id)
+            target_dossier = closure_dossier(session, tenant_id, command.target_case_id)
+            source_state = source_context_state(
+                source_rex.execution_source_json.get("case_source"), source_dossier["case_source"]
+            )
+            if command.decision == "APPLICABLE" and (
+                source_state == "REVIEW_REQUIRED" or source.expires_on < context.received_at.date()
+            ):
+                raise CommandExecutionError("EXECUTION_REX_SOURCE_CHANGED_OR_EXPIRED")
+            if command.decision == "APPLICABLE" and (
+                target_dossier["case_source"]["lifecycle"] != "ACTIVE"
+                or target_dossier["case_source"]["dce_freshness"] == "REVIEW_REQUIRED"
+            ):
+                raise CommandExecutionError("EXECUTION_REX_TARGET_REVIEW_REQUIRED")
+            if target_dossier["dossier_sha256"] != command.expected_target_dossier_sha256:
+                raise CommandExecutionError("CLOSURE_VIEW_CONFLICT")
+            selected_snapshot = {
+                **selected_snapshot,
+                "execution_reuse": {
+                    "human_confirmed": True,
+                    "source_context_state": source_state,
+                    "target_case_source": target_dossier["case_source"],
+                    "expected_target_dossier_sha256": command.expected_target_dossier_sha256,
+                },
+            }
+
         try:
             applicability = build_case_teaching_applicability(
                 source_case_id=source.case_id,
@@ -159,6 +203,12 @@ class RecordCaseTeachingApplicabilityHandler(CommandHandler):
 
 
 def _snapshot_matches_record(snapshot: dict[str, object], record: CaseRexRecord) -> bool:
+    if record.execution_exit_act_id is not None and (
+        snapshot.get("execution_exit_act_id") != str(record.execution_exit_act_id)
+        or snapshot.get("execution_source")
+        != published_execution_origin(record.execution_source_json)
+    ):
+        return False
     return all(
         snapshot.get(key) == value
         for key, value in {
@@ -202,6 +252,7 @@ class CaseTeachingApplicabilityProjection:
     source_case_id: UUID
     source_case_label: str
     source_validity: str
+    context_state: str = "UNKNOWN"
 
 
 class CaseTeachingApplicabilityService:
@@ -337,6 +388,9 @@ class CaseTeachingApplicabilityService:
                         block_reason = "CASE_ONLY_TEACHING_CANNOT_CROSS_CASES"
                     elif scope not in {"CASE_ONLY", "LOT_PATTERN", "ENTERPRISE_PATTERN"}:
                         block_reason = "SOURCE_SCOPE_UNKNOWN"
+                    if teaching.get("execution_exit_act_id"):
+                        can_assess = False
+                        block_reason = "EXECUTION_REX_USE_CLOSURE_REVIEW"
                     projections.append(
                         CaseTeachingSourceProjection(
                             source_case_id=interview.case_id,
@@ -397,6 +451,10 @@ class CaseTeachingApplicabilityService:
             ).all()
             today = now.date()
             projections: list[CaseTeachingApplicabilityProjection] = []
+            from app.modules.patron_action.infrastructure.execution_rex_reader import (
+                execution_reuse_context_state,
+            )
+
             for record, source_case_id, source_case_label in rows:
                 try:
                     self._authorize(
@@ -410,6 +468,9 @@ class CaseTeachingApplicabilityService:
                 projections.append(
                     CaseTeachingApplicabilityProjection(
                         record=record,
+                        context_state=execution_reuse_context_state(
+                            session, actor.tenant_id, record
+                        ),
                         source_case_id=source_case_id,
                         source_case_label=source_case_label,
                         source_validity="USABLE"

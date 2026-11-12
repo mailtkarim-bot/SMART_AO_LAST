@@ -1,4 +1,14 @@
 # ruff: noqa: E501, I001
+from typing import cast
+from app.interfaces.http.routes.consultations import ConsultationSecurityRuntime
+from app.interfaces.http.routes.patron_contract_execution_evidence import (
+    ContractExecutionEvidenceReadService,
+    ContractExecutionEvidenceRequalificationReadService,
+    ContractExecutionEvidenceTimelineReadService,
+    ContractInstrumentSupersessionReadService,
+    ContractInstrumentVersionReadService,
+)
+from app.platform.events.dispatcher import CommandDispatcher
 from datetime import UTC, date, datetime
 from types import SimpleNamespace
 from uuid import uuid4
@@ -191,13 +201,22 @@ def test_patron_can_record_and_read_human_declared_evidence_without_legal_conclu
     case_id, act_id = uuid4(), uuid4()
     dispatcher = Dispatcher()
     router = build_patron_contract_execution_evidence_router(
-        dispatcher=dispatcher,
-        service=ReadService(),
-        instrument_version_service=InstrumentVersionReadService(),
-        supersession_service=SupersessionReadService(),
-        requalification_service=RequalificationReadService(),
-        timeline_service=TimelineReadService(),
-        security_runtime=SimpleNamespace(context_resolver=Resolver(ActorKind.PATRON_ADMIN)),
+        dispatcher=cast(CommandDispatcher, dispatcher),
+        service=cast(ContractExecutionEvidenceReadService, ReadService()),
+        instrument_version_service=cast(
+            ContractInstrumentVersionReadService, InstrumentVersionReadService()
+        ),
+        supersession_service=cast(
+            ContractInstrumentSupersessionReadService, SupersessionReadService()
+        ),
+        requalification_service=cast(
+            ContractExecutionEvidenceRequalificationReadService, RequalificationReadService()
+        ),
+        timeline_service=cast(ContractExecutionEvidenceTimelineReadService, TimelineReadService()),
+        security_runtime=cast(
+            ConsultationSecurityRuntime,
+            SimpleNamespace(context_resolver=Resolver(ActorKind.PATRON_ADMIN)),
+        ),
     )
     request = RecordContractExecutionEvidenceRequest(
         command_id=uuid4(),
@@ -215,7 +234,9 @@ def test_patron_can_record_and_read_human_declared_evidence_without_legal_conclu
     listed = router.routes[1].endpoint(case_id, authorization="Bearer token")
 
     assert receipt.status_code == 201
+    assert dispatcher.command is not None
     assert dispatcher.command.act_kind == "WORK_RECEPTION"
+    assert dispatcher.command is not None
     assert dispatcher.command.reception_outcome == "UNDER_RESERVATIONS"
     assert not hasattr(dispatcher.command, "deadline")
     assert listed[0].evidence_refs == ["document://pv/sha256:abc"]
@@ -228,13 +249,22 @@ def test_patron_can_record_and_read_human_declared_evidence_without_legal_conclu
 def test_collaborator_cannot_create_or_read_contract_execution_evidence():
     dispatcher = Dispatcher()
     router = build_patron_contract_execution_evidence_router(
-        dispatcher=dispatcher,
-        service=ReadService(),
-        instrument_version_service=InstrumentVersionReadService(),
-        supersession_service=SupersessionReadService(),
-        requalification_service=RequalificationReadService(),
-        timeline_service=TimelineReadService(),
-        security_runtime=SimpleNamespace(context_resolver=Resolver(ActorKind.COLLABORATEUR)),
+        dispatcher=cast(CommandDispatcher, dispatcher),
+        service=cast(ContractExecutionEvidenceReadService, ReadService()),
+        instrument_version_service=cast(
+            ContractInstrumentVersionReadService, InstrumentVersionReadService()
+        ),
+        supersession_service=cast(
+            ContractInstrumentSupersessionReadService, SupersessionReadService()
+        ),
+        requalification_service=cast(
+            ContractExecutionEvidenceRequalificationReadService, RequalificationReadService()
+        ),
+        timeline_service=cast(ContractExecutionEvidenceTimelineReadService, TimelineReadService()),
+        security_runtime=cast(
+            ConsultationSecurityRuntime,
+            SimpleNamespace(context_resolver=Resolver(ActorKind.COLLABORATEUR)),
+        ),
     )
     request = RecordContractExecutionEvidenceRequest(
         command_id=uuid4(),
@@ -307,13 +337,22 @@ def test_patron_can_declare_and_read_a_sourced_contract_instrument_version():
     case_id, version_id = uuid4(), uuid4()
     dispatcher = Dispatcher()
     router = build_patron_contract_execution_evidence_router(
-        dispatcher=dispatcher,
-        service=ReadService(),
-        instrument_version_service=InstrumentVersionReadService(),
-        supersession_service=SupersessionReadService(),
-        requalification_service=RequalificationReadService(),
-        timeline_service=TimelineReadService(),
-        security_runtime=SimpleNamespace(context_resolver=Resolver(ActorKind.PATRON_ADMIN)),
+        dispatcher=cast(CommandDispatcher, dispatcher),
+        service=cast(ContractExecutionEvidenceReadService, ReadService()),
+        instrument_version_service=cast(
+            ContractInstrumentVersionReadService, InstrumentVersionReadService()
+        ),
+        supersession_service=cast(
+            ContractInstrumentSupersessionReadService, SupersessionReadService()
+        ),
+        requalification_service=cast(
+            ContractExecutionEvidenceRequalificationReadService, RequalificationReadService()
+        ),
+        timeline_service=cast(ContractExecutionEvidenceTimelineReadService, TimelineReadService()),
+        security_runtime=cast(
+            ConsultationSecurityRuntime,
+            SimpleNamespace(context_resolver=Resolver(ActorKind.PATRON_ADMIN)),
+        ),
     )
     request = RecordContractInstrumentVersionRequest(
         command_id=uuid4(),
@@ -327,6 +366,7 @@ def test_patron_can_declare_and_read_a_sourced_contract_instrument_version():
     receipt = router.routes[2].endpoint(case_id, request, authorization="Bearer token")
     listed = router.routes[3].endpoint(case_id, authorization="Bearer token")
     assert receipt.status_code == 201
+    assert dispatcher.command is not None
     assert dispatcher.command.version_reference == "AVENANT-2-SIGNE"
     assert listed[0].version_reference == "MARCHE-SIGNE-2026"
     assert listed[0].source_refs == ["contract://initial"]
@@ -336,13 +376,22 @@ def test_patron_can_declare_and_read_an_append_only_supersession():
     case_id = uuid4()
     dispatcher = Dispatcher()
     router = build_patron_contract_execution_evidence_router(
-        dispatcher=dispatcher,
-        service=ReadService(),
-        instrument_version_service=InstrumentVersionReadService(),
-        supersession_service=SupersessionReadService(),
-        requalification_service=RequalificationReadService(),
-        timeline_service=TimelineReadService(),
-        security_runtime=SimpleNamespace(context_resolver=Resolver(ActorKind.PATRON_ADMIN)),
+        dispatcher=cast(CommandDispatcher, dispatcher),
+        service=cast(ContractExecutionEvidenceReadService, ReadService()),
+        instrument_version_service=cast(
+            ContractInstrumentVersionReadService, InstrumentVersionReadService()
+        ),
+        supersession_service=cast(
+            ContractInstrumentSupersessionReadService, SupersessionReadService()
+        ),
+        requalification_service=cast(
+            ContractExecutionEvidenceRequalificationReadService, RequalificationReadService()
+        ),
+        timeline_service=cast(ContractExecutionEvidenceTimelineReadService, TimelineReadService()),
+        security_runtime=cast(
+            ConsultationSecurityRuntime,
+            SimpleNamespace(context_resolver=Resolver(ActorKind.PATRON_ADMIN)),
+        ),
     )
     request = DeclareContractInstrumentSupersessionRequest(
         command_id=uuid4(),
@@ -357,6 +406,7 @@ def test_patron_can_declare_and_read_an_append_only_supersession():
     listed = router.routes[5].endpoint(case_id, authorization="Bearer token")
 
     assert receipt.status_code == 201
+    assert dispatcher.command is not None
     assert dispatcher.command.replacing_contract_instrument_version_id == (
         request.replacing_contract_instrument_version_id
     )
@@ -369,13 +419,22 @@ def test_patron_can_record_and_read_a_requalification_without_legal_conclusion()
     case_id = uuid4()
     dispatcher = Dispatcher()
     router = build_patron_contract_execution_evidence_router(
-        dispatcher=dispatcher,
-        service=ReadService(),
-        instrument_version_service=InstrumentVersionReadService(),
-        supersession_service=SupersessionReadService(),
-        requalification_service=RequalificationReadService(),
-        timeline_service=TimelineReadService(),
-        security_runtime=SimpleNamespace(context_resolver=Resolver(ActorKind.PATRON_ADMIN)),
+        dispatcher=cast(CommandDispatcher, dispatcher),
+        service=cast(ContractExecutionEvidenceReadService, ReadService()),
+        instrument_version_service=cast(
+            ContractInstrumentVersionReadService, InstrumentVersionReadService()
+        ),
+        supersession_service=cast(
+            ContractInstrumentSupersessionReadService, SupersessionReadService()
+        ),
+        requalification_service=cast(
+            ContractExecutionEvidenceRequalificationReadService, RequalificationReadService()
+        ),
+        timeline_service=cast(ContractExecutionEvidenceTimelineReadService, TimelineReadService()),
+        security_runtime=cast(
+            ConsultationSecurityRuntime,
+            SimpleNamespace(context_resolver=Resolver(ActorKind.PATRON_ADMIN)),
+        ),
     )
     request = RecordContractExecutionEvidenceRequalificationRequest(
         command_id=uuid4(),
@@ -393,7 +452,9 @@ def test_patron_can_record_and_read_a_requalification_without_legal_conclusion()
     listed = router.routes[7].endpoint(case_id, authorization="Bearer token")
 
     assert receipt.status_code == 201
+    assert dispatcher.command is not None
     assert dispatcher.command.expected_revision == 0
+    assert dispatcher.command is not None
     assert dispatcher.command.decision == "RELINKED_TO_DECLARED_VERSION"
     assert receipt.body
     assert listed[0].decision == "RELINKED_TO_DECLARED_VERSION"
@@ -403,13 +464,22 @@ def test_patron_can_record_and_read_a_requalification_without_legal_conclusion()
 
 def test_patron_timeline_keeps_supersession_as_a_distinct_human_event():
     router = build_patron_contract_execution_evidence_router(
-        dispatcher=Dispatcher(),
-        service=ReadService(),
-        instrument_version_service=InstrumentVersionReadService(),
-        supersession_service=SupersessionReadService(),
-        requalification_service=RequalificationReadService(),
-        timeline_service=TimelineReadService(),
-        security_runtime=SimpleNamespace(context_resolver=Resolver(ActorKind.PATRON_ADMIN)),
+        dispatcher=cast(CommandDispatcher, Dispatcher()),
+        service=cast(ContractExecutionEvidenceReadService, ReadService()),
+        instrument_version_service=cast(
+            ContractInstrumentVersionReadService, InstrumentVersionReadService()
+        ),
+        supersession_service=cast(
+            ContractInstrumentSupersessionReadService, SupersessionReadService()
+        ),
+        requalification_service=cast(
+            ContractExecutionEvidenceRequalificationReadService, RequalificationReadService()
+        ),
+        timeline_service=cast(ContractExecutionEvidenceTimelineReadService, TimelineReadService()),
+        security_runtime=cast(
+            ConsultationSecurityRuntime,
+            SimpleNamespace(context_resolver=Resolver(ActorKind.PATRON_ADMIN)),
+        ),
     )
 
     response = router.routes[8].endpoint(uuid4(), authorization="Bearer token")

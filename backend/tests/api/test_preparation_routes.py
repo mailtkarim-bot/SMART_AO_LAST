@@ -1,3 +1,4 @@
+import hashlib
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from types import SimpleNamespace
@@ -230,6 +231,10 @@ class _PreparationService:
         )
         return package, readiness, [document], [draft]
 
+    def read_package_with_verified_drafts(self, **kwargs):
+        result = self.read_package(**kwargs)
+        return (*result, {})
+
 
 class _ReviewService:
     def __init__(self, *, error=None):
@@ -246,10 +251,12 @@ class _ReviewService:
             "DecidePreparationReviewCommand": "PREPARATION_REVIEW_DECIDED",
             "AddPreparationCorrectionCommand": "PREPARATION_CORRECTION_ADDED",
             "CreateTechnicalResponseDraftCommand": "TECHNICAL_RESPONSE_DRAFT_CREATED",
+            "CreateBuyerDocxResponseDraftCommand": "BUYER_DOCX_RESPONSE_DRAFT_CREATED",
         }[name]
         return _result(code=code, replayed=self.calls > 1)
 
     def read_response_drafts(self, **kwargs):
+        content = "Texte de brouillon synthétique."
         return [
             SimpleNamespace(
                 draft_id=uuid4(),
@@ -258,8 +265,17 @@ class _ReviewService:
                 section_codes_json=["METHOD"],
                 source_refs_json=[str(uuid4())],
                 responsible_role="COLLABORATEUR",
+                content_sha256=hashlib.sha256(content.encode("utf-8")).hexdigest(),
+                response_plan_id=uuid4(),
+                response_plan_version=1,
             )
         ]
+
+    def read_response_drafts_package_revision(self, **kwargs):
+        return 3
+
+    def read_verified_response_drafts(self, **kwargs):
+        return ((self.read_response_drafts(**kwargs)[0], "Texte de brouillon synthétique."),)
 
 
 def _headers():
@@ -416,14 +432,20 @@ def test_review_routes_return_each_command_result():
         assert response.json()["result_code"] == code
 
 
-def test_patron_can_read_response_draft_projection_without_content():
+def test_patron_reads_response_draft_content_only_after_storage_hash_verification():
     response = _client(review_service=cast(Any, _ReviewService())).get(
         f"/api/v1/preparation/{uuid4()}/response-drafts", headers=_headers()
     )
 
     assert response.status_code == 200
     body = response.json()
+    assert body["package_revision"] == 3
     assert body["drafts"][0]["section_codes"] == ["METHOD"]
+    assert body["drafts"][0]["content"] == "Texte de brouillon synthétique."
+    assert (
+        body["drafts"][0]["content_sha256"]
+        == hashlib.sha256("Texte de brouillon synthétique.".encode()).hexdigest()
+    )
     assert "storage_key" not in body["drafts"][0]
 
 
@@ -457,3 +479,57 @@ def test_preparation_payload_rejects_financial_fields():
     )
 
     assert response.status_code == 422
+
+
+def test_collaborator_reads_exact_assembled_draft_metadata_and_verified_content():
+    content = "Deux contributions sourcées, manques UNKNOWN."
+    digest = hashlib.sha256(content.encode()).hexdigest()
+    plan_id = uuid4()
+
+    class SourceService(_PreparationService):
+        def read_package(self, **kwargs):
+            package, readiness, documents, drafts = super().read_package(**kwargs)
+            for draft in drafts:
+                draft.content_sha256 = digest
+                draft.response_plan_id = plan_id
+                draft.response_plan_version = 1
+            return package, readiness, documents, drafts
+
+        def read_package_with_verified_drafts(self, **kwargs):
+            result = self.read_package(**kwargs)
+            return (*result, {(d.draft_id, d.version): content for d in result[3]})
+
+    response = _client(service=SourceService()).get(
+        f"/api/v1/collaborator/preparation/{uuid4()}", headers=_headers()
+    )
+    assert response.status_code == 200
+    draft = response.json()["response_drafts"][0]
+    assert draft["content_sha256"] == digest
+    assert draft["response_plan_id"] == str(plan_id)
+    assert draft["response_plan_version"] == 1
+    assert draft["content"] == content
+
+
+def test_buyer_docx_fill_is_an_explicit_native_command():
+    package = uuid4()
+    source = uuid4()
+    body = dict(
+        command_id=str(uuid4()),
+        idempotency_key=str(uuid4()),
+        draft_id=str(uuid4()),
+        expected_package_revision=4,
+        source_response=dict(draft_id=str(source), version=1, content_sha256="a" * 64),
+        template=dict(document_id=str(uuid4()), dce_version_id=str(uuid4()), sha256="b" * 64),
+        fields=[
+            dict(
+                locator="p:3",
+                expected_xml_sha256="c" * 64,
+                requirement_id=str(uuid4()),
+                section_code="METHOD",
+            )
+        ],
+    )
+    response = _client(review_service=cast(Any, _ReviewService())).post(
+        f"/api/v1/preparation/{package}/buyer-response-drafts", json=body, headers=_headers()
+    )
+    assert response.status_code == 201, response.text

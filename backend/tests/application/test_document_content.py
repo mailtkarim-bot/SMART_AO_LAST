@@ -1,7 +1,9 @@
 from uuid import uuid4
 
 from app.modules.preparation.application.document_content import (
+    ResponsePlanDraftItem,
     TechnicalDocumentFacts,
+    build_response_plan_draft,
     build_technical_document,
 )
 from app.modules.preparation.application.ports import PreparationRequirementInput
@@ -40,5 +42,33 @@ def test_technical_document_is_canonical_structured_and_non_financial() -> None:
     assert "SITE_VISIT" in content
     assert "PENDING_HUMAN_CONFIRMATION" in content
     assert "TASK_RESULT_MISSING" in content
+    forbidden = {"prix", "marge", "trésorerie", "chiffrage", "go/no-go"}
+    assert not forbidden.intersection(content.casefold())
+
+
+def test_response_draft_content_is_built_from_the_exact_plan_without_source_ids() -> None:
+    case_id, requirement_id, proposal_id = (uuid4() for _ in range(3))
+    content = build_response_plan_draft(
+        plan_version=4,
+        draft_version=2,
+        items=(
+            ResponsePlanDraftItem(
+                requirement_id=requirement_id,
+                section_code="METHOD",
+                capability_name="Méthodologie travaux",
+                capability_title="Organisation de chantier",
+                capability_version_number=3,
+                verified_source_count=2,
+            ),
+        ),
+    )
+
+    assert "Plan de réponse — révision 4" in content
+    assert "Brouillon — version 2" in content
+    assert "Méthodologie travaux — Organisation de chantier (version 3)" in content
+    assert "2 pièce(s) relue(s); SHA-256 recalculés et concordants" in content
+    assert str(requirement_id) not in content
+    assert str(proposal_id) not in content
+    assert str(case_id) not in content
     forbidden = {"prix", "marge", "trésorerie", "chiffrage", "go/no-go"}
     assert not forbidden.intersection(content.casefold())

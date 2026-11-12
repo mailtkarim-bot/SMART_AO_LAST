@@ -1697,6 +1697,7 @@ from app.modules.patron_action.infrastructure.models.patron_action import (  # n
 from app.modules.preparation.infrastructure.models.preparation import (  # noqa: E402, F401
     GeneratedTechnicalDocumentRecord,
     PreparationReadinessRecord,
+    PreparationResponsePlanRecord,
     PreparationReviewCorrectionRecord,
     PreparationSnapshotRecord,
     PreparationTransmissionRecord,

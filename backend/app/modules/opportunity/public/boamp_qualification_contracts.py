@@ -29,6 +29,16 @@ class BoampUnknownResponse(BaseModel):
     source_ref: str
 
 
+class BoampSourceCaptureResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    ingestion_run_id: UUID
+    source_mode: Literal["LIVE", "REPLAY"]
+    run_recorded_at: str
+    source_contract_version: str | None = Field(default=None, pattern=r"^[A-Z0-9_]{1,64}$")
+    source_response_sha256: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
+
+
 class BoampObservationResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -61,6 +71,7 @@ class BoampObservationResponse(BaseModel):
     deadline_source_timezone: str | None
     deadline_normalized_timezone: str | None
     unknowns: list[BoampUnknownResponse]
+    source_captures: list[BoampSourceCaptureResponse]
 
 
 class BoampSourceStatusResponse(BaseModel):

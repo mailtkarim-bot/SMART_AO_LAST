@@ -81,9 +81,7 @@ def upgrade() -> None:
         sa.CheckConstraint("technical_document_version > 0", name="technical_document_version"),
         sa.CheckConstraint("financial_snapshot_revision >= 0", name="financial_snapshot_revision"),
     )
-    op.create_index(
-        "ix_submission_packages_tenant_id", "submission_packages", ["tenant_id"]
-    )
+    op.create_index("ix_submission_packages_tenant_id", "submission_packages", ["tenant_id"])
     op.create_index(
         "ix_submission_packages__tenant_preparation_version",
         "submission_packages",
@@ -110,8 +108,6 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.execute("DROP TRIGGER IF EXISTS submission_packages_append_only ON submission_packages")
     op.execute("DROP FUNCTION IF EXISTS prevent_submission_package_mutation()")
-    op.execute(
-        "DROP INDEX IF EXISTS ix_submission_packages__tenant_preparation_version"
-    )
+    op.execute("DROP INDEX IF EXISTS ix_submission_packages__tenant_preparation_version")
     op.execute("DROP INDEX IF EXISTS ix_submission_packages_tenant_id")
     op.drop_table("submission_packages")

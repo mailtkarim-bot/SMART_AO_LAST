@@ -97,8 +97,7 @@ def upgrade() -> None:
             name="consumed_fields_required",
         ),
         sa.CheckConstraint(
-            "state = 'CONSUMED' OR "
-            "(consumed_by_dce_version_id IS NULL AND consumed_at IS NULL)",
+            "state = 'CONSUMED' OR (consumed_by_dce_version_id IS NULL AND consumed_at IS NULL)",
             name="consumed_fields_only_when_consumed",
         ),
         sa.CheckConstraint(

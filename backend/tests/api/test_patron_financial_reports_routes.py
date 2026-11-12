@@ -353,7 +353,10 @@ def test_get_draft_and_published_report_are_no_store_and_financially_complete():
     assert published.headers["cache-control"] == "no-store"
     assert draft.json()["status"] == "DRAFT"
     assert published.json()["status"] == "PUBLISHED"
+    assert published.json()["aggregate_revision"] == 2
     assert draft.json()["summary"]["gross_margin_minor"] == 60000
+    assert draft.json()["margin_calculation"]["state"] == "UNKNOWN"
+    assert draft.json()["margin_calculation"]["gross_margin_minor"] is None
     assert published.json()["lines"][0]["amount_minor"] == 125000
 
 

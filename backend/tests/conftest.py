@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+
 import pytest
 import sqlalchemy as sa
 from alembic import command
@@ -20,6 +22,8 @@ def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
 @pytest.fixture(scope="module")
 def database_engine() -> sa.Engine:
     """Create one isolated Alembic schema per test module."""
+    if not DATABASE_URL:
+        raise RuntimeError("Explicit SMART_AO_TEST_DATABASE_URL is required for database tests")
     config = Config(str(ALEMBIC_INI))
     config.set_main_option("sqlalchemy.url", DATABASE_URL)
     command.upgrade(config, "head")
@@ -28,13 +32,23 @@ def database_engine() -> sa.Engine:
         yield engine
     finally:
         engine.dispose()
+        preserve_fixture = (
+            os.environ.get("SMART_AO_TEST_PRESERVE_C5_RESTORE_FIXTURE") == "1"
+            and os.environ.get("SMART_AO_TEST_DISPOSABLE_DATABASE") == "1"
+        )
         cleanup_engine = sa.create_engine(DATABASE_URL)
         try:
             with cleanup_engine.begin() as connection:
+                if (
+                    not preserve_fixture
+                    and os.environ.get("SMART_AO_TEST_DISPOSABLE_DATABASE") == "1"
+                ):
+                    connection.execute(sa.text("TRUNCATE TABLE tenants, identities CASCADE"))
                 connection.execute(sa.text("TRUNCATE TABLE security_audit_events CASCADE"))
         finally:
             cleanup_engine.dispose()
-        command.downgrade(config, "base")
+        if not preserve_fixture:
+            command.downgrade(config, "base")
 
 
 @pytest.fixture

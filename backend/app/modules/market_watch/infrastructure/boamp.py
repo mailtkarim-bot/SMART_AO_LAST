@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from datetime import date, datetime
 from typing import Any
@@ -9,6 +10,7 @@ from typing import Any
 from app.modules.market_watch.application.ports import BoampNotice, PublicNoticeSearchPort
 
 BOAMP_RECORDS_URL = "https://www.boamp.fr/api/explore/v2.1/catalog/datasets/boamp/records"
+BOAMP_SOURCE_CONTRACT_VERSION = "BOAMP_EXPLORE_V2_1_ALLOWLIST_V1"
 _ALLOWED_FIELDS = (
     "idweb",
     "objet",
@@ -69,11 +71,22 @@ class BoampReadOnlySearch(PublicNoticeSearchPort):
         if response.status_code != 200:
             raise BoampRegistryUnavailable("BOAMP source returned an unexpected status")
         try:
+            response_bytes = response.content
+            if not isinstance(response_bytes, bytes):
+                raise TypeError("response body is not bytes")
+            source_response_sha256 = hashlib.sha256(response_bytes).hexdigest()
             payload = response.json()
             results = payload["results"]
             if not isinstance(results, list):
                 raise TypeError("results is not a list")
-            return tuple(_parse_notice(item) for item in results)
+            return tuple(
+                _parse_notice(
+                    item,
+                    source_contract_version=BOAMP_SOURCE_CONTRACT_VERSION,
+                    source_response_sha256=source_response_sha256,
+                )
+                for item in results
+            )
         except (KeyError, TypeError, ValueError, IndexError) as exc:
             raise BoampRegistryUnavailable("BOAMP response invalid") from exc
 
@@ -95,7 +108,12 @@ def _validate_search_text(text: str) -> str:
     return normalized
 
 
-def _parse_notice(item: object) -> BoampNotice:
+def _parse_notice(
+    item: object,
+    *,
+    source_contract_version: str,
+    source_response_sha256: str,
+) -> BoampNotice:
     if not isinstance(item, dict):
         raise TypeError("BOAMP result is not an object")
     notice_id = item.get("idweb")
@@ -117,6 +135,8 @@ def _parse_notice(item: object) -> BoampNotice:
         department_codes=_string_tuple(departments),
         market_types=_string_tuple(market_types),
         status=status if isinstance(status, str) else None,
+        source_contract_version=source_contract_version,
+        source_response_sha256=source_response_sha256,
     )
 
 

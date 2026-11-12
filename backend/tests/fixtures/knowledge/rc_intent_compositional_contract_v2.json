@@ -1,0 +1,39 @@
+{
+  "schema_version": 2,
+  "kind": "rc_intent_compositional_contract",
+  "mechanism": "rc-compositional-v2",
+  "anchor_convention": "lexical-cue-v2",
+  "synthetic_only": true,
+  "base_contract": "rc_intent_recognition_design_contract_v1.json",
+  "rules": [
+    "Use original text and SHA256; byte UTF8 [start,end), sorted(start,end,signal). No rewriting, no business answer beyond UNKNOWN.",
+    "Invalid input/budget => null intent INVALID_QUERY_BUDGET. Canonical financial guard next => null FINANCIAL_SCOPE_REFUSED, no anchors.",
+    "Truncated conditional/incomplete ellipsis => UNKNOWN/TRUNCATED before ambiguities; preserve explicit unique subject and valid unique lot only, no DEMAND.",
+    "Invalid signed/decimal/suffixed/out-of-range/non-numeric lot => AMBIGUOUS/INVALID_LOT; multiple or alternative lot => AMBIGUOUS/MULTIPLE_LOTS. Scope UNKNOWN/no LOTanchor in either case; unique subject retained; no DEMAND.",
+    "Multiple catalog subjects => subjectUNKNOWN,demandUNKNOWN,AMBIGUOUS/MULTIPLE_SUBJECTS; preserve all SUBJECT anchors and valid unique LOT. Multiple active information requests => AMBIGUOUS/MULTIPLE_DEMANDS; unique subject retained, no DEMAND.",
+    "An auxiliary of necessity within a single date question is not a second active request. Explicit coordinated status and date/location requests remain ambiguous.",
+    "Citation/metalinguistic/instruction => UNKNOWN/NON_ACTIVE_REQUEST; unresolved pronominal reference => UNKNOWN/UNRESOLVED_REFERENCE; unknown qualifier/type => subjectUNKNOWN,demandUNKNOWN,UNKNOWN/UNKNOWN_SUBJECT. Preserve explicit SUBJECT/validLOT, no DEMAND.",
+    "Complete condition on identifiable single request => UNSUPPORTED/UNSUPPORTED_CONDITION with subject/demand/lot proof; never unconditional COVERED.",
+    "Identified temporal/spatial question => DATE_TIME or LOCATION,UNSUPPORTED_TIME or UNSUPPORTED_LOCATION; unknown subject or unresolved pronoun is not completed from context.",
+    "Only a proven mono-subject status request becomes OBLIGATION/COVERED/UNIQUE_EXPLICIT_REQUEST. Other insufficient relations => UNKNOWN/INSUFFICIENT_EVIDENCE.",
+    "Ancres: generic or qualified catalog SUBJECT lexical cue only; LOT full literal lot+number including n° when present. Pure status adjective anchor = adjective. Continuous negated modal/action anchor includes negation and local pronoun, never removes ne/pas.",
+    "Impersonal necessity followed by infinitive: demand anchor is continuous necessity construction including interrogative auxiliary, necessity and infinitive; negative includes negation.",
+    "Permission of non-production: continuous interrogative modal/negation/action span includes local pronominal object when present; antecedent must be same request explicit unique catalog subject.",
+    "DATE_TIME anchor is interrogative time phrase only (quand,à quelle date,à quelle heure,quel horaire). LOCATION anchor is minimal interrogative/spatial lexical cue only (où/lieu), not entire spatial predicate. Declare this v2 convention prospectively; never rewrite historical annotations.",
+    "On UNKNOWN/AMBIGUOUS no DEMAND is certified. Preserve unique literal source scope independently of unresolved business applicability; absent lot remainsUNKNOWN.",
+    "No source reader/encoder/LLM/provider/factory/API call. Conditions sources/multi-subject/truncated sources remain unqualified by intent recognition.",
+    "Clarification avant code/gel: une question explicite sur les conditions d’une seule exigence est OBLIGATION/UNSUPPORTED/UNSUPPORTED_CONDITION, jamais couverte. Son DEMAND est l’indice interrogatif conditionnel minimal continu (à/sous quelles conditions ou dans quels cas), sans certifier une condition source. Sujet absent/nonrésolu garde UNKNOWN. Une question de statut comportant une proposition conditionnelle conserve au contraire son indice de statut/modal ordinaire. Aucun résultat métier ne se déduit de cette classification.",
+    "Une reprise pronominale objet de la non-production doit avoir un antécédent catalogue explicite antérieur compatible en genre/nombre ;sinon UNKNOWN/UNRESOLVED_REFERENCE sans DEMAND. Une juxtaposition ou coordination de questions actives date/statut reste AMBIGUOUS/MULTIPLE_DEMANDS, même avec virgule ou est-ce."
+  ],
+  "challenge_gates": {
+    "positive_exact_fraction": 1,
+    "structural_refusal_exact_fraction": 1,
+    "unsupported_exact_fraction": 1,
+    "financial_exact_fraction": 1,
+    "max_promotions": 0,
+    "max_invalid_anchors": 0,
+    "max_anchor_mismatches": 0,
+    "repetitions": 4,
+    "p95_ms_max": 1500
+  }
+}

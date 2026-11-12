@@ -3,6 +3,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.modules.pricing.application.import_commands import PricingImportSourceLocator
+
 
 class PricingImportRowResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -15,6 +17,7 @@ class PricingImportRowResponse(BaseModel):
     unit_price_minor: int | None
     total_minor: int | None
     errors: list[str]
+    source_locator: PricingImportSourceLocator | None = None
 
 
 class PricingImportAggregateReferenceResponse(BaseModel):

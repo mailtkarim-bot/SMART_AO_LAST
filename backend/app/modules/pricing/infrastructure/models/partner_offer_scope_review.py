@@ -10,10 +10,10 @@ from app.platform.persistence.base import Base, TenantScopedRecord
 class PartnerOfferScopeReviewRecord(TenantScopedRecord, Base):
     __tablename__ = "partner_offer_scope_reviews"
     __table_args__ = (
+        sa.PrimaryKeyConstraint("tenant_id", "case_id", "id"),
         sa.ForeignKeyConstraint(
             ["tenant_id", "case_id"], ["cases.tenant_id", "cases.id"], ondelete="RESTRICT"
         ),
-        sa.UniqueConstraint("tenant_id", "id", name="uq_partner_scope_review__tenant_id"),
         sa.UniqueConstraint(
             "tenant_id", "case_id", "id", name="uq_partner_scope_review__tenant_case_id"
         ),
@@ -39,7 +39,7 @@ class PartnerOfferScopeReviewRecord(TenantScopedRecord, Base):
         ),
     )
 
-    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     case_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     comparison_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     revision: Mapped[int] = mapped_column(sa.Integer, nullable=False)

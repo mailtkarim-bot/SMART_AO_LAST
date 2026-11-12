@@ -6,12 +6,15 @@ __pycache__/
 .ruff_cache/
 .mypy_cache/
 .coverage
+.coverage.*
 htmlcov/
-.venv/
+/ci-coverage/
+/ci-shards/
+.venv
 *.egg-info/
 
 # Node
-node_modules/
+node_modules
 dist/
 .vite/
 
@@ -28,3 +31,14 @@ minio_data/
 .vscode/
 .idea/
 .DS_Store
+
+# Local coding-agent state; never version credentials, transcripts, or caches.
+.codex/
+.kimi-code/
+.serena/
+
+# Derived local codebase graph and extraction caches; keep outside checkpoints.
+graphify-out/
+
+# Private local proofs and full WIP archives are not publishable source.
+.local-proofs/

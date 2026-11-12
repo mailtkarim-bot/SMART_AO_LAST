@@ -1,6 +1,6 @@
 from dataclasses import replace
 from datetime import UTC, date, datetime
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 import sqlalchemy as sa
@@ -63,6 +63,8 @@ def _seed(database_engine):
         case_id=source_case_id,
         correlation_id=uuid4(),
     )
+    assert isinstance(context.session_id, UUID)
+    assert isinstance(context.correlation_id, UUID)
     actor = ActorContext(
         actor_id=actor_id,
         identity_id=actor_id,

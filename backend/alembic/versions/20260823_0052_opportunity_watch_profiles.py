@@ -47,9 +47,7 @@ def upgrade() -> None:
         sa.UniqueConstraint(
             "tenant_id", "idempotency_key", name="uq_opportunity_watch_profiles__tenant_idempotency"
         ),
-        sa.CheckConstraint(
-            "state IN ('ACTIVE', 'PAUSED')", name="state_allowed"
-        ),
+        sa.CheckConstraint("state IN ('ACTIVE', 'PAUSED')", name="state_allowed"),
         sa.CheckConstraint("aggregate_revision >= 0", name="aggregate_revision_non_negative"),
         sa.CheckConstraint("current_version >= 1", name="current_version_positive"),
         sa.CheckConstraint("length(trim(name)) > 0", name="name_non_empty"),
@@ -96,21 +94,22 @@ def upgrade() -> None:
             "tenant_id", "id", name="uq_opportunity_watch_profile_versions__tenant_id"
         ),
         sa.UniqueConstraint(
-            "tenant_id", "profile_id", "version_number",
+            "tenant_id",
+            "profile_id",
+            "version_number",
             name="uq_opportunity_watch_profile_versions__profile_version",
         ),
         sa.UniqueConstraint(
             "tenant_id", "command_id", name="uq_opportunity_watch_profile_versions__tenant_command"
         ),
         sa.UniqueConstraint(
-            "tenant_id", "idempotency_key",
+            "tenant_id",
+            "idempotency_key",
             name="uq_opportunity_watch_profile_versions__tenant_idempotency",
         ),
         sa.CheckConstraint("version_number >= 1", name="version_number_positive"),
         sa.CheckConstraint("jsonb_typeof(criteria_json) = 'object'", name="criteria_object"),
-        sa.CheckConstraint(
-            "criteria_sha256 ~ '^[a-f0-9]{64}$'", name="criteria_sha256_hex"
-        ),
+        sa.CheckConstraint("criteria_sha256 ~ '^[a-f0-9]{64}$'", name="criteria_sha256_hex"),
         sa.CheckConstraint("length(trim(name)) > 0", name="name_non_empty"),
     )
     op.create_index(

@@ -1,0 +1,219 @@
+{
+  "purpose": "FROZEN_EXECUTION_HOLDOUT_V1_SYNTHETIC_ONLY",
+  "lots": [
+    5,
+    9
+  ],
+  "expected_point_count": 15,
+  "expected_execution_count": 12,
+  "documents": [
+    {
+      "file": "rc.txt",
+      "family": "RC",
+      "sha256": "5ebbf47f7d1466d8d52efbc571f9327d9d521c0f12a1d4da390ad762975cae49",
+      "facts": [
+        {
+          "line": 1,
+          "quote": "Le DC1 est obligatoire pour le lot 5.",
+          "expected_kind": "RC_DOCUMENT_CANDIDATURE",
+          "expected_type": "CANDIDATURE_DOCUMENT",
+          "expected_axis": "CANDIDATURE",
+          "expected_lots": [
+            5
+          ],
+          "expected_lot_state": "CANDIDATE"
+        },
+        {
+          "line": 2,
+          "quote": "La visite du chantier est facultative pour le lot 9.",
+          "expected_kind": "RC_SITE_VISIT",
+          "expected_type": "SITE_VISIT",
+          "expected_axis": "CANDIDATURE",
+          "expected_lots": [
+            9
+          ],
+          "expected_lot_state": "CANDIDATE"
+        },
+        {
+          "line": 3,
+          "quote": "Un mémoire technique est requis pour les lots 5 et 9.",
+          "expected_kind": "RC_CONTENT_OFFER",
+          "expected_type": "OFFER_DOCUMENT",
+          "expected_axis": "DOCUMENTS",
+          "expected_lots": [
+            5,
+            9
+          ],
+          "expected_lot_state": "CANDIDATE"
+        }
+      ]
+    },
+    {
+      "file": "ccap.txt",
+      "family": "CCAP",
+      "sha256": "351f13c223c567665b7cb65f49b5183adadb53b3be97b37c4f5f054c9deb6d2b",
+      "facts": [
+        {
+          "line": 1,
+          "quote": "Le paiement intervient après contrôle pour le lot 5.",
+          "expected_kind": "DCE_PAYMENT_TERM",
+          "expected_type": "PAYMENT_TERM_SIGNAL",
+          "expected_axis": "CASH",
+          "expected_lots": [
+            5
+          ],
+          "expected_lot_state": "CANDIDATE"
+        },
+        {
+          "line": 2,
+          "quote": "Sous réserve de conformité, le délai de paiement est de 28 jours pour le lot 9.",
+          "expected_kind": "DCE_PAYMENT_TERM",
+          "expected_type": "PAYMENT_TERM_SIGNAL",
+          "expected_axis": "CASH",
+          "expected_lots": [],
+          "expected_lot_state": "UNKNOWN"
+        },
+        {
+          "line": 3,
+          "quote": "Le procès-verbal de réception du lot 5 mentionne les réserves.",
+          "expected_kind": "DCE_ACCEPTANCE_TERM",
+          "expected_type": "ACCEPTANCE_TERM_SIGNAL",
+          "expected_axis": "RIGHTS",
+          "expected_lots": [
+            5
+          ],
+          "expected_lot_state": "CANDIDATE"
+        },
+        {
+          "line": 4,
+          "quote": "La réception du lot 9 ne peut être prononcée sans procès-verbal des réserves.",
+          "expected_kind": "DCE_ACCEPTANCE_TERM",
+          "expected_type": "ACCEPTANCE_TERM_SIGNAL",
+          "expected_axis": "RIGHTS",
+          "expected_lots": [],
+          "expected_lot_state": "UNKNOWN"
+        }
+      ]
+    },
+    {
+      "file": "cctp-lot-5.txt",
+      "family": "CCTP",
+      "sha256": "a1a60647d0317149cc59d212451e8bcab4b48f37d7858e3dbd4a8120b730c46b",
+      "facts": [
+        {
+          "line": 1,
+          "quote": "Installer des clapets coupe-feu pour le lot 5.",
+          "expected_kind": "DCE_TECHNICAL_PRESCRIPTION",
+          "expected_type": "TECHNICAL_PRESCRIPTION",
+          "expected_axis": "TECHNICAL",
+          "expected_lots": [
+            5
+          ],
+          "expected_lot_state": "CANDIDATE"
+        },
+        {
+          "line": 2,
+          "quote": "Pour le lot 5, livraison des équipements uniquement la nuit.",
+          "expected_kind": "DCE_LOGISTICS_CONSTRAINT",
+          "expected_type": "LOGISTICS_CONSTRAINT",
+          "expected_axis": "CONSTRUCTIBILITY",
+          "expected_lots": [
+            5
+          ],
+          "expected_lot_state": "CANDIDATE"
+        }
+      ]
+    },
+    {
+      "file": "cctp-lot-9.txt",
+      "family": "CCTP",
+      "sha256": "b41291b31e16eae8d8c93e88012a502ae7769ed8d613a9ec6947bf2d0afa713f",
+      "facts": [
+        {
+          "line": 1,
+          "quote": "Ne pas remplacer les câbles avant validation pour le lot 9.",
+          "expected_kind": "DCE_TECHNICAL_PRESCRIPTION",
+          "expected_type": "TECHNICAL_PRESCRIPTION",
+          "expected_axis": "TECHNICAL",
+          "expected_lots": [],
+          "expected_lot_state": "UNKNOWN"
+        },
+        {
+          "line": 2,
+          "quote": "Stockage interdit hors zone balisée pour le lot 9.",
+          "expected_kind": "DCE_LOGISTICS_CONSTRAINT",
+          "expected_type": "LOGISTICS_CONSTRAINT",
+          "expected_axis": "CONSTRUCTIBILITY",
+          "expected_lots": [],
+          "expected_lot_state": "UNKNOWN"
+        }
+      ]
+    },
+    {
+      "file": "planning.txt",
+      "family": "PLANNING",
+      "sha256": "0b6a4a07580707cc40122a33211d9790e75ddaadb5b320a32e554702d72cbf61",
+      "facts": [
+        {
+          "line": 1,
+          "quote": "Les travaux du lot 5 seront exécutés du 3 mai au 28 mai 2027.",
+          "expected_kind": "DCE_SCHEDULE_CONSTRAINT",
+          "expected_type": "SCHEDULE_CONSTRAINT",
+          "expected_axis": "CAPACITY",
+          "expected_lots": [
+            5
+          ],
+          "expected_lot_state": "CANDIDATE"
+        },
+        {
+          "line": 2,
+          "quote": "Si les travaux du lot 5 sont achevés, intervention du lot 9 après réception.",
+          "expected_kind": "DCE_SCHEDULE_CONSTRAINT",
+          "expected_type": "SCHEDULE_CONSTRAINT",
+          "expected_axis": "CAPACITY",
+          "expected_lots": [],
+          "expected_lot_state": "UNKNOWN"
+        }
+      ]
+    },
+    {
+      "file": "pgc.txt",
+      "family": "OTHER",
+      "sha256": "af3f89ad5566f077e8f51e0df51cf94cac3402ed493273c72567980a8e4f065b",
+      "facts": [
+        {
+          "line": 1,
+          "quote": "Suspendre les travaux en hauteur si le garde-corps est absent.",
+          "expected_kind": "DCE_HSE_CONSTRAINT",
+          "expected_type": "HSE_CONSTRAINT",
+          "expected_axis": "HSE",
+          "expected_lots": [],
+          "expected_lot_state": "UNKNOWN"
+        },
+        {
+          "line": 2,
+          "quote": "Les circulations des usagers du lot 9 doivent rester séparées.",
+          "expected_kind": "DCE_HSE_CONSTRAINT",
+          "expected_type": "HSE_CONSTRAINT",
+          "expected_axis": "HSE",
+          "expected_lots": [
+            9
+          ],
+          "expected_lot_state": "CANDIDATE"
+        }
+      ]
+    },
+    {
+      "file": "dpgf.txt",
+      "family": "DPGF",
+      "sha256": "0a0cbb0f52226ea424a2910f2999a1cd2ad9bc2a934f9b16d9544759a9b876a9",
+      "facts": []
+    },
+    {
+      "file": "bordereau.txt",
+      "family": "OTHER",
+      "sha256": "fea50aa88adb42ca043503e96aa56b52bae6b15f7843217d95e604c9291e3635",
+      "facts": []
+    }
+  ]
+}

@@ -382,13 +382,11 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.execute(
-        "DROP TRIGGER trg_dce_doc_class_evidence_parent "
-        "ON dce_document_classification_evidence"
+        "DROP TRIGGER trg_dce_doc_class_evidence_parent ON dce_document_classification_evidence"
     )
     op.execute("DROP FUNCTION validate_dce_document_classification_evidence_parent()")
     op.execute(
-        "DROP TRIGGER trg_dce_doc_class_result_parent "
-        "ON dce_document_classification_results"
+        "DROP TRIGGER trg_dce_doc_class_result_parent ON dce_document_classification_results"
     )
     op.execute("DROP FUNCTION validate_dce_document_classification_result_parent()")
     op.execute(
@@ -396,12 +394,10 @@ def downgrade() -> None:
         "ON dce_document_classification_evidence"
     )
     op.execute(
-        "DROP TRIGGER trg_dce_doc_class_results_append_only "
-        "ON dce_document_classification_results"
+        "DROP TRIGGER trg_dce_doc_class_results_append_only ON dce_document_classification_results"
     )
     op.execute(
-        "DROP TRIGGER trg_dce_doc_class_runs_append_only "
-        "ON dce_document_classification_runs"
+        "DROP TRIGGER trg_dce_doc_class_runs_append_only ON dce_document_classification_runs"
     )
     op.execute("DROP FUNCTION prevent_dce_document_classification_mutation()")
     op.drop_index(

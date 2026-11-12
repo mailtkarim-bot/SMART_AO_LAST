@@ -10,6 +10,8 @@ from app.modules.dce.infrastructure.models.dce_requirement_confirmations import 
 )
 from app.modules.dce.infrastructure.models.dce_requirements import DceRequirementRecord
 from app.modules.decision.domain.submission_gate import DecisionSubmissionGateSnapshot
+from app.modules.decision.infrastructure.analysis_reference import assessment_reference_is_current
+from app.modules.decision.infrastructure.capacity_reference import capacity_reference_is_current
 from app.modules.decision.infrastructure.models.decision import (
     DecisionConditionRecord,
     DecisionContextReferenceRecord,
@@ -69,10 +71,36 @@ class SqlAlchemySubmissionDecisionGateReader(SubmissionDecisionGateReader):
             tenant_id=tenant_id,
             case_id=case_id,
         )
+        assessment_references = list(
+            db_session.scalars(
+                sa.select(DecisionContextReferenceRecord).where(
+                    DecisionContextReferenceRecord.tenant_id == tenant_id,
+                    DecisionContextReferenceRecord.decision_context_id == context_id,
+                    DecisionContextReferenceRecord.aggregate_type.in_(
+                        ("ANALYSIS_ASSESSMENT", "CAPACITY_RUN")
+                    ),
+                )
+            )
+        )
+        context_current = all(
+            (
+                capacity_reference_is_current
+                if reference.aggregate_type == "CAPACITY_RUN"
+                else assessment_reference_is_current
+            )(
+                db_session,
+                tenant_id=tenant_id,
+                case_id=case_id,
+                aggregate_id=reference.aggregate_id,
+                aggregate_revision=reference.aggregate_revision,
+                content_hash=reference.content_hash,
+            )
+            for reference in assessment_references
+        )
         return DecisionSubmissionGateSnapshot(
             lifecycle=decision.lifecycle,
             outcome=decision.outcome,
-            context_status=decision.context_status,
+            context_status=decision.context_status if context_current else "STALE",
             condition_status=decision.condition_status,
             open_condition_count=open_condition_count,
             unresolved_risk_action_count=unresolved_risk_action_count,

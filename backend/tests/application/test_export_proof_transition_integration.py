@@ -1,6 +1,9 @@
 from hashlib import sha256
 
-from app.modules.dce.domain.export_proof_verification import ExportProofVerificationStatus, verify_export_proof
+from app.modules.dce.domain.export_proof_verification import (
+    ExportProofVerificationStatus,
+    verify_export_proof,
+)
 
 
 def test_match_can_supply_ready_proof_reference() -> None:

@@ -19,9 +19,7 @@ def _branch_set(file_data: dict[str, object], key: str) -> set[str]:
 
 
 def _partial(file_data: dict[str, object]) -> set[str]:
-    return _branch_set(file_data, "executed_branches") - _branch_set(
-        file_data, "missing_branches"
-    )
+    return _branch_set(file_data, "executed_branches") - _branch_set(file_data, "missing_branches")
 
 
 def compare(local_path: Path, ci_path: Path) -> dict[str, object]:
@@ -67,8 +65,7 @@ def compare(local_path: Path, ci_path: Path) -> dict[str, object]:
         "local_totals": local["totals"],
         "ci_totals": ci["totals"],
         "percent_delta_ci_minus_local": round(
-            float(ci["totals"]["percent_covered"])
-            - float(local["totals"]["percent_covered"]),
+            float(ci["totals"]["percent_covered"]) - float(local["totals"]["percent_covered"]),
             4,
         ),
         "files_with_differences": file_diffs,

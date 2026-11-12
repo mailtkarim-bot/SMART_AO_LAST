@@ -47,7 +47,11 @@ class ContractExecutionEvidenceRequalificationRecord(TenantScopedRecord, Base):
         ),
         sa.UniqueConstraint("tenant_id", "id", name="uq_contract_exec_requal__tenant_id"),
         sa.UniqueConstraint(
-            "tenant_id", "case_id", "act_id", "supersession_id", "revision",
+            "tenant_id",
+            "case_id",
+            "act_id",
+            "supersession_id",
+            "revision",
             name="uq_contract_exec_requal__trigger_revision",
         ),
         sa.CheckConstraint("revision > 0", name="contract_exec_requal_revision_positive"),

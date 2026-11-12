@@ -47,15 +47,9 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.execute(
-        "ALTER TABLE security_audit_events DISABLE TRIGGER trg_security_audit_append_only"
-    )
-    op.execute(
-        "DELETE FROM security_audit_events WHERE event_type = 'SUBMISSION_PACKAGE_EXPORTED'"
-    )
-    op.execute(
-        "ALTER TABLE security_audit_events ENABLE TRIGGER trg_security_audit_append_only"
-    )
+    op.execute("ALTER TABLE security_audit_events DISABLE TRIGGER trg_security_audit_append_only")
+    op.execute("DELETE FROM security_audit_events WHERE event_type = 'SUBMISSION_PACKAGE_EXPORTED'")
+    op.execute("ALTER TABLE security_audit_events ENABLE TRIGGER trg_security_audit_append_only")
     op.drop_constraint(
         "event_type",
         "security_audit_events",

@@ -1,4 +1,5 @@
 from app.modules.patron_action.infrastructure.models.case_interview import CaseInterviewRecord
+from app.modules.patron_action.infrastructure.models.handover import CaseHandoverSnapshotRecord
 from app.modules.patron_action.infrastructure.models.order import CaseOrderRecord
 from app.modules.patron_action.infrastructure.models.outcome import CaseOutcomeRecord
 from app.modules.patron_action.infrastructure.models.p6 import CaseP6ControlRecord
@@ -28,6 +29,8 @@ __all__ = [
     "CaseP6ControlRecord",
     "CaseP7ResultRecord",
     "CaseInterviewRecord",
+    "CaseHandoverSnapshotRecord",
+    "CaseHandoverReceiptRecord",
     "CaseRexRecord",
     "CaseTeachingApplicabilityRecord",
     "CaseDispositionRecord",
@@ -35,3 +38,6 @@ __all__ = [
     "CaseRetentionRecord",
 ]
 from app.modules.patron_action.infrastructure.models.disposition import CaseDispositionRecord
+from app.modules.patron_action.infrastructure.models.handover_receipt import (
+    CaseHandoverReceiptRecord,
+)

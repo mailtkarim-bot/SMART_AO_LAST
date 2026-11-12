@@ -18,13 +18,7 @@ from app.platform.security.models import (
     TenantMembershipRecord,
 )
 
-DATABASE_URL = os.getenv("SMART_AO_TEST_DATABASE_URL") or (
-    "postgresql+psycopg://"
-    + "smart_ao"
-    + ":"
-    + "smart_ao"
-    + "@127.0.0.1:5432/smart_ao"
-)
+DATABASE_URL = os.getenv("SMART_AO_TEST_DATABASE_URL", "")
 EVENT_COUNT = 1_000
 READ_LIMIT = 100
 NOW = datetime(2026, 8, 14, 12, 0, tzinfo=UTC)
@@ -42,6 +36,12 @@ def measure(
         "ASSIGNMENT_ENDED",
     }:
         raise ValueError("unsupported assignment journal benchmark event")
+    if (
+        not DATABASE_URL
+        or os.environ.get("SMART_AO_TEST_DISPOSABLE_DATABASE") != "1"
+        or engine.url != sa.engine.make_url(DATABASE_URL)
+    ):
+        raise RuntimeError("Explicit disposable PostgreSQL URL and matching engine are required")
     is_suspension = event_type == "ASSIGNMENT_SUSPENDED"
     is_reactivation = event_type == "ASSIGNMENT_REACTIVATED"
     is_ending = event_type == "ASSIGNMENT_ENDED"
@@ -53,142 +53,142 @@ def measure(
     case_id = uuid4()
     assignment_id = uuid4()
     with engine.begin() as connection:
-            connection.execute(sa.text("TRUNCATE TABLE tenants, identities CASCADE"))
-            connection.execute(
-                sa.insert(TenantRecord).values(
-                    id=tenant_id,
-                    slug=f"benchmark-{tenant_id.hex[:12]}",
-                    lifecycle="ACTIVE",
-                )
+        connection.execute(sa.text("TRUNCATE TABLE tenants, identities CASCADE"))
+        connection.execute(
+            sa.insert(TenantRecord).values(
+                id=tenant_id,
+                slug=f"benchmark-{tenant_id.hex[:12]}",
+                lifecycle="ACTIVE",
             )
-            connection.execute(
-                sa.insert(IdentityRecord),
-                [
-                    {
-                        "id": patron_identity_id,
-                        "email_normalized": f"patron-{patron_identity_id.hex[:12]}@example.test",
-                        "lifecycle": "ACTIVE",
-                        "email_verified_at": NOW,
-                    },
-                    {
-                        "id": collaborator_identity_id,
-                        "email_normalized": (
-                            f"collab-{collaborator_identity_id.hex[:12]}@example.test"
-                        ),
-                        "lifecycle": "ACTIVE",
-                        "email_verified_at": NOW,
-                    },
-                ],
-            )
-            connection.execute(
-                sa.insert(TenantMembershipRecord),
-                [
-                    {
-                        "id": patron_membership_id,
-                        "tenant_id": tenant_id,
-                        "identity_id": patron_identity_id,
-                        "role": "PATRON_ADMIN",
-                        "state": "ACTIVE",
-                        "activated_at": NOW,
-                        "revoked_at": None,
-                    },
-                    {
-                        "id": collaborator_membership_id,
-                        "tenant_id": tenant_id,
-                        "identity_id": collaborator_identity_id,
-                        "role": "COLLABORATEUR",
-                        "state": "ACTIVE",
-                        "activated_at": NOW,
-                        "revoked_at": None,
-                    },
-                ],
-            )
-            connection.execute(
-                sa.insert(CaseRecord).values(
-                    id=case_id,
-                    tenant_id=tenant_id,
-                    aggregate_revision=1,
-                    functional_identity_hash="a" * 64,
-                    title="Affaire benchmark journal patron",
-                    object_description=None,
-                    business_origin="MANUAL",
-                    origin_reference_id=None,
-                    origin_rationale="Mesure locale du journal append-only",
-                    consultation_id=None,
-                    scope_kind="CUSTOM",
-                    scope_json={},
-                    scope_fingerprint="b" * 64,
-                    applicable_dce_version_id=None,
-                    lifecycle="ACTIVE",
-                    commercial_stage="ANALYSIS",
-                    decision_readiness="NOT_ASSESSED",
-                    dce_freshness="NO_DCE",
-                    responsibility_status="ASSIGNED",
-                    stopped_reason=None,
-                    stopped_at=None,
-                    archived_reason=None,
-                    archived_at=None,
-                    created_by_actor_id=None,
-                    updated_by_actor_id=None,
-                )
-            )
-            connection.execute(
-                sa.insert(CaseAssignmentRecord).values(
-                    id=assignment_id,
-                    tenant_id=tenant_id,
-                    membership_id=collaborator_membership_id,
-                    case_id=case_id,
-                    aggregate_revision=EVENT_COUNT,
-                    state="ENDED" if is_ending else "ACTIVE",
-                    scope_actions_json=["case.dce.read"],
-                    scope_classifications_json=["INTERNAL_OPERATIONAL"],
-                    granted_by_membership_id=patron_membership_id,
-                    granted_at=NOW,
-                    starts_at=NOW,
-                    ends_at=None,
-                    ended_at=NOW if is_ending else None,
-                )
-            )
-            rows = [
+        )
+        connection.execute(
+            sa.insert(IdentityRecord),
+            [
                 {
-                    "id": uuid4(),
+                    "id": patron_identity_id,
+                    "email_normalized": f"patron-{patron_identity_id.hex[:12]}@example.test",
+                    "lifecycle": "ACTIVE",
+                    "email_verified_at": NOW,
+                },
+                {
+                    "id": collaborator_identity_id,
+                    "email_normalized": (
+                        f"collab-{collaborator_identity_id.hex[:12]}@example.test"
+                    ),
+                    "lifecycle": "ACTIVE",
+                    "email_verified_at": NOW,
+                },
+            ],
+        )
+        connection.execute(
+            sa.insert(TenantMembershipRecord),
+            [
+                {
+                    "id": patron_membership_id,
                     "tenant_id": tenant_id,
-                    "assignment_id": assignment_id,
-                    "case_id": case_id,
-                    "target_membership_id": collaborator_membership_id,
-                    "author_membership_id": patron_membership_id,
-                    "event_type": event_type,
-                    "previous_revision": revision - 1,
-                    "resulting_revision": revision,
-                    "previous_state": "SUSPENDED" if is_reactivation else "ACTIVE",
-                    "resulting_state": (
-                        "SUSPENDED" if is_suspension else "ENDED" if is_ending else "ACTIVE"
-                    ),
-                    "reason_code": (
-                        "CASE_PAUSED"
-                        if is_suspension
-                        else "CASE_RESUMED"
-                        if is_reactivation
-                        else "PATRON_ENDED"
-                        if is_ending
-                        else None
-                    ),
-                    "previous_scope_actions_json": ["case.dce.read"],
-                    "previous_scope_classifications_json": ["INTERNAL_OPERATIONAL"],
-                    "resulting_scope_actions_json": (
-                        ["case.dce.read"]
-                        if is_suspension or is_reactivation or is_ending
-                        else ["preparation.transmit"]
-                    ),
-                    "resulting_scope_classifications_json": ["INTERNAL_OPERATIONAL"],
-                    "command_id": uuid4(),
-                    "correlation_id": uuid4(),
-                }
-                for revision in range(1, EVENT_COUNT + 1)
-            ]
-            insert_started = perf_counter()
-            connection.execute(sa.insert(CaseAssignmentChangeEventRecord), rows)
-            insert_elapsed_ms = (perf_counter() - insert_started) * 1_000
+                    "identity_id": patron_identity_id,
+                    "role": "PATRON_ADMIN",
+                    "state": "ACTIVE",
+                    "activated_at": NOW,
+                    "revoked_at": None,
+                },
+                {
+                    "id": collaborator_membership_id,
+                    "tenant_id": tenant_id,
+                    "identity_id": collaborator_identity_id,
+                    "role": "COLLABORATEUR",
+                    "state": "ACTIVE",
+                    "activated_at": NOW,
+                    "revoked_at": None,
+                },
+            ],
+        )
+        connection.execute(
+            sa.insert(CaseRecord).values(
+                id=case_id,
+                tenant_id=tenant_id,
+                aggregate_revision=1,
+                functional_identity_hash="a" * 64,
+                title="Affaire benchmark journal patron",
+                object_description=None,
+                business_origin="MANUAL",
+                origin_reference_id=None,
+                origin_rationale="Mesure locale du journal append-only",
+                consultation_id=None,
+                scope_kind="CUSTOM",
+                scope_json={},
+                scope_fingerprint="b" * 64,
+                applicable_dce_version_id=None,
+                lifecycle="ACTIVE",
+                commercial_stage="ANALYSIS",
+                decision_readiness="NOT_ASSESSED",
+                dce_freshness="NO_DCE",
+                responsibility_status="ASSIGNED",
+                stopped_reason=None,
+                stopped_at=None,
+                archived_reason=None,
+                archived_at=None,
+                created_by_actor_id=None,
+                updated_by_actor_id=None,
+            )
+        )
+        connection.execute(
+            sa.insert(CaseAssignmentRecord).values(
+                id=assignment_id,
+                tenant_id=tenant_id,
+                membership_id=collaborator_membership_id,
+                case_id=case_id,
+                aggregate_revision=EVENT_COUNT,
+                state="ENDED" if is_ending else "ACTIVE",
+                scope_actions_json=["case.dce.read"],
+                scope_classifications_json=["INTERNAL_OPERATIONAL"],
+                granted_by_membership_id=patron_membership_id,
+                granted_at=NOW,
+                starts_at=NOW,
+                ends_at=None,
+                ended_at=NOW if is_ending else None,
+            )
+        )
+        rows = [
+            {
+                "id": uuid4(),
+                "tenant_id": tenant_id,
+                "assignment_id": assignment_id,
+                "case_id": case_id,
+                "target_membership_id": collaborator_membership_id,
+                "author_membership_id": patron_membership_id,
+                "event_type": event_type,
+                "previous_revision": revision - 1,
+                "resulting_revision": revision,
+                "previous_state": "SUSPENDED" if is_reactivation else "ACTIVE",
+                "resulting_state": (
+                    "SUSPENDED" if is_suspension else "ENDED" if is_ending else "ACTIVE"
+                ),
+                "reason_code": (
+                    "CASE_PAUSED"
+                    if is_suspension
+                    else "CASE_RESUMED"
+                    if is_reactivation
+                    else "PATRON_ENDED"
+                    if is_ending
+                    else None
+                ),
+                "previous_scope_actions_json": ["case.dce.read"],
+                "previous_scope_classifications_json": ["INTERNAL_OPERATIONAL"],
+                "resulting_scope_actions_json": (
+                    ["case.dce.read"]
+                    if is_suspension or is_reactivation or is_ending
+                    else ["preparation.transmit"]
+                ),
+                "resulting_scope_classifications_json": ["INTERNAL_OPERATIONAL"],
+                "command_id": uuid4(),
+                "correlation_id": uuid4(),
+            }
+            for revision in range(1, EVENT_COUNT + 1)
+        ]
+        insert_started = perf_counter()
+        connection.execute(sa.insert(CaseAssignmentChangeEventRecord), rows)
+        insert_elapsed_ms = (perf_counter() - insert_started) * 1_000
 
     with engine.connect() as connection:
         read_started = perf_counter()
@@ -215,6 +215,8 @@ def measure(
 
 
 def main() -> None:
+    if not DATABASE_URL or os.environ.get("SMART_AO_TEST_DISPOSABLE_DATABASE") != "1":
+        raise SystemExit("Set an explicit test database URL and disposable database opt-in")
     engine = sa.create_engine(DATABASE_URL)
     try:
         print(json.dumps(measure(engine), sort_keys=True))

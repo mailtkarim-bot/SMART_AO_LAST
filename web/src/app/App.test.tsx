@@ -2,9 +2,26 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import App from "./App";
-import type { AssignedCase, CaseExecutionResults, CaseInterview } from "../shared/types";
+import * as openingHooks from "../features/dce/useDceOpening";
+import * as analysisHooks from "../features/dce/useCaseAnalysisSummary";
+import {analysisFixture} from "../features/dce/analysisFixture.test-helper";
+import type {
+  AssignedCase,
+  CaseExecutionResults,
+  CaseInterview,
+  CaseResolution,
+  DraftReport,
+  CommandReceipt,
+  ContractBaselineImpact,
+  FreezeDecisionContextRequest,
+  PatronDecisionDossier,
+  PricingScenario,
+} from "../shared/types";
 
-const { authMfaRef, authProfileRef, authRoleRef, authSessionExpiredRef, authSessionRef, overridesRef } = vi.hoisted(() => ({
+const { authSessionGenerationRef, authTenantRef, authAccessTokenRef, authMfaRef, authProfileRef, authRoleRef, authSessionExpiredRef, authSessionRef, overridesRef } = vi.hoisted(() => ({
+  authSessionGenerationRef: { current: 1 },
+  authTenantRef: { current: "entreprise-test" },
+  authAccessTokenRef: { current: "token-test" },
   authMfaRef: { current: true },
   authProfileRef: { current: null as "RESPONSABLE" | "EXPERT" | null },
   authRoleRef: { current: "PATRON_ADMIN" as string },
@@ -23,52 +40,62 @@ vi.mock("../infrastructure/api", () => ({
     }) as never,
 }));
 
-vi.mock("../features/auth/useAuthentication", () => ({
-  useAuthentication: () => ({
-    accessToken: "token-test",
-    currentActor: authSessionRef.current ? {
-      actor_id: "actor-1",
-      identity_id: "identity-1",
-      tenant_slug: "entreprise-test",
-      actor_kind: authRoleRef.current,
-      operational_profile: authProfileRef.current,
-      membership_state: "ACTIVE",
-      mfa_verified: authMfaRef.current,
-    } : null,
-    isRestoring: false,
-    sessionExpired: authSessionExpiredRef.current,
-    hasSession: authSessionRef.current,
-    isAuthenticated: authSessionRef.current && authMfaRef.current,
-    api: new Proxy(
-      {
-        getEnterpriseCompany: () => Promise.reject(new Error("no company")),
-        listAssignedCases: () => Promise.resolve([]),
-        listPatronAssignments: () => Promise.resolve({ items: [] }),
-        listPatronActions: () => Promise.resolve({ items: [], open_count: 0 }),
-        listBoampObservations: () => Promise.resolve({ observations: [] }),
-        getCaseDceReading: () => Promise.reject(Object.assign(new Error("missing DCE"), { status: 404 })),
-        searchCaseKnowledge: () => Promise.resolve({ case_id: "case-1", query: "", results: [] }),
-        listPricingScenarios: () => Promise.resolve([]),
-        listDecisionRiskRequirementLinks: () => Promise.resolve({ items: [], next_cursor: null }),
-        listDceContractRiskSignals: () => Promise.resolve({ case_id: "case-1", items: [] }),
-        listRegulatoryProfiles: () => Promise.resolve({ case_id: "case-1", items: [] }),
-        crossCctpPricing: () => Promise.resolve({ case_id: "case-1", items: [] }),
-        listDocumentContradictions: () => Promise.resolve({ case_id: "case-1", items: [] }),
-        reconcileDecisionPricing: () => Promise.resolve({ link_id: "", search: "", items: [] }),
-        getDecisionDossier: () => Promise.reject(Object.assign(new Error("missing"), { status: 404 })),
-        ...overridesRef.current,
-      } as Record<string, unknown>,
-      {
-      get(target, prop) {
-        if (typeof prop === "string" && prop in target) return target[prop];
-        return () => Promise.resolve({});
-      },
-    }) as never,
-    login: vi.fn(),
-    refreshActor: vi.fn(),
-    logout: vi.fn(),
-  }),
-}));
+vi.mock("../features/auth/useAuthentication", () => {
+  const defaults: Record<string, unknown> = {
+    getEnterpriseCompany: () => Promise.reject(new Error("no company")),
+    listAssignedCases: () => Promise.resolve([]),
+    listPatronAssignments: () => Promise.resolve({ items: [] }),
+    listPatronActions: () => Promise.resolve({ items: [], open_count: 0 }),
+    listBoampObservations: () => Promise.resolve({ observations: [] }),
+    getCaseDceReading: () => Promise.reject(Object.assign(new Error("missing DCE"), { status: 404 })),
+    searchCaseKnowledge: () => Promise.resolve({ case_id: "case-1", query: "", results: [] }),
+    listPricingScenarios: () => Promise.resolve([]),
+    getCommitmentCard: (caseId:string) => Promise.resolve({case_id:caseId,case_scope_fingerprint:"a".repeat(64),dce_version_id:null,source_context_state:"UNKNOWN",axes:["COMMERCIAL","CANDIDATURE","TECHNICAL","CONSTRUCTIBILITY","CONTRACT","PRICE","CASH","CAPACITY","PARTNERS","HSE","DOCUMENTS","RIGHTS"].map(code=>({code,label:code,status:"UNKNOWN"})),points:[],coverage:null,dossier_review:null,references:[],truncated:false,analysis_complete:false,gate_effect:"NONE",current_decision:null,history:[],history_has_more:false}),
+    getCashSchedule: (caseId:string) => Promise.resolve({case_id:caseId,revision:0,view_sha256:'a'.repeat(64),current:null,history:[],sources:[],history_truncated:false,catalog_truncated:false}),
+    getCaseClosure: (caseId:string) => Promise.resolve({case_id:caseId,dossier_sha256:'a'.repeat(64),dce_version_id:null,case_source:{},reference_options:[],contract_versions:[],lot_references:[],change_actions:[],acts:[],obligations:[],cycles:[],facts:[],rex:[],interviews:[],reuse_history:[],contract_replacements:[],open_obligation_ids:[],financial_observations:{collection_state:'UNKNOWN',settlement_state:'UNKNOWN',comparisons:[]},legal_effect_state:'UNKNOWN',external_receipt_state:'UNKNOWN',completeness_state:'REVIEW_REQUIRED'}),
+    getDatedCapacity: (caseId:string) => Promise.resolve({case_id:caseId,context_sha256:"a".repeat(64),revision:0,current:null,history:[],history_has_more:false,state:"UNKNOWN",coverage_state:"UNKNOWN",reservation_state:"NOT_RESERVED"}),
+    getCapabilityAssessments: () => Promise.resolve({proposals:[],gaps:[]}),
+    getCapabilityCandidates: () => Promise.resolve([]),
+    getCaseResolution: (caseId: string) => Promise.resolve({ case_id: caseId, work_label: "Affaire synthétique", coverage: "PARTIAL", items: [], economic_coverage: null }),
+    listDecisionRiskRequirementLinks: () => Promise.resolve({ items: [], next_cursor: null }),
+    listDceContractRiskSignals: () => Promise.resolve({ case_id: "case-1", items: [] }),
+    listRegulatoryProfiles: () => Promise.resolve({ case_id: "case-1", items: [] }),
+    crossCctpPricing: () => Promise.resolve({ case_id: "case-1", items: [] }),
+    listDocumentContradictions: () => Promise.resolve({ case_id: "case-1", items: [] }),
+    reconcileDecisionPricing: () => Promise.resolve({ link_id: "", search: "", items: [] }),
+    getDecisionDossier: () => Promise.reject(Object.assign(new Error("missing"), { status: 404 })),
+  };
+  const api = new Proxy(defaults, {
+    get(target, prop) {
+      if (typeof prop === "string" && prop in overridesRef.current) return overridesRef.current[prop];
+      if (typeof prop === "string" && prop in target) return target[prop];
+      return () => Promise.resolve({});
+    },
+  }) as never;
+  return {
+    useAuthentication: () => ({
+      accessToken: authAccessTokenRef.current,
+      sessionGeneration: authSessionGenerationRef.current,
+      currentActor: authSessionRef.current ? {
+        actor_id: "actor-1",
+        identity_id: "identity-1",
+        tenant_slug: authTenantRef.current,
+        actor_kind: authRoleRef.current,
+        operational_profile: authProfileRef.current,
+        membership_state: "ACTIVE",
+        mfa_verified: authMfaRef.current,
+      } : null,
+      isRestoring: false,
+      sessionExpired: authSessionExpiredRef.current,
+      hasSession: authSessionRef.current,
+      isAuthenticated: authSessionRef.current && authMfaRef.current,
+      api,
+      login: vi.fn(),
+      refreshActor: vi.fn(),
+      logout: vi.fn(),
+    }),
+  };
+});
 
 vi.mock("../features/connection/useBackendReadiness", () => ({
   useBackendReadiness: () => ({
@@ -91,6 +118,7 @@ const CASE: AssignedCase = {
   consultation_id: null,
   applicable_dce_version_id: null,
 };
+const c08HttpProof = (globalThis as typeof globalThis & { __smartAoC08Proof?: { complete: DraftReport; incomplete: DraftReport; scenarios_complete: PricingScenario[]; scenarios_incomplete: PricingScenario[] } }).__smartAoC08Proof;
 
 function baseOverrides(): Record<string, unknown> {
   return {
@@ -102,6 +130,7 @@ function baseOverrides(): Record<string, unknown> {
     getCaseDceReading: () => Promise.reject(Object.assign(new Error("missing DCE"), { status: 404 })),
     searchCaseKnowledge: () => Promise.resolve({ case_id: "case-1", query: "", results: [] }),
     listPricingScenarios: () => Promise.resolve([]),
+    getCaseResolution: (caseId: string) => Promise.resolve({ case_id: caseId, work_label: "Affaire synthétique", coverage: "PARTIAL", items: [], economic_coverage: null }),
     listDecisionRiskRequirementLinks: () => Promise.resolve({ items: [], next_cursor: null }),
     listDceContractRiskSignals: () => Promise.resolve({ case_id: "case-1", items: [] }),
     listRegulatoryProfiles: () => Promise.resolve({ case_id: "case-1", items: [] }),
@@ -145,7 +174,109 @@ describe("App readiness integration", () => {
     authMfaRef.current = true;
     authSessionExpiredRef.current = false;
     authSessionRef.current = true;
+    authAccessTokenRef.current = "token-test";
+    authSessionGenerationRef.current = 1;
+    authTenantRef.current = "entreprise-test";
     overridesRef.current = {};
+  });
+
+  it("masque une synthèse V1 mise en cache dès que l’admission devient UNKNOWN",async()=>{
+    Object.defineProperty(HTMLElement.prototype,"scrollIntoView",{configurable:true,value:vi.fn()});
+    let pending=false;
+    const opening=vi.spyOn(openingHooks,"useDceOpening").mockImplementation(()=>({consultation:null,dceVersionMetadata:null,inventory:null,loading:false,busy:false,sourceChannel:"MANUAL_UPLOAD",file:null,files:[],step:"IDLE",pending,replacementReason:"",replacementConfirmed:false,openSpace:vi.fn(),admitSelectedFile:vi.fn(),setSourceChannel:vi.fn(),setFile:vi.fn(),setFiles:vi.fn(),setReplacementReason:vi.fn(),setReplacementConfirmed:vi.fn()} as unknown as ReturnType<typeof openingHooks.useDceOpening>));
+    const summary={...analysisFixture(),case_id:CASE.case_id};
+    const analysis=vi.spyOn(analysisHooks,"useCaseAnalysisSummary").mockReturnValue({summary,loading:false,error:null,refresh:vi.fn()});
+    overridesRef.current={...baseOverrides(),getCaseDceReading:async()=>({case_id:CASE.case_id,work_label:CASE.work_label,case_lifecycle:"ACTIVE",commercial_stage:"ANALYSIS",dce_freshness:"CURRENT",availability:"AVAILABLE",dce:{dce_version_id:"version-a",lifecycle:"ADMITTED",integrity:"VERIFIED",classification_readiness:"CLASSIFIED",analysis_readiness:"READY_FOR_ANALYSIS",source_received_at:"2026-11-03T00:00:00Z"},requirements:[],counters:{total:0,pending_human_confirmation:0,confirmed:0,review_required:0,not_applicable:0}})};
+    let view:Awaited<ReturnType<typeof renderApp>>|undefined;
+    try{view=await renderApp();fireEvent.click(screen.getByRole("button",{name:/Lecture DCE/}));await screen.findByRole("table",{name:/Douze axes/});pending=true;view.rerender(<App/>);expect(screen.queryByRole("table",{name:/Douze axes/})).toBeNull();}
+    finally{view?.unmount();analysis.mockRestore();opening.mockRestore();}
+  });
+
+  it("ne relit pas automatiquement une source dont l’acte UNKNOWN est restauré", async () => {
+    const spy = vi.spyOn(openingHooks, "useDceOpening").mockImplementation((_api, _message, selected) => ({
+      consultation: null, dceVersionMetadata: null, inventory: null, loading: false, busy: false,
+      sourceChannel: "MANUAL_UPLOAD", file: null, files: [], step: "IDLE", pending: selected?.case_id === CASE.case_id,
+      replacementReason: "", replacementConfirmed: false, openSpace: vi.fn(), admitSelectedFile: vi.fn(),
+      setSourceChannel: vi.fn(), setFile: vi.fn(), setFiles: vi.fn(), setReplacementReason: vi.fn(), setReplacementConfirmed: vi.fn(),
+    } as unknown as ReturnType<typeof openingHooks.useDceOpening>));
+    const getCaseDceReading = vi.fn().mockRejectedValue(Object.assign(new Error("not available"), { status: 404 }));
+    overridesRef.current = { ...baseOverrides(), getCaseDceReading };
+    let view: Awaited<ReturnType<typeof renderApp>> | undefined;
+    try {
+      view = await renderApp();
+      expect(getCaseDceReading).not.toHaveBeenCalled();
+    } finally { view?.unmount(); spy.mockRestore(); }
+  });
+
+  it("opens the newly created BOAMP Case even when another Case was selected",async()=>{
+    let created=false;
+    const cash=vi.fn((caseId:string)=>Promise.resolve({case_id:caseId,revision:0,view_sha256:'a'.repeat(64),current:null,history:[],sources:[],history_truncated:false,catalog_truncated:false}));
+    const signal={observation_id:'obs-local',source_notice_id:'SYNTH-1',title:'Signal BOAMP synthétique',observed_at:'2026-11-03T00:00:00Z',publication_date:null,response_deadline:null,department_codes:[],market_types:[],source_status:null,source_captures:[],score_version:'BOAMP_PUBLIC_V1',score:50,score_explanation:{factors:[]},fingerprint_sha256:'b'.repeat(64),p0_state:'TARGETED',p0_decision:'QUALIFIED',p0_reason_code:'RELEVANT_PUBLIC_SIGNAL',p0_qualification_id:'q-local',p0_decided_at:null,p1_state:'NOT_OPEN',p1_case_id:null,p1_opened_at:null,lot_scope_state:'UNKNOWN',lot_references:[],lot_scope_source:'BOAMP',deadline_state:'MISSING',deadline_source:null,deadline_source_timezone:null,deadline_normalized_timezone:'UTC',unknowns:[]};
+    overridesRef.current={...baseOverrides(),getCashSchedule:cash,listAssignedCases:()=>Promise.resolve(created?[CASE,{...CASE,case_id:'case-boamp-new',work_label:'Affaire BOAMP nouvelle'}]:[CASE]),listBoampObservations:()=>Promise.resolve({observations:[{...signal,p1_state:created?'OPEN_WITH_UNKNOWNS':'NOT_OPEN',p1_case_id:created?'case-boamp-new':null}]}),createCaseFromBoampObservation:async(_id:string,input:Record<string,string>)=>{created=true;return{status:'SUCCEEDED',command_id:input.command_id,idempotency_key:input.idempotency_key,result_code:'CASE_CREATED',case_id:'case-boamp-new',version:1,event_ids:[],replayed:false};}};
+    await renderApp();
+    fireEvent.click(await screen.findByLabelText('Je confirme l’ouverture d’une Affaire avec les inconnues affichées.'));
+    fireEvent.click(screen.getByRole('button',{name:/Créer une affaire/}));
+    await waitFor(()=>expect(cash).toHaveBeenLastCalledWith('case-boamp-new'));
+  });
+
+  it("clears the submission manifest when the authenticated tenant changes", async () => {
+    const hash = "d".repeat(64);
+    overridesRef.current = {
+      ...baseOverrides(),
+      getSubmissionPackageManifest: () => Promise.resolve({ submission_package_id: "package-private", package_version: 1, state: "PRET_CONTROLE", manifest_sha256: hash, manifest: {}, authorization_status: "NOT_AUTHORIZED", external_submission: "NOT_PERFORMED" }),
+    };
+    const view = await renderApp();
+    fireEvent.change(screen.getByLabelText("Identifiant du paquet"), { target: { value: "package-private" } });
+    fireEvent.click(screen.getByRole("button", { name: /Prévisualiser le manifeste/ }));
+    expect(await screen.findByText(new RegExp(hash))).toBeVisible();
+    authTenantRef.current = "entreprise-autre";
+    authSessionGenerationRef.current += 1;
+    await act(async () => { view.rerender(<App />); });
+    expect(screen.queryByText(new RegExp(hash))).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Identifiant du paquet")).toHaveValue("");
+  });
+
+  it("does not publish a late P5 error into a different tenant session", async () => {
+    let failAuthorization: ((error: Error) => void) | undefined;
+    const authorize = vi.fn().mockImplementation(() => new Promise((_resolve, reject) => { failAuthorization = reject; }));
+    overridesRef.current = {
+      ...baseOverrides(),
+      authorizeSubmissionPackage: authorize,
+      getSubmissionPackageManifest: () => Promise.resolve({ submission_package_id: "package-private", package_version: 1, state: "PRET_CONTROLE", manifest_sha256: "d".repeat(64), manifest: {}, authorization_status: "NOT_AUTHORIZED", external_submission: "NOT_PERFORMED" }),
+    };
+    const view = await renderApp();
+    fireEvent.change(screen.getByLabelText("Identifiant du paquet"), { target: { value: "package-private" } });
+    fireEvent.click(screen.getByRole("button", { name: /Prévisualiser le manifeste/ }));
+    await screen.findByText(new RegExp("d".repeat(64)));
+    fireEvent.click(screen.getByRole("button", { name: /Autoriser la remise humaine/ }));
+    expect(authorize).toHaveBeenCalledOnce();
+    authTenantRef.current = "entreprise-autre";
+    authSessionGenerationRef.current += 1;
+    await act(async () => { view.rerender(<App />); });
+    await act(async () => { failAuthorization?.(new Error("PRIVATE_RESPONSE_FROM_PREVIOUS_TENANT")); });
+    expect(screen.queryByText("PRIVATE_RESPONSE_FROM_PREVIOUS_TENANT")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Identifiant du paquet")).toHaveValue("");
+  });
+
+  it("clears an already published P5 message when the authenticated scope changes", async () => {
+    const marker = "PRIVATE_STORED_FOR_PREVIOUS_TENANT";
+    overridesRef.current = {
+      ...baseOverrides(),
+      listAssignedCases: () => Promise.resolve([{ ...CASE, consultation_id: "consultation-1" }]),
+      getConsultation: () => new Promise(() => {}),
+      authorizeSubmissionPackage: vi.fn().mockRejectedValue(new Error(marker)),
+      getSubmissionPackageManifest: () => Promise.resolve({ submission_package_id: "package-private", package_version: 1, state: "PRET_CONTROLE", manifest_sha256: "d".repeat(64), manifest: {}, authorization_status: "NOT_AUTHORIZED", external_submission: "NOT_PERFORMED" }),
+    };
+    const view = await renderApp();
+    fireEvent.change(screen.getByLabelText("Identifiant du paquet"), { target: { value: "package-private" } });
+    fireEvent.click(screen.getByRole("button", { name: /Prévisualiser le manifeste/ }));
+    await screen.findByText(new RegExp("d".repeat(64)));
+    fireEvent.click(screen.getByRole("button", { name: /Autoriser la remise humaine/ }));
+    expect(await screen.findByText(marker)).toBeVisible();
+    authTenantRef.current = "entreprise-autre";
+    authSessionGenerationRef.current += 1;
+    await act(async () => { view.rerender(<App />); });
+    expect(screen.queryByText(marker)).not.toBeInTheDocument();
   });
 
   it("affiche l’état backend et les dépendances dans la configuration API", async () => {
@@ -173,6 +304,249 @@ describe("App readiness integration", () => {
   it("expose C12 résultat/passation dans la navigation Patron", async () => {
     await renderApp();
     expect(screen.getByRole("button", { name: /Résultat et passation/ })).toBeVisible();
+  });
+
+  it("affiche les points À résoudre de l'affaire dans la revue existante", async () => {
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", { configurable: true, value: vi.fn() });
+    const projection: CaseResolution = {
+      case_id: CASE.case_id,
+      work_label: CASE.work_label,
+      coverage: "PARTIAL",
+      items: [{ item_id: "unknown-1", item_kind: "UNKNOWN", native_state: "UNKNOWN", source_refs: ["fixture://notice/1"], resolution_owner: null, next_action: "REVIEW_UNKNOWN", due_at: null, impact: "Périmètre à vérifier" }],
+      economic_coverage: null,
+    };
+    const getCaseResolution = vi.fn().mockResolvedValue(projection);
+    overridesRef.current = { ...baseOverrides(), getCaseResolution };
+    await renderApp();
+    fireEvent.click(screen.getByRole("button", { name: /Revue/ }));
+
+    const panel = await screen.findByRole("region", { name: "À résoudre" });
+    expect(within(panel).getByText("Couverture partielle")).toBeVisible();
+    expect(within(panel).getByText("UNKNOWN")).toBeVisible();
+    expect(within(panel).getByText("Périmètre à vérifier")).toBeVisible();
+    expect(getCaseResolution).toHaveBeenCalledWith(CASE.case_id);
+  });
+
+  it("lit les évaluations documentaires de l’Affaire Collaborateur sans identifiant privé", async () => {
+    authRoleRef.current = "COLLABORATEUR";
+    const getCapabilityAssessments = vi.fn().mockResolvedValue({proposals:[{case_id:CASE.case_id,source_evidence_state:"CURRENT",source_evidence_evaluated_at:"2026-10-08T09:00:00Z",source_locator:"PRIVATE_LOCATOR",proposal_id:"PRIVATE_ID"}],gaps:[]});
+    overridesRef.current = {...baseOverrides(),getCapabilityAssessments};
+    await renderApp();
+    const panel = await screen.findByRole("region", {name:"Éligibilité documentaire des moyens"});
+    await waitFor(()=>expect(within(panel).getByText("CURRENT")).toBeVisible());
+    expect(getCapabilityAssessments).toHaveBeenCalledWith(CASE.case_id);
+    expect(panel.textContent).not.toMatch(/PRIVATE_LOCATOR|PRIVATE_ID/);
+  });
+
+  it.each(["PATRON_ADMIN","PATRON_DELEGATE","MFA_PENDING"])("ne lit pas les évaluations documentaires pour %s",async(context)=>{
+    authRoleRef.current = context === "MFA_PENDING" ? "COLLABORATEUR" : context;
+    if(context === "MFA_PENDING") authMfaRef.current = false;
+    const getCapabilityAssessments = vi.fn();
+    overridesRef.current = {...baseOverrides(),getCapabilityAssessments};
+    await renderApp();
+    expect(getCapabilityAssessments).not.toHaveBeenCalled();
+    expect(screen.queryByRole("region", {name:"Éligibilité documentaire des moyens"})).toBeNull();
+  });
+
+  it("rend les candidats de moyens en lecture sans exposer leurs UUID", async () => {
+    authRoleRef.current = "COLLABORATEUR";
+    const getCapabilityCandidates = vi.fn().mockResolvedValue([{
+      capability_id: "PRIVATE_CAPABILITY_ID", capability_kind: "EQUIPMENT", name: "Levage synthétique",
+      version_id: "PRIVATE_VERSION_ID", version_number: 2, title: "Version chantier",
+      valid_from: "2026-10-01T00:00:00Z", valid_until: null, validity_state: "CURRENT",
+      source_evidence_state: "UNKNOWN", evaluated_at: "2026-10-08T09:00:00Z",
+      proof_document_ids: ["PRIVATE_PROOF_ID"], summary: "PRIVATE SUMMARY",
+    }]);
+    const createProposal = vi.fn();
+    overridesRef.current = { ...baseOverrides(), getCapabilityCandidates, proposeCapability: createProposal };
+    await renderApp();
+    const panel = await screen.findByRole("region", { name: "Moyens que vous pouvez proposer" });
+    expect(within(panel).getByText("Levage synthétique")).toBeVisible();
+    expect(within(panel).getByText(/État documentaire : UNKNOWN/)).toBeVisible();
+    expect(panel.textContent).not.toMatch(/PRIVATE_CAPABILITY_ID|PRIVATE_VERSION_ID|PRIVATE_PROOF_ID|PRIVATE SUMMARY/);
+    expect(getCapabilityCandidates).toHaveBeenCalledWith(CASE.case_id);
+    expect(createProposal).not.toHaveBeenCalled();
+  });
+
+  it.each(["PATRON_ADMIN", "PATRON_DELEGATE", "MFA_PENDING"])("does not read collaborator candidates for %s", async (context) => {
+    authRoleRef.current = context === "MFA_PENDING" ? "COLLABORATEUR" : context;
+    if (context === "MFA_PENDING") authMfaRef.current = false;
+    const getCapabilityCandidates = vi.fn();
+    overridesRef.current = { ...baseOverrides(), getCapabilityCandidates };
+    await renderApp();
+    expect(getCapabilityCandidates).not.toHaveBeenCalled();
+    expect(screen.queryByRole("region", { name: "Moyens que vous pouvez proposer" })).toBeNull();
+  });
+
+  it("affiche la projection Collaborateur sans couverture économique privée", async () => {
+    authRoleRef.current = "COLLABORATEUR";
+    authProfileRef.current = "RESPONSABLE";
+    const economic = { state: "UNKNOWN" as const, source_refs: [], note: "PRIVATE ECONOMIC NOTE" };
+    const getCaseResolution = vi.fn().mockResolvedValue({
+      case_id: CASE.case_id, work_label: CASE.work_label, coverage: "PARTIAL",
+      items: [{ item_id: "blocker-1", item_kind: "TASK_BLOCKER", native_state: "OPEN", source_refs: ["fixture://task/assigned"], resolution_owner: "COLLABORATEUR", next_action: "RESOLVE_TASK_BLOCKER", due_at: null, impact: null }],
+      economic_coverage: { assumptions: economic, quote_validity: economic, capacity: economic, financing: economic },
+    } satisfies CaseResolution);
+    overridesRef.current = { ...baseOverrides(), getCaseResolution };
+    await renderApp();
+    const panel = await screen.findByRole("region", { name: "À résoudre" });
+    expect(within(panel).getByRole("heading", { name: "Blocages de tâche" })).toBeVisible();
+    expect(screen.queryByText("PRIVATE ECONOMIC NOTE")).toBeNull();
+    expect(screen.queryByLabelText("Couverture économique de l’affaire")).toBeNull();
+  });
+
+  it.each(["PATRON_DELEGATE", "MFA_PENDING"])("ne lit pas À résoudre pour le contexte refusé %s", async (context) => {
+    if (context === "MFA_PENDING") authMfaRef.current = false;
+    else authRoleRef.current = context;
+    const getCaseResolution = vi.fn();
+    overridesRef.current = { ...baseOverrides(), getCaseResolution };
+    await renderApp();
+    expect(getCaseResolution).not.toHaveBeenCalled();
+    expect(screen.queryByRole("region", { name: "À résoudre" })).toBeNull();
+  });
+
+  it("ignore une réponse Patron tardive après passage au contexte Collaborateur", async () => {
+    let resolvePatron!: (value: CaseResolution) => void;
+    const patronPending = new Promise<CaseResolution>((resolve) => { resolvePatron = resolve; });
+    const collaborator: CaseResolution = { case_id: CASE.case_id, work_label: CASE.work_label, coverage: "PARTIAL", economic_coverage: null, items: [{ item_id: "task-1", item_kind: "TASK_BLOCKER", native_state: "OPEN", source_refs: [], resolution_owner: null, next_action: "RESOLVE_TASK_BLOCKER", due_at: null, impact: null }] };
+    const getCaseResolution = vi.fn().mockReturnValueOnce(patronPending).mockResolvedValue(collaborator);
+    overridesRef.current = { ...baseOverrides(), getCaseResolution };
+    const view = await renderApp();
+    authRoleRef.current = "COLLABORATEUR";
+    authProfileRef.current = "RESPONSABLE";
+    view.rerender(<App />);
+    const panel = await screen.findByRole("region", { name: "À résoudre" });
+    await waitFor(() => expect(within(panel).getByRole("heading", { name: "Blocages de tâche" })).toBeVisible());
+    await act(async () => resolvePatron({ ...collaborator, items: [{ ...collaborator.items[0], item_kind: "RISK", impact: "CONFIDENTIAL PATRON ITEM" }] }));
+    expect(within(panel).queryByText("CONFIDENTIAL PATRON ITEM")).toBeNull();
+    expect(within(panel).queryByRole("heading", { name: "Risques" })).toBeNull();
+  });
+
+  it("invalide la lecture lors du remplacement de session pour le même acteur", async () => {
+    let resolveOldSession!: (value: CaseResolution) => void;
+    const pending = new Promise<CaseResolution>((resolve) => { resolveOldSession = resolve; });
+    const current: CaseResolution = { case_id: CASE.case_id, work_label: CASE.work_label, coverage: "PARTIAL", economic_coverage: null, items: [{ item_id: "current-1", item_kind: "UNKNOWN", native_state: "UNKNOWN", source_refs: [], resolution_owner: null, next_action: "REVIEW_UNKNOWN", due_at: null, impact: "CURRENT SESSION ITEM" }] };
+    const getCaseResolution = vi.fn().mockReturnValueOnce(pending).mockResolvedValue(current);
+    overridesRef.current = { ...baseOverrides(), getCaseResolution };
+    const view = await renderApp();
+    authAccessTokenRef.current = "token-test-replacement";
+    authSessionGenerationRef.current++;
+    view.rerender(<App />);
+    await waitFor(() => expect(getCaseResolution).toHaveBeenCalledTimes(2));
+    await act(async () => resolveOldSession({ ...current, items: [{ ...current.items[0], impact: "OLD SESSION ITEM" }] }));
+    const panel = screen.getByRole("region", { name: "À résoudre" });
+    expect(within(panel).getByText("CURRENT SESSION ITEM")).toBeVisible();
+    expect(within(panel).queryByText("OLD SESSION ITEM")).toBeNull();
+  });
+
+  it.skipIf(!c08HttpProof?.scenarios_complete)("relit la provenance PostgreSQL/HTTP dans l’application Patron puis la masque au changement de rôle", async () => {
+    const scenarios = c08HttpProof!.scenarios_complete;
+    const sourceCase = { ...CASE, case_id: scenarios[0].case_id };
+    const listPricingScenarios = vi.fn().mockResolvedValue(scenarios);
+    overridesRef.current = { ...baseOverrides(), listAssignedCases: () => Promise.resolve([sourceCase]), listPricingScenarios };
+    const view = await renderApp();
+    expect(await screen.findByText(`Source ${scenarios[0].source_snapshot_id} · révision 6`)).toBeInTheDocument();
+    expect(screen.getByText("Marge 32.99 % · DRAFT")).toBeInTheDocument();
+    expect(listPricingScenarios).toHaveBeenCalledWith(sourceCase.case_id);
+    authRoleRef.current = "COLLABORATEUR";
+    view.rerender(<App />);
+    expect(screen.queryByRole("heading", { name: "Options de prix" })).toBeNull();
+    expect(screen.queryByText(`Source ${scenarios[0].source_snapshot_id} · révision 6`)).toBeNull();
+  });
+
+  it.each(["COLLABORATEUR", "PATRON_DELEGATE"])("ne lit ni ne rend les scénarios privés pour %s", async (role) => {
+    authRoleRef.current = role;
+    const listPricingScenarios = vi.fn();
+    overridesRef.current = { ...baseOverrides(), listPricingScenarios };
+    await renderApp();
+    expect(screen.queryByRole("heading", { name: "Options de prix" })).toBeNull();
+    expect(listPricingScenarios).not.toHaveBeenCalled();
+  });
+
+  it.each(["COLLABORATEUR", "PATRON_DELEGATE"])("ne lit ni n’expose les rapprochements privés pour %s", async (role) => {
+    authRoleRef.current = role;
+    const listPartnerOfferLineComparisons = vi.fn();
+    overridesRef.current = { ...baseOverrides(), listPartnerOfferLineComparisons };
+    await renderApp();
+
+    expect(screen.queryByRole("region", { name: "Rapprochements de lignes C08" })).toBeNull();
+    expect(listPartnerOfferLineComparisons).not.toHaveBeenCalled();
+  });
+
+  it("ignore le scénario tardif d’une ancienne génération de session", async () => {
+    let resolveOld!: (value: PricingScenario[]) => void;
+    const old = new Promise<PricingScenario[]>((resolve) => { resolveOld = resolve; });
+    const current: PricingScenario = { scenario_id: "local-synthetic", case_id: CASE.case_id, scenario_key: "CURRENT SCENARIO", scenario_type: "BASE", version: 1, state: "DRAFT", assumptions: {}, sales_total_minor: 100, total_cost_minor: 0, gross_margin_minor: 100, gross_margin_rate_bps: 10000, source_snapshot_id: "synthetic-source", source_snapshot_revision: 1, source_basis_state: "DECLARED_COMPLETE", source_basis_reason: null, currency_code: "EUR" };
+    const listPricingScenarios = vi.fn().mockReturnValueOnce(old).mockResolvedValueOnce([current]);
+    overridesRef.current = { ...baseOverrides(), listPricingScenarios };
+    const view = await renderApp();
+    authSessionGenerationRef.current++;
+    view.rerender(<App />);
+    await waitFor(() => expect(listPricingScenarios).toHaveBeenCalledTimes(2));
+    await act(async () => resolveOld([{ ...current, scenario_key: "OLD SCENARIO" }]));
+    expect(await screen.findByText("CURRENT SCENARIO · v1")).toBeInTheDocument();
+    expect(screen.queryByText("OLD SCENARIO · v1")).toBeNull();
+  });
+
+  it.each(["COLLABORATEUR", "PATRON_DELEGATE"])("masque le brouillon FINANCIAL_PRIVATE pour %s", async (role) => {
+    authRoleRef.current = role;
+    const getDraft = vi.fn();
+    overridesRef.current = { ...baseOverrides(), getDraft };
+    await renderApp();
+    expect(screen.queryByRole("heading", { name: "Brouillon financier" })).toBeNull();
+    expect(getDraft).not.toHaveBeenCalled();
+  });
+
+  it("publie humainement le rapport exact puis masque la source publiée au changement de rôle", async () => {
+    const report: DraftReport = { report_id: "browser-source", case_id: CASE.case_id, status: "DRAFT", aggregate_revision: 2, currency_code: "EUR", calculated_at: "2026-10-07T10:00:00Z", ruleset_version: 1, lines: [], summary: { sales_total_minor: 0, direct_cost_total_minor: 0, overhead_total_minor: 0, subcontracting_total_minor: 0, contingency_total_minor: 0, gross_margin_minor: 0, gross_margin_rate_bps: 0, forecast_cashflow_minor: 0 } };
+    const publishFinancialReport = vi.fn().mockImplementation(async (_case, reportId, input) => ({ status: "SUCCEEDED", command_id: input.command_id, idempotency_key: input.idempotency_key, result_code: "FINANCIAL_REPORT_PUBLISHED", aggregate_refs: [{ aggregate_type: "FinancialReportSnapshot", aggregate_id: reportId, aggregate_revision: 3 }], event_ids: ["synthetic-event"], replayed: false }));
+    const getPublishedFinancialReport = vi.fn().mockResolvedValue({ ...report, status: "PUBLISHED", aggregate_revision: 3, margin_calculation: { state: "UNKNOWN", basis: "DECLARED_BASE_CATEGORIES", missing_categories: ["SALES"], basis_line_ids: [], total_cost_minor: null, gross_margin_minor: null, gross_margin_rate_bps: null, unknown_reason: "MISSING_BASE_CATEGORY", rate_unknown_reason: null } });
+    overridesRef.current = { ...baseOverrides(), getDraft: vi.fn().mockResolvedValue(report), publishFinancialReport, getPublishedFinancialReport };
+    const view = await renderApp();
+    fireEvent.change(screen.getByLabelText("Identifiant du rapport"), { target: { value: report.report_id } });
+    fireEvent.click(screen.getByRole("button", { name: /Lire le brouillon/ }));
+    const publishButton = await screen.findByRole("button", { name: "Publier et figer ce rapport" });
+    expect(publishFinancialReport).not.toHaveBeenCalled();
+    fireEvent.click(publishButton);
+    expect(await screen.findByText("browser-source · révision 3")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Rapport financier publié" })).toBeInTheDocument();
+    expect(publishFinancialReport).toHaveBeenCalledOnce();
+    expect(getPublishedFinancialReport).toHaveBeenCalledWith(CASE.case_id, report.report_id);
+    authRoleRef.current = "COLLABORATEUR";
+    view.rerender(<App />);
+    expect(screen.queryByText("browser-source · révision 3")).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Rapport financier publié" })).toBeNull();
+  });
+
+  it("conserve une écriture C08 en cours lors du renouvellement de jeton de la même session", async () => {
+    let acknowledge!: (value: CommandReceipt) => void;
+    const createDraft = vi.fn().mockReturnValue(new Promise<CommandReceipt>((resolve) => { acknowledge = resolve; }));
+    const getDraft = vi.fn().mockResolvedValue({ report_id: "report-1", case_id: CASE.case_id, status: "DRAFT", aggregate_revision: 0, currency_code: "EUR", calculated_at: "2026-10-05T10:00:00Z", ruleset_version: 1, lines: [], summary: { sales_total_minor: 0, direct_cost_total_minor: 0, overhead_total_minor: 0, subcontracting_total_minor: 0, contingency_total_minor: 0, gross_margin_minor: 0, gross_margin_rate_bps: 0, forecast_cashflow_minor: 0 } } satisfies DraftReport);
+    overridesRef.current = { ...baseOverrides(), createDraft, getDraft };
+    const view = await renderApp();
+    fireEvent.click(screen.getByRole("button", { name: /Nouveau brouillon/ }));
+    authAccessTokenRef.current = "token-test-renewed";
+    view.rerender(<App />);
+    await act(async () => acknowledge({ status: "SUCCEEDED", command_id: "fixture-command", idempotency_key: "fixture-intent", result_code: "FINANCIAL_REPORT_DRAFT_CREATED", aggregate_refs: [{ aggregate_type: "FinancialReportSnapshot", aggregate_id: "report-1", aggregate_revision: 0 }], event_ids: [], replayed: false }));
+    await waitFor(() => expect(getDraft).toHaveBeenCalledWith(CASE.case_id, "report-1"));
+    expect(screen.getByText("DRAFT · Révision 0")).toBeVisible();
+  });
+
+  it.skipIf(!c08HttpProof)("projette les réponses HTTP/PostgreSQL synthétiques incomplète puis complète dans C08 Patron", async () => {
+    const incomplete = c08HttpProof!.incomplete;
+    const complete = c08HttpProof!.complete;
+    const getDraft = vi.fn().mockResolvedValueOnce(incomplete).mockResolvedValueOnce(complete);
+    overridesRef.current = { ...baseOverrides(), listAssignedCases: () => Promise.resolve([{ ...CASE, case_id: complete.case_id, work_label: "Affaire C08 synthétique" }]), getDraft };
+    await renderApp();
+    fireEvent.change(screen.getByLabelText("Identifiant du rapport"), { target: { value: complete.report_id } });
+    fireEvent.click(screen.getByRole("button", { name: /Lire le brouillon/ }));
+    await screen.findByText("Taux UNKNOWN");
+    expect(screen.getByText(/postes de base absents/)).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: /Lire le brouillon/ }));
+    expect(await screen.findByText("32.99 % du chiffre d’affaires")).toBeVisible();
+    expect(screen.getByText(/330,00/)).toBeVisible();
+    expect(getDraft).toHaveBeenCalledWith(complete.case_id, complete.report_id);
+    expect(screen.queryByText("Taux UNKNOWN")).toBeNull();
   });
 
   it("place la revue d’entretien PUX-19 dans C13 et distingue USABLE d’EXPIRED", async () => {
@@ -253,6 +627,7 @@ describe("App readiness integration", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Partenaires C09/ }));
 
+    await waitFor(() => expect(listCasePartnerEvents).toHaveBeenCalledWith("case-1"), { timeout: 10000 });
     expect(await screen.findByText(/RECEIVED · preuve reçue/)).toBeVisible();
     expect(screen.getByText(/Mandat : NOT_APPLICABLE/)).toBeVisible();
     expect(screen.getByText(/reçu ≠ engagé/)).toBeVisible();
@@ -547,6 +922,14 @@ describe("App error visibility", () => {
     expect(screen.queryByText("Ventes")).toBeNull();
   });
 
+  it("fige aussi les contrôles Decision existants pendant un acte de carte UNKNOWN",async()=>{
+    overridesRef.current={...baseOverrides(),createDecision:vi.fn().mockRejectedValue(Object.assign(Error("Réponse perdue"),{status:503}))};
+    await renderApp();connect();
+    fireEvent.click(await screen.findByRole("button",{name:"Créer un brouillon de décision"}));
+    await screen.findByText(/UNKNOWN — résultat de l’acte inconnu/);
+    expect(screen.queryByRole("button",{name:"Créer le brouillon Decision"})).toBeNull();
+  });
+
   it("affiche une erreur visible quand le chargement des scénarios de chiffrage échoue", async () => {
     overridesRef.current = {
       ...baseOverrides(),
@@ -557,9 +940,9 @@ describe("App error visibility", () => {
     connect();
 
     expect(
-      await screen.findByText("Scénarios indisponibles", {}, { timeout: 3000 }),
+      await screen.findByText(/Les scénarios privés sont indisponibles/, {}, { timeout: 3000 }),
     ).toBeVisible();
-    expect(screen.getByRole("alert")).toHaveTextContent("Scénarios indisponibles");
+    expect(screen.getByRole("alert")).toHaveTextContent("Les scénarios privés sont indisponibles");
   });
 
   it("affiche une erreur visible quand le dossier de décision échoue hors 404", async () => {
@@ -597,5 +980,118 @@ describe("App error visibility", () => {
     ).toBeVisible();
     await new Promise((resolve) => setTimeout(resolve, 150));
     expect(screen.queryByText("ne doit jamais apparaître")).toBeNull();
+  });
+
+  it("relie depuis C07 l’impact au Patron et conserve le contrat de retry exact", async () => {
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+      configurable: true,
+      value: vi.fn(),
+    });
+    const impact: ContractBaselineImpact = {
+      proof_id: "proof-1",
+      case_id: "case-1",
+      baseline_observation_id: "observation-1",
+      dce_requirement_id: "requirement-1",
+      dce_requirement_revision: 2,
+      proof_revision: 1,
+      baseline_source_refs: ["CCAP · article 4 · page 12"],
+      baseline_statement: "Délai de paiement déclaré.",
+      deviation_statement: null,
+      impact_statement: "Effet à examiner, non calculé.",
+      status: "HUMAN_REVIEW_REQUIRED",
+    };
+    const dossier: PatronDecisionDossier = {
+      decision_id: "decision-1",
+      aggregate_revision: 4,
+      case_id: "case-1",
+      decision_type: "GO_NO_GO",
+      lifecycle: "FINALIZED",
+      outcome: "CONDITIONAL_GO",
+      validity: "CURRENT",
+      context_status: "FROZEN",
+      final_justification: "Décision conditionnelle Patron.",
+      known: [],
+      unknowns: [],
+      risks: [],
+      conditions: [{ condition_id: "condition-1", label: "Vérifier l’impact", status: "OPEN", due_at: null, failure_consequence: "Réexamen Patron" }],
+      sources: [
+        { aggregate_type: "DCE_REQUIREMENT", aggregate_id: "requirement-1", aggregate_revision: 2, role: "REQUIREMENT" },
+        { aggregate_type: "CONTRACT_BASELINE_IMPACT", aggregate_id: "proof-1", aggregate_revision: 1, role: "IMPACT" },
+        { aggregate_type: "BUSINESS_METHOD_PROFILE", aggregate_id: "profile-1", aggregate_revision: 1, role: "ADOPTED_METHOD" },
+      ],
+      contract_evidence_links: [],
+      context_fingerprint: "a".repeat(64),
+    };
+    const link = vi.fn(async () => ({ status: "SUCCEEDED" }));
+    overridesRef.current = {
+      ...baseOverrides(),
+      listContractBaselineImpacts: async () => ({ case_id: "case-1", items: [impact] }),
+      getDecisionDossier: async () => dossier,
+      linkDecisionConditionContractEvidence: link,
+    };
+    await renderApp();
+    fireEvent.click(screen.getByRole("button", { name: /Décision/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "Relier l’impact v1 à cette condition" }));
+    await waitFor(() => expect(link).toHaveBeenCalledOnce());
+    const [caseId, decisionId, conditionId, input] = link.mock.calls[0] as unknown as [string, string, string, Record<string, unknown>];
+    expect([caseId, decisionId, conditionId]).toEqual(["case-1", "decision-1", "condition-1"]);
+    expect(input).toMatchObject({ contract_impact_id: "proof-1", proof_revision: 1, expected_decision_revision: 4 });
+  });
+
+  it("ajoute au contexte A1 le profil versionné actuellement adopté", async () => {
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+      configurable: true,
+      value: vi.fn(),
+    });
+    const company = {
+      company_id: "company-1", aggregate_revision: 1, legal_name: "Entreprise test",
+      trade_name: null, siren: "123456789", siret: "12345678900012", vat_number: "FR123456789",
+      address_line1: "1 rue test", postal_code: "75000", city: "Paris", country_code: "FR", documents: [],
+    };
+    const adoption = {
+      adoption_id: "adoption-1", case_id: "case-1", adoption_revision: 3,
+      profile_version_id: "profile-2", profile_version: 2, profile_content_sha256: "b".repeat(64),
+    };
+    const decision: PatronDecisionDossier = {
+      decision_id: "decision-draft", aggregate_revision: 0, case_id: "case-1",
+      decision_type: "GO_NO_GO", lifecycle: "DRAFT", outcome: "UNDECIDED", validity: "CURRENT",
+      context_status: "INCOMPLETE", final_justification: null, known: [], unknowns: [], risks: [],
+      conditions: [], sources: [], contract_evidence_links: [], context_fingerprint: null,
+    };
+    const freeze = vi.fn(async (
+      _caseId: string,
+      _decisionId: string,
+      _input: FreezeDecisionContextRequest,
+    ) => ({ result_code: "DECISION_CONTEXT_FROZEN" }));
+    overridesRef.current = {
+      ...baseOverrides(),
+      getEnterpriseCompany: async () => company,
+      listEnterpriseCapabilities: async () => ({ capabilities: [] }),
+      listBusinessMethodProfileVersions: async () => ({ company_id: "company-1", versions: [] }),
+      listBusinessMethodProfileAdoptions: vi.fn().mockResolvedValue([]),
+      getBusinessMethodProfileAdoption: async () => adoption,
+      getDecisionDossier: async () => decision,
+      freezeDecisionContext: freeze,
+    };
+    await renderApp();
+    fireEvent.click(screen.getByRole("button", { name: /Décision/ }));
+    await screen.findByText("Profil métier versionné");
+    fireEvent.change(screen.getByLabelText("Identifiant du contexte"), { target: { value: "context-1" } });
+    fireEvent.change(screen.getByLabelText("Justification"), { target: { value: "Décision à instruire" } });
+    fireEvent.change(screen.getByLabelText("Références JSON vérifiables"), { target: { value: JSON.stringify([
+      { aggregate_type: "CASE", aggregate_id: "case-1", aggregate_revision: 1, reference_role: "SUBJECT" },
+      { aggregate_type: "DCE_REQUIREMENT", aggregate_id: "requirement-1", aggregate_revision: 2, reference_role: "REQUIREMENT" },
+      { aggregate_type: "CONTRACT_BASELINE_IMPACT", aggregate_id: "proof-1", aggregate_revision: 1, reference_role: "DECLARED_IMPACT" },
+    ]) } });
+    fireEvent.click(screen.getByRole("button", { name: "Geler le contexte" }));
+    await waitFor(() => expect(freeze).toHaveBeenCalledOnce());
+    const input = freeze.mock.calls[0][2];
+    expect(input.references).toContainEqual({
+      aggregate_type: "BUSINESS_METHOD_PROFILE",
+      aggregate_id: "profile-2",
+      aggregate_revision: 2,
+      content_hash: "b".repeat(64),
+      reference_role: "ADOPTED_METHOD",
+    });
   });
 });

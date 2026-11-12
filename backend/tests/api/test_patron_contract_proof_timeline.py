@@ -1,9 +1,12 @@
 # ruff: noqa: E501
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from typing import cast
 from uuid import uuid4
 
+from app.interfaces.http.routes.consultations import ConsultationSecurityRuntime
 from app.interfaces.http.routes.patron_contract_proof_reviews import (
+    ContractProofReviewReadService,
     build_patron_contract_proof_review_router,
 )
 from app.platform.security.context import ActorContext, ActorKind, MembershipState
@@ -15,8 +18,10 @@ class Resolver:
 
 
 class Service:
-    def timeline_for_case(self, *, actor, case_id, now, revision=None, status=None, limit=50, offset=0):
-        rows = (
+    def timeline_for_case(
+        self, *, actor, case_id, now, revision=None, status=None, limit=50, offset=0
+    ):
+        rows: tuple[dict[str, object], ...] = (
             {
                 "event_type": "REVIEW",
                 "event_id": uuid4(),
@@ -64,15 +69,23 @@ def _actor() -> ActorContext:
 
 def test_timeline_projection_keeps_superseded_and_new_review_visible() -> None:
     router = build_patron_contract_proof_review_router(
-        service=Service(), security_runtime=SimpleNamespace(context_resolver=Resolver())
+        service=cast(ContractProofReviewReadService, Service()),
+        security_runtime=cast(
+            ConsultationSecurityRuntime, SimpleNamespace(context_resolver=Resolver())
+        ),
     )
-    response = router.routes[2].endpoint(uuid4(), revision=None, review_status=None, limit=50, offset=0, authorization="Bearer token")
+    response = router.routes[2].endpoint(
+        uuid4(), revision=None, review_status=None, limit=50, offset=0, authorization="Bearer token"
+    )
     assert [item.status for item in response.items] == ["SUPERSEDED", "NEEDS_CLARIFICATION"]
 
 
 def test_timeline_endpoint_accepts_bounded_filters() -> None:
     router = build_patron_contract_proof_review_router(
-        service=Service(), security_runtime=SimpleNamespace(context_resolver=Resolver())
+        service=cast(ContractProofReviewReadService, Service()),
+        security_runtime=cast(
+            ConsultationSecurityRuntime, SimpleNamespace(context_resolver=Resolver())
+        ),
     )
     response = router.routes[2].endpoint(
         uuid4(),

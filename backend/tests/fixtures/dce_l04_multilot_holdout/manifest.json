@@ -1,0 +1,275 @@
+{
+  "purpose": "FROZEN_HOLDOUT_SYNTHETIC_ONLY",
+  "version": 1,
+  "documents": [
+    {
+      "file": "rc.txt",
+      "family": "RC",
+      "sha256": "b89b3601e63efaa0160e85cd04d5ba3fe7cb0e8e51c26a735e8aaad40f4b9b88",
+      "facts": [
+        {
+          "line": 2,
+          "quote": "Le DC1 est exigé pour le lot 3.",
+          "expected_kind": "RC_DOCUMENT_CANDIDATURE",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 3,
+          "quote": "Le formulaire DC2 est requis pour le lot 7.",
+          "expected_kind": "RC_DOCUMENT_CANDIDATURE",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 4,
+          "quote": "Une visite des sites du lot 3 est exigée.",
+          "expected_kind": "RC_SITE_VISIT",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 5,
+          "quote": "Pour le lot 7, la visite du site est facultative.",
+          "expected_kind": "RC_SITE_VISIT",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 6,
+          "quote": "Pour le lot 7, les visites de chantier ne sont pas requises.",
+          "expected_kind": "RC_SITE_VISIT",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 7,
+          "quote": "Un mémoire technique est requis pour les lots 3 et 7.",
+          "expected_kind": "RC_CONTENT_OFFER",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 8,
+          "quote": "Date et heure limites de dépôt des offres : 18 décembre 2026 à 16h30 UTC.",
+          "expected_kind": "RC_SUBMISSION_DEADLINE",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 9,
+          "quote": "Le profil d'acheteur https://achat.example.test/mediatheque reçoit les offres.",
+          "expected_kind": "RC_RESPONSE_CHANNEL",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 10,
+          "quote": "Le format PDF est exigé pour les documents de réponse.",
+          "expected_kind": "RC_FILE_CONSTRAINT",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 11,
+          "quote": "Critère prix (35%) et valeur technique (65%).",
+          "expected_kind": "RC_AWARD_CRITERION",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 12,
+          "quote": "Aucune négociation ne sera menée.",
+          "expected_kind": "RC_NEGOTIATION",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 13,
+          "quote": "La validité des offres est fixée à 90 jours.",
+          "expected_kind": "RC_OFFER_VALIDITY",
+          "coverage": "SUPPORTED_SIGNAL"
+        }
+      ],
+      "financial_rag_evaluation": null
+    },
+    {
+      "file": "ccap.txt",
+      "family": "CCAP",
+      "sha256": "966effb11dcf28d99ee925581c7f238090c735dbce9390452711ee57c74b393d",
+      "facts": [
+        {
+          "line": 1,
+          "quote": "Des pénalités de retard sont prévues pour les lots 3 et 7.",
+          "expected_kind": "CCAP_PENALTIES",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 2,
+          "quote": "La retenue de garantie représente 3% pour les lots 3 et 7.",
+          "expected_kind": "CCAP_RETENTION_GUARANTEE",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 3,
+          "quote": "Le cautionnement peut remplacer cette retenue.",
+          "expected_kind": "CCAP_GUARANTEE",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 4,
+          "quote": "L'assurance décennale est obligatoire pour le lot 3.",
+          "expected_kind": "CCAP_INSURANCE",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 5,
+          "quote": "Les modalités de sous-traitance doivent être approuvées pour les lots 3 et 7.",
+          "expected_kind": "CCAP_SUBCONTRACTING",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 6,
+          "quote": "Le paiement intervient dans les vingt jours.",
+          "axis": "CASH",
+          "expected_kind": null,
+          "coverage": "UNSUPPORTED_SEMANTICS"
+        },
+        {
+          "line": 7,
+          "quote": "Un procès-verbal de réception contradictoire consigne les réserves.",
+          "axis": "RIGHTS",
+          "expected_kind": null,
+          "coverage": "UNSUPPORTED_SEMANTICS"
+        }
+      ],
+      "financial_rag_evaluation": null
+    },
+    {
+      "file": "cctp-lot-1.txt",
+      "family": "CCTP",
+      "sha256": "d01ce0d2ef5c26640850aef352b4ce93b587f15a038f5bfea432622e31626687",
+      "facts": [
+        {
+          "line": 1,
+          "quote": "Une qualification professionnelle est requise pour le lot 3.",
+          "expected_kind": "CCAP_QUALIFICATIONS",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 2,
+          "quote": "Les variantes sont interdites pour le lot 3.",
+          "expected_kind": "CCTP_VARIANTS",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 3,
+          "quote": "Lot 3 : poser une membrane étanche sur les terrasses.",
+          "axis": "TECHNICAL",
+          "expected_kind": null,
+          "coverage": "UNSUPPORTED_SEMANTICS"
+        },
+        {
+          "line": 4,
+          "quote": "Lot 3 : évacuer les déblais par la cour nord uniquement.",
+          "axis": "CONSTRUCTIBILITY",
+          "expected_kind": null,
+          "coverage": "UNSUPPORTED_SEMANTICS"
+        }
+      ],
+      "financial_rag_evaluation": null
+    },
+    {
+      "file": "cctp-lot-2.txt",
+      "family": "CCTP",
+      "sha256": "13a5a53246f472e716777dc60bd933c03fbf3778bb8ab5b82ec74fdb400d6985",
+      "facts": [
+        {
+          "line": 1,
+          "quote": "Une habilitation électrique est obligatoire pour le lot 7.",
+          "expected_kind": "CCAP_QUALIFICATIONS",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 2,
+          "quote": "Les options sont facultatives pour le lot 7.",
+          "expected_kind": "CCTP_VARIANTS",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 3,
+          "quote": "Lot 7 : installer un tableau électrique de remplacement.",
+          "axis": "TECHNICAL",
+          "expected_kind": null,
+          "coverage": "UNSUPPORTED_SEMANTICS"
+        },
+        {
+          "line": 4,
+          "quote": "Lot 7 : conserver l'alimentation des équipements de sécurité.",
+          "axis": "TECHNICAL",
+          "expected_kind": null,
+          "coverage": "UNSUPPORTED_SEMANTICS"
+        }
+      ],
+      "financial_rag_evaluation": null
+    },
+    {
+      "file": "planning.txt",
+      "family": "PLANNING",
+      "sha256": "4f0d4b43d28fb7495d1f449ef37b2dd233c97bdb4b74e1c48428c2f57be531d1",
+      "facts": [
+        {
+          "line": 1,
+          "quote": "Lot 3 : exécution pendant les vacances de février 2027.",
+          "axis": "CAPACITY",
+          "expected_kind": null,
+          "coverage": "UNSUPPORTED_SEMANTICS"
+        },
+        {
+          "line": 2,
+          "quote": "Lot 7 : intervenir après achèvement des plafonds.",
+          "axis": "CAPACITY",
+          "expected_kind": null,
+          "coverage": "UNSUPPORTED_SEMANTICS"
+        },
+        {
+          "line": 3,
+          "quote": "Deux équipes du lot 7 doivent pouvoir travailler simultanément.",
+          "axis": "CAPACITY",
+          "expected_kind": null,
+          "coverage": "UNSUPPORTED_SEMANTICS"
+        }
+      ],
+      "financial_rag_evaluation": null
+    },
+    {
+      "file": "pgc.txt",
+      "family": "OTHER",
+      "sha256": "8cd3667d1eb071cf815d4bdb23127593bd721e1d63d66781ae64c226a82ee915",
+      "facts": [
+        {
+          "line": 1,
+          "quote": "Lot 3 : suspendre les travaux en hauteur lorsque le vent dépasse le seuil prévu.",
+          "axis": "HSE",
+          "expected_kind": null,
+          "coverage": "UNSUPPORTED_SEMANTICS"
+        },
+        {
+          "line": 2,
+          "quote": "Séparer les déplacements des usagers et les zones de stockage.",
+          "axis": "HSE",
+          "expected_kind": null,
+          "coverage": "UNSUPPORTED_SEMANTICS"
+        }
+      ],
+      "financial_rag_evaluation": null
+    },
+    {
+      "file": "dpgf.txt",
+      "family": "DPGF",
+      "sha256": "5b9031049fe899f233ddf600f13fe5f981752cf7bbc36e2ea2f291c530e3ca95",
+      "facts": [],
+      "financial_rag_evaluation": "NOT_EVALUABLE"
+    },
+    {
+      "file": "bordereau.txt",
+      "family": "OTHER",
+      "sha256": "31cb9672d842974c522583b5e382ee080ebc695816bfb5d413bec2a95fa21f27",
+      "facts": [],
+      "financial_rag_evaluation": null
+    }
+  ],
+  "lots": [
+    3,
+    7
+  ]
+}

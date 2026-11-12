@@ -20,6 +20,12 @@ class ContractBaselineDeviationImpactRecord(TenantScopedRecord, Base):
         sa.ForeignKeyConstraint(
             ["tenant_id", "case_id"], ["cases.tenant_id", "cases.id"], ondelete="RESTRICT"
         ),
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "dce_requirement_id"],
+            ["dce_requirements.tenant_id", "dce_requirements.id"],
+            name="fk_contract_baseline_impact__dce_requirement",
+            ondelete="RESTRICT",
+        ),
         sa.UniqueConstraint("tenant_id", "id", name="uq_contract_baseline_impacts__tenant_id"),
         sa.UniqueConstraint(
             "tenant_id",
@@ -29,6 +35,11 @@ class ContractBaselineDeviationImpactRecord(TenantScopedRecord, Base):
             name="uq_contract_baseline_impacts__functional",
         ),
         sa.CheckConstraint("proof_revision > 0", name="contract_proof_revision_positive"),
+        sa.CheckConstraint(
+            "(dce_requirement_id IS NULL AND dce_requirement_revision IS NULL) OR "
+            "(dce_requirement_id IS NOT NULL AND dce_requirement_revision > 0)",
+            name="contract_proof_requirement_reference_pair",
+        ),
         sa.CheckConstraint(
             "status IN ('SOURCE_SIGNAL_ONLY', 'HUMAN_REVIEW_REQUIRED', 'CONFIRMED', 'UNKNOWN', 'SUPERSEDED')",
             name="contract_assessment_status_closed",
@@ -42,6 +53,8 @@ class ContractBaselineDeviationImpactRecord(TenantScopedRecord, Base):
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
     case_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     baseline_observation_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    dce_requirement_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True))
+    dce_requirement_revision: Mapped[int | None] = mapped_column(sa.Integer)
     proof_revision: Mapped[int] = mapped_column(sa.Integer, nullable=False, default=1)
     baseline_source_refs_json: Mapped[list[str]] = mapped_column(JSONB, nullable=False)
     baseline_statement: Mapped[str] = mapped_column(sa.Text, nullable=False)

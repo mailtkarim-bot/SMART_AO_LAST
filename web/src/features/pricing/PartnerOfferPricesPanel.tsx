@@ -6,6 +6,7 @@ import type {
   PartnerOfferPriceList,
   PartnerOfferPriceView,
 } from "../../shared/types";
+import { PartnerOfferLineComparisonsPanel } from "./PartnerOfferLineComparisonsPanel";
 import { PartnerOfferScopeReviewsPanel } from "./PartnerOfferScopeReviewsPanel";
 
 type ReadStatus = "LOADING" | "READY" | "FORBIDDEN" | "UNAVAILABLE" | "NO_CASE" | "INACTIVE";
@@ -189,6 +190,7 @@ export function PartnerOfferPricesPanel({
           enabled={enabled}
         />
       )}
+      <PartnerOfferLineComparisonsPanel api={api} caseId={caseId} enabled={enabled} />
     </section>
   );
 }

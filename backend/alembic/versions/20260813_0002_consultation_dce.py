@@ -206,8 +206,7 @@ def upgrade() -> None:
             name="integrity",
         ),
         sa.CheckConstraint(
-            "classification_readiness IN "
-            "('UNCLASSIFIED', 'PARTIALLY_CLASSIFIED', 'CLASSIFIED')",
+            "classification_readiness IN ('UNCLASSIFIED', 'PARTIALLY_CLASSIFIED', 'CLASSIFIED')",
             name="classification_readiness",
         ),
         sa.CheckConstraint(
@@ -289,9 +288,7 @@ def upgrade() -> None:
             name="fk_dce_doc_class__previous",
             ondelete="RESTRICT",
         ),
-        sa.UniqueConstraint(
-            "tenant_id", "id", name="uq_dce_document_classifications__tenant_id"
-        ),
+        sa.UniqueConstraint("tenant_id", "id", name="uq_dce_document_classifications__tenant_id"),
     )
     op.create_index(
         "ix_dce_document_classifications_tenant_id",

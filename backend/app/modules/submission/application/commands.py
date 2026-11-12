@@ -3,8 +3,9 @@ from __future__ import annotations
 from typing import Literal
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import Field, SerializerFunctionWrapHandler, model_serializer
 
+from app.modules.submission.public.contracts import PreparationSnapshotSource
 from app.platform.events.command_contracts import ApplicationCommand
 
 
@@ -18,6 +19,15 @@ class PrepareSubmissionPackageCommand(ApplicationCommand):
     submission_mode: Literal["FULL", "CANDIDATURE_ONLY"] = "FULL"
     candidature_only_reason: str | None = Field(default=None, min_length=1, max_length=1_000)
 
+    preparation_snapshot_source: PreparationSnapshotSource | None = None
+
+    @model_serializer(mode="wrap")
+    def preserve_legacy_intent_hash(self, handler: SerializerFunctionWrapHandler) -> dict:
+        serialized = handler(self)
+        if self.preparation_snapshot_source is None:
+            serialized.pop("preparation_snapshot_source", None)
+        return serialized
+
 
 class AuthorizeSubmissionPackageCommand(ApplicationCommand):
     """Record Patron authorization for one exact immutable package version."""
@@ -27,4 +37,12 @@ class AuthorizeSubmissionPackageCommand(ApplicationCommand):
     authorization_id: UUID
     submission_package_id: UUID
     expected_package_version: int = Field(ge=1)
+    expected_manifest_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     rationale: str = Field(min_length=1, max_length=2_000)
+
+    @model_serializer(mode="wrap")
+    def preserve_legacy_intent_hash(self, handler: SerializerFunctionWrapHandler) -> dict:
+        serialized = handler(self)
+        if self.expected_manifest_sha256 is None:
+            serialized.pop("expected_manifest_sha256", None)
+        return serialized

@@ -119,9 +119,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.execute(
-        "DROP TRIGGER IF EXISTS trg_security_audit_append_only ON security_audit_events"
-    )
+    op.execute("DROP TRIGGER IF EXISTS trg_security_audit_append_only ON security_audit_events")
     op.execute("DROP FUNCTION IF EXISTS protect_security_audit_append_only()")
     op.drop_index("ix_security_audit__correlation", table_name="security_audit_events")
     op.drop_index("ix_security_audit__event_occurred", table_name="security_audit_events")

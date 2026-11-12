@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
+from dataclasses import dataclass, replace
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation, localcontext
 from io import BytesIO
+from xml.etree.ElementTree import ParseError
 from zipfile import BadZipFile, ZipFile
 
 from openpyxl import load_workbook
+from openpyxl.utils.cell import get_column_letter
 
 from app.platform.security.authorization import (
     AuthorizationPolicyPort,
@@ -19,6 +21,9 @@ MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 MAX_UNCOMPRESSED_BYTES = 50 * 1024 * 1024
 MAX_ROWS = 10_000
 MAX_ERRORS = 100
+MAX_SHEETS = 32
+MAX_COLUMNS = 256
+MAX_MINOR = 2**63 - 1
 
 _HEADER_ALIASES = {
     "code": {"code", "référence", "reference", "ref", "n°", "no"},
@@ -40,6 +45,7 @@ class PricingImportRow:
     unit_price_minor: int | None
     total_minor: int | None
     errors: tuple[str, ...]
+    source_locator: dict | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -89,43 +95,81 @@ class PricingImportPreviewService:
                 if sum(info.file_size for info in archive.infolist()) > MAX_UNCOMPRESSED_BYTES:
                     raise ValueError("IMPORT_ARCHIVE_TOO_LARGE")
                 _check_archive_uncompressed_size(archive)
-            workbook = load_workbook(BytesIO(payload), read_only=True, data_only=True)
-        except (BadZipFile, OSError, ValueError) as error:
+            workbook = load_workbook(
+                BytesIO(payload), read_only=True, data_only=False, keep_links=False
+            )
+        except (BadZipFile, OSError, ValueError, ParseError, KeyError) as error:
             if isinstance(error, ValueError) and str(error).startswith("IMPORT_"):
                 raise
             raise ValueError("IMPORT_WORKBOOK_INVALID") from error
         try:
-            sheet = workbook.active
-            rows = sheet.iter_rows(values_only=True)
-            header = next(rows, None)
-            if header is None:
-                raise ValueError("IMPORT_EMPTY_WORKBOOK")
-            header_map = _resolve_headers(header)
-            if "designation" not in header_map:
-                raise ValueError("IMPORT_DESIGNATION_COLUMN_REQUIRED")
+            if len(workbook.worksheets) > MAX_SHEETS:
+                raise ValueError("IMPORT_SHEET_LIMIT")
             parsed: list[PricingImportRow] = []
-            total_minor = 0
-            errors = 0
-            rows_budget_reached = False
-            errors_budget_reached = False
-            for row_number, values in enumerate(rows, start=2):
-                if row_number > MAX_ROWS + 1:
-                    rows_budget_reached = True
-                    break
-                if not any(value not in (None, "") for value in values):
+            total_minor = errors = scanned = offset = 0
+            truncated = False
+            limit_reason = None
+            for sheet in workbook.worksheets:
+                # Producer dimension metadata may omit real rows or inflate empty ranges.
+                sheet.reset_dimensions()
+                rows = sheet.iter_rows(values_only=False)
+                header_cells = next(rows, None)
+                header = tuple(cell.value for cell in header_cells) if header_cells else None
+                if header is None or not any(value not in (None, "") for value in header):
+                    if _has_remaining_rows(rows):
+                        raise ValueError("IMPORT_DESIGNATION_COLUMN_REQUIRED")
                     continue
-                item = _parse_row(row_number=row_number, values=values, header_map=header_map)
-                parsed.append(item)
-                errors += len(item.errors)
-                if not item.errors and item.total_minor is not None:
-                    total_minor += item.total_minor
-                if errors >= MAX_ERRORS:
-                    errors_budget_reached = True
+                if len(header) > MAX_COLUMNS:
+                    raise ValueError("IMPORT_COLUMN_LIMIT")
+                header_map = _resolve_headers(header)
+                if "designation" not in header_map:
+                    raise ValueError("IMPORT_DESIGNATION_COLUMN_REQUIRED")
+                source_row = 1
+                for source_row, cells in enumerate(rows, start=2):
+                    if len(cells) > MAX_COLUMNS:
+                        raise ValueError("IMPORT_COLUMN_LIMIT")
+                    values = tuple(cell.value for cell in cells)
+                    scanned += 1
+                    if scanned > MAX_ROWS:
+                        truncated = True
+                        limit_reason = "ROW_LIMIT"
+                        break
+                    if not any(value not in (None, "") for value in values):
+                        continue
+                    formula = any(
+                        column < len(cells) and cells[column].data_type == "f"
+                        for column in header_map.values()
+                    )
+                    item = _parse_row(
+                        row_number=offset + source_row, values=values, header_map=header_map
+                    )
+                    locator = {
+                        "sheet": sheet.title,
+                        "row": source_row,
+                        "cells": {
+                            field: f"{get_column_letter(column + 1)}{source_row}"
+                            for field, column in header_map.items()
+                        },
+                    }
+                    item = replace(item, source_locator=locator)
+                    if formula:
+                        item = replace(item, errors=(*item.errors, "FORMULA_REQUIRES_REVIEW"))
+                    parsed.append(item)
+                    errors += len(item.errors)
+                    if not item.errors and item.total_minor is not None:
+                        total_minor += item.total_minor
+                        if total_minor > MAX_MINOR:
+                            raise ValueError("IMPORT_TOTAL_OUT_OF_RANGE")
+                    if errors >= MAX_ERRORS:
+                        # The remainder is deliberately unqualified, even at the last row.
+                        truncated = True
+                        limit_reason = "ERROR_LIMIT"
+                        break
+                offset += source_row
+                if truncated:
                     break
-            truncated = (rows_budget_reached or errors_budget_reached) and _has_remaining_rows(rows)
-            limit_reason: str | None = None
-            if truncated:
-                limit_reason = "ROW_LIMIT" if rows_budget_reached else "ERROR_LIMIT"
+            if not parsed and not truncated:
+                raise ValueError("IMPORT_EMPTY_WORKBOOK")
             return PricingImportPreview(
                 case_id=case_id,
                 document_kind=document_kind,
@@ -138,6 +182,8 @@ class PricingImportPreviewService:
                 limit_reason=limit_reason,
                 rows=tuple(parsed),
             )
+        except (ParseError, BadZipFile, KeyError, OSError) as error:
+            raise ValueError("IMPORT_WORKBOOK_INVALID") from error
         finally:
             workbook.close()
 
@@ -175,7 +221,14 @@ def _check_archive_uncompressed_size(archive: ZipFile) -> None:
 
 
 def _has_remaining_rows(rows) -> bool:
-    return any(any(value not in (None, "") for value in values) for values in rows)
+    for index, values in enumerate(rows, start=1):
+        if index > MAX_ROWS:
+            raise ValueError("IMPORT_ROW_LIMIT")
+        if len(values) > MAX_COLUMNS:
+            raise ValueError("IMPORT_COLUMN_LIMIT")
+        if any(getattr(value, "value", value) not in (None, "") for value in values):
+            return True
+    return False
 
 
 def _normalize_header(value: object) -> str:
@@ -190,7 +243,9 @@ def _resolve_headers(values: tuple[object, ...]) -> dict[str, int]:
     for index, value in enumerate(values):
         normalized = _normalize_header(value)
         for field, field_aliases in aliases.items():
-            if normalized in field_aliases and field not in resolved:
+            if normalized in field_aliases:
+                if field in resolved:
+                    raise ValueError("IMPORT_HEADER_AMBIGUOUS")
                 resolved[field] = index
                 break
     return resolved
@@ -207,19 +262,53 @@ def _parse_row(
     code = _text(_value(values, header_map, "code"))
     designation = _text(_value(values, header_map, "designation"))
     unit = _text(_value(values, header_map, "unit"))
-    quantity = _decimal_text(_value(values, header_map, "quantity"), default="1")
+    quantity = _decimal_text(_value(values, header_map, "quantity"))
     unit_price = _minor(_value(values, header_map, "unit_price"))
     total = _minor(_value(values, header_map, "total_price"))
     errors: list[str] = []
+    raw_unit_price = _decimal(_value(values, header_map, "unit_price"))
+    subcent_price = False
+    if raw_unit_price is not None and unit_price is not None:
+        price_tuple = raw_unit_price.as_tuple()
+        subcent_digits = max(0, -int(price_tuple.exponent) - 2)
+        # Historical commercial rounding is qualified for one explicit unit only.
+        subcent_price = bool(
+            subcent_digits
+            and any(price_tuple.digits[-subcent_digits:])
+            and quantity is not None
+            and Decimal(quantity) != 1
+        )
+        if subcent_price:
+            unit_price = None
+            errors.append("UNIT_PRICE_PRECISION_UNQUALIFIED")
     if not designation:
         errors.append("DESIGNATION_REQUIRED")
     if quantity is None:
         errors.append("QUANTITY_INVALID")
-    if total is None and unit_price is None:
+    for field, value in [("unit_price", unit_price), ("total_price", total)]:
+        if (
+            _value(values, header_map, field) not in (None, "")
+            and value is None
+            and not (field == "unit_price" and subcent_price)
+        ):
+            errors.append(field.upper() + "_INVALID")
+    for field, text_value, limit in [
+        ("code", code, 120),
+        ("unit", unit, 32),
+        ("designation", designation, 160),
+    ]:
+        if text_value is not None and len(text_value) > limit:
+            errors.append(field.upper() + "_TOO_LONG")
+    code = code if code is None or len(code) <= 120 else None
+    unit = unit if unit is None or len(unit) <= 32 else None
+    designation = designation if designation is None or len(designation) <= 500 else None
+    if total is None and unit_price is None and not subcent_price:
         errors.append("PRICE_REQUIRED")
     if unit_price is not None and quantity is not None:
         calculated_total = _calculate_total_minor(quantity=quantity, unit_price_minor=unit_price)
-        if total is None:
+        if calculated_total > MAX_MINOR:
+            errors.append("TOTAL_PRICE_OUT_OF_RANGE")
+        elif total is None and _value(values, header_map, "total_price") in (None, ""):
             total = calculated_total
         elif total != calculated_total:
             errors.append("TOTAL_PRICE_MISMATCH")
@@ -236,33 +325,39 @@ def _parse_row(
 
 
 def _text(value: object) -> str | None:
-    if value in (None, ""):
+    if value in (None, "") or not isinstance(value, (str, int, float, Decimal)):
         return None
-    return str(value).strip()[:500] or None
+    return str(value).strip() or None
 
 
 def _decimal_text(value: object, *, default: str | None = None) -> str | None:
     if value in (None, ""):
         return default
     decimal = _decimal(value)
-    if decimal is None or decimal < 0:
+    if decimal is None or decimal < 0 or abs(int(decimal.as_tuple().exponent)) > 32:
         return None
-    return format(decimal, "f")
+    result = format(decimal, "f")
+    return result if len(result) <= 32 else None
 
 
 def _minor(value: object) -> int | None:
     if value in (None, ""):
         return None
     decimal = _decimal(value)
-    if decimal is None or decimal < 0:
+    if decimal is None or decimal < 0 or decimal > Decimal(MAX_MINOR) / 100:
         return None
-    return int((decimal * 100).to_integral_value(rounding=ROUND_HALF_UP))
+    result = int((decimal * 100).to_integral_value(rounding=ROUND_HALF_UP))
+    return result if result <= MAX_MINOR else None
 
 
 def _calculate_total_minor(*, quantity: str, unit_price_minor: int) -> int:
-    return int(
-        (Decimal(quantity) * Decimal(unit_price_minor)).to_integral_value(rounding=ROUND_HALF_UP)
-    )
+    with localcontext() as context:
+        context.prec = 64
+        return int(
+            (Decimal(quantity) * Decimal(unit_price_minor)).to_integral_value(
+                rounding=ROUND_HALF_UP
+            )
+        )
 
 
 def _decimal(value: object) -> Decimal | None:

@@ -17,9 +17,7 @@ branch_labels = None
 depends_on = None
 
 
-identity_lifecycle = (
-    "'PENDING_VERIFICATION', 'ACTIVE', 'SUSPENDED', 'LOCKED', 'ARCHIVED'"
-)
+identity_lifecycle = "'PENDING_VERIFICATION', 'ACTIVE', 'SUSPENDED', 'LOCKED', 'ARCHIVED'"
 membership_roles = (
     "'PATRON_ADMIN', 'PATRON_DELEGATE', 'COLLABORATEUR', "
     "'PARTENAIRE_EXTERNAL', 'SUPPORT_BREAK_GLASS', 'SYSTEM'"

@@ -164,6 +164,42 @@ class BusinessMethodProfileService:
             profile_content_sha256=row.profile_content_sha256,
         )
 
+    def adoption_history(
+        self, *, actor: ActorContext, case_id: UUID, now
+    ) -> tuple[BusinessMethodProfileAdoptionProjection, ...]:
+        self._authorize_case(actor=actor, case_id=case_id, now=now, write=False)
+        with self._session_factory() as session:
+            case_exists = session.scalar(
+                sa.select(CaseRecord.id).where(
+                    CaseRecord.tenant_id == actor.tenant_id,
+                    CaseRecord.id == case_id,
+                )
+            )
+            if case_exists is None:
+                raise PermissionError("NOT_FOUND_OR_FORBIDDEN")
+            rows = session.scalars(
+                sa.select(CaseBusinessMethodProfileAdoptionRecord)
+                .where(
+                    CaseBusinessMethodProfileAdoptionRecord.tenant_id == actor.tenant_id,
+                    CaseBusinessMethodProfileAdoptionRecord.case_id == case_id,
+                )
+                .order_by(
+                    CaseBusinessMethodProfileAdoptionRecord.adoption_revision,
+                    CaseBusinessMethodProfileAdoptionRecord.id,
+                )
+            ).all()
+        return tuple(
+            BusinessMethodProfileAdoptionProjection(
+                adoption_id=row.id,
+                case_id=row.case_id,
+                adoption_revision=row.adoption_revision,
+                profile_version_id=row.profile_version_id,
+                profile_version=row.profile_version,
+                profile_content_sha256=row.profile_content_sha256,
+            )
+            for row in rows
+        )
+
     def _authorize_company(
         self, *, actor: ActorContext, company_id: UUID, now, write: bool
     ) -> None:
@@ -244,12 +280,17 @@ class PublishBusinessMethodProfileHandler(CommandHandler):
         )
         if company is None:
             raise CommandExecutionError("NOT_FOUND_OR_FORBIDDEN")
-        latest_version = session.scalar(
-            sa.select(sa.func.max(EnterpriseBusinessMethodProfileVersionRecord.version_number)).where(
-                EnterpriseBusinessMethodProfileVersionRecord.tenant_id == context.tenant_id,
-                EnterpriseBusinessMethodProfileVersionRecord.company_id == company.id,
+        latest_version = (
+            session.scalar(
+                sa.select(
+                    sa.func.max(EnterpriseBusinessMethodProfileVersionRecord.version_number)
+                ).where(
+                    EnterpriseBusinessMethodProfileVersionRecord.tenant_id == context.tenant_id,
+                    EnterpriseBusinessMethodProfileVersionRecord.company_id == company.id,
+                )
             )
-        ) or 0
+            or 0
+        )
         if command.expected_version != latest_version:
             raise CommandExecutionError("STALE_PROFILE_VERSION")
         version = latest_version + 1
@@ -326,12 +367,17 @@ class AdoptBusinessMethodProfileHandler(CommandHandler):
         )
         if profile is None:
             raise CommandExecutionError("PROFILE_VERSION_NOT_FOUND_OR_FORBIDDEN")
-        latest_revision = session.scalar(
-            sa.select(sa.func.max(CaseBusinessMethodProfileAdoptionRecord.adoption_revision)).where(
-                CaseBusinessMethodProfileAdoptionRecord.tenant_id == context.tenant_id,
-                CaseBusinessMethodProfileAdoptionRecord.case_id == case.id,
+        latest_revision = (
+            session.scalar(
+                sa.select(
+                    sa.func.max(CaseBusinessMethodProfileAdoptionRecord.adoption_revision)
+                ).where(
+                    CaseBusinessMethodProfileAdoptionRecord.tenant_id == context.tenant_id,
+                    CaseBusinessMethodProfileAdoptionRecord.case_id == case.id,
+                )
             )
-        ) or 0
+            or 0
+        )
         if command.expected_adoption_revision != latest_revision:
             raise CommandExecutionError("STALE_PROFILE_ADOPTION")
         revision = latest_revision + 1

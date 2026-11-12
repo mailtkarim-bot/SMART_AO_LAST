@@ -1,0 +1,90 @@
+export type ClosureRow = {
+  id: string;
+  summary?: string;
+  act_kind?: string;
+  reception_outcome?: string | null;
+  source_refs_json?: string[];
+  evidence_refs_json?: string[];
+  declared_event_date?: string | null;
+  closure_review_json?: Record<string, unknown> | null;
+  context_state?: string;
+  responsible?: string;
+  expected_evidence?: string;
+  declared_status?: string;
+  history?: ClosureRow[];
+  revision?: number;
+  trigger_event?: string;
+  fact_id?: string;
+  kind?: string;
+  amount_minor?: number;
+  currency_code?: string;
+  declared_date?: string;
+  observation?: string;
+  consequence?: string;
+  follow_up?: string;
+  lot_reference?: string;
+  validation?: string;
+  scope?: string;
+  snapshot_json?: {
+    rex: Array<Record<string, unknown>>;
+  };
+  held_on?: string;
+  expires_on?: string;
+  [key: string]: unknown;
+};
+export type ClosureDossier = {
+  case_id: string;
+  dossier_sha256: string;
+  dce_version_id: string | null;
+  case_source: Record<string, unknown>;
+  contract_versions?: ClosureRow[];
+  lot_references?: string[];
+  reference_options?: Array<{
+    kind: string;
+    record_id: string;
+    sha256: string;
+    label: string;
+    context_state: string;
+  }>;
+  change_actions?: ClosureRow[];
+  acts: ClosureRow[];
+  obligations: ClosureRow[];
+  cycles: ClosureRow[];
+  facts: ClosureRow[];
+  rex: ClosureRow[];
+  interviews: ClosureRow[];
+  reuse_history: ClosureRow[];
+  contract_replacements: ClosureRow[];
+  open_obligation_ids: string[];
+  financial_observations: {
+    collection_state: string;
+    settlement_state: string;
+    comparisons: Array<{
+      expected_fact_id: string;
+      recorded_fact_id: string;
+      currency_code: string;
+      difference_minor: number | null;
+      source_state: string;
+    }>;
+  };
+  legal_effect_state: string;
+  external_receipt_state: string;
+  completeness_state: string;
+};
+export type ClosureOperation = 'acts' | 'obligations' | 'obligation-transitions' | 'cycles' | 'payment-facts' | 'rex' | 'interviews' | 'teaching-reuse';
+export type ClosureReceipt = {
+  command_id: string;
+  idempotency_key: string;
+  result_code: string;
+  replayed: boolean;
+  [key: string]: unknown;
+};
+export type ClosureIntent = {
+  operation: ClosureOperation;
+  input: Record<string, unknown>;
+  identity: string;
+  resultCode: string;
+  phase: 'SENDING' | 'UNKNOWN' | 'READ_REQUIRED' | 'CONFLICT';
+  terminalRefusal?: boolean;
+};
+export type ClosurePendingStore = Map<string, ClosureIntent>;

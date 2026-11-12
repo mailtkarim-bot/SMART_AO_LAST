@@ -1,11 +1,13 @@
 from dataclasses import replace
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from typing import cast
 from uuid import uuid4
 
 import pytest
 import sqlalchemy as sa
 from app.interfaces.http.routes.patron_partner_offer_scope_reviews import (
+    ConsultationSecurityRuntime,
     build_patron_partner_offer_scope_reviews_router,
 )
 from app.modules.partner.infrastructure.models.partner_event import CasePartnerEventRecord
@@ -278,9 +280,7 @@ def test_foreign_tenant_receipts_and_cases_are_not_observable_or_reviewable(
     projection = service.list_for_case(actor=actor, case_id=foreign_case_id, now=NOW)
     assert projection.reviews == ()
 
-    foreign_receipt_review = _command(
-        case_id, uuid4(), (own_receipt_id, foreign_receipt_id)
-    )
+    foreign_receipt_review = _command(case_id, uuid4(), (own_receipt_id, foreign_receipt_id))
     with pytest.raises(CommandExecutionError, match="PARTNER_RECEIPT_NOT_FOUND_OR_FORBIDDEN"):
         service.record(actor=actor, command=foreign_receipt_review, now=NOW)
 
@@ -495,7 +495,9 @@ def test_http_scope_review_reuses_command_on_retry_and_keeps_unknowns(
     app.include_router(
         build_patron_partner_offer_scope_reviews_router(
             service=service,
-            security_runtime=SimpleNamespace(context_resolver=resolver),
+            security_runtime=cast(
+                ConsultationSecurityRuntime, SimpleNamespace(context_resolver=resolver)
+            ),
         )
     )
     client = TestClient(app)

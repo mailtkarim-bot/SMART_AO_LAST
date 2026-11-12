@@ -8,6 +8,11 @@ from app.modules.dce.application.queries import (
     CaseDceReadingAvailability,
     CaseDceReadingRequirementProjection,
 )
+from app.modules.dce.application.source_anchor_projection import (
+    DceSourceAnchorProjection,
+    DceSourceLocator,
+    DceSourceLocatorKind,
+)
 from app.modules.dce.infrastructure.case_dce_reading_reader import (
     SqlAlchemyCaseDceReadingReader,
     _positive_int,
@@ -76,6 +81,65 @@ def test_source_locator_label_is_bounded_and_human_readable(locator, family, exp
     assert _source_locator_label(document_family=family, locator_json=locator) == expected
 
 
+def test_case_reader_attaches_source_anchor_without_changing_legacy_locator_label(monkeypatch):
+    from app.modules.dce.infrastructure import case_dce_reading_reader as module
+
+    tenant_id, fragment_id = uuid4(), uuid4()
+    anchor = DceSourceAnchorProjection(
+        source_anchor_id=fragment_id,
+        dce_version_id=uuid4(),
+        dce_document_id=uuid4(),
+        extraction_id=uuid4(),
+        fragment_ordinal=1,
+        source_sha256="a" * 64,
+        extractor_id="smart-ao-native",
+        extractor_version="2",
+        fragment_sha256="b" * 64,
+        locator=DceSourceLocator(
+            kind=DceSourceLocatorKind.PDF_PAGE,
+            coordinates={"page": 2, "part": 1},
+        ),
+    )
+    row = SimpleNamespace(
+        id=uuid4(),
+        current_analysis=False,
+        current_materialization=False,
+        current_extraction=False,
+        source_lifecycle="ADMITTED",
+        source_integrity="VERIFIED",
+        value_version="5",
+        requirement_type="ADMINISTRATIVE",
+        directive_signal="REQUIRED",
+        uncertainty_status="TO_CONFIRM",
+        outcome=None,
+        revision=None,
+        classification="CCTP",
+        locator_json={"kind": "pdf_page", "page": 2},
+        source_fragment_id=fragment_id,
+    )
+
+    class Session:
+        def execute(self, _statement):
+            return SimpleNamespace(all=lambda: [row])
+
+    def get_many(self, *, session, tenant_id, fragment_ids, dce_version_id):
+        assert isinstance(session, Session)
+        assert tenant_id == tenant_id_expected
+        assert tuple(fragment_ids) == (fragment_id,)
+        assert dce_version_id == anchor.dce_version_id
+        return {fragment_id: anchor}
+
+    tenant_id_expected = tenant_id
+    monkeypatch.setattr(module.SqlAlchemyDceSourceAnchorReader, "get_many", get_many)
+    projection = module.SqlAlchemyCaseDceReadingReader(Session())._read_requirements(
+        tenant_id=tenant_id,
+        dce_version_id=anchor.dce_version_id,
+    )[0]
+
+    assert projection.source_locator_label == "CCTP · page 2"
+    assert projection.source_anchor == anchor
+
+
 @pytest.mark.parametrize("value", [1, 10, 999])
 def test_positive_int_accepts_only_positive_integers(value):
     assert _positive_int(value) is True
@@ -113,3 +177,81 @@ def test_reader_counters_classify_all_closed_outcomes():
     assert counters.review_required == 1
     assert counters.not_applicable == 1
     assert counters.pending_human_confirmation == 1
+
+
+@pytest.mark.parametrize(
+    ("status", "matches", "fragments", "expected"),
+    [
+        (None, False, 0, "NOT_STARTED"),
+        ("COMPLETED", True, 1, "COMPLETED"),
+        ("COMPLETED", False, 1, "REVIEW_REQUIRED"),
+        ("COMPLETED", True, 0, "REVIEW_REQUIRED"),
+        ("UNSUPPORTED", True, 0, "UNSUPPORTED"),
+        ("FAILED_SAFE", True, 0, "FAILED_SAFE"),
+        ("REJECTED_LIMIT", True, 0, "REJECTED_LIMIT"),
+        ("REVIEW_REQUIRED", True, 1, "REVIEW_REQUIRED"),
+    ],
+)
+def test_coverage_never_confuses_extraction_with_complete_analysis(
+    status, matches, fragments, expected
+):
+    document_id, extraction_id = uuid4(), uuid4()
+    row = SimpleNamespace(
+        document_id=document_id,
+        extraction_id=extraction_id if status else None,
+        classification="RC",
+        status=status,
+        input_matches=matches,
+        fragment_count=fragments,
+        actual_fragment_count=fragments,
+    )
+    session = SimpleNamespace(
+        execute=lambda statement: (
+            [row] if "actual_fragment_count" in statement.selected_columns else []
+        ),
+        scalars=lambda statement: [],
+    )
+    coverage = SqlAlchemyCaseDceReadingReader(session)._read_coverage(
+        tenant_id=uuid4(),
+        dce_version_id=uuid4(),
+        case_scope_kind="SINGLE_LOT",
+    )
+    assert coverage.documents[0].document_id == document_id
+    assert coverage.documents[0].extraction_status == expected
+    assert coverage.completed_extractions == int(expected == "COMPLETED")
+    assert coverage.unread_documents == int(expected != "COMPLETED")
+    assert coverage.inventory_scope == "ADMITTED_DOCUMENTS_ONLY"
+    assert coverage.lot_applicability == "UNKNOWN"
+    assert coverage.critical_unread_documents is None
+    assert coverage.analysis_complete is False
+    assert coverage.status == "REVIEW_REQUIRED"
+
+
+def test_empty_inventory_is_unknown_and_fragment_count_mismatch_requires_review():
+    session = SimpleNamespace(execute=lambda statement: [], scalars=lambda statement: [])
+    coverage = SqlAlchemyCaseDceReadingReader(session)._read_coverage(
+        tenant_id=uuid4(),
+        dce_version_id=uuid4(),
+        case_scope_kind="CUSTOM",
+    )
+    assert coverage.total_documents == 0
+    assert coverage.inventory_completeness == "UNKNOWN"
+    assert not coverage.analysis_complete
+    row = SimpleNamespace(
+        document_id=uuid4(),
+        extraction_id=uuid4(),
+        classification=None,
+        status="COMPLETED",
+        input_matches=True,
+        fragment_count=2,
+        actual_fragment_count=1,
+    )
+    session.execute = lambda statement: (
+        [row] if "actual_fragment_count" in statement.selected_columns else []
+    )
+    coverage = SqlAlchemyCaseDceReadingReader(session)._read_coverage(
+        tenant_id=uuid4(),
+        dce_version_id=uuid4(),
+        case_scope_kind="CUSTOM",
+    )
+    assert coverage.documents[0].extraction_status == "REVIEW_REQUIRED"

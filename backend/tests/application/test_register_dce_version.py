@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from hashlib import sha256
 from uuid import UUID, uuid4
@@ -106,9 +107,10 @@ def _seed_clean_staged_objects(
     state: str = "CLEAN",
     expires_at: datetime | None = None,
     media_type: str | None = "application/pdf",
+    first_hash: str = "c" * 64,
 ) -> None:
     document_metadata = (
-        ("c" * 64, "second.pdf", 200),
+        (first_hash, "second.pdf", 200),
         ("b" * 64, "first.pdf", 100),
     )
     with session_factory.begin() as session:
@@ -386,3 +388,79 @@ def test_register_dce_version_rejects_noncanonical_corpus_hash_without_side_effe
             )
             == 2
         )
+
+
+def test_explicit_rectification_preserves_sources_and_invalidates_old_case(session_factory):
+    from app.modules.case.infrastructure.models.case import CaseRecord
+
+    from tests.db.test_regulatory_profile_persistence import _case
+
+    tenant, consultation = _seed_consultation(session_factory)
+    old = _command(consultation_id=consultation)
+    _seed_clean_staged_objects(
+        session_factory, tenant_id=tenant, consultation_id=consultation, command=old
+    )
+    dispatcher = _dispatcher(session_factory)
+    dispatcher.dispatch(command=old, context=_context(tenant))
+    case_id = uuid4()
+    with session_factory.begin() as s:
+        case = _case(tenant_id=tenant, case_id=case_id, marker="d")
+        case.consultation_id = consultation
+        case.applicable_dce_version_id = old.dce_version_id
+        case.dce_freshness = "CURRENT"
+        s.add(case)
+    fresh = _command(consultation_id=consultation).model_copy(
+        update={"corpus_hash": _hash_manifest("e" * 64, "b" * 64)}
+    )
+    _seed_clean_staged_objects(
+        session_factory,
+        tenant_id=tenant,
+        consultation_id=consultation,
+        command=fresh,
+        first_hash="e" * 64,
+    )
+    payload = fresh.model_dump()
+    payload.update(
+        provenance_channel="RECTIFICATION",
+        predecessor_dce_version_id=old.dce_version_id,
+        expected_predecessor_revision=0,
+        replacement_reason="Rectificatif synthétique reçu, remplace cette version exacte.",
+    )
+    command = RegisterDceVersionCommand.model_validate(payload)
+    ctx = _context(tenant)
+    collaborator = replace(ctx, actor_kind="COLLABORATEUR")
+    with pytest.raises(CommandExecutionError):
+        dispatcher.dispatch(command=command, context=collaborator)
+    first = dispatcher.dispatch(command=command, context=ctx)
+    replay = dispatcher.dispatch(command=command, context=ctx)
+    with pytest.raises(CommandExecutionError):
+        dispatcher.dispatch(command=command, context=collaborator)
+    assert replay.replayed and replay.event_ids == first.event_ids
+    with session_factory() as s:
+        predecessor = s.get(DceVersionRecord, old.dce_version_id)
+        successor = s.get(DceVersionRecord, fresh.dce_version_id)
+        case = s.get(CaseRecord, case_id)
+        assert predecessor.lifecycle == "SUPERSEDED"
+        assert successor.predecessor_dce_version_id == predecessor.id
+        assert case.applicable_dce_version_id == old.dce_version_id
+        assert case.dce_freshness == "REVIEW_REQUIRED" and case.aggregate_revision == 2
+        assert len(s.scalars(sa.select(DceDocumentRecord)).all()) == 4
+        assert s.scalar(sa.select(sa.func.count()).select_from(DceVersionRecord)) == 2
+
+
+def test_legacy_dce_admission_serialization_remains_exact():
+    command = _command(consultation_id=uuid4())
+    assert set(command.model_dump()) == {
+        "command_id",
+        "idempotency_key",
+        "correlation_id",
+        "dce_version_id",
+        "consultation_id",
+        "consultation_revision",
+        "corpus_hash",
+        "provenance_channel",
+        "provenance_reference",
+        "provenance_url",
+        "source_received_at",
+        "documents",
+    }

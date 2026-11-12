@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from hashlib import sha256
 from uuid import UUID, uuid4
 
 import pytest
@@ -9,6 +10,10 @@ from app.bootstrap.application import AppRuntime, create_app
 from app.interfaces.http.routes.authentication import AuthenticationHttpRuntime
 from app.modules.case.infrastructure.models.case import CaseRecord
 from app.modules.dce.infrastructure.models.consultation import ConsultationRecord
+from app.modules.dce.infrastructure.models.dce_extraction import (
+    DceDocumentExtractionFragmentRecord,
+    DceDocumentExtractionRecord,
+)
 from app.modules.dce.infrastructure.models.dce_rc_analysis import (
     DceRcAnalysisRunRecord,
     DceRcRequirementObservationRecord,
@@ -19,8 +24,10 @@ from app.modules.dce.infrastructure.models.dce_requirement_confirmations import 
 from app.modules.dce.infrastructure.models.dce_requirements import (
     DceRequirementMaterializationRunRecord,
     DceRequirementRecord,
+    DceRequirementSourceRecord,
 )
-from app.modules.dce.infrastructure.models.dce_version import DceVersionRecord
+from app.modules.dce.infrastructure.models.dce_staging import DceStagedObjectRecord
+from app.modules.dce.infrastructure.models.dce_version import DceDocumentRecord, DceVersionRecord
 from app.platform.security.authentication import AuthenticationService
 from app.platform.security.models import (
     AuthSessionRecord,
@@ -558,6 +565,200 @@ def test_case_dce_reading_patron_requires_real_bearer_and_returns_closed_project
     assert payload["counters"]["total"] == 1
     assert payload["requirements"][0]["confirmation_outcome"] == "PENDING_HUMAN_CONFIRMATION"
     assert not _forbidden_response_keys(payload)
+
+
+@pytest.mark.api
+@pytest.mark.db
+@pytest.mark.security
+def test_case_dce_reading_http_projects_real_anchor_only_for_authorized_tenant(
+    database_engine: sa.Engine,
+    session_factory: sessionmaker[Session],
+) -> None:
+    tenant_id, identity_id, _, session_id = _seed_principal(
+        database_engine,
+        role="PATRON_ADMIN",
+    )
+    requirement_id, case_id = _seed_requirement_and_case(session_factory, tenant_id=tenant_id)
+    source_bytes = b"X"
+    source_sha256 = sha256(source_bytes).hexdigest()
+    fragment_text = "X"
+    fragment_sha256 = sha256(fragment_text.encode("utf-8")).hexdigest()
+    staged_object_id, document_id, extraction_id = uuid4(), uuid4(), uuid4()
+    with session_factory.begin() as session:
+        requirement = session.get(DceRequirementRecord, requirement_id)
+        case = session.get(CaseRecord, case_id)
+        assert requirement is not None and case is not None
+        observation = session.get(
+            DceRcRequirementObservationRecord, requirement.source_observation_id
+        )
+        assert observation is not None
+        fragment_id = observation.fragment_id
+        dce_version_id = requirement.dce_version_id
+        consultation_id = case.consultation_id
+        storage_key = f"dce-staging/{tenant_id}/{staged_object_id}"
+        session.add(
+            DceStagedObjectRecord(
+                id=staged_object_id,
+                tenant_id=tenant_id,
+                consultation_id=consultation_id,
+                storage_key=storage_key,
+                original_filename="fixture.txt",
+                expected_byte_size=len(source_bytes),
+                actual_byte_size=len(source_bytes),
+                sha256=source_sha256,
+                media_type="text/plain",
+                source_channel="MANUAL_UPLOAD",
+                state="CONSUMED",
+                scan_verdict="CLEAN",
+                scanner_name="synthetic-clamd",
+                scanner_signature_version="synthetic-signatures",
+                scanned_at=NOW,
+                rejection_code=None,
+                expires_at=NOW + timedelta(days=1),
+                consumed_by_dce_version_id=dce_version_id,
+                consumed_at=NOW,
+                created_by_actor_id=None,
+                updated_by_actor_id=None,
+            )
+        )
+        session.add(
+            DceDocumentRecord(
+                id=document_id,
+                tenant_id=tenant_id,
+                dce_version_id=dce_version_id,
+                storage_object_id=staged_object_id,
+                storage_key=storage_key,
+                original_filename="fixture.txt",
+                media_type="text/plain",
+                byte_size=len(source_bytes),
+                sha256=source_sha256,
+                received_from="MANUAL_UPLOAD",
+            )
+        )
+        session.flush()
+        session.add(
+            DceDocumentExtractionRecord(
+                id=extraction_id,
+                tenant_id=tenant_id,
+                dce_version_id=dce_version_id,
+                dce_document_id=document_id,
+                input_sha256=source_sha256,
+                extractor_id="smart-ao-native",
+                extractor_version="2",
+                status="COMPLETED",
+                fragment_count=1,
+                extracted_char_count=len(fragment_text),
+                failure_code=None,
+            )
+        )
+        session.flush()
+        session.add(
+            DceDocumentExtractionFragmentRecord(
+                id=fragment_id,
+                tenant_id=tenant_id,
+                extraction_id=extraction_id,
+                ordinal=1,
+                locator_json={"kind": "text_line", "line": 1, "part": 1},
+                text=fragment_text,
+                text_sha256=fragment_sha256,
+            )
+        )
+        session.add(
+            DceRequirementSourceRecord(
+                id=uuid4(),
+                tenant_id=tenant_id,
+                requirement_id=requirement_id,
+                source_observation_id=requirement.source_observation_id,
+                fragment_id=fragment_id,
+                start_byte_offset=0,
+                end_byte_offset=1,
+            )
+        )
+
+    client, tokens = _client(session_factory)
+    response = client.get(
+        f"/api/v1/cases/{case_id}/dce-reading",
+        headers=_headers(tokens, identity_id=identity_id, session_id=session_id),
+    )
+
+    assert response.status_code == 200
+    requirement_response = response.json()["requirements"][0]
+    anchor = requirement_response["source_anchor"]
+    assert anchor["source_anchor_id"] == str(fragment_id)
+    assert anchor["dce_version_id"] == str(dce_version_id)
+    assert anchor["dce_document_id"] == str(document_id)
+    assert anchor["extraction_id"] == str(extraction_id)
+    assert anchor["source_sha256"] == source_sha256
+    assert anchor["fragment_sha256"] == fragment_sha256
+    assert anchor["locator_state"] == "RESOLVED"
+    assert anchor["locator"] == {"kind": "text_line", "coordinates": {"line": 1, "part": 1}}
+    assert "source_text" not in anchor
+
+    foreign_tenant_id, foreign_identity_id, _, foreign_session_id = _seed_principal(
+        database_engine,
+        role="PATRON_ADMIN",
+    )
+    assert foreign_tenant_id != tenant_id
+    foreign_response = client.get(
+        f"/api/v1/cases/{case_id}/dce-reading",
+        headers=_headers(tokens, identity_id=foreign_identity_id, session_id=foreign_session_id),
+    )
+    assert foreign_response.status_code == 404
+    assert foreign_response.json() == {"detail": "NOT_FOUND_OR_FORBIDDEN"}
+
+    collaborator_id, collaborator_membership_id, collaborator_session_id = (
+        uuid4(),
+        uuid4(),
+        uuid4(),
+    )
+    with database_engine.begin() as connection:
+        connection.execute(
+            sa.insert(IdentityRecord).values(
+                id=collaborator_id,
+                email_normalized=f"collaborator-{collaborator_id}@example.test",
+                lifecycle="ACTIVE",
+                email_verified_at=NOW,
+            )
+        )
+        connection.execute(
+            sa.insert(TenantMembershipRecord).values(
+                id=collaborator_membership_id,
+                tenant_id=tenant_id,
+                identity_id=collaborator_id,
+                role="COLLABORATEUR",
+                state="ACTIVE",
+                activated_at=NOW,
+                revoked_at=None,
+            )
+        )
+        connection.execute(
+            sa.insert(AuthSessionRecord).values(
+                id=collaborator_session_id,
+                tenant_id=tenant_id,
+                membership_id=collaborator_membership_id,
+                identity_id=collaborator_id,
+                state="ACTIVE",
+                auth_strength="MFA",
+                token_version=1,
+                issued_at=NOW,
+                last_seen_at=NOW,
+                expires_at=NOW + timedelta(hours=8),
+                absolute_expires_at=NOW + timedelta(hours=12),
+                mfa_verified_at=NOW,
+                revoked_at=None,
+                revoke_reason=None,
+            )
+        )
+    collaborator_response = client.get(
+        f"/api/v1/cases/{case_id}/dce-reading",
+        headers=_headers(
+            tokens,
+            identity_id=collaborator_id,
+            session_id=collaborator_session_id,
+        ),
+    )
+    assert collaborator_response.status_code == 403
+    assert collaborator_response.json() == {"detail": "FORBIDDEN"}
 
 
 @pytest.mark.api

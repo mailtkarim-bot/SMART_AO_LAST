@@ -16,6 +16,7 @@ from app.modules.dce.application.classification import (
     ClassificationFragment,
     ClassificationProjection,
     classification_input_manifest_sha256,
+    current_completed_extraction_condition,
     project_dce_classification,
 )
 from app.modules.dce.application.commands import (
@@ -82,6 +83,7 @@ from app.modules.dce.infrastructure.models.dce_requirements import (
 from app.modules.dce.infrastructure.models.dce_staging import DceStagedObjectRecord
 from app.modules.dce.infrastructure.models.dce_version import (
     DceDocumentClassificationRecord,
+    DceDocumentIssueRecord,
     DceDocumentRecord,
     DceVersionRecord,
 )
@@ -578,6 +580,11 @@ class RecordDceDocumentExtractionHandler:
             raise ValueError("DOCUMENT_STORAGE_NOT_CONSUMED")
         if command.input_sha256.lower() != document.sha256.lower():
             raise ValueError("DOCUMENT_INPUT_HASH_REQUIRED")
+        if command.archive_entries and document.media_type not in {
+            "application/zip",
+            "application/x-zip-compressed",
+        }:
+            raise ValueError("ARCHIVE_DOCUMENT_REQUIRED")
         if command.status in {"COMPLETED", "REVIEW_REQUIRED"}:
             _validate_extraction_fragments(command=command)
 
@@ -606,6 +613,25 @@ class RecordDceDocumentExtractionHandler:
                     locator_json=fragment.locator_json,
                     text=fragment.text,
                     text_sha256=fragment.text_sha256.lower(),
+                )
+            )
+        for ordinal, entry in enumerate(command.archive_entries, 1):
+            session.add(
+                DceDocumentIssueRecord(
+                    id=uuid5(extraction.id, f"archive-entry:{ordinal}"),
+                    tenant_id=context.tenant_id,
+                    dce_version_id=dce_version.id,
+                    dce_document_id=document.id,
+                    issue_kind="ARCHIVE_ENTRY_NOT_ADMITTED",
+                    impact="REVIEW_REQUIRED",
+                    reason="ARCHIVE_MEMBERS_NOT_ADMITTED",
+                    locator_json={
+                        "kind": "archive_entry",
+                        "extraction_id": str(extraction.id),
+                        "source_sha256": document.sha256.lower(),
+                        **entry.model_dump(),
+                    },
+                    created_by_actor_id=None,
                 )
             )
         event = PendingDomainEvent(
@@ -695,6 +721,7 @@ class RecordDceDocumentClassificationRunHandler:
                 DceDocumentExtractionRecord.tenant_id == context.tenant_id,
                 DceDocumentExtractionRecord.dce_document_id.in_(document_ids),
                 DceDocumentExtractionRecord.status == "COMPLETED",
+                current_completed_extraction_condition(tenant_id=context.tenant_id),
             )
             .order_by(
                 DceDocumentExtractionRecord.dce_document_id,
@@ -950,6 +977,7 @@ class RecordDceRcAnalysisHandler:
                 DceDocumentRecord.tenant_id == context.tenant_id,
                 DceDocumentRecord.dce_version_id == dce_version.id,
                 DceDocumentExtractionRecord.status == "COMPLETED",
+                current_completed_extraction_condition(tenant_id=context.tenant_id),
             )
             .order_by(
                 DceDocumentRecord.id,
@@ -971,6 +999,28 @@ class RecordDceRcAnalysisHandler:
         ):
             raise ValueError("DCE_ANALYSIS_SOURCE_COUNT_REQUIRED")
         expected_manifest = _rc_analysis_input_manifest(source_rows=source_rows)
+        if command.analyzer_version in {"10", "11"}:
+            from app.modules.dce.domain.rc_source_manifest import rc_source_manifest
+
+            classes = session.scalars(
+                sa.select(DceDocumentClassificationRecord).where(
+                    DceDocumentClassificationRecord.tenant_id == context.tenant_id,
+                    DceDocumentClassificationRecord.dce_document_id.in_(
+                        {doc for doc, _, _ in source_rows}
+                    ),
+                    DceDocumentClassificationRecord.is_current.is_(True),
+                )
+            ).all()
+            expected_manifest = rc_source_manifest(
+                [
+                    (doc, extraction, fragment.id, fragment.ordinal, fragment.text_sha256)
+                    for doc, extraction, fragment in source_rows
+                ],
+                classifications={
+                    row.dce_document_id: (row.id, row.classification) for row in classes
+                },
+                format_version=2,
+            )
         if command.input_manifest_sha256.lower() != expected_manifest:
             raise ValueError("DCE_ANALYSIS_INPUT_MANIFEST_REQUIRED")
 
@@ -1074,6 +1124,12 @@ class RecordDceRcAnalysisHandler:
 class RegisterDceVersionHandler:
     """Admit a new immutable DCE root and its originals in one dispatcher transaction."""
 
+    def authorize_context(
+        self, *, session: Session, command: RegisterDceVersionCommand, context: CommandContext
+    ) -> None:
+        if command.predecessor_dce_version_id is not None and context.actor_kind != "PATRON_ADMIN":
+            raise ValueError("PATRON_REQUIRED_FOR_REPLACEMENT")
+
     def execute(
         self,
         *,
@@ -1081,6 +1137,52 @@ class RegisterDceVersionHandler:
         command: RegisterDceVersionCommand,
         context: CommandContext,
     ) -> HandlerOutcome:
+        predecessor = None
+        affected_cases = []
+        if command.predecessor_dce_version_id is not None:
+            if context.actor_kind != "PATRON_ADMIN":
+                raise ValueError("PATRON_REQUIRED_FOR_REPLACEMENT")
+            # Both replacement and Case linking serialize on the consultation first.
+            locked_consultation = session.scalar(
+                sa.select(ConsultationRecord)
+                .where(
+                    ConsultationRecord.tenant_id == context.tenant_id,
+                    ConsultationRecord.id == command.consultation_id,
+                )
+                .with_for_update()
+            )
+            if (
+                locked_consultation is None
+                or locked_consultation.aggregate_revision != command.consultation_revision
+            ):
+                raise ValueError("CONSULTATION_REQUIRED_OR_STALE")
+            affected_cases = list(
+                session.scalars(
+                    sa.select(CaseRecord)
+                    .where(
+                        CaseRecord.tenant_id == context.tenant_id,
+                        CaseRecord.applicable_dce_version_id == command.predecessor_dce_version_id,
+                    )
+                    .order_by(CaseRecord.id)
+                    .with_for_update()
+                )
+            )
+            predecessor = session.scalar(
+                sa.select(DceVersionRecord)
+                .where(
+                    DceVersionRecord.tenant_id == context.tenant_id,
+                    DceVersionRecord.id == command.predecessor_dce_version_id,
+                    DceVersionRecord.consultation_id == command.consultation_id,
+                )
+                .with_for_update()
+            )
+            if (
+                predecessor is None
+                or predecessor.lifecycle != "ADMITTED"
+                or predecessor.integrity != "VERIFIED"
+                or predecessor.aggregate_revision != command.expected_predecessor_revision
+            ):
+                raise ValueError("PREDECESSOR_REQUIRED_OR_STALE")
         consultation = session.scalar(
             sa.select(ConsultationRecord).where(
                 ConsultationRecord.tenant_id == context.tenant_id,
@@ -1153,6 +1255,8 @@ class RegisterDceVersionHandler:
             documents=domain_documents,
             provenance=command.provenance_reference or command.provenance_channel,
             received_at=command.source_received_at,
+            supersedes_version_id=command.predecessor_dce_version_id,
+            supersession_source=command.replacement_reason,
         )
         persistence_state = to_dce_version_persistence_state(version)
         session.add(
@@ -1162,7 +1266,7 @@ class RegisterDceVersionHandler:
                 aggregate_revision=version.aggregate_revision,
                 consultation_id=version.consultation_id,
                 corpus_hash=version.corpus_hash,
-                predecessor_dce_version_id=None,
+                predecessor_dce_version_id=predecessor.id if predecessor else None,
                 provenance_channel=command.provenance_channel,
                 provenance_reference=command.provenance_reference,
                 provenance_url=command.provenance_url,
@@ -1210,6 +1314,41 @@ class RegisterDceVersionHandler:
                 "consultation_id": str(version.consultation_id),
             },
         )
+        replacement_events = []
+        if predecessor is not None:
+            predecessor.lifecycle = "SUPERSEDED"
+            predecessor.analysis_readiness = "REVIEW_REQUIRED"
+            predecessor.superseded_at = context.received_at
+            predecessor.aggregate_revision += 1
+            predecessor.updated_by_actor_id = context.actor_id
+            replacement_events.append(
+                PendingDomainEvent(
+                    aggregate_type="DCE_VERSION",
+                    aggregate_id=predecessor.id,
+                    aggregate_revision=predecessor.aggregate_revision,
+                    event_type="DCE_VERSION_SUPERSEDED",
+                    payload={
+                        "successor_dce_version_id": str(version.id),
+                        "replacement_reason": command.replacement_reason,
+                    },
+                )
+            )
+            for case in affected_cases:
+                case.dce_freshness = "REVIEW_REQUIRED"
+                case.aggregate_revision += 1
+                case.updated_by_actor_id = context.actor_id
+                replacement_events.append(
+                    PendingDomainEvent(
+                        aggregate_type="CASE",
+                        aggregate_id=case.id,
+                        aggregate_revision=case.aggregate_revision,
+                        event_type="CASE_DCE_SOURCE_SUPERSEDED",
+                        payload={
+                            "predecessor_dce_version_id": str(predecessor.id),
+                            "successor_dce_version_id": str(version.id),
+                        },
+                    )
+                )
         return HandlerOutcome(
             result_code="DCE_VERSION_REGISTERED",
             aggregate_refs=(
@@ -1219,7 +1358,7 @@ class RegisterDceVersionHandler:
                     "aggregate_revision": version.aggregate_revision,
                 },
             ),
-            events=(event,),
+            events=(event, *replacement_events),
         )
 
 
@@ -1291,6 +1430,8 @@ def _validate_rc_analysis_observations(
     fragments_by_id: dict[UUID, DceDocumentExtractionFragmentRecord],
 ) -> None:
     for observation in command.observations:
+        if observation.rule_version != command.analyzer_version:
+            raise ValueError("DCE_ANALYSIS_RULE_VERSION_REQUIRED")
         source = observation.sources[0]
         fragment = fragments_by_id.get(source.fragment_id)
         if fragment is None:
@@ -1311,6 +1452,10 @@ def _validate_rc_analysis_observations(
             rule_id=observation.rule_id,
             directive=observation.directive,
             excerpt=observation.excerpt,
+            rule_version=observation.rule_version,
+            source_locator_kind=fragment.locator_json.get("kind")
+            if isinstance(fragment.locator_json, dict)
+            else None,
         ):
             raise ValueError("DCE_ANALYSIS_RULE_REQUIRED")
 
@@ -1467,24 +1612,15 @@ class RecordDceRequirementMaterializationRunHandler:
         projection = project_requirements(signals=signals)
         if command.status != projection.status or command.failure_code != projection.failure_code:
             raise ValueError("DCE_REQUIREMENT_PROJECTION_REQUIRED")
-        expected_types = {
-            "RC_DOCUMENT_CANDIDATURE": "CANDIDATURE_DOCUMENT",
-            "RC_CONTENT_OFFER": "OFFER_DOCUMENT",
-            "RC_SUBMISSION_DEADLINE": "SUBMISSION_DEADLINE_SIGNAL",
-            "RC_RESPONSE_CHANNEL": "SUBMISSION_CHANNEL",
-            "RC_FILE_CONSTRAINT": "FILE_CONSTRAINT",
-            "RC_SITE_VISIT": "SITE_VISIT",
-            "RC_AWARD_CRITERION": "AWARD_CRITERION_SIGNAL",
-            "RC_NEGOTIATION": "NEGOTIATION_SIGNAL",
-            "RC_OFFER_VALIDITY": "OFFER_VALIDITY_SIGNAL",
-        }
+        from app.modules.dce.application.requirements import REQUIREMENT_TYPES
+
         if command.status == "COMPLETED":
             if len(command.requirements) != len(signals):
                 raise ValueError("DCE_REQUIREMENT_COUNT_REQUIRED")
             for received, signal in zip(command.requirements, signals, strict=True):
                 if (
                     received.source_observation_id != signal.observation_id
-                    or received.requirement_type != expected_types[signal.requirement_kind]
+                    or received.requirement_type != REQUIREMENT_TYPES[signal.requirement_kind]
                     or received.directive_signal != signal.directive
                     or received.confirmation_status != "PENDING_HUMAN_CONFIRMATION"
                     or received.uncertainty_status != "SOURCE_SIGNAL_ONLY"

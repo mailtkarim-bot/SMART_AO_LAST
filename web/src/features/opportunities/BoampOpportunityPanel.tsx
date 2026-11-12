@@ -1,3 +1,5 @@
+import {useState} from "react";
+import type {BoampPending} from "./useBoampOpportunities";
 import type {
   BoampObservation,
   BoampSourceStatus,
@@ -15,6 +17,9 @@ type Props = {
   qualifiedObservationIds: ReadonlySet<string>;
   creatingCase: boolean;
   onRefresh: () => void;
+  pending?: BoampPending|null;
+  onResume?: () => void;
+  onOpenCase?: (caseId:string) => void;
   onSelect: (observationId: string) => void;
   onDecisionChange: (decision: BoampQualificationDecision) => void;
   onReasonChange: (reason: BoampQualificationReason) => void;
@@ -43,6 +48,17 @@ function formatDate(value: string | null) {
   return Number.isNaN(parsed.getTime())
     ? "Date invalide"
     : new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium" }).format(parsed);
+}
+
+function formatDateTime(value: string) {
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime())
+    ? "Date invalide"
+    : `${new Intl.DateTimeFormat("fr-FR", {
+        dateStyle: "medium",
+        timeStyle: "short",
+        timeZone: "UTC",
+      }).format(parsed)} UTC`;
 }
 
 function p0Label(state: BoampObservation["p0_state"]) {
@@ -112,6 +128,7 @@ function scoreFactors(explanation: BoampObservation["score_explanation"]): Score
 
 export function BoampOpportunityPanel({
   observations,
+  pending=null, onResume, onOpenCase,
   selectedObservationId,
   qualificationForm,
   loading,
@@ -128,6 +145,11 @@ export function BoampOpportunityPanel({
   onManualEntry,
 }: Props) {
   const selected = selectedItem(observations, selectedObservationId);
+  const [p0Confirm,setP0Confirm]=useState<string|null>(null);
+  const [p1Confirm,setP1Confirm]=useState<string|null>(null);
+  const decisionKey=JSON.stringify([selectedObservationId,qualificationForm,selected?.fingerprint_sha256,selected?.p0_qualification_id,selected?.p1_case_id]);
+  const locked=Boolean(pending);
+
   const selectedScoreFactors = selected ? scoreFactors(selected.score_explanation) : [];
 
   return (
@@ -139,7 +161,7 @@ export function BoampOpportunityPanel({
         </div>
         <div className="section-actions">
           <span className="count-pill">{observations.length} visible{observations.length > 1 ? "s" : ""}</span>
-          <button className="secondary-button compact-button" type="button" onClick={onRefresh} disabled={loading}>
+          <button className="secondary-button compact-button" type="button" onClick={onRefresh} disabled={loading||locked}>
             {loading ? "Chargement…" : "Actualiser"}
           </button>
         </div>
@@ -160,7 +182,7 @@ export function BoampOpportunityPanel({
           )}
           <div className="section-actions">
             {sourceStatus.retryable && (
-              <button className="secondary-button compact-button" type="button" onClick={onRefresh} disabled={loading}>
+              <button className="secondary-button compact-button" type="button" onClick={onRefresh} disabled={loading||locked}>
                 {loading ? "Relance…" : "Relancer"}
               </button>
             )}
@@ -172,6 +194,7 @@ export function BoampOpportunityPanel({
           </div>
         </div>
       )}
+      {pending&&<div role="status" className="empty-card"><p>{pending.phase==='UNKNOWN'?'Résultat UNKNOWN : sélection, décision et identifiants figés.':pending.phase==='READ_REQUIRED'?'Acte reçu ou conflit : relecture de l’état courant requise.':'Enregistrement en cours.'}</p>{pending.phase!=='SENDING'&&onResume&&<button className="secondary-button" onClick={onResume}>{pending.phase==='UNKNOWN'?'Réessayer la même opération':'Relire le résultat reçu'}</button>}</div>}
       {observations.length === 0 ? (
         <div className="empty-card">
           <strong>Aucune opportunité BOAMP disponible</strong>
@@ -185,7 +208,7 @@ export function BoampOpportunityPanel({
                 className={`boamp-item ${item.observation_id === selectedObservationId ? "selected" : ""}`}
                 key={item.observation_id}
                 type="button"
-                onClick={() => onSelect(item.observation_id)}
+                onClick={() => {setP0Confirm(null);setP1Confirm(null);onSelect(item.observation_id);}} disabled={locked}
               >
                 <span className="boamp-item-top">
                   <span className="state-badge state-monitor">P0 {p0Label(item.p0_state)}</span>
@@ -239,6 +262,26 @@ export function BoampOpportunityPanel({
                   <div><dt>Décision P0</dt><dd>{selected.p0_decision ?? "Aucune décision"}</dd></div>
                   <div><dt>Motif P0</dt><dd>{selected.p0_reason_code ?? "Non applicable"}</dd></div>
                 </dl>
+                <details className="boamp-score-details boamp-source-captures">
+                  <summary>Captures de source ({selected.source_captures.length})</summary>
+                  {selected.source_captures.length === 0 ? (
+                    <p>Aucun lien de capture enregistré.</p>
+                  ) : (
+                    <ol>
+                      {selected.source_captures.map((capture) => (
+                        <li key={capture.ingestion_run_id}>
+                          <strong>
+                            {capture.source_mode === "REPLAY" ? "REPLAY · Rejeu synthétique" : "LIVE"}
+                          </strong>
+                          <span>Run enregistré le {formatDateTime(capture.run_recorded_at)}</span>
+                          <span>Contrat adaptateur : {capture.source_contract_version ?? "Non renseigné"}</span>
+                          <code>{capture.source_response_sha256 ?? "Hash non renseigné"}</code>
+                        </li>
+                      ))}
+                    </ol>
+                  )}
+                  <p>Ces runs décrivent l’ingestion et ne certifient ni l’actualité ni l’authenticité de l’avis.</p>
+                </details>
                 {selected.unknowns.length > 0 && (
                   <div className="boamp-unknowns" aria-label="Inconnues de l’opportunité">
                     <span className="section-kicker">INCONNUES À LEVER</span>
@@ -252,15 +295,18 @@ export function BoampOpportunityPanel({
                     </ul>
                   </div>
                 )}
+                {selected.p1_case_id&&<div className="empty-card"><p>Une Affaire est déjà liée à cet avis. Chaque capture conserve sa propre décision P0.</p><code>{selected.p1_case_id}</code>{onOpenCase&&<button className="secondary-button" disabled={locked} onClick={()=>onOpenCase(selected.p1_case_id!)}>Ouvrir l’Affaire liée</button>}</div>}
                 <div className="boamp-qualification">
                   <div><span className="section-kicker">DÉCISION HUMAINE P0</span><h3>Décider du suivi</h3></div>
-                  <label><span>Décision</span><select value={qualificationForm.decision} onChange={(event) => onDecisionChange(event.target.value as BoampQualificationDecision)}>{decisions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
-                  <label><span>Motif</span><select value={qualificationForm.reason_code} onChange={(event) => onReasonChange(event.target.value as BoampQualificationReason)}>{reasons.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
-                  <button className="primary-button" type="button" onClick={onQualify} disabled={qualifying}>{qualifying ? "Enregistrement…" : "Enregistrer la décision P0"}<span>→</span></button>
+                  <label><span>Décision</span><select disabled={locked} value={qualificationForm.decision} onChange={(event) => {setP0Confirm(null);setP1Confirm(null);onDecisionChange(event.target.value as BoampQualificationDecision);}}>{decisions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
+                  <label><span>Motif</span><select disabled={locked} value={qualificationForm.reason_code} onChange={(event) => {setP0Confirm(null);setP1Confirm(null);onReasonChange(event.target.value as BoampQualificationReason);}}>{reasons.filter(r=>qualificationForm.decision==='QUALIFIED'?r.value==='RELEVANT_PUBLIC_SIGNAL':qualificationForm.decision==='SNOOZED'?r.value==='INSUFFICIENT_PUBLIC_DATA':['NOT_RELEVANT','EXPIRED'].includes(r.value)).map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
+                  <label><input type="checkbox" checked={p0Confirm===decisionKey} disabled={locked} onChange={e=>setP0Confirm(e.target.checked?decisionKey:null)}/>Je confirme la décision P0 et son motif pour cet avis.</label>
+                  <button className="primary-button" type="button" onClick={()=>{if(p0Confirm===decisionKey){setP0Confirm(null);onQualify();}}} disabled={qualifying||locked}>{qualifying ? "Enregistrement…" : "Enregistrer la décision P0"}<span>→</span></button>
                   {qualifiedObservationIds.has(selected.observation_id) && selected.p0_state === "TARGETED" && selected.p1_state === "NOT_OPEN" && (
-                    <button className="secondary-button" type="button" onClick={onCreateCase} disabled={creatingCase}>
+                    <div><label><input type="checkbox" checked={p1Confirm===decisionKey} disabled={locked} onChange={e=>setP1Confirm(e.target.checked?decisionKey:null)}/>Je confirme l’ouverture d’une Affaire avec les inconnues affichées.</label>
+                    <button className="secondary-button" type="button" onClick={()=>{if(p1Confirm===decisionKey){setP1Confirm(null);onCreateCase();}}} disabled={creatingCase||locked}>
                       {creatingCase ? "Création…" : "Créer une affaire"}<span>→</span>
-                    </button>
+                    </button></div>
                   )}
                 </div>
               </>

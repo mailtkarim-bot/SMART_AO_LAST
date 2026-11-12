@@ -1,7 +1,10 @@
 from datetime import datetime
 from typing import Literal
 from uuid import UUID
+
 from pydantic import BaseModel, ConfigDict, Field
+
+
 class RecordPaymentCollectionRejectionReviewRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     command_id: UUID
@@ -10,6 +13,8 @@ class RecordPaymentCollectionRejectionReviewRequest(BaseModel):
     rejected_count: int = Field(ge=1)
     decision: Literal["ACKNOWLEDGED", "FOLLOW_UP_REQUIRED"]
     rationale: str = Field(min_length=1)
+
+
 class PaymentCollectionRejectionReviewResponse(BaseModel):
     review_id: UUID
     case_id: UUID

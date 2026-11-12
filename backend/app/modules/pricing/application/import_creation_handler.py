@@ -87,6 +87,9 @@ class CreatePricingImportPreviewHandler:
                 unit_price_minor=row.unit_price_minor,
                 total_minor=row.total_minor,
                 error_codes_json=list(row.errors),
+                source_locator_json=row.source_locator.model_dump(mode="json")
+                if row.source_locator
+                else None,
             )
             for row in rows
         )

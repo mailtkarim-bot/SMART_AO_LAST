@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import type { PatronDecisionDossier } from "../../shared/types";
@@ -34,6 +34,7 @@ const decisionDossier: PatronDecisionDossier = {
       role: "TECHNICAL_PREPARATION",
     },
   ],
+  contract_evidence_links: [],
   context_fingerprint: null,
 };
 
@@ -67,6 +68,26 @@ describe("PatronDecisionPanel", () => {
     expect(screen.getByText("PreparationPackage")).toBeInTheDocument();
     expect(screen.queryByText(/montant|marge|prix/i)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Finaliser et enregistrer" })).not.toBeInTheDocument();
+  });
+
+  it("links exact evidence to an existing open condition without promoting the decision", async () => {
+    const onLink = vi.fn().mockResolvedValue(true);
+    const dossier: PatronDecisionDossier = {
+      ...decisionDossier,
+      outcome: "CONDITIONAL_GO",
+      sources: [
+        { aggregate_type: "DCE_REQUIREMENT", aggregate_id: "req-1", aggregate_revision: 2, role: "REQUIREMENT" },
+        { aggregate_type: "CONTRACT_BASELINE_IMPACT", aggregate_id: "proof-1", aggregate_revision: 1, role: "IMPACT" },
+        { aggregate_type: "BUSINESS_METHOD_PROFILE", aggregate_id: "profile-1", aggregate_revision: 3, role: "ADOPTED_METHOD" },
+      ],
+      contract_evidence_links: [],
+    };
+    const impact = { proof_id: "proof-1", case_id: "case-1", baseline_observation_id: "obs-1", dce_requirement_id: "req-1", dce_requirement_revision: 2, proof_revision: 1, baseline_source_refs: ["CCAP · article 4"], baseline_statement: "Baseline", deviation_statement: null, impact_statement: "Impact déclaré", status: "HUMAN_REVIEW_REQUIRED" as const };
+    render(<PatronDecisionPanel decisionDossier={dossier} contractBaselineImpacts={[impact]} onLinkContractEvidence={onLink} canManage formatDate={() => ""} />);
+    fireEvent.click(screen.getByRole("button", { name: "Relier l’impact v1 à cette condition" }));
+    await waitFor(() => expect(onLink).toHaveBeenCalledOnce());
+    expect(onLink.mock.calls[0][0]).toBe("condition-1");
+    expect(onLink.mock.calls[0][1]).toMatchObject({ contract_impact_id: "proof-1", proof_revision: 1, expected_decision_revision: 1 });
   });
 
   it("submits the server fingerprint for a frozen patron decision", () => {

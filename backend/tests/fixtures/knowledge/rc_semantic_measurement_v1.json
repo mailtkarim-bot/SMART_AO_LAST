@@ -1,0 +1,829 @@
+{
+  "schema_version": 1,
+  "kind": "rc_semantic_measurement",
+  "synthetic": true,
+  "held_out": true,
+  "preparation_only": false,
+  "tenant_id": "00000000-0000-0000-0000-0000000061a9",
+  "case_id": "00000000-0000-0000-0000-0000000061aa",
+  "version_id": "00000000-0000-0000-0000-0000000061ab",
+  "documents": [
+    {
+      "id": "00000000-0000-0000-0000-00000000620c",
+      "tenant_id": "00000000-0000-0000-0000-0000000061a9",
+      "case_id": "00000000-0000-0000-0000-0000000061aa",
+      "version_id": "00000000-0000-0000-0000-0000000061ab",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 1,
+      "family": "RC",
+      "text": "91 — Accès au bâtiment. La reconnaissance préalable des locaux constitue une condition de recevabilité de l'offre. Aucun créneau n'est fixé dans le présent article.",
+      "text_sha256": "cef1ed7abc0895f6deae78e64f7e0bbed2e5129e3c4ff49e402cfd7b4eb83564"
+    },
+    {
+      "id": "00000000-0000-0000-0000-00000000620d",
+      "tenant_id": "00000000-0000-0000-0000-0000000061a9",
+      "case_id": "00000000-0000-0000-0000-0000000061aa",
+      "version_id": "00000000-0000-0000-0000-0000000061ab",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 2,
+      "family": "RC",
+      "text": "Tableau des formalités\nLot 92 | Visite de site | Caractère : obligatoire\nL'inscription se fait auprès du secrétariat.",
+      "text_sha256": "bba09b85eb1c2dab0db9a55acbec3a0596af974c91329958d1b3e79ddf12ecbf"
+    },
+    {
+      "id": "00000000-0000-0000-0000-00000000620e",
+      "tenant_id": "00000000-0000-0000-0000-0000000061a9",
+      "case_id": "00000000-0000-0000-0000-0000000061aa",
+      "version_id": "00000000-0000-0000-0000-0000000061ab",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 3,
+      "family": "RC",
+      "text": "Pièces de candidature, lot 93. Le formulaire DC2 ne sera réclamé qu'aux opérateurs invités à poursuivre la procédure.",
+      "text_sha256": "b7c6ade2ceab22ae87dc957de9dd9d59b91816a52212f7f491edefd7af47ecf9"
+    },
+    {
+      "id": "00000000-0000-0000-0000-00000000620f",
+      "tenant_id": "00000000-0000-0000-0000-0000000061a9",
+      "case_id": "00000000-0000-0000-0000-0000000061aa",
+      "version_id": "00000000-0000-0000-0000-0000000061ab",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 4,
+      "family": "RC",
+      "text": "Lot 94 — Le pouvoir adjudicateur dispense les candidats de produire le DC1. Cette dispense ne concerne aucune autre pièce.",
+      "text_sha256": "f223a814152893175779994a8ebb31656beee6a5b21d5d25fd3a5de538fa05da"
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000006210",
+      "tenant_id": "00000000-0000-0000-0000-0000000061a9",
+      "case_id": "00000000-0000-0000-0000-0000000061aa",
+      "version_id": "00000000-0000-0000-0000-0000000061ab",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 5,
+      "family": "RC",
+      "text": "Pour le lot 95, le dossier de candidature comprend deux formulaires distincts : DC1 et DC2. Chacun doit être présent.",
+      "text_sha256": "a5ff4fcccde54553f04911c85af514c34a2415b33488624627f2135d8c28eaf7"
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000006211",
+      "tenant_id": "00000000-0000-0000-0000-0000000061a9",
+      "case_id": "00000000-0000-0000-0000-0000000061aa",
+      "version_id": "00000000-0000-0000-0000-0000000061ab",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 6,
+      "family": "RC",
+      "text": "Lot 96. Il est demandé de remettre le DC2 si…",
+      "text_sha256": "c899e3df9b80b3833221863d57278377a282319ba890461dd92d3b79f641a77a"
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000006212",
+      "tenant_id": "00000000-0000-0000-0000-0000000061a9",
+      "case_id": "00000000-0000-0000-0000-0000000061aa",
+      "version_id": "00000000-0000-0000-0000-0000000061ab",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 7,
+      "family": "RC",
+      "text": "Article 7, lot 97 : la visite des locaux est obligatoire. Le même article précise que le DC2 doit figurer dans la candidature.",
+      "text_sha256": "916b9aeefd46864c382aaca3b25f94f407cc95848aacb4b2c31f6a74af7e800f"
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000006213",
+      "tenant_id": "00000000-0000-0000-0000-0000000061a9",
+      "case_id": "00000000-0000-0000-0000-0000000061aa",
+      "version_id": "00000000-0000-0000-0000-0000000061ab",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 8,
+      "family": "RC",
+      "text": "Rectificatif du règlement, lot 98. L'obligation de visite de chantier mentionnée dans la rédaction initiale est supprimée. Une reconnaissance volontaire reste possible.",
+      "text_sha256": "3d7559c09d527f9353ae08407d6e2be0621d374d717130dd1604b5a9f7e512ab"
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000006214",
+      "tenant_id": "00000000-0000-0000-0000-0000000061a9",
+      "case_id": "00000000-0000-0000-0000-0000000061aa",
+      "version_id": "00000000-0000-0000-0000-0000000061ab",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 9,
+      "family": "RC",
+      "text": "Lot 99 — Informations pratiques. La visite de site commencera à 10 h 30. Le caractère obligatoire de cette visite n'est pas indiqué ici.",
+      "text_sha256": "dfa376fadad24437f68aad6844f07106fde9b9f9c76353bfe7fc8bd2c9df22ce"
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000006215",
+      "tenant_id": "00000000-0000-0000-0000-0000000061a9",
+      "case_id": "00000000-0000-0000-0000-0000000061aa",
+      "version_id": "00000000-0000-0000-0000-0000000061ab",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 10,
+      "family": "RC",
+      "text": "Lot 100. Exemple de question posée lors d'une ancienne consultation : « La visite est-elle obligatoire ? ». Cet exemple ne fixe aucune exigence pour le présent lot.",
+      "text_sha256": "590df0ecaf22e1ddc3ea19f21a3470f58a2e264dbabd08b991b26863065af877"
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000006216",
+      "tenant_id": "00000000-0000-0000-0000-0000000061a9",
+      "case_id": "00000000-0000-0000-0000-0000000061aa",
+      "version_id": "00000000-0000-0000-0000-0000000061ab",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 11,
+      "family": "RC",
+      "text": "Lot 101 — Dossier technique. Un mémoire décrivant les moyens, le phasage et l'organisation sera inclus dans l'offre.",
+      "text_sha256": "41569c0ea3709ccb96734bfcc0d764f42a326ccdc54c15e5d8f29c5877db0d01"
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000006217",
+      "tenant_id": "00000000-0000-0000-0000-0000000061a9",
+      "case_id": "00000000-0000-0000-0000-0000000061aa",
+      "version_id": "00000000-0000-0000-0000-0000000061ab",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 12,
+      "family": "RC",
+      "text": "Lot 102 : la DPGF est à compléter avec les prix unitaires et les montants.",
+      "text_sha256": "2ff58249f7211b312333d62bd57e6b23d491f5a5fa1238bf46597040af5c8096"
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000006218",
+      "tenant_id": "00000000-0000-0000-0000-0000000061ac",
+      "case_id": "00000000-0000-0000-0000-0000000061ad",
+      "version_id": "00000000-0000-0000-0000-0000000061ae",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 13,
+      "family": "RC",
+      "text": "Lot 103 : une visite de site est obligatoire.",
+      "text_sha256": "782905f831e0c99b6615e3956b1645804b196fa70715256fccf620807647c7ad"
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000006219",
+      "tenant_id": "00000000-0000-0000-0000-0000000061a9",
+      "case_id": "00000000-0000-0000-0000-0000000061af",
+      "version_id": "00000000-0000-0000-0000-0000000061b0",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 14,
+      "family": "RC",
+      "text": "Lot 104 : une visite de site est obligatoire.",
+      "text_sha256": "656464194378354229526c50e9371bd4f5dbcd8a0f77d5942419cad01f3e6eb2"
+    },
+    {
+      "id": "00000000-0000-0000-0000-00000000621a",
+      "tenant_id": "00000000-0000-0000-0000-0000000061a9",
+      "case_id": "00000000-0000-0000-0000-0000000061aa",
+      "version_id": "00000000-0000-0000-0000-0000000061b1",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": false,
+      "extraction_status": "COMPLETED",
+      "page": 15,
+      "family": "RC",
+      "text": "Lot 105 : une visite de site est obligatoire.",
+      "text_sha256": "cf2ebe142444dd968127e5473c4bfd0b6984d41001d1c0537a1209963513a38a"
+    },
+    {
+      "id": "00000000-0000-0000-0000-00000000621b",
+      "tenant_id": "00000000-0000-0000-0000-0000000061a9",
+      "case_id": "00000000-0000-0000-0000-0000000061aa",
+      "version_id": "00000000-0000-0000-0000-0000000061ab",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "REVIEW_REQUIRED",
+      "page": 16,
+      "family": "RC",
+      "text": "Lot 106 : une visite de site est obligatoire.",
+      "text_sha256": "72939558d7ca952883f8de5ae0061516b2c5ca61a3454c1eb4dae58d49fb2a47"
+    }
+  ],
+  "queries": [
+    {
+      "id": "recognition",
+      "text": "Sans passage préalable dans les locaux du lot 91, notre offre serait-elle recevable ?",
+      "query_sha256": "3a70675af8fcadf2b5cca00f25deb1619908a55cb4cf29e21b667c8cc93c55e3",
+      "semantic_request": {
+        "subject": "VISIT_SITE",
+        "demand": "OBLIGATION",
+        "lot": 91
+      },
+      "gold_sources": [
+        "00000000-0000-0000-0000-00000000620c"
+      ],
+      "gold_regions": [
+        {
+          "source_fragment_id": "00000000-0000-0000-0000-00000000620c",
+          "start_byte": 0,
+          "end_byte": 173,
+          "excerpt": "91 — Accès au bâtiment. La reconnaissance préalable des locaux constitue une condition de recevabilité de l'offre. Aucun créneau n'est fixé dans le présent article.",
+          "source_sha256": "cef1ed7abc0895f6deae78e64f7e0bbed2e5129e3c4ff49e402cfd7b4eb83564",
+          "value": "REQUIRED",
+          "kind": "ASSERTION",
+          "applicability": "UNKNOWN"
+        }
+      ],
+      "annotation_rationale": "Reconnaissance préalable = visite des locaux ; recevabilité conditionnée, pas de calendrier déduit.",
+      "runtime_expectations": null,
+      "protected_runtime_unknown": false,
+      "fact_ids": []
+    },
+    {
+      "id": "table",
+      "text": "Dans le tableau du lot 92, peut-on faire l'impasse sur la visite de site ?",
+      "query_sha256": "46223ec165957c2ec36ea1def01242670c4697c5460b7de8a6373e281bf5f850",
+      "semantic_request": {
+        "subject": "VISIT_SITE",
+        "demand": "OBLIGATION",
+        "lot": 92
+      },
+      "gold_sources": [
+        "00000000-0000-0000-0000-00000000620d"
+      ],
+      "gold_regions": [
+        {
+          "source_fragment_id": "00000000-0000-0000-0000-00000000620d",
+          "start_byte": 0,
+          "end_byte": 121,
+          "excerpt": "Tableau des formalités\nLot 92 | Visite de site | Caractère : obligatoire\nL'inscription se fait auprès du secrétariat.",
+          "source_sha256": "bba09b85eb1c2dab0db9a55acbec3a0596af974c91329958d1b3e79ddf12ecbf",
+          "value": "REQUIRED",
+          "kind": "ASSERTION",
+          "applicability": "UNKNOWN"
+        }
+      ],
+      "annotation_rationale": "Une ligne de tableau porte explicitement le caractère obligatoire.",
+      "runtime_expectations": null,
+      "protected_runtime_unknown": false,
+      "fact_ids": []
+    },
+    {
+      "id": "conditional-doc",
+      "text": "Pour candidater au lot 93, à quel stade nous réclamera-t-on le DC2 ?",
+      "query_sha256": "5c94653cd120969d335edb5a675930f16c109830c2c33f18be9198bf3e8df42f",
+      "semantic_request": {
+        "subject": "DC2",
+        "demand": "DATE_TIME",
+        "lot": 93
+      },
+      "gold_sources": [
+        "00000000-0000-0000-0000-00000000620e"
+      ],
+      "gold_regions": [
+        {
+          "source_fragment_id": "00000000-0000-0000-0000-00000000620e",
+          "start_byte": 0,
+          "end_byte": 124,
+          "excerpt": "Pièces de candidature, lot 93. Le formulaire DC2 ne sera réclamé qu'aux opérateurs invités à poursuivre la procédure.",
+          "source_sha256": "b7c6ade2ceab22ae87dc957de9dd9d59b91816a52212f7f491edefd7af47ecf9",
+          "value": "UNKNOWN",
+          "kind": "UNKNOWN",
+          "applicability": "UNKNOWN"
+        }
+      ],
+      "annotation_rationale": "La réponse est un événement conditionnel, pas une date certaine ; condition entière conservée.",
+      "runtime_expectations": null,
+      "protected_runtime_unknown": false,
+      "fact_ids": [
+        "conditional-stage"
+      ]
+    },
+    {
+      "id": "dispense",
+      "text": "La dispense annoncée au lot 94 nous évite-t-elle de déposer un DC1 ?",
+      "query_sha256": "5c0665dacaa56b55750059e6ca1b2726098a2eb7535e512873dab715a3e5e606",
+      "semantic_request": {
+        "subject": "DC1",
+        "demand": "OBLIGATION",
+        "lot": 94
+      },
+      "gold_sources": [
+        "00000000-0000-0000-0000-00000000620f"
+      ],
+      "gold_regions": [
+        {
+          "source_fragment_id": "00000000-0000-0000-0000-00000000620f",
+          "start_byte": 0,
+          "end_byte": 125,
+          "excerpt": "Lot 94 — Le pouvoir adjudicateur dispense les candidats de produire le DC1. Cette dispense ne concerne aucune autre pièce.",
+          "source_sha256": "f223a814152893175779994a8ebb31656beee6a5b21d5d25fd3a5de538fa05da",
+          "value": "NOT_REQUIRED",
+          "kind": "NEGATION",
+          "applicability": "UNKNOWN"
+        }
+      ],
+      "annotation_rationale": "Dispense explicite limitée au DC1, aucune propagation aux autres pièces.",
+      "runtime_expectations": null,
+      "protected_runtime_unknown": false,
+      "fact_ids": []
+    },
+    {
+      "id": "two-docs",
+      "text": "Sur le lot 95, le DC1 suffit-il à lui seul, sans DC2 ?",
+      "query_sha256": "717001c8e88d32056c2548a3731fb035ee49d9670e31a215a4035c56ea652824",
+      "semantic_request": {
+        "subject": "MULTIPLE",
+        "demand": "OBLIGATION",
+        "lot": 95
+      },
+      "gold_sources": [
+        "00000000-0000-0000-0000-000000006210"
+      ],
+      "gold_regions": [
+        {
+          "source_fragment_id": "00000000-0000-0000-0000-000000006210",
+          "start_byte": 0,
+          "end_byte": 119,
+          "excerpt": "Pour le lot 95, le dossier de candidature comprend deux formulaires distincts : DC1 et DC2. Chacun doit être présent.",
+          "source_sha256": "a5ff4fcccde54553f04911c85af514c34a2415b33488624627f2135d8c28eaf7",
+          "value": "REQUIRED",
+          "kind": "ASSERTION",
+          "applicability": "UNKNOWN"
+        }
+      ],
+      "annotation_rationale": "Deux sujets et deux exigences certaines dans la source ; demande multiple hors contrat runtime.",
+      "runtime_expectations": null,
+      "protected_runtime_unknown": true,
+      "fact_ids": []
+    },
+    {
+      "id": "truncated",
+      "text": "Quelles réserves accompagnent la remise du DC2 pour le lot 96 ?",
+      "query_sha256": "3e8ac4c0e15b8581e6f45070a897cbcd0492b8d4452baf3b663cb20d0ec9d5e0",
+      "semantic_request": {
+        "subject": "DC2",
+        "demand": "CONDITION",
+        "lot": 96
+      },
+      "gold_sources": [
+        "00000000-0000-0000-0000-000000006211"
+      ],
+      "gold_regions": [
+        {
+          "source_fragment_id": "00000000-0000-0000-0000-000000006211",
+          "start_byte": 0,
+          "end_byte": 48,
+          "excerpt": "Lot 96. Il est demandé de remettre le DC2 si…",
+          "source_sha256": "c899e3df9b80b3833221863d57278377a282319ba890461dd92d3b79f641a77a",
+          "value": "UNKNOWN",
+          "kind": "UNKNOWN",
+          "applicability": "UNKNOWN"
+        }
+      ],
+      "annotation_rationale": "Le si tronqué ne prouve pas la condition ; ne rien compléter.",
+      "runtime_expectations": null,
+      "protected_runtime_unknown": true,
+      "fact_ids": []
+    },
+    {
+      "id": "mixed-source-visit",
+      "text": "Dans l'article 7 du lot 97, est-ce le déplacement dans les locaux qui est imposé ?",
+      "query_sha256": "35fb4756e59c9ab5a1118597f4eca705c106924ddba024337f7dff0277772d5d",
+      "semantic_request": {
+        "subject": "VISIT_SITE",
+        "demand": "OBLIGATION",
+        "lot": 97
+      },
+      "gold_sources": [
+        "00000000-0000-0000-0000-000000006212"
+      ],
+      "gold_regions": [
+        {
+          "source_fragment_id": "00000000-0000-0000-0000-000000006212",
+          "start_byte": 0,
+          "end_byte": 128,
+          "excerpt": "Article 7, lot 97 : la visite des locaux est obligatoire. Le même article précise que le DC2 doit figurer dans la candidature.",
+          "source_sha256": "916b9aeefd46864c382aaca3b25f94f407cc95848aacb4b2c31f6a74af7e800f",
+          "value": "REQUIRED",
+          "kind": "ASSERTION",
+          "applicability": "UNKNOWN"
+        }
+      ],
+      "annotation_rationale": "Pertinence visite malgré seconde exigence DC2 ; runtime multi-sujets doit rester UNKNOWN.",
+      "runtime_expectations": null,
+      "protected_runtime_unknown": true,
+      "fact_ids": []
+    },
+    {
+      "id": "mixed-source-dc2",
+      "text": "Le même article 7 du lot 97 impose-t-il aussi un DC2 dans la candidature ?",
+      "query_sha256": "056ef600580bef2962d7d4a04c77e5afc81d5727630b45d5325fb47ee5d243d2",
+      "semantic_request": {
+        "subject": "DC2",
+        "demand": "OBLIGATION",
+        "lot": 97
+      },
+      "gold_sources": [
+        "00000000-0000-0000-0000-000000006212"
+      ],
+      "gold_regions": [
+        {
+          "source_fragment_id": "00000000-0000-0000-0000-000000006212",
+          "start_byte": 0,
+          "end_byte": 128,
+          "excerpt": "Article 7, lot 97 : la visite des locaux est obligatoire. Le même article précise que le DC2 doit figurer dans la candidature.",
+          "source_sha256": "916b9aeefd46864c382aaca3b25f94f407cc95848aacb4b2c31f6a74af7e800f",
+          "value": "REQUIRED",
+          "kind": "ASSERTION",
+          "applicability": "UNKNOWN"
+        }
+      ],
+      "annotation_rationale": "Pertinence DC2 malgré première exigence visite ; pas de propagation du sujet.",
+      "runtime_expectations": null,
+      "protected_runtime_unknown": true,
+      "fact_ids": []
+    },
+    {
+      "id": "withdrawn",
+      "text": "Après le rectificatif du lot 98, la visite de chantier reste-t-elle une obligation ?",
+      "query_sha256": "e21f7fbec39de33faf43858049b713b18df291bb54faf8c9058317fd0c1fa9f9",
+      "semantic_request": {
+        "subject": "VISIT_SITE",
+        "demand": "OBLIGATION",
+        "lot": 98
+      },
+      "gold_sources": [
+        "00000000-0000-0000-0000-000000006213"
+      ],
+      "gold_regions": [
+        {
+          "source_fragment_id": "00000000-0000-0000-0000-000000006213",
+          "start_byte": 0,
+          "end_byte": 172,
+          "excerpt": "Rectificatif du règlement, lot 98. L'obligation de visite de chantier mentionnée dans la rédaction initiale est supprimée. Une reconnaissance volontaire reste possible.",
+          "source_sha256": "3d7559c09d527f9353ae08407d6e2be0621d374d717130dd1604b5a9f7e512ab",
+          "value": "NOT_REQUIRED",
+          "kind": "NEGATION",
+          "applicability": "UNKNOWN"
+        }
+      ],
+      "annotation_rationale": "Suppression explicite dans la source rectificative ; applicabilité humaine reste UNKNOWN.",
+      "runtime_expectations": null,
+      "protected_runtime_unknown": false,
+      "fact_ids": []
+    },
+    {
+      "id": "schedule",
+      "text": "Pour le lot 99, indiquez le début de la visite de site et dites si elle est obligatoire.",
+      "query_sha256": "6e0af0c731c4365a270004ccf3258d5ca27261f5c88ae350dbe0c0f829cf8338",
+      "semantic_request": {
+        "subject": "VISIT_SITE",
+        "demand": "MULTIPLE",
+        "lot": 99
+      },
+      "gold_sources": [
+        "00000000-0000-0000-0000-000000006214"
+      ],
+      "gold_regions": [
+        {
+          "source_fragment_id": "00000000-0000-0000-0000-000000006214",
+          "start_byte": 0,
+          "end_byte": 141,
+          "excerpt": "Lot 99 — Informations pratiques. La visite de site commencera à 10 h 30. Le caractère obligatoire de cette visite n'est pas indiqué ici.",
+          "source_sha256": "dfa376fadad24437f68aad6844f07106fde9b9f9c76353bfe7fc8bd2c9df22ce",
+          "value": "UNKNOWN",
+          "kind": "UNKNOWN",
+          "applicability": "UNKNOWN"
+        }
+      ],
+      "annotation_rationale": "Deux demandes : horaire déclaré présent, obligation non établie ; runtime non couvert.",
+      "runtime_expectations": null,
+      "protected_runtime_unknown": true,
+      "fact_ids": [
+        "declared-time"
+      ]
+    },
+    {
+      "id": "quoted",
+      "text": "L'exemple cité au lot 100 permet-il d'affirmer qu'une visite est obligatoire ?",
+      "query_sha256": "c287bb97994f40c764fc1bfb4cd5e5d575ed2c12c8b67405e2a29e1f18a952b2",
+      "semantic_request": {
+        "subject": "VISIT",
+        "demand": "OBLIGATION",
+        "lot": 100
+      },
+      "gold_sources": [
+        "00000000-0000-0000-0000-000000006215"
+      ],
+      "gold_regions": [
+        {
+          "source_fragment_id": "00000000-0000-0000-0000-000000006215",
+          "start_byte": 0,
+          "end_byte": 168,
+          "excerpt": "Lot 100. Exemple de question posée lors d'une ancienne consultation : « La visite est-elle obligatoire ? ». Cet exemple ne fixe aucune exigence pour le présent lot.",
+          "source_sha256": "590df0ecaf22e1ddc3ea19f21a3470f58a2e264dbabd08b991b26863065af877",
+          "value": "UNKNOWN",
+          "kind": "UNKNOWN",
+          "applicability": "UNKNOWN"
+        }
+      ],
+      "annotation_rationale": "Source pertinente pour répondre sur cet exemple : disclaimer actuel explicite, citation historique non probante ; obligation UNKNOWN, jamais NOT_REQUIRED.",
+      "runtime_expectations": null,
+      "protected_runtime_unknown": true,
+      "fact_ids": [
+        "historical-question",
+        "quote-disclaimer"
+      ]
+    },
+    {
+      "id": "memo",
+      "text": "Les moyens et le phasage du lot 101 doivent-ils être présentés dans un mémoire technique ?",
+      "query_sha256": "26a8b8ba2f194943ebd7572cbe5dbeea6b4c3c8aea68d29fda5a36f99aba30c3",
+      "semantic_request": {
+        "subject": "MEMOIRE_TECHNIQUE",
+        "demand": "OBLIGATION",
+        "lot": 101
+      },
+      "gold_sources": [
+        "00000000-0000-0000-0000-000000006216"
+      ],
+      "gold_regions": [
+        {
+          "source_fragment_id": "00000000-0000-0000-0000-000000006216",
+          "start_byte": 0,
+          "end_byte": 120,
+          "excerpt": "Lot 101 — Dossier technique. Un mémoire décrivant les moyens, le phasage et l'organisation sera inclus dans l'offre.",
+          "source_sha256": "41569c0ea3709ccb96734bfcc0d764f42a326ccdc54c15e5d8f29c5877db0d01",
+          "value": "REQUIRED",
+          "kind": "ASSERTION",
+          "applicability": "UNKNOWN"
+        }
+      ],
+      "annotation_rationale": "Mémoire technique demandé à travers son contenu ; obligation, aucune localisation physique déduite.",
+      "runtime_expectations": null,
+      "protected_runtime_unknown": false,
+      "fact_ids": []
+    },
+    {
+      "id": "no-lot",
+      "text": "À propos de la visite de site, qu'est-ce qui est obligatoire dans les pièces ?",
+      "query_sha256": "6b8e09fc00051806db60e60bd68f6315e6064afa8c81eb43357df0bfc6cf36fe",
+      "semantic_request": {
+        "subject": "VISIT_SITE",
+        "demand": "OBLIGATION",
+        "lot": null
+      },
+      "gold_sources": [
+        "00000000-0000-0000-0000-00000000620c",
+        "00000000-0000-0000-0000-00000000620d",
+        "00000000-0000-0000-0000-000000006212",
+        "00000000-0000-0000-0000-000000006213",
+        "00000000-0000-0000-0000-000000006214"
+      ],
+      "gold_regions": [
+        {
+          "source_fragment_id": "00000000-0000-0000-0000-00000000620c",
+          "start_byte": 0,
+          "end_byte": 173,
+          "excerpt": "91 — Accès au bâtiment. La reconnaissance préalable des locaux constitue une condition de recevabilité de l'offre. Aucun créneau n'est fixé dans le présent article.",
+          "source_sha256": "cef1ed7abc0895f6deae78e64f7e0bbed2e5129e3c4ff49e402cfd7b4eb83564",
+          "value": "REQUIRED",
+          "kind": "ASSERTION",
+          "applicability": "UNKNOWN"
+        },
+        {
+          "source_fragment_id": "00000000-0000-0000-0000-00000000620d",
+          "start_byte": 0,
+          "end_byte": 121,
+          "excerpt": "Tableau des formalités\nLot 92 | Visite de site | Caractère : obligatoire\nL'inscription se fait auprès du secrétariat.",
+          "source_sha256": "bba09b85eb1c2dab0db9a55acbec3a0596af974c91329958d1b3e79ddf12ecbf",
+          "value": "REQUIRED",
+          "kind": "ASSERTION",
+          "applicability": "UNKNOWN"
+        },
+        {
+          "source_fragment_id": "00000000-0000-0000-0000-000000006212",
+          "start_byte": 0,
+          "end_byte": 128,
+          "excerpt": "Article 7, lot 97 : la visite des locaux est obligatoire. Le même article précise que le DC2 doit figurer dans la candidature.",
+          "source_sha256": "916b9aeefd46864c382aaca3b25f94f407cc95848aacb4b2c31f6a74af7e800f",
+          "value": "REQUIRED",
+          "kind": "ASSERTION",
+          "applicability": "UNKNOWN"
+        },
+        {
+          "source_fragment_id": "00000000-0000-0000-0000-000000006213",
+          "start_byte": 0,
+          "end_byte": 172,
+          "excerpt": "Rectificatif du règlement, lot 98. L'obligation de visite de chantier mentionnée dans la rédaction initiale est supprimée. Une reconnaissance volontaire reste possible.",
+          "source_sha256": "3d7559c09d527f9353ae08407d6e2be0621d374d717130dd1604b5a9f7e512ab",
+          "value": "NOT_REQUIRED",
+          "kind": "NEGATION",
+          "applicability": "UNKNOWN"
+        },
+        {
+          "source_fragment_id": "00000000-0000-0000-0000-000000006214",
+          "start_byte": 0,
+          "end_byte": 141,
+          "excerpt": "Lot 99 — Informations pratiques. La visite de site commencera à 10 h 30. Le caractère obligatoire de cette visite n'est pas indiqué ici.",
+          "source_sha256": "dfa376fadad24437f68aad6844f07106fde9b9f9c76353bfe7fc8bd2c9df22ce",
+          "value": "UNKNOWN",
+          "kind": "UNKNOWN",
+          "applicability": "UNKNOWN"
+        }
+      ],
+      "annotation_rationale": "Sans lot, cinq sources pertinentes : reconnaissance/visites obligatoires, suppression et caractère non indiqué ; toutes candidates, aucune opposition inter-lots ou applicabilité déduite.",
+      "runtime_expectations": null,
+      "protected_runtime_unknown": true,
+      "fact_ids": [
+        "declared-time"
+      ]
+    },
+    {
+      "id": "foreign-tenant",
+      "text": "Le déplacement sur site est-il imposé pour le lot 103 ?",
+      "query_sha256": "b96a1de65bd79aabd4b0264007065b8d7f19acc46a2b304f59d0e3d570f288e2",
+      "semantic_request": {
+        "subject": "VISIT_SITE",
+        "demand": "OBLIGATION",
+        "lot": 103
+      },
+      "gold_sources": [],
+      "gold_regions": [],
+      "annotation_rationale": "Seule source tenant étranger, doit rester inobservable.",
+      "runtime_expectations": null,
+      "protected_runtime_unknown": false,
+      "fact_ids": []
+    },
+    {
+      "id": "foreign-case",
+      "text": "Peut-on éviter la visite du lot 104 ?",
+      "query_sha256": "b564f0f4651315ae7f44e8367143fa28ee5d5107f89eed71f952e3188a657834",
+      "semantic_request": {
+        "subject": "VISIT_SITE",
+        "demand": "OBLIGATION",
+        "lot": 104
+      },
+      "gold_sources": [],
+      "gold_regions": [],
+      "annotation_rationale": "Seule source Affaire étrangère, doit rester inobservable.",
+      "runtime_expectations": null,
+      "protected_runtime_unknown": false,
+      "fact_ids": []
+    },
+    {
+      "id": "old-version",
+      "text": "Quelles contraintes de visite s'appliquent au lot 105 ?",
+      "query_sha256": "da3060491af4037681e782486b90f55c025c44b1994fe16164d76c7a8ecab9c9",
+      "semantic_request": {
+        "subject": "VISIT_SITE",
+        "demand": "OBLIGATION",
+        "lot": 105
+      },
+      "gold_sources": [],
+      "gold_regions": [],
+      "annotation_rationale": "Version non courante exclue, pas de réemploi du texte historique.",
+      "runtime_expectations": null,
+      "protected_runtime_unknown": false,
+      "fact_ids": []
+    },
+    {
+      "id": "partial",
+      "text": "Le lot 106 impose-t-il une visite de site avant de soumissionner ?",
+      "query_sha256": "475efab92eed2e3de5762cfff4d933b01d75d8b78e7d3cfd84d9373642c0cd0e",
+      "semantic_request": {
+        "subject": "VISIT_SITE",
+        "demand": "OBLIGATION",
+        "lot": 106
+      },
+      "gold_sources": [],
+      "gold_regions": [],
+      "annotation_rationale": "Extraction REVIEW_REQUIRED exclue du retrieval courant, contenu partiel non qualifiant.",
+      "runtime_expectations": null,
+      "protected_runtime_unknown": false,
+      "fact_ids": []
+    },
+    {
+      "id": "financial",
+      "text": "Donnez le montant de la DPGF pour le lot 102.",
+      "query_sha256": "f3f913a1bd47c4f470e26162dcd8b217540487800252f3aa3bb628f70832b0a0",
+      "semantic_request": {
+        "subject": "DPGF",
+        "demand": "FINANCIAL",
+        "lot": 102
+      },
+      "gold_sources": [],
+      "gold_regions": [],
+      "annotation_rationale": "FINANCIAL_SCOPE_REFUSED ; DPGF non évaluable, pas un vrai négatif sémantique.",
+      "runtime_expectations": null,
+      "protected_runtime_unknown": false,
+      "fact_ids": []
+    }
+  ],
+  "qualification_protocol": {
+    "status": "FROZEN_FOR_MEASUREMENT",
+    "runtime_policy": "rc-conditional-v10",
+    "model_tuning_allowed": false,
+    "production_activation_allowed": false,
+    "top_k": 10,
+    "report_at": [
+      1,
+      5,
+      10
+    ],
+    "latency_budget_ms": 1500,
+    "semantic_positive_queries": 13,
+    "negative_scope_queries": 4,
+    "financial_non_evaluable_queries": 1,
+    "non_applicable_citation_queries": 1,
+    "max_relevant_sources": 5,
+    "blind_or_statistically_independent": false,
+    "source_origin": "New synthetic discourse/table/withdrawal/ellipsis/cross-topic examples; not transformed engine outputs",
+    "pending": [
+      "freeze then measurement"
+    ],
+    "engine_invoked": false,
+    "citation_subset_of_positive_queries": true,
+    "mapping_design": {
+      "semantic_axis": "Compare subject/demand/lot and documentary qrels independently of current parser vocabulary; never infer expected coverage from actual output",
+      "parser_axis": "Record closed subject/demand/coverage separately; MULTIPLE and CONDITION semantic demands have no direct closed-enum equivalent",
+      "safety_axis": "All answer_state values must stay UNKNOWN; protected_runtime_unknown does not mean documentary sources are irrelevant and does not force candidate retrieval",
+      "lexical_anchor_axis": "Evaluate DEMAND lexical-cue contract only on recognized forms; semantic region spans are not lexical anchors",
+      "citation_axis": "Documentary relevance may include a disclaimer; never map that to NOT_REQUIRED or applicability",
+      "financial_axis": "FINANCIAL_SCOPE_REFUSED, exclude from recall denominator and report refusal separately"
+    },
+    "independent_review": "Two P2 semantic ambiguities corrected before preparation freeze; 4 facts preserve complete condition/time/quotation/disclaimer; no engine invoked",
+    "preparation_sha256": "ba3d4c1b8fd5d9894717ea3b53907b505371ea3f523f499b12b7ff5a92b1a194",
+    "restricted_source_ids": [
+      "00000000-0000-0000-0000-00000000620e",
+      "00000000-0000-0000-0000-000000006210",
+      "00000000-0000-0000-0000-000000006211",
+      "00000000-0000-0000-0000-000000006212",
+      "00000000-0000-0000-0000-000000006214",
+      "00000000-0000-0000-0000-000000006215"
+    ],
+    "measurement_adapter": "qualify_rc_semantic.py",
+    "legacy_expectations": "observed separately, never injected into semantic gold",
+    "profile_sha256": "30df2b3a836607c4bfa3943544b1f49cc4224e72c2abd99bce44e638dc5d685f",
+    "source_ranking_budget": "cutoff on ranked segments before source deduplication; no rank compression",
+    "preflight_sql": "16 exact fragments/12 eligible sources verified without model",
+    "review": "four P2 corrections in adapter verified before freeze; annotations unchanged"
+  },
+  "gold_semantics": {
+    "source_relevance": "Documentary evidence relevant to answering the question, including explicit limits; not proof of applicable obligation",
+    "region_value": "Candidate obligation value only; independent condition/time facts are annotated separately",
+    "applicability": "UNKNOWN for all source regions",
+    "runtime_coverage": "Not inferred from semantic gold; runtime_expectations must stay null"
+  },
+  "source_facts": [
+    {
+      "id": "conditional-stage",
+      "source_fragment_id": "00000000-0000-0000-0000-00000000620e",
+      "source_sha256": "b7c6ade2ceab22ae87dc957de9dd9d59b91816a52212f7f491edefd7af47ecf9",
+      "kind": "CONDITION",
+      "start_byte": 71,
+      "end_byte": 123,
+      "excerpt": "aux opérateurs invités à poursuivre la procédure",
+      "normalized_value": null
+    },
+    {
+      "id": "declared-time",
+      "source_fragment_id": "00000000-0000-0000-0000-000000006214",
+      "source_sha256": "dfa376fadad24437f68aad6844f07106fde9b9f9c76353bfe7fc8bd2c9df22ce",
+      "kind": "DECLARED_LOCAL_TIME",
+      "start_byte": 67,
+      "end_byte": 74,
+      "excerpt": "10 h 30",
+      "normalized_value": null
+    },
+    {
+      "id": "historical-question",
+      "source_fragment_id": "00000000-0000-0000-0000-000000006215",
+      "source_sha256": "590df0ecaf22e1ddc3ea19f21a3470f58a2e264dbabd08b991b26863065af877",
+      "kind": "NON_APPLICABLE_QUOTATION",
+      "start_byte": 71,
+      "end_byte": 109,
+      "excerpt": "« La visite est-elle obligatoire ? »",
+      "normalized_value": null
+    },
+    {
+      "id": "quote-disclaimer",
+      "source_fragment_id": "00000000-0000-0000-0000-000000006215",
+      "source_sha256": "590df0ecaf22e1ddc3ea19f21a3470f58a2e264dbabd08b991b26863065af877",
+      "kind": "DISCLAIMER",
+      "start_byte": 111,
+      "end_byte": 168,
+      "excerpt": "Cet exemple ne fixe aucune exigence pour le présent lot.",
+      "normalized_value": null
+    }
+  ]
+}

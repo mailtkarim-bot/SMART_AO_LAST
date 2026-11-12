@@ -28,6 +28,7 @@ class PatronDecisionDossier:
     conditions: tuple[dict[str, object], ...]
     sources: tuple[dict[str, object], ...]
     context_fingerprint: str | None = None
+    contract_evidence_links: tuple[dict[str, object], ...] = ()
 
 
 class PatronDecisionDossierService:
@@ -58,6 +59,23 @@ class PatronDecisionDossierService:
             raise PermissionError(decision.code)
 
         lookup = self._reader.read(tenant_id=actor.tenant_id, case_id=case_id)
+        if any(ref.aggregate_type == "ANALYSIS_ASSESSMENT" for ref in lookup.references):
+            private = self._policy.authorize(
+                context=actor,
+                request=AuthorizationRequest(
+                    action=Capability.PRICING_READ,
+                    resource=AuthorizationResource(
+                        resource_type="DECISION_DOSSIER",
+                        resource_id=case_id,
+                        tenant_id=actor.tenant_id,
+                        classification=DataClassification.FINANCIAL_PRIVATE,
+                        case_id=case_id,
+                    ),
+                    evaluated_at=now,
+                ),
+            )
+            if not private.allowed:
+                raise PermissionError(private.code)
         if lookup.decision is None:
             raise PermissionError("NOT_FOUND_OR_FORBIDDEN")
         if lookup.context is None:
@@ -113,6 +131,21 @@ class PatronDecisionDossierService:
                 for item in lookup.references
             ),
             context_fingerprint=lookup.context.context_fingerprint,
+            contract_evidence_links=tuple(
+                {
+                    "link_id": str(item.id),
+                    "condition_id": str(item.condition_id),
+                    "context_id": str(item.context_id),
+                    "dce_requirement_id": str(item.dce_requirement_id),
+                    "dce_requirement_revision": item.dce_requirement_revision,
+                    "contract_impact_id": str(item.contract_impact_id),
+                    "proof_revision": item.proof_revision,
+                    "profile_version_id": str(item.profile_version_id),
+                    "profile_version": item.profile_version,
+                    "profile_content_sha256": item.profile_content_sha256,
+                }
+                for item in lookup.contract_evidence_links
+            ),
         )
 
 

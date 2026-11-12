@@ -9,10 +9,9 @@ import time
 from io import BytesIO
 from pathlib import Path
 
+from app.modules.dce.application.extraction import _project_document
 from docx import Document
 from openpyxl import Workbook
-
-from app.modules.dce.application.extraction import _project_document
 
 
 def _percentile(values: list[float], percentile: float) -> float:
@@ -22,7 +21,8 @@ def _percentile(values: list[float], percentile: float) -> float:
 
 def _text_bytes() -> bytes:
     return "\n".join(
-        f"Article {index}: exigence technique, délai et pièce justificative." for index in range(20_000)
+        f"Article {index}: exigence technique, délai et pièce justificative."
+        for index in range(20_000)
     ).encode()
 
 
@@ -43,7 +43,9 @@ def _xlsx_bytes() -> bytes:
         sheet = first if sheet_index == 0 else workbook.create_sheet(f"Lot-{sheet_index}")
         for row in range(1, 201):
             for column in range(1, 21):
-                sheet.cell(row=row, column=column, value=f"Lot {sheet_index} cellule {row}-{column}")
+                sheet.cell(
+                    row=row, column=column, value=f"Lot {sheet_index} cellule {row}-{column}"
+                )
     output = BytesIO()
     workbook.save(output)
     return output.getvalue()
@@ -89,7 +91,9 @@ def main() -> int:
             },
         }
         if projection.status != "COMPLETED":
-            raise RuntimeError(f"unexpected extraction status for {media_type}: {projection.status}")
+            raise RuntimeError(
+                f"unexpected extraction status for {media_type}: {projection.status}"
+            )
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(results, indent=2, sort_keys=True) + "\n", encoding="utf-8")

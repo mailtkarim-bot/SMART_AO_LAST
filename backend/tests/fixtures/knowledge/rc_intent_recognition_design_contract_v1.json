@@ -1,0 +1,127 @@
+{
+  "schema_version": 1,
+  "kind": "rc_intent_recognition_design_contract",
+  "status": "PROPOSED_PENDING_OWNER_CHOICE",
+  "candidate_implemented": false,
+  "recognizer_executed": false,
+  "mechanism_choice": null,
+  "recommended_mechanism": "LOCAL_COMPOSITIONAL_DETERMINISTIC",
+  "anchor_convention": "lexical-cue-v1",
+  "subjects": [
+    "VISIT",
+    "VISIT_SITE",
+    "VISIT_MEDICAL",
+    "DC1",
+    "DC2",
+    "MEMOIRE_TECHNIQUE",
+    "VARIANTS",
+    "UNKNOWN"
+  ],
+  "demands": [
+    "OBLIGATION",
+    "DATE_TIME",
+    "LOCATION",
+    "UNKNOWN"
+  ],
+  "coverage": [
+    "COVERED",
+    "UNSUPPORTED",
+    "AMBIGUOUS",
+    "UNKNOWN"
+  ],
+  "scope_states": [
+    "CANDIDATE",
+    "UNKNOWN"
+  ],
+  "decision_priority": [
+    "INVALID_QUERY_BUDGET",
+    "FINANCIAL_SCOPE_REFUSED",
+    "TRUNCATED",
+    "INVALID_LOT",
+    "MULTIPLE_LOTS",
+    "MULTIPLE_SUBJECTS",
+    "MULTIPLE_DEMANDS",
+    "UNRESOLVED_OR_NON_ACTIVE_REQUEST",
+    "UNSUPPORTED_REQUEST",
+    "COVERED_OR_UNKNOWN"
+  ],
+  "financial_policy": {
+    "file": "backend/app/modules/knowledge/application/retrieval.py",
+    "file_sha256": "74c189e50f17a72da78cb17fe99b1475d5eba7508012d3b61484c2b947dcd826",
+    "candidate_callsite_file": "backend/app/modules/knowledge/application/candidate_retrieval.py",
+    "candidate_callsite_sha256": "c87a07525621475a3b21bc117617379ea7a66500395f92460256a7e1be82a65a",
+    "whole_query_including_quotes_and_mixed": true,
+    "policy_changed": false,
+    "lexical_pattern": "\\b(?:prix|montant|marge|co[uû]t|bpu|dpgf|tr[eé]sorerie|financement|rentabilit[eé]|devis)\\b",
+    "flags": "IGNORECASE"
+  },
+  "gates": {
+    "status": "PROPOSED_BEFORE_OBSERVATION",
+    "development_covered_denominator": 16,
+    "development_covered_minimum": 15,
+    "development_abstention_denominator": 12,
+    "development_financial_denominator": 1,
+    "development_unsupported_denominator": 3,
+    "max_unsafe_promotions": 0,
+    "max_false_anchors": 0,
+    "max_invented_scopes": 0,
+    "answer_state": "UNKNOWN",
+    "interactive_p95_ms": 1500,
+    "repetitions": 4,
+    "warm_repetitions": 3,
+    "p95_method": "nearest-rank ceil(.95*n)",
+    "retrieval_allowed_only_if_coverage": "COVERED",
+    "challenge_covered_fraction_minimum": 1.0,
+    "challenge_structural_refusal_fraction_minimum": 1.0,
+    "challenge_gate_status": "PROPOSED_NOT_INHERITED_FROM_DEVELOPMENT"
+  },
+  "measured_gold_policy": "NO_CALIBRATION_NO_REWRITE",
+  "challenge_stage": "INTENT_ONLY_NOT_RETRIEVAL",
+  "challenge_exposure": "developer content read, output diagnostic or annotation correction; log and retain revision; no post-observation tuning",
+  "reasons": [
+    "INVALID_QUERY_BUDGET",
+    "FINANCIAL_SCOPE_REFUSED",
+    "TRUNCATED",
+    "INVALID_LOT",
+    "MULTIPLE_LOTS",
+    "MULTIPLE_SUBJECTS",
+    "MULTIPLE_DEMANDS",
+    "NON_ACTIVE_REQUEST",
+    "UNRESOLVED_REFERENCE",
+    "UNKNOWN_SUBJECT",
+    "UNSUPPORTED_CONDITION",
+    "UNSUPPORTED_TIME",
+    "UNSUPPORTED_LOCATION",
+    "UNIQUE_EXPLICIT_REQUEST",
+    "INSUFFICIENT_EVIDENCE",
+    "RECOGNIZER_UNAVAILABLE",
+    "INVALID_RECOGNIZER_OUTPUT"
+  ],
+  "output_shape": {
+    "expected_intent_nullable_only_for_input_error_or_financial_refusal": true,
+    "fields": [
+      "subject",
+      "demand",
+      "coverage",
+      "scope_state",
+      "lot"
+    ],
+    "reason_required": true,
+    "anchors": "ordered exact original UTF8 evidence",
+    "answer_state": "UNKNOWN",
+    "confidence_alone_authorizes_retrieval": false,
+    "field_types": {
+      "subject": "string enum",
+      "demand": "string enum",
+      "coverage": "string enum",
+      "scope_state": "string enum",
+      "lot": "JSON integer or null; never decimal string or boolean"
+    }
+  },
+  "scope_policy": {
+    "lot_min": 1,
+    "lot_max": 999,
+    "non_numeric_or_out_of_range": "UNKNOWN_OR_AMBIGUOUS_NO_RETRIEVAL",
+    "source": "existing numeric scope boundary; no expansion in this framing"
+  }
+}

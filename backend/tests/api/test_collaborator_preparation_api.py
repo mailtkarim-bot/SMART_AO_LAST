@@ -245,7 +245,9 @@ def test_collaborator_preparation_readiness_generation_and_public_projection(
         "document_kind",
         "state",
         "readiness_revision",
+        "content_format",
     }
+    assert all(item["content_format"] == "MARKDOWN" for item in body["generated_documents"])
     assert "storage_key" not in str(body)
     assert "content_sha256" not in str(body)
 

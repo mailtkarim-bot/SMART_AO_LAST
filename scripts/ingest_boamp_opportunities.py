@@ -101,7 +101,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         "pages_read": report.pages_read,
         "truncated": report.truncated,
         "candidates": [
-            {**candidate.snapshot(), "fingerprint_sha256": candidate.fingerprint()}
+            {
+                **candidate.staging_snapshot(),
+                "fingerprint_sha256": candidate.fingerprint(),
+                "transport_fingerprint_sha256": candidate.transport_fingerprint(),
+            }
             for candidate in report.candidates
         ],
     }

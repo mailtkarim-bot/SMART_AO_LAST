@@ -13,12 +13,14 @@ class RecordPaymentCycleReviewRequest(BaseModel):
     decision: Literal["ACCEPTED_FOR_PLANNING", "REVIEW_REQUIRED", "REJECTED"]
     rationale: str = Field(min_length=1)
 
+
 class RecordPaymentCycleReviewResponse(BaseModel):
     command_id: UUID
     idempotency_key: UUID
     review_id: UUID
     result_code: str
     replayed: bool
+
 
 class PaymentCycleReviewReadResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")

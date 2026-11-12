@@ -16,7 +16,7 @@ class ProposeCapabilityForCaseCommand(ApplicationCommand):
 
     proposal_id: UUID
     case_id: UUID
-    assignment_id: UUID
+    assignment_id: UUID | None = None
     capability_id: UUID
     capability_version_id: UUID
     requirement_id: UUID | None = None

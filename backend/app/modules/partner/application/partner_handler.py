@@ -61,10 +61,14 @@ def _latest_event(session: Session, *, tenant_id: UUID, case_id: UUID, partner_i
     )
 
 
-def _assert_event_id_available(session: Session, *, tenant_id: UUID, event_id: UUID) -> None:
+def _assert_event_id_available(
+    session: Session, *, tenant_id: UUID, case_id: UUID, event_id: UUID
+) -> None:
     if (
         session.scalar(
             sa.select(CasePartnerEventRecord.event_id).where(
+                CasePartnerEventRecord.tenant_id == tenant_id,
+                CasePartnerEventRecord.case_id == case_id,
                 CasePartnerEventRecord.event_id == event_id,
             )
         )
@@ -125,7 +129,9 @@ class RecordCasePartnerRequestHandler(CommandHandler):
     ) -> HandlerOutcome:
         tenant_id = UUID(str(context.tenant_id))
         _lock_case(session, tenant_id=tenant_id, case_id=command.case_id)
-        _assert_event_id_available(session, tenant_id=tenant_id, event_id=command.event_id)
+        _assert_event_id_available(
+            session, tenant_id=tenant_id, case_id=command.case_id, event_id=command.event_id
+        )
         current = _latest_event(
             session, tenant_id=tenant_id, case_id=command.case_id, partner_id=command.partner_id
         )
@@ -183,7 +189,9 @@ class RecordCasePartnerReceiptHandler(CommandHandler):
     ) -> HandlerOutcome:
         tenant_id = UUID(str(context.tenant_id))
         _lock_case(session, tenant_id=tenant_id, case_id=command.case_id)
-        _assert_event_id_available(session, tenant_id=tenant_id, event_id=command.event_id)
+        _assert_event_id_available(
+            session, tenant_id=tenant_id, case_id=command.case_id, event_id=command.event_id
+        )
         current = _latest_event(
             session, tenant_id=tenant_id, case_id=command.case_id, partner_id=command.partner_id
         )
@@ -206,6 +214,7 @@ class RecordCasePartnerReceiptHandler(CommandHandler):
             receipt_exists = session.scalar(
                 sa.select(CasePartnerEventRecord.event_id).where(
                     CasePartnerEventRecord.tenant_id == tenant_id,
+                    CasePartnerEventRecord.case_id == command.case_id,
                     CasePartnerEventRecord.event_type == "RECEIVED",
                     CasePartnerEventRecord.related_event_id == command.request_event_id,
                 )
@@ -273,7 +282,9 @@ class DeclareCasePartnerEngagementHandler(CommandHandler):
     ) -> HandlerOutcome:
         tenant_id = UUID(str(context.tenant_id))
         _lock_case(session, tenant_id=tenant_id, case_id=command.case_id)
-        _assert_event_id_available(session, tenant_id=tenant_id, event_id=command.event_id)
+        _assert_event_id_available(
+            session, tenant_id=tenant_id, case_id=command.case_id, event_id=command.event_id
+        )
         current = _latest_event(
             session, tenant_id=tenant_id, case_id=command.case_id, partner_id=command.partner_id
         )
@@ -308,6 +319,7 @@ class DeclareCasePartnerEngagementHandler(CommandHandler):
             session.scalar(
                 sa.select(CasePartnerEventRecord.event_id).where(
                     CasePartnerEventRecord.tenant_id == tenant_id,
+                    CasePartnerEventRecord.case_id == command.case_id,
                     CasePartnerEventRecord.event_type == "ENGAGEMENT_DECLARED",
                     CasePartnerEventRecord.related_event_id == receipt_row.event_id,
                 )

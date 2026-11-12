@@ -24,6 +24,7 @@ class PricingImportRowProjection:
     unit_price_minor: int | None
     total_minor: int | None
     errors: tuple[str, ...]
+    source_locator: dict | None = None
 
 
 @dataclass(frozen=True, slots=True)

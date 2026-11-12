@@ -13,9 +13,12 @@ from app.modules.knowledge.application.retrieval import (
     InMemoryVectorIndex,
     RagRetrievalService,
 )
-from app.modules.knowledge.domain.retrieval import DataClassification, RetrievalChunk, RetrievalScope
+from app.modules.knowledge.domain.retrieval import (
+    DataClassification,
+    RetrievalChunk,
+    RetrievalScope,
+)
 from app.modules.knowledge.infrastructure.bge_embeddings import BgeEmbeddingProvider
-
 
 TENANT_ID = uuid5(NAMESPACE_URL, "smartao:redacted:tenant")
 CASE_ID = uuid5(NAMESPACE_URL, "smartao:redacted:case")
@@ -59,7 +62,11 @@ def main() -> int:
     retrieval.index(chunks=chunks)
     checks = [
         ("deadline", "Quelle est la date limite de réception des offres ?", "RC"),
-        ("common_requirements", "Quelles sont les prescriptions techniques communes du marché ?", "CCTC"),
+        (
+            "common_requirements",
+            "Quelles sont les prescriptions techniques communes du marché ?",
+            "CCTC",
+        ),
         ("schedule", "Quel est le calendrier prévisionnel des travaux ?", "Planning"),
     ]
     results = []
@@ -68,8 +75,7 @@ def main() -> int:
         found = retrieval.retrieve(query=query, scope=scope, top_k=3)
         sources = [str(result.chunk.locator["source"]) for result in found]
         locators_complete = all(
-            "source" in result.chunk.locator and "chunk" in result.chunk.locator
-            for result in found
+            "source" in result.chunk.locator and "chunk" in result.chunk.locator for result in found
         )
         financial_marker_leak = any(
             marker.lower() in result.chunk.text.lower()

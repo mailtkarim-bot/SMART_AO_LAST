@@ -147,3 +147,15 @@ def test_handler_rejects_unsupported_command_and_exposes_bindings() -> None:
         )
     handlers = submission_signature_handlers()
     assert set(handlers) == {"RequestSubmissionSignature", "RecordSubmissionSignature"}
+
+
+def test_signature_request_rejects_an_exact_manifest_mismatch_before_any_act():
+    command = _request_command()
+    command.expected_manifest_sha256 = "e" * 64
+    package = SimpleNamespace(
+        id=command.submission_package_id, case_id=uuid4(), version=2, manifest_sha256="c" * 64
+    )
+    with pytest.raises(CommandExecutionError, match="SUBMISSION_MANIFEST_HASH_MISMATCH"):
+        SubmissionSignatureHandler().execute(
+            session=_session(package), command=command, context=_context()
+        )

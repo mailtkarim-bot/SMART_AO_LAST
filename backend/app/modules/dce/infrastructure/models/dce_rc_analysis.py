@@ -107,14 +107,14 @@ class DceRcRequirementObservationRecord(TenantScopedRecord, Base):
             name="uq_dce_rc_req_obs_identity",
         ),
         sa.CheckConstraint(
-            "requirement_kind IN ("
-            "'RC_DOCUMENT_CANDIDATURE', 'RC_CONTENT_OFFER', 'RC_SUBMISSION_DEADLINE', "
-            "'RC_RESPONSE_CHANNEL', 'RC_FILE_CONSTRAINT', 'RC_SITE_VISIT', "
-            "'RC_AWARD_CRITERION', 'RC_NEGOTIATION', 'RC_OFFER_VALIDITY', "
-            "'CCAP_PENALTIES', 'CCAP_RETENTION_GUARANTEE', 'CCAP_GUARANTEE', "
-            "'CCAP_INSURANCE', 'CCTP_VARIANTS', 'CCAP_SUBCONTRACTING', "
-            "'CCAP_QUALIFICATIONS'"
-            ")",
+            "requirement_kind IN ('RC_DOCUMENT_CANDIDATURE', 'RC_CONTENT_OFFER', "
+            "'RC_SUBMISSION_DEADLINE', 'RC_RESPONSE_CHANNEL', 'RC_FILE_CONSTRAINT', "
+            "'RC_SITE_VISIT', 'RC_AWARD_CRITERION', 'RC_NEGOTIATION', "
+            "'RC_OFFER_VALIDITY', 'CCAP_PENALTIES', 'CCAP_RETENTION_GUARANTEE', "
+            "'CCAP_GUARANTEE', 'CCAP_INSURANCE', 'CCTP_VARIANTS', 'CCAP_SUBCONTRACTING', "
+            "'CCAP_QUALIFICATIONS', 'DCE_TECHNICAL_PRESCRIPTION', "
+            "'DCE_LOGISTICS_CONSTRAINT', 'DCE_SCHEDULE_CONSTRAINT', 'DCE_HSE_CONSTRAINT',"
+            " 'DCE_PAYMENT_TERM', 'DCE_ACCEPTANCE_TERM')",
             name="requirement_kind",
         ),
         sa.CheckConstraint(

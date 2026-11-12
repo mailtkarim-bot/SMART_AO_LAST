@@ -41,10 +41,12 @@ class RecordPostReceptionObligationHandler(CommandHandler):
         if context.actor_kind != "PATRON_ADMIN" or context.membership_id is None:
             raise CommandExecutionError("PATRON_REQUIRED")
         case_exists = session.scalar(
-            sa.select(CaseRecord.id).where(
+            sa.select(CaseRecord.id)
+            .where(
                 CaseRecord.tenant_id == tenant_id,
                 CaseRecord.id == command.case_id,
             )
+            .with_for_update()
         )
         if case_exists is None:
             raise CommandExecutionError("CASE_NOT_FOUND_OR_FORBIDDEN")
@@ -92,6 +94,12 @@ class RecordPostReceptionObligationHandler(CommandHandler):
             )
         except ValueError as error:
             raise CommandExecutionError(str(error)) from error
+        closure_review = None
+        if getattr(command, "closure_review", None) is not None:
+            from app.modules.pricing.application.case_closure_handler import validate_closure_review
+
+            closure_review = validate_closure_review(session, tenant_id, command)
+
         session.add(
             PostReceptionObligationRecord(
                 id=command.obligation_id,
@@ -108,6 +116,7 @@ class RecordPostReceptionObligationHandler(CommandHandler):
                 sanction_ref=obligation.sanction_ref,
                 status=obligation.status,
                 actor_id=UUID(str(context.actor_id)),
+                closure_review_json=closure_review,
             )
         )
         return HandlerOutcome(

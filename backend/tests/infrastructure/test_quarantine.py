@@ -10,6 +10,7 @@ from app.modules.dce.infrastructure.quarantine import (
     LocalQuarantineStorageAdapter,
     PythonMagicContentInspectionAdapter,
 )
+from tests.support.quarantine_crash import kill_local_quarantine_write
 
 
 async def _stream(*chunks: bytes) -> AsyncIterable[bytes]:
@@ -38,6 +39,23 @@ def test_local_quarantine_round_trip_delete_and_path(tmp_path: Path):
     assert not path.exists()
 
 
+def test_local_quarantine_recalculates_private_object_digest_with_a_size_limit(
+    tmp_path: Path,
+):
+    storage = LocalQuarantineStorageAdapter(root=tmp_path)
+    written = _write(storage, "tenant/source.bin", b"authorized", b" source")
+
+    reread = storage.read_digest(storage_key="tenant/source.bin", max_bytes=100)
+
+    assert reread == (written.byte_size, written.sha256)
+    with pytest.raises(ValueError, match="private document exceeds configured read limit"):
+        storage.read_digest(storage_key="tenant/source.bin", max_bytes=3)
+
+    (tmp_path / "tenant/source.bin").write_bytes(b"tampered")
+    reread = storage.read_digest(storage_key="tenant/source.bin", max_bytes=100)
+    assert reread[1] != written.sha256
+
+
 @pytest.mark.parametrize("key", ["/absolute", "../escape", "tenant/../escape"])
 def test_local_quarantine_rejects_path_traversal_and_empty_segments(tmp_path: Path, key: str):
     storage = LocalQuarantineStorageAdapter(root=tmp_path)
@@ -58,6 +76,66 @@ def test_local_quarantine_rejects_non_bytes_and_removes_partial_file(tmp_path: P
         )
     assert not list(tmp_path.rglob("*.part"))
     assert not (tmp_path / "tenant/object").exists()
+
+
+def test_local_quarantine_cancellation_removes_partial_file(tmp_path: Path):
+    async def cancelled_stream():
+        yield b"partial"
+        raise asyncio.CancelledError()
+
+    storage = LocalQuarantineStorageAdapter(root=tmp_path)
+    with pytest.raises(asyncio.CancelledError):
+        asyncio.run(
+            storage.write(
+                storage_key="tenant/object",
+                stream=cancelled_stream(),
+                max_bytes=100,
+            )
+        )
+
+    assert not list(tmp_path.rglob("*.part"))
+    assert not (tmp_path / "tenant/object").exists()
+
+
+def test_local_quarantine_removes_only_partials_for_the_expired_storage_key(
+    tmp_path: Path,
+) -> None:
+    storage = LocalQuarantineStorageAdapter(root=tmp_path)
+    target = asyncio.run(storage.local_path(storage_key="c5/object-a"))
+    target.parent.mkdir(parents=True)
+    matching_partial = target.parent / ".object-a.0123.part"
+    unrelated_partial = target.parent / ".object-b.0456.part"
+    matching_partial.write_bytes(b"partial A")
+    unrelated_partial.write_bytes(b"partial B")
+
+    removed = asyncio.run(storage.delete_partials(storage_key="c5/object-a"))
+
+    assert removed == 1
+    assert not matching_partial.exists()
+    assert unrelated_partial.read_bytes() == b"partial B"
+    assert asyncio.run(storage.delete_partials(storage_key="c5/object-a")) == 0
+
+
+@pytest.mark.parametrize("after_rename", [False, True], ids=["part-file", "renamed-object"])
+def test_abrupt_process_exit_leaves_expected_recovery_target(
+    tmp_path: Path,
+    after_rename: bool,
+) -> None:
+    storage_key = "c5/evidence-object"
+    kill_local_quarantine_write(
+        root=tmp_path,
+        storage_key=storage_key,
+        after_rename=after_rename,
+    )
+
+    storage = LocalQuarantineStorageAdapter(root=tmp_path)
+    path = asyncio.run(storage.local_path(storage_key=storage_key))
+    if after_rename:
+        assert path.read_bytes().startswith(b"%PDF-1.7")
+        assert not list(path.parent.glob(f".{path.name}.*.part"))
+    else:
+        assert not path.exists()
+        assert list(path.parent.glob(f".{path.name}.*.part"))
 
 
 def test_local_quarantine_enforces_limit_and_cleans_partial_file(tmp_path: Path):

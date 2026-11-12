@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Literal, Protocol
 from uuid import UUID
 
 
@@ -27,6 +27,10 @@ class PricingScenarioProjection:
     floor_sales_minor: int
     target_sales_minor: int
     source_snapshot_revision: int
+    source_snapshot_id: UUID | None = None
+    source_basis_state: Literal["DECLARED_COMPLETE", "UNKNOWN"] = "UNKNOWN"
+    source_basis_reason: str | None = "UNQUALIFIED_HISTORY"
+    currency_code: str | None = None
 
 
 def project_pricing_scenario(
@@ -51,6 +55,10 @@ def project_pricing_scenario(
     floor_sales_minor: int,
     target_sales_minor: int,
     source_snapshot_revision: int,
+    source_snapshot_id: UUID | None = None,
+    source_basis_state: Literal["DECLARED_COMPLETE", "UNKNOWN"] = "UNKNOWN",
+    source_basis_reason: str | None = "UNQUALIFIED_HISTORY",
+    currency_code: str | None = None,
 ) -> PricingScenarioProjection:
     """Build a pricing scenario projection from primitive fields.
 
@@ -79,6 +87,10 @@ def project_pricing_scenario(
         floor_sales_minor=floor_sales_minor,
         target_sales_minor=target_sales_minor,
         source_snapshot_revision=source_snapshot_revision,
+        source_snapshot_id=source_snapshot_id,
+        source_basis_state=source_basis_state,
+        source_basis_reason=source_basis_reason,
+        currency_code=currency_code,
     )
 
 

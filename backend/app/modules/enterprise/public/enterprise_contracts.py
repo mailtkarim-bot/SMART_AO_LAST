@@ -150,6 +150,7 @@ class EnterpriseDocumentResponse(EnterprisePublicResponse):
     expires_at: datetime | None
     verification_status: Literal["PENDING", "VALIDATED", "EXPIRED", "REJECTED"]
     verification_revision: int = Field(ge=0)
+    sha256: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
 
 
 class EnterpriseCompanyResponse(EnterprisePublicResponse):

@@ -468,7 +468,10 @@ def build_patron_action_router(
             "rex": [
                 {
                     "rex_id": str(row.id),
-                    "p7_result_id": str(row.p7_result_id),
+                    "p7_result_id": str(row.p7_result_id) if row.p7_result_id else None,
+                    "execution_exit_act_id": str(row.execution_exit_act_id)
+                    if getattr(row, "execution_exit_act_id", None)
+                    else None,
                     "lot_reference": row.lot_reference,
                     "motif": row.motif,
                     "scope": row.scope,
@@ -566,9 +569,7 @@ def build_patron_action_router(
         }
 
     @router.get("/cases/{case_id}/teaching-sources")
-    def list_case_teaching_sources(
-        case_id: UUID, authorization: str | None = Header(default=None)
-    ):
+    def list_case_teaching_sources(case_id: UUID, authorization: str | None = Header(default=None)):
         if teaching_applicability_service is None:
             raise HTTPException(status_code=503, detail="UNAVAILABLE")
         actor = _resolve_context(
@@ -674,6 +675,7 @@ def build_patron_action_router(
                     source_expires_on=row.record.source_expires_on,
                     source_validity_at_recording=row.record.source_validity_at_recording,
                     source_validity_current=row.source_validity,
+                    context_state=getattr(row, "context_state", "UNKNOWN"),
                     source_snapshot=row.record.source_snapshot_json,
                     actor_id=row.record.actor_id,
                     recorded_at=row.record.created_at,

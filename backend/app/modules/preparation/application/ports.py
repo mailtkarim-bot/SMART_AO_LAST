@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Protocol
+from typing import Literal, Protocol
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -18,6 +18,8 @@ class PreparationRequirementInput:
     requirement_type: str
     directive_signal: str
     confirmation_outcome: str | None
+    confirmation_id: UUID | None = None
+    confirmation_revision: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -26,6 +28,7 @@ class PreparationDceInput:
 
     analysis_readiness: str
     requirements: tuple[PreparationRequirementInput, ...]
+    source_manifest_sha256: str | None = None
 
 
 class PreparationDceReader(Protocol):
@@ -39,3 +42,50 @@ class PreparationDceReader(Protocol):
         dce_version_id: UUID,
         as_of: datetime,
     ) -> PreparationDceInput | None: ...
+
+
+PreparationRequirementState = Literal["CONFIRMED", "REVIEW_REQUIRED", "NOT_APPLICABLE", "UNKNOWN"]
+PreparationSourceState = Literal["CURRENT", "EXPIRED", "UNKNOWN"]
+
+
+@dataclass(frozen=True, slots=True)
+class PreparationResponsePlanFact:
+    proposal_id: UUID
+    requirement_id: UUID | None
+    task_id: UUID | None
+    capability_version_id: UUID
+    validity_state: PreparationSourceState
+    evidence_state: PreparationSourceState
+    proof_refs: tuple[tuple[UUID, str], ...]
+
+
+@dataclass(frozen=True, slots=True)
+class PreparationResponsePlanSources:
+    dce_current: bool
+    requirement_states: dict[UUID, PreparationRequirementState]
+    facts: dict[UUID, PreparationResponsePlanFact]
+
+
+class PreparationResponsePlanSourceReader(Protocol):
+    """Resolve exact Case/DCE requirements and existing reusable capability proofs."""
+
+    def read(
+        self,
+        *,
+        session: Session,
+        tenant_id: UUID,
+        case_id: UUID,
+        assignment_id: UUID,
+        dce_version_id: UUID,
+        requirement_ids: set[UUID],
+        proposal_ids: set[UUID],
+        evaluated_at: datetime,
+    ) -> PreparationResponsePlanSources: ...
+
+
+class PreparationPrivateSourceDigestReader(Protocol):
+    """Read authorized proof digests or bounded bytes; storage keys stay internal."""
+
+    def read_digest(self, *, storage_key: str, max_bytes: int) -> tuple[int, str]: ...
+
+    def read_verified_bytes(self, *, storage_key: str, max_bytes: int) -> bytes: ...

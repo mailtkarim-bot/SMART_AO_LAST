@@ -14,9 +14,50 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  backend:
-    timeout-minutes: 30
+  backend-quality:
+    timeout-minutes: 20
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync --frozen --group dev --all-extras
+      - name: Lint
+        run: uv run ruff check backend/app backend/tests scripts/collect_coverage_diagnostics.py
+      - name: Format check
+        run: uv run ruff format --check backend/app backend/tests scripts/collect_coverage_diagnostics.py
+      - name: Type check backend
+        run: uv run mypy backend/app backend/tests scripts/collect_coverage_diagnostics.py
+      - name: Whitespace check
+        run: git diff --check
+      - name: Secrets scan
+        run: >-
+          git ls-files -z | xargs -0
+          uv run detect-secrets-hook --baseline .secrets.baseline
+          --exclude-files '^docs/|^web/pnpm-lock.yaml$'
+      - name: Dependency vulnerability audit
+        run: >-
+          uv export --all-extras --no-emit-project --no-dev --format requirements-txt
+          -o /tmp/smart_ao_requirements.txt
+          && uv run pip-audit --strict --require-hashes --disable-pip
+          -r /tmp/smart_ao_requirements.txt
+      - name: Python SAST
+        run: uv run bandit -q -r backend/app -ll
+
+  backend-shards:
+    needs: backend-quality
+    timeout-minutes: 45
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
+    env:
+      SMART_AO_TEST_DATABASE_URL: postgresql+psycopg://smart_ao:smart_ao@127.0.0.1:5432/smart_ao # pragma: allowlist secret -- disposable CI service
+      SMART_AO_TEST_DISPOSABLE_DATABASE: "1"
     services:
       postgres:
         image: postgres:16-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685
@@ -38,37 +79,46 @@ jobs:
           python-version: "3.12"
           enable-cache: true
       - name: Install dependencies
-        run: uv sync --group dev --all-extras
-      - name: Lint
-        run: uv run ruff check backend/app backend/tests
-      - name: Format check
-        run: uv run ruff format --check backend/app backend/tests
-      - name: Type check backend
-        run: uv run mypy backend/app backend/tests
-      - name: Whitespace check
-        run: git diff --check
-      - name: Secrets scan
+        run: uv sync --frozen --group dev --all-extras
+      - name: Test complete module partition
         run: >-
-          git ls-files -z | xargs -0
-          uv run detect-secrets-hook --baseline .secrets.baseline
-          --exclude-files '^docs/|^web/pnpm-lock.yaml$'
-      - name: Dependency vulnerability audit
-        run: >-
-          uv export --all-extras --no-emit-project --no-dev --format requirements-txt
-          -o /tmp/smart_ao_requirements.txt
-          && uv run pip-audit --strict -r /tmp/smart_ao_requirements.txt
-      - name: Python SAST
-        run: uv run bandit -q -r backend/app -ll
-      - name: Tests and coverage gate
-        run: >-
-          uv run pytest backend/tests -q --cov=app --cov-report=term-missing
-          --cov-report=json:ci-coverage/coverage.json
-          --cov-report=xml:ci-coverage/coverage.xml --cov-fail-under=85.50
-      - name: Collect coverage environment
+          uv run python scripts/collect_coverage_diagnostics.py
+          --output-dir ci-coverage --shard-index ${{ matrix.shard }} --shard-count 4
+      - name: Upload partition evidence
         if: always()
-        run: uv run python scripts/collect_coverage_diagnostics.py
-          --output-dir ci-coverage --environment-only
-      - name: Upload coverage diagnostics
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: coverage-shard-${{ matrix.shard }}
+          path: ci-coverage/
+          if-no-files-found: error
+
+  backend:
+    needs: [backend-quality, backend-shards]
+    if: always()
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require all backend jobs to succeed
+        if: needs.backend-quality.result != 'success' || needs.backend-shards.result != 'success'
+        run: exit 1
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync --frozen --group dev --all-extras
+      - name: Download all partition evidence
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: coverage-shard-*
+          path: ci-shards
+          merge-multiple: false
+      - name: Validate completeness and enforce global coverage
+        run: >-
+          uv run python scripts/collect_coverage_diagnostics.py
+          --output-dir ci-coverage --combine-shards ci-shards --shard-count 4
+      - name: Upload aggregate coverage diagnostics
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -98,6 +148,9 @@ jobs:
       - name: Lint cockpit
         working-directory: web
         run: pnpm lint
+      - name: Audit cockpit dependencies
+        working-directory: web
+        run: pnpm audit --registry=https://registry.npmjs.org
       - name: Test cockpit
         working-directory: web
         run: pnpm test

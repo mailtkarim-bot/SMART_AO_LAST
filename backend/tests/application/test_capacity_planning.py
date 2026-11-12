@@ -90,13 +90,13 @@ def test_service_loads_case_scoped_inputs_and_returns_safe_plan() -> None:
     assert not hasattr(plan, "margin")
 
 
-def test_service_rejects_adapter_scope_mismatch() -> None:
+@pytest.mark.parametrize("provided", [{}, {"demands": (), "supplies": ()}])
+def test_service_rejects_adapter_scope_mismatch(provided) -> None:
     source = FakeInputPort(
         CaseCapacityPlanInput(
             tenant_id=UUID("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
             case_id=CASE_ID,
-            demands=(),
-            supplies=(),
+            **provided,
         )
     )
 
@@ -126,3 +126,33 @@ def test_service_preserves_infeasible_result_without_fallback() -> None:
     assert plan.status is SolverStatus.INFEASIBLE
     assert plan.assignments == ()
     assert plan.unassigned_demand_ids == (DEMAND_A, DEMAND_B)
+
+
+@pytest.mark.parametrize(
+    ("provided", "unassigned"),
+    [
+        ({}, ()),
+        ({"demands": (ResourceDemand(id=DEMAND_A, required_units=2),)}, (DEMAND_A,)),
+        ({"supplies": (ResourceSupply(id=SUPPLY_A, capacity_units=3),)}, ()),
+    ],
+)
+def test_service_preserves_unknown_when_capacity_inputs_are_not_provided(
+    provided, unassigned
+) -> None:
+    source = FakeInputPort(CaseCapacityPlanInput(tenant_id=TENANT_ID, case_id=CASE_ID, **provided))
+    plan = CaseCapacityPlanningService(input_port=source).plan(tenant_id=TENANT_ID, case_id=CASE_ID)
+
+    assert plan.status is SolverStatus.UNKNOWN
+    assert plan.assignments == ()
+    assert plan.unassigned_demand_ids == unassigned
+
+
+def test_service_preserves_explicitly_known_empty_inputs() -> None:
+    source = FakeInputPort(
+        CaseCapacityPlanInput(tenant_id=TENANT_ID, case_id=CASE_ID, demands=(), supplies=())
+    )
+    plan = CaseCapacityPlanningService(input_port=source).plan(tenant_id=TENANT_ID, case_id=CASE_ID)
+
+    assert plan.status is SolverStatus.OPTIMAL
+    assert plan.assignments == ()
+    assert plan.unassigned_demand_ids == ()

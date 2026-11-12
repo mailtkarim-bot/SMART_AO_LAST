@@ -124,11 +124,7 @@ def downgrade() -> None:
         """
     )
     op.execute("DROP FUNCTION IF EXISTS prevent_dce_fragment_embedding_mutation()")
-    op.execute(
-        "DROP INDEX IF EXISTS ix_dce_fragment_embeddings__tenant_fragment_model"
-    )
+    op.execute("DROP INDEX IF EXISTS ix_dce_fragment_embeddings__tenant_fragment_model")
     op.execute("DROP INDEX IF EXISTS ix_dce_fragment_embeddings_tenant_id")
-    op.execute(
-        "DROP INDEX IF EXISTS ix_dce_fragment_embeddings__tenant_version_model"
-    )
+    op.execute("DROP INDEX IF EXISTS ix_dce_fragment_embeddings__tenant_version_model")
     op.drop_table("dce_fragment_embeddings")

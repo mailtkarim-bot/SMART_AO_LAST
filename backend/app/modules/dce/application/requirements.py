@@ -27,7 +27,7 @@ MATERIALIZER_ID: Final = "smart-ao-rc-requirement-materializer"
 MATERIALIZER_VERSION: Final = "2"
 SYSTEM_REQUIREMENTS_ACTOR_ID: Final = UUID("00000000-0000-0000-0000-000000000016")
 MAX_OBSERVATIONS: Final = 20_000
-_REQUIREMENT_TYPES: Final = {
+REQUIREMENT_TYPES: Final = {
     "RC_DOCUMENT_CANDIDATURE": "CANDIDATURE_DOCUMENT",
     "RC_CONTENT_OFFER": "OFFER_DOCUMENT",
     "RC_SUBMISSION_DEADLINE": "SUBMISSION_DEADLINE_SIGNAL",
@@ -44,6 +44,12 @@ _REQUIREMENT_TYPES: Final = {
     "CCTP_VARIANTS": "CONTRACT_RISK_SIGNAL",
     "CCAP_SUBCONTRACTING": "CONTRACT_RISK_SIGNAL",
     "CCAP_QUALIFICATIONS": "CONTRACT_RISK_SIGNAL",
+    "DCE_TECHNICAL_PRESCRIPTION": "TECHNICAL_PRESCRIPTION",
+    "DCE_LOGISTICS_CONSTRAINT": "LOGISTICS_CONSTRAINT",
+    "DCE_SCHEDULE_CONSTRAINT": "SCHEDULE_CONSTRAINT",
+    "DCE_HSE_CONSTRAINT": "HSE_CONSTRAINT",
+    "DCE_PAYMENT_TERM": "PAYMENT_TERM_SIGNAL",
+    "DCE_ACCEPTANCE_TERM": "ACCEPTANCE_TERM_SIGNAL",
 }
 
 
@@ -170,7 +176,7 @@ def project_requirements(*, signals: tuple[RequirementSignal, ...]) -> Requireme
         )
     if not signals:
         return RequirementProjection(status="NO_SIGNAL", failure_code=None, signals=())
-    if any(signal.requirement_kind not in _REQUIREMENT_TYPES for signal in signals):
+    if any(signal.requirement_kind not in REQUIREMENT_TYPES for signal in signals):
         return RequirementProjection(
             status="FAILED_SAFE", failure_code="REQUIREMENT_MAPPING_UNKNOWN", signals=signals
         )
@@ -218,7 +224,7 @@ def recording_command(
             DceRequirementInput(
                 requirement_id=uuid5(run_id, str(signal.observation_id)),
                 source_observation_id=signal.observation_id,
-                requirement_type=_REQUIREMENT_TYPES[signal.requirement_kind],
+                requirement_type=REQUIREMENT_TYPES[signal.requirement_kind],
                 directive_signal=signal.directive,
                 confirmation_status="PENDING_HUMAN_CONFIRMATION",
                 uncertainty_status="SOURCE_SIGNAL_ONLY",

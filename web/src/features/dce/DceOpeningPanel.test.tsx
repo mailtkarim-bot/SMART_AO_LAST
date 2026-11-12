@@ -206,3 +206,20 @@ describe("DceOpeningPanel", () => {
     expect(onAdmit).toHaveBeenCalledOnce();
   });
 });
+
+
+it("exige une confirmation exacte pour le rectificatif et rend la reprise UNKNOWN visible",()=>{
+ renderPanel({consultation,dceVersionMetadata:metadata,sourceChannel:"RECTIFICATION",file:new File(["new"],"rectificatif.txt"),canReplace:true,replacementReason:"Source reçue",replacementConfirmed:false,pending:false});
+ expect(screen.getByRole("button",{name:/Préparer et admettre/})).toBeDisabled();
+ expect(screen.getByLabelText(/Je confirme le remplacement/)).toBeVisible();
+});
+
+
+it("permet de choisir plusieurs pièces pour une même version exacte",()=>{
+ renderPanel({consultation});expect(screen.getByLabelText("Document DCE")).toHaveAttribute("multiple");
+});
+
+
+it("affiche le prédécesseur exact sans le présenter comme une nouvelle source",()=>{
+ renderPanel({consultation,dceVersionMetadata:{...metadata,predecessor_dce_version_id:"predecessor-exact"}});expect(screen.getByText(/Prédécesseur : predecessor-exact/)).toBeVisible();
+});

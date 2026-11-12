@@ -1,3 +1,4 @@
+from typing import Any
 from uuid import uuid4
 
 import pytest
@@ -8,7 +9,7 @@ from app.modules.dce.domain.contract_baseline import (
 
 
 def _proof(**overrides):
-    values = {
+    values: dict[str, Any] = {
         "case_id": uuid4(),
         "baseline_observation_id": uuid4(),
         "baseline_source_refs": ("dce://ccap/page-4",),

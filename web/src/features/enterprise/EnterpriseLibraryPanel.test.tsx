@@ -128,3 +128,15 @@ describe("EnterpriseLibraryPanel", () => {
     expect(screen.getByText(/vérification humaine reste une action séparée/)).toBeInTheDocument();
   });
 });
+
+
+it("rend l'échéance inconnue et expirée visibles sans remplacer la vérification humaine", () => {
+  renderPanel({ enterpriseCompany: { ...company, documents: [
+    { ...company.documents[0], document_id: "unknown-proof", expires_at: null },
+    { ...company.documents[0], document_id: "expired-proof", expires_at: "2020-01-01T00:00:00Z" },
+  ] } });
+  expect(screen.getByText(/Validité déclarée : UNKNOWN/)).toBeVisible();
+  expect(screen.getByText(/Échéance déclarée dépassée : EXPIRED/)).toBeVisible();
+  expect(screen.getAllByText("VALIDATED", { selector: "span" })).toHaveLength(2);
+  expect(screen.getByText(/ne vaut pas validité officielle/)).toBeVisible();
+});

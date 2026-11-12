@@ -371,6 +371,7 @@ def test_collection_is_a_closed_projection_without_forbidden_fields(
     assert response.status_code == 200
     assert set(response.json()[0]) == {
         "case_id",
+        "aggregate_revision",
         "work_label",
         "case_lifecycle",
         "commercial_stage",
@@ -378,6 +379,7 @@ def test_collection_is_a_closed_projection_without_forbidden_fields(
         "consultation_id",
         "applicable_dce_version_id",
     }
+    assert response.json()[0]["aggregate_revision"] == 1
     serialized = response.text
     for forbidden in (
         "tenant_id",

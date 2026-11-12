@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import re
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from hashlib import sha256
 from io import BytesIO
@@ -14,12 +14,17 @@ from uuid import UUID, uuid5
 from zipfile import BadZipFile, ZipFile
 
 from docx import Document
+from docx.document import Document as DocxDocument
+from docx.table import Table
+from docx.text.paragraph import Paragraph
 from openpyxl import load_workbook
-from pypdf import PdfReader
+from pypdf import PageObject, PdfReader
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.modules.dce.application.archive_inventory import inventory_zip
 from app.modules.dce.application.commands import (
+    DceArchiveEntryInput,
     DceExtractionFragmentInput,
     RecordDceDocumentExtractionCommand,
 )
@@ -30,10 +35,13 @@ from app.platform.events.dispatcher import CommandContext, CommandDispatcher, Di
 logger = logging.getLogger(__name__)
 
 EXTRACTOR_ID = "smart-ao-deterministic"
-EXTRACTOR_VERSION = "1"
+EXTRACTOR_VERSION = "4"
 MAX_SOURCE_BYTES = 128 * 1024 * 1024
 MAX_PDF_PAGES = 2_000
 MAX_DOCX_PARAGRAPHS = 100_000
+MAX_DOCX_TABLE_CELLS = 100_000
+MAX_DOCX_TABLES = 2_000
+_DOCX_NS = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
 MAX_DOCX_UNCOMPRESSED_BYTES = 50 * 1024 * 1024
 MAX_XLSX_SHEETS = 200
 MAX_XLSX_TEXT_CELLS = 500_000
@@ -41,6 +49,7 @@ MAX_TEXT_LINES = 500_000
 MAX_FRAGMENT_CHARS = 8_000
 MAX_TOTAL_CHARS = 10_000_000
 MAX_TOTAL_DOCUMENT_CHARS = 20_000_000
+PDF_LARGE_IMAGE_AREA_FRACTION = 0.25
 SYSTEM_EXTRACTION_ACTOR_ID = UUID("00000000-0000-0000-0000-000000000013")
 
 _HOSTILE_INSTRUCTION_PATTERNS = (
@@ -88,6 +97,7 @@ class ExtractionProjection:
     fragments: tuple[ExtractedFragment, ...]
     extractor_id: str = EXTRACTOR_ID
     extractor_version: str = EXTRACTOR_VERSION
+    archive_entries: tuple[DceArchiveEntryInput, ...] = ()
 
 
 class ExtractionLimitError(ValueError):
@@ -232,6 +242,7 @@ def _recording_command(
         status=projection.status,
         extracted_char_count=sum(len(fragment.text) for fragment in projection.fragments),
         failure_code=projection.failure_code,
+        archive_entries=list(projection.archive_entries),
         fragments=[
             DceExtractionFragmentInput(
                 ordinal=fragment.ordinal,
@@ -250,6 +261,15 @@ def _project_document(
     source_bytes: bytes,
     advanced_extractor: AdvancedDocumentExtractionPort | None = None,
 ) -> ExtractionProjection:
+    if media_type in {"application/zip", "application/x-zip-compressed"}:
+        return ExtractionProjection(
+            status="UNSUPPORTED",
+            failure_code="ARCHIVE_MEMBERS_NOT_ADMITTED",
+            fragments=(),
+            extractor_id="smart-ao-archive-inventory",
+            extractor_version="1",
+            archive_entries=inventory_zip(source_bytes),
+        )
     try:
         native_unsupported = False
         try:
@@ -259,6 +279,14 @@ def _project_document(
                 raise
             native_unsupported = True
             fragments = ()
+        if media_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+            document = Document(BytesIO(source_bytes))
+            if _docx_has_unread_content(document, source_bytes=source_bytes):
+                return ExtractionProjection(
+                    status="REVIEW_REQUIRED" if fragments else "FAILED_SAFE",
+                    failure_code="DOCX_TABLE_CONTENT_REVIEW_REQUIRED",
+                    fragments=fragments,
+                )
         if fragments:
             if _contains_hostile_instruction(fragments):
                 return ExtractionProjection(
@@ -266,10 +294,15 @@ def _project_document(
                     failure_code="HOSTILE_INSTRUCTION_REVIEW_REQUIRED",
                     fragments=fragments,
                 )
-            return ExtractionProjection(
+            projection = ExtractionProjection(
                 status="COMPLETED",
                 failure_code=None,
                 fragments=fragments,
+            )
+            return (
+                _enforce_pdf_content_coverage(projection, source_bytes=source_bytes)
+                if media_type == "application/pdf"
+                else projection
             )
         if advanced_extractor is not None:
             advanced_projection = advanced_extractor.extract(
@@ -277,7 +310,11 @@ def _project_document(
                 source_bytes=source_bytes,
             )
             if advanced_projection.status != "UNSUPPORTED":
-                return advanced_projection
+                return (
+                    _enforce_pdf_content_coverage(advanced_projection, source_bytes=source_bytes)
+                    if media_type == "application/pdf"
+                    else advanced_projection
+                )
         if native_unsupported:
             return ExtractionProjection(
                 status="UNSUPPORTED",
@@ -339,6 +376,91 @@ def _contains_hostile_instruction(fragments: Iterable[ExtractedFragment]) -> boo
     )
 
 
+def _enforce_pdf_content_coverage(
+    projection: ExtractionProjection, *, source_bytes: bytes
+) -> ExtractionProjection:
+    if projection.status != "COMPLETED":
+        return projection
+    reader = PdfReader(BytesIO(source_bytes))
+    if reader.is_encrypted:
+        raise ValueError("DOCUMENT_PROTECTED")
+    if len(reader.pages) > MAX_PDF_PAGES:
+        raise ExtractionLimitError
+    covered_pages = {
+        fragment.locator_json["page"]
+        for fragment in projection.fragments
+        if type(fragment.locator_json.get("page")) is int
+    }
+    painting_operations = {
+        b"Do",
+        b"INLINE IMAGE",
+        b"S",
+        b"s",
+        b"f",
+        b"F",
+        b"f*",
+        b"B",
+        b"B*",
+        b"b",
+        b"b*",
+        b"sh",
+    }
+    for number, page in enumerate(reader.pages, start=1):
+        if number in covered_pages:
+            if _has_large_direct_image(page):
+                return replace(
+                    projection,
+                    status="REVIEW_REQUIRED",
+                    failure_code="PDF_LARGE_IMAGE_REVIEW_REQUIRED",
+                )
+            continue
+        content = page.get_contents()
+        if content is None:
+            continue
+        # Blank pages are harmless; painted content with no page-anchored text is not complete.
+        if any(operator in painting_operations for _, operator in content.operations):
+            return replace(
+                projection,
+                status="REVIEW_REQUIRED",
+                failure_code="PDF_PAGE_CONTENT_UNEXTRACTED",
+            )
+    return projection
+
+
+def _has_large_direct_image(page: PageObject) -> bool:
+    resources = page.get("/Resources")
+    if resources is None:
+        return False
+    xobjects = resources.get_object().get("/XObject")
+    if xobjects is None:
+        return False
+    image_names = {
+        str(name)
+        for name, obj in xobjects.get_object().items()
+        if obj.get_object().get("/Subtype") == "/Image"
+    }
+    if not image_names:
+        return False
+    page_area = float(page.cropbox.width) * float(page.cropbox.height)
+    if page_area <= 0:
+        return True
+    image_area = 0.0
+
+    def before(
+        operator: bytes,
+        operands: list[object],
+        matrix: list[float],
+        text_matrix: list[float],
+    ) -> None:
+        nonlocal image_area
+        if operator == b"Do" and operands and str(operands[0]) in image_names:
+            image_area += abs(matrix[0] * matrix[3] - matrix[1] * matrix[2])
+
+    # shortcut: direct raster regions only; nested forms/vector semantics still need layout review.
+    page.extract_text(visitor_operand_before=before)
+    return image_area >= page_area * PDF_LARGE_IMAGE_AREA_FRACTION
+
+
 def _extract_fragments(*, media_type: str, source_bytes: bytes) -> Iterable[ExtractedFragment]:
     if media_type == "application/pdf":
         return _extract_pdf(source_bytes=source_bytes)
@@ -383,14 +505,127 @@ def _extract_docx(*, source_bytes: bytes) -> tuple[ExtractedFragment, ...]:
         raise ValueError("invalid DOCX archive") from error
 
     document = Document(BytesIO(source_bytes))
-    if len(document.paragraphs) > MAX_DOCX_PARAGRAPHS:
-        raise ExtractionLimitError
+    for tag, limit in (
+        ("p", MAX_DOCX_PARAGRAPHS),
+        ("tc", MAX_DOCX_TABLE_CELLS),
+        ("tbl", MAX_DOCX_TABLES),
+    ):
+        for count, _ in enumerate(document.element.iter(_DOCX_NS + tag), start=1):
+            if count > limit:
+                raise ExtractionLimitError
     return _fragmentize(
-        (
-            ({"kind": "docx_paragraph", "paragraph": index}, paragraph.text)
-            for index, paragraph in enumerate(document.paragraphs, start=1)
+        (locator, paragraph.text) for locator, paragraph in _iter_docx_paragraphs(document)
+    )
+
+
+def _docx_table_ambiguous(table: Table) -> bool:
+    unsupported = {
+        "gridSpan",
+        "vMerge",
+        "hMerge",
+        "gridBefore",
+        "gridAfter",
+        "ins",
+        "del",
+        "moveFrom",
+        "moveTo",
+        "drawing",
+        "pict",
+        "object",
+        "sdt",
+        "fldChar",
+        "fldSimple",
+        "altChunk",
+        "customXml",
+        "smartTag",
+        "sym",
+    }
+    unsupported_tags = {_DOCX_NS + name for name in unsupported}
+    if any(
+        node.tag in unsupported_tags
+        or node.tag.rsplit("}", 1)[-1] in {"AlternateContent", "oMath", "oMathPara"}
+        for node in table._tbl.iter()
+    ):
+        return True
+    if sum(1 for _ in table._tbl.iter(_DOCX_NS + "tbl")) != 1:
+        return True
+    columns = len(table.columns)
+    return (
+        not columns
+        or not table.rows
+        or any(
+            len(row.cells) != columns or any(not cell.paragraphs for cell in row.cells)
+            for row in table.rows
         )
     )
+
+
+def _docx_has_unread_content(document: DocxDocument, *, source_bytes: bytes) -> bool:
+    with ZipFile(BytesIO(source_bytes)) as archive:
+        if any(
+            re.fullmatch(r"word/(?:header[0-9]+|footer[0-9]+|footnotes|endnotes)\.xml", name)
+            for name in archive.namelist()
+        ):
+            return True
+    unsupported = {
+        "ins",
+        "del",
+        "moveFrom",
+        "moveTo",
+        "drawing",
+        "pict",
+        "object",
+        "sdt",
+        "fldChar",
+        "fldSimple",
+        "altChunk",
+        "footnoteReference",
+        "endnoteReference",
+        "customXml",
+        "smartTag",
+        "sym",
+    }
+    if any(
+        node.tag in {_DOCX_NS + name for name in unsupported} for node in document.element.iter()
+    ):
+        return True
+    if sum(1 for _ in document.element.iter(_DOCX_NS + "tbl")) != len(document.tables):
+        return True
+    if any(_docx_table_ambiguous(table) for table in document.tables):
+        return True
+    covered = 0
+    for _, paragraph in _iter_docx_paragraphs(document):
+        covered += 1
+        raw_text = "".join(node.text or "" for node in paragraph._p.iter(_DOCX_NS + "t"))
+        # Coverage check only: the emitted paragraph text is never normalised.
+        if raw_text != paragraph.text.replace("\t", "").replace("\n", ""):
+            return True
+    return covered != sum(1 for _ in document.element.iter(_DOCX_NS + "p"))
+
+
+def _iter_docx_paragraphs(document: DocxDocument) -> Iterable[tuple[dict[str, object], Paragraph]]:
+    paragraph_number = table_number = 0
+    for block in document.iter_inner_content():
+        if isinstance(block, Paragraph):
+            paragraph_number += 1
+            yield {"kind": "docx_paragraph", "paragraph": paragraph_number}, block
+        elif isinstance(block, Table):
+            table_number += 1
+            if _docx_table_ambiguous(block):
+                continue
+            for row_number, row in enumerate(block.rows, start=1):
+                for column_number, cell in enumerate(row.cells, start=1):
+                    for paragraph_number_in_cell, paragraph in enumerate(cell.paragraphs, start=1):
+                        yield (
+                            {
+                                "kind": "docx_table_cell",
+                                "table": table_number,
+                                "row": row_number,
+                                "column": column_number,
+                                "paragraph": paragraph_number_in_cell,
+                            },
+                            paragraph,
+                        )
 
 
 def _extract_xlsx(*, source_bytes: bytes) -> tuple[ExtractedFragment, ...]:

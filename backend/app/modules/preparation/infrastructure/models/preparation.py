@@ -73,6 +73,16 @@ class PreparationReviewRecord(TenantScopedRecord, Base):
             name="fk_preparation_review__document",
             ondelete="RESTRICT",
         ),
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "target_draft_id", "target_draft_version"],
+            [
+                "technical_response_drafts.tenant_id",
+                "technical_response_drafts.draft_id",
+                "technical_response_drafts.version",
+            ],
+            name="fk_preparation_reviews__draft",
+            ondelete="RESTRICT",
+        ),
         sa.UniqueConstraint("tenant_id", "id", name="uq_preparation_review__tenant_id"),
         sa.UniqueConstraint(
             "tenant_id", "review_id", "revision", name="uq_preparation_review__revision"
@@ -83,6 +93,13 @@ class PreparationReviewRecord(TenantScopedRecord, Base):
         ),
         sa.CheckConstraint("revision > 0", name="revision_positive"),
         sa.CheckConstraint("target_version > 0", name="target_version_positive"),
+        sa.CheckConstraint(
+            "(target_draft_id IS NULL AND target_draft_version IS NULL AND "
+            "target_content_sha256 IS NULL) OR "
+            "(target_draft_id IS NOT NULL AND target_draft_version IS NOT NULL AND "
+            "target_content_sha256 IS NOT NULL AND target_content_sha256 ~ '^[0-9a-f]{64}$')",
+            name="target_draft_exact",
+        ),
         sa.CheckConstraint(
             "decision_code IS NULL OR decision_code IN ("
             "'ACCEPTED', 'CORRECTIONS_REQUIRED', 'REJECTED'"
@@ -99,6 +116,9 @@ class PreparationReviewRecord(TenantScopedRecord, Base):
     package_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     target_document_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     target_version: Mapped[int] = mapped_column(sa.Integer, nullable=False)
+    target_draft_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True))
+    target_draft_version: Mapped[int | None] = mapped_column(sa.Integer)
+    target_content_sha256: Mapped[str | None] = mapped_column(sa.CHAR(64))
     revision: Mapped[int] = mapped_column(sa.Integer, nullable=False)
     state: Mapped[str] = mapped_column(sa.String(32), nullable=False)
     decision_code: Mapped[str | None] = mapped_column(sa.String(32))
@@ -177,6 +197,11 @@ class GeneratedTechnicalDocumentRecord(TenantScopedRecord, Base):
         sa.UniqueConstraint("tenant_id", "id", name="uq_generated_docs__tenant_id"),
         sa.UniqueConstraint("tenant_id", "package_id", "version", name="uq_generated_doc_version"),
         sa.CheckConstraint("version > 0", name="version_positive"),
+        sa.CheckConstraint("content_format IN ('MARKDOWN', 'DOCX')", name="content_format"),
+        sa.CheckConstraint(
+            "content_format <> 'DOCX' OR document_kind = 'TECHNICAL_RESPONSE'",
+            name="docx_technical_only",
+        ),
         sa.CheckConstraint(
             "document_kind IN ('TECHNICAL_RESPONSE', 'DC1', 'DC2', 'DC4')",
             name="document_kind",
@@ -192,6 +217,9 @@ class GeneratedTechnicalDocumentRecord(TenantScopedRecord, Base):
     document_kind: Mapped[str] = mapped_column(sa.String(32), nullable=False)
     state: Mapped[str] = mapped_column(sa.String(16), nullable=False)
     content_sha256: Mapped[str] = mapped_column(sa.CHAR(64), nullable=False)
+    content_format: Mapped[str] = mapped_column(
+        sa.String(16), nullable=False, server_default="MARKDOWN"
+    )
     storage_key: Mapped[str] = mapped_column(sa.String(700), nullable=False)
     actor_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     membership_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
@@ -314,12 +342,29 @@ class PreparationReviewCorrectionRecord(TenantScopedRecord, Base):
             name="fk_preparation_correction__document",
             ondelete="RESTRICT",
         ),
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "target_draft_id", "target_draft_version"],
+            [
+                "technical_response_drafts.tenant_id",
+                "technical_response_drafts.draft_id",
+                "technical_response_drafts.version",
+            ],
+            name="fk_preparation_review_corrections__draft",
+            ondelete="RESTRICT",
+        ),
         sa.UniqueConstraint("tenant_id", "id", name="uq_preparation_correction__tenant_id"),
         sa.UniqueConstraint(
             "tenant_id", "review_id", "revision", name="uq_preparation_correction__revision"
         ),
         sa.CheckConstraint("revision > 0", name="revision_positive"),
         sa.CheckConstraint("review_revision > 0", name="review_revision_positive"),
+        sa.CheckConstraint(
+            "(target_draft_id IS NULL AND target_draft_version IS NULL AND "
+            "target_content_sha256 IS NULL) OR "
+            "(target_draft_id IS NOT NULL AND target_draft_version IS NOT NULL AND "
+            "target_content_sha256 IS NOT NULL AND target_content_sha256 ~ '^[0-9a-f]{64}$')",
+            name="target_draft_exact",
+        ),
         sa.CheckConstraint(
             "correction_code IN ("
             "'SOURCE_MISSING', 'SOURCE_WRONG', 'SECTION_INCOMPLETE', "
@@ -334,6 +379,9 @@ class PreparationReviewCorrectionRecord(TenantScopedRecord, Base):
     review_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     review_revision: Mapped[int] = mapped_column(sa.Integer, nullable=False)
     target_document_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    target_draft_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True))
+    target_draft_version: Mapped[int | None] = mapped_column(sa.Integer)
+    target_content_sha256: Mapped[str | None] = mapped_column(sa.CHAR(64))
     revision: Mapped[int] = mapped_column(sa.Integer, nullable=False)
     correction_code: Mapped[str] = mapped_column(sa.String(32), nullable=False)
     instruction: Mapped[str] = mapped_column(sa.String(2000), nullable=False)
@@ -365,9 +413,27 @@ class TechnicalResponseDraftRecord(TenantScopedRecord, Base):
             name="fk_technical_draft__document",
             ondelete="RESTRICT",
         ),
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "package_id", "response_plan_id", "response_plan_version"],
+            [
+                "preparation_response_plans.tenant_id",
+                "preparation_response_plans.package_id",
+                "preparation_response_plans.plan_id",
+                "preparation_response_plans.version",
+            ],
+            name="fk_technical_draft__response_plan",
+            ondelete="RESTRICT",
+        ),
         sa.UniqueConstraint("tenant_id", "id", name="uq_technical_draft__tenant_id"),
         sa.UniqueConstraint("tenant_id", "draft_id", "version", name="uq_technical_draft__version"),
         sa.CheckConstraint("version > 0", name="version_positive"),
+        sa.CheckConstraint("content_format IN ('MARKDOWN', 'DOCX')", name="content_format"),
+        sa.CheckConstraint(
+            "(content_format = 'MARKDOWN' AND content_provenance_json IS NULL) OR "
+            "(content_format = 'DOCX' AND content_provenance_json IS NOT NULL "
+            "AND jsonb_typeof(content_provenance_json) = 'object')",
+            name="content_provenance",
+        ),
         sa.CheckConstraint(
             "state IN ("
             "'DRAFT', 'SUBMITTED_FOR_REVIEW', 'RETURNED_WITH_CORRECTIONS', "
@@ -379,6 +445,11 @@ class TechnicalResponseDraftRecord(TenantScopedRecord, Base):
             "responsible_role IN ('COLLABORATEUR', 'PATRON_REVIEWER')",
             name="responsible_role",
         ),
+        sa.CheckConstraint(
+            "(response_plan_id IS NULL AND response_plan_version IS NULL) OR "
+            "(response_plan_id IS NOT NULL AND response_plan_version IS NOT NULL)",
+            name="response_plan_pair",
+        ),
         sa.Index("ix_technical_drafts__tenant_package", "tenant_id", "package_id", "version"),
     )
 
@@ -386,13 +457,78 @@ class TechnicalResponseDraftRecord(TenantScopedRecord, Base):
     draft_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     package_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     source_document_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    response_plan_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True))
+    response_plan_version: Mapped[int | None] = mapped_column(sa.Integer)
     version: Mapped[int] = mapped_column(sa.Integer, nullable=False)
     state: Mapped[str] = mapped_column(sa.String(32), nullable=False)
     section_codes_json: Mapped[list[str]] = mapped_column(JSONB, nullable=False)
     source_refs_json: Mapped[list[str]] = mapped_column(JSONB, nullable=False)
     responsible_role: Mapped[str] = mapped_column(sa.String(32), nullable=False)
     content_sha256: Mapped[str] = mapped_column(sa.CHAR(64), nullable=False)
+    content_format: Mapped[str] = mapped_column(
+        sa.String(16), nullable=False, server_default="MARKDOWN"
+    )
+    content_provenance_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     storage_key: Mapped[str] = mapped_column(sa.String(700), nullable=False)
+    actor_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    membership_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    command_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    idempotency_key: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    correlation_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True))
+
+
+class PreparationResponsePlanRecord(TenantScopedRecord, Base):
+    """Immutable version of a response plan tied to one preparation and DCE version."""
+
+    __tablename__ = "preparation_response_plans"
+    __table_args__ = (
+        sa.ForeignKeyConstraint(
+            ["tenant_id"], ["tenants.id"], name="fk_response_plan__tenant", ondelete="RESTRICT"
+        ),
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "package_id"],
+            ["preparation_packages.tenant_id", "preparation_packages.id"],
+            name="fk_response_plan__package",
+            ondelete="RESTRICT",
+        ),
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "dce_version_id"],
+            ["dce_versions.tenant_id", "dce_versions.id"],
+            name="fk_response_plan__dce_version",
+            ondelete="RESTRICT",
+        ),
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "membership_id"],
+            ["tenant_memberships.tenant_id", "tenant_memberships.id"],
+            name="fk_response_plan__membership",
+            ondelete="RESTRICT",
+        ),
+        sa.UniqueConstraint("tenant_id", "id", name="uq_response_plan__tenant_id"),
+        sa.UniqueConstraint("tenant_id", "command_id", name="uq_response_plan__command"),
+        sa.UniqueConstraint(
+            "tenant_id", "package_id", "plan_id", "version", name="uq_response_plan__version"
+        ),
+        sa.CheckConstraint("version > 0", name="version_positive"),
+        sa.CheckConstraint("state IN ('UNKNOWN', 'SOURCES_CURRENT')", name="state"),
+        sa.CheckConstraint("plan_sha256 ~ '^[0-9a-f]{64}$'", name="plan_sha256"),
+        sa.Index(
+            "ix_response_plans__tenant_package_version",
+            "tenant_id",
+            "package_id",
+            "version",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    plan_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    package_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    dce_version_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    version: Mapped[int] = mapped_column(sa.Integer, nullable=False)
+    state: Mapped[str] = mapped_column(sa.String(24), nullable=False)
+    content_json: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    plan_sha256: Mapped[str] = mapped_column(sa.CHAR(64), nullable=False)
+    source_evidence_json: Mapped[list[dict]] = mapped_column(JSONB, nullable=False)
+    source_evidence_sha256: Mapped[str] = mapped_column(sa.CHAR(64), nullable=False)
     actor_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     membership_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     command_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)

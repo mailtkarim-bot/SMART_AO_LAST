@@ -1,5 +1,5 @@
 import type { Dispatch, SetStateAction } from "react";
-import { act, renderHook } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import type { ApiClient } from "../../infrastructure/api";
@@ -18,7 +18,14 @@ type WizardApi = Pick<
   | "recordCollaboratorTaskResult"
   | "completeCollaboratorTask"
   | "transmitPreparationSnapshot"
->;
+> & Partial<Pick<ApiClient,
+  | "getCaseDceReading"
+  | "getCapabilityAssessments"
+  | "getCapabilityCandidates"
+  | "getPreparationResponsePlans"
+  | "createPreparationResponsePlan"
+  | "createPreparationSnapshot"
+>>;
 
 const preparation = (): PreparationPackage => ({
   package_id: "package-1",
@@ -58,8 +65,25 @@ function renderWizardHook(
   api: WizardApi,
   setMessage: Dispatch<SetStateAction<HookMessage | null>>,
 ) {
-  return renderHook(() => useCollaboratorWizard(api as ApiClient, setMessage));
+  const planDefaults: Partial<ApiClient> = {
+    getCaseDceReading: vi.fn().mockResolvedValue({
+      case_id: "case-1", work_label: "Affaire synthétique", case_lifecycle: "ACTIVE", commercial_stage: "PREPARATION", dce_freshness: "CURRENT", availability: "AVAILABLE",
+      dce: { dce_version_id: "dce-1", lifecycle: "ADMITTED", integrity: "VERIFIED", classification_readiness: "CLASSIFIED", analysis_readiness: "READY", source_received_at: "2026-10-09T10:00:00Z" },
+      counters: { total: 1, pending_human_confirmation: 0, confirmed: 1, review_required: 0, not_applicable: 0 },
+      requirements: [{ requirement_id: "requirement-1", confirmation_revision: 1, requirement_type: "Méthodologie", directive_signal: "REQUIRED", confirmation_outcome: "CONFIRMED", uncertainty_status: "KNOWN", document_family: "CCTP", source_locator_label: "Article synthétique", source_anchor: null }],
+    }),
+    getCapabilityAssessments: vi.fn().mockResolvedValue({ proposals: [{ proposal_id: "proposal-1", case_id: "case-1", assignment_id: "assignment-1", capability_id: "capability-1", capability_version_id: "version-1", requirement_id: "requirement-1", task_id: null, state: "PROPOSED", validity_state: "CURRENT", justification: "Synthétique", source_locator: null, source_evidence_state: "CURRENT", source_evidence_evaluated_at: "2026-10-09T10:00:00Z" }], gaps: [] }),
+    getCapabilityCandidates: vi.fn().mockResolvedValue([{ capability_id: "capability-1", capability_kind: "METHOD", name: "Méthodologie travaux", version_id: "version-1", version_number: 1, title: "Organisation de chantier", valid_from: "2026-10-01T00:00:00Z", valid_until: null, validity_state: "CURRENT", source_evidence_state: "CURRENT", evaluated_at: "2026-10-09T10:00:00Z" }]),
+    getPreparationResponsePlans: vi.fn().mockResolvedValue({ package_id: "package-1", plans: [] }),
+    createPreparationResponsePlan: vi.fn().mockResolvedValue({ status: "SUCCEEDED", command_id: "command-1", idempotency_key: "retry-1", result_code: "PREPARATION_RESPONSE_PLAN_CREATED", aggregate_refs: [], event_ids: [], replayed: false }),
+  };
+  return renderHook(() => useCollaboratorWizard({ ...planDefaults, ...api } as ApiClient, setMessage));
 }
+
+const responsePlan = (state: "UNKNOWN" | "SOURCES_CURRENT" = "SOURCES_CURRENT") => ({
+  plan_id: "plan-1", version: 1, package_id: "package-1", dce_version_id: "dce-1", state, plan_sha256: "a".repeat(64),
+  content: { schema_version: 1 as const, case_id: "case-1", package_id: "package-1", dce_version_id: "dce-1", items: [{ requirement_id: "requirement-1", requirement_state: "CONFIRMED" as const, section_code: "METHOD" as const, source_proposal_id: state === "SOURCES_CURRENT" ? "proposal-1" : null, source_capability_version_id: state === "SOURCES_CURRENT" ? "version-1" : null, source_validity_state: state === "SOURCES_CURRENT" ? "CURRENT" as const : "UNKNOWN" as const, source_evidence_state: state === "SOURCES_CURRENT" ? "CURRENT" as const : "UNKNOWN" as const }] },
+});
 
 describe("useCollaboratorWizard", () => {
   it("requires both the case and preparation package identifiers", async () => {
@@ -198,17 +222,18 @@ describe("useCollaboratorWizard", () => {
     expect(result.current.wizardResultText).toBe("");
   });
 
-  it("creates a trimmed response draft from the package revision", async () => {
+  it("does not create a draft from an UNKNOWN response-plan readback", async () => {
     const api = {
       getCollaboratorPreparation: vi.fn().mockResolvedValue(preparation()),
       listCollaboratorTasks: vi.fn().mockResolvedValue({ case_id: "case-1", tasks: [] }),
       evaluatePreparationReadiness: vi.fn(),
       generateTechnicalDocument: vi.fn(),
-      createTechnicalResponseDraft: vi.fn().mockResolvedValue({}),
+      createTechnicalResponseDraft: vi.fn(),
       claimCollaboratorTask: vi.fn(),
       recordCollaboratorTaskResult: vi.fn(),
       completeCollaboratorTask: vi.fn(),
       transmitPreparationSnapshot: vi.fn(),
+      getPreparationResponsePlans: vi.fn().mockResolvedValue({ package_id: "package-1", plans: [responsePlan("UNKNOWN")] }),
     } satisfies WizardApi;
     const setMessage = vi.fn() as unknown as Dispatch<SetStateAction<HookMessage | null>>;
     const { result } = renderWizardHook(api, setMessage);
@@ -216,9 +241,6 @@ describe("useCollaboratorWizard", () => {
     act(() => {
       result.current.setWizardCaseId("case-1");
       result.current.setWizardPackageId("package-1");
-      result.current.setWizardDraftSourceDocumentId(" document-1 ");
-      result.current.setWizardDraftSections(" METHOD, SOURCES ");
-      result.current.setWizardDraftSourceRefs(" requirement-1, task-1 ");
     });
     await act(async () => {
       await result.current.loadCollaboratorWizard();
@@ -227,13 +249,274 @@ describe("useCollaboratorWizard", () => {
       await result.current.createWizardResponseDraft();
     });
 
-    expect(api.createTechnicalResponseDraft).toHaveBeenCalledWith("package-1", {
-      expected_package_revision: 7,
+    expect(result.current.wizardResponsePlan.exactPlan?.state).toBe("UNKNOWN");
+    expect(result.current.canCreateWizardResponseDraft).toBe(false);
+    expect(api.createTechnicalResponseDraft).not.toHaveBeenCalled();
+  });
+
+  it("retries one response-plan intent with the same IDs and then reads the exact plan", async () => {
+    const current = responsePlan("SOURCES_CURRENT");
+    const api = {
+      getCollaboratorPreparation: vi.fn().mockResolvedValue({ ...preparation(), generated_documents: [{ document_id: "document-1", version: 1, document_kind: "TECHNICAL_RESPONSE", state: "GENERATED", readiness_revision: 3 }] }),
+      listCollaboratorTasks: vi.fn().mockResolvedValue({ case_id: "case-1", tasks: [] }),
+      evaluatePreparationReadiness: vi.fn(),
+      generateTechnicalDocument: vi.fn(),
+      createTechnicalResponseDraft: vi.fn(),
+      claimCollaboratorTask: vi.fn(),
+      recordCollaboratorTaskResult: vi.fn(),
+      completeCollaboratorTask: vi.fn(),
+      transmitPreparationSnapshot: vi.fn(),
+      getPreparationResponsePlans: vi.fn().mockResolvedValueOnce({ package_id: "package-1", plans: [] }).mockResolvedValue({ package_id: "package-1", plans: [current] }),
+      createPreparationResponsePlan: vi.fn().mockRejectedValueOnce(new TypeError("Synthetic network failure")).mockResolvedValue({ status: "SUCCEEDED", command_id: "command-1", idempotency_key: "retry-1", result_code: "PREPARATION_RESPONSE_PLAN_CREATED", aggregate_refs: [], event_ids: [], replayed: false }),
+    } satisfies WizardApi;
+    const setMessage = vi.fn() as unknown as Dispatch<SetStateAction<HookMessage | null>>;
+    const { result } = renderWizardHook(api, setMessage);
+    act(() => { result.current.setWizardCaseId("case-1"); result.current.setWizardPackageId("package-1"); });
+    await act(async () => { await result.current.loadCollaboratorWizard(); });
+    expect(result.current.canSaveWizardResponsePlan).toBe(false);
+    act(() => result.current.setWizardResponsePlanItem("requirement-1", { section_code: "METHOD", source_proposal_id: "proposal-1" }));
+    expect(result.current.canSaveWizardResponsePlan).toBe(true);
+
+    await act(async () => { await result.current.createWizardResponsePlan(); });
+    expect(result.current.wizardResponsePlan.requestState).toBe("UNKNOWN");
+    await act(async () => { await result.current.retryWizardResponsePlan(); });
+
+    expect(api.createPreparationResponsePlan).toHaveBeenCalledTimes(2);
+    expect(api.createPreparationResponsePlan.mock.calls[0]).toEqual(api.createPreparationResponsePlan.mock.calls[1]);
+    expect(result.current.wizardResponsePlan.exactPlan?.state).toBe("SOURCES_CURRENT");
+    expect(result.current.wizardResponsePlan.requestState).toBe("IDLE");
+    expect(result.current.isWizardResponsePlanCurrent).toBe(true);
+    expect(result.current.canCreateWizardResponseDraft).toBe(true);
+    expect(api.createTechnicalResponseDraft).not.toHaveBeenCalled();
+    expect(api.getPreparationResponsePlans).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps the logical plan identity when the DCE version changes", async () => {
+    const oldPlan = { ...responsePlan("UNKNOWN"), dce_version_id: "dce-old", content: { ...responsePlan("UNKNOWN").content, dce_version_id: "dce-old" } };
+    const currentPlan = { ...responsePlan("UNKNOWN"), version: 2 };
+    const api = {
+      getCollaboratorPreparation: vi.fn().mockResolvedValue(preparation()),
+      listCollaboratorTasks: vi.fn().mockResolvedValue({ case_id: "case-1", tasks: [] }),
+      evaluatePreparationReadiness: vi.fn(),
+      generateTechnicalDocument: vi.fn(),
+      createTechnicalResponseDraft: vi.fn(),
+      claimCollaboratorTask: vi.fn(),
+      recordCollaboratorTaskResult: vi.fn(),
+      completeCollaboratorTask: vi.fn(),
+      transmitPreparationSnapshot: vi.fn(),
+      getPreparationResponsePlans: vi.fn().mockResolvedValueOnce({ package_id: "package-1", plans: [oldPlan] }).mockResolvedValue({ package_id: "package-1", plans: [currentPlan] }),
+      createPreparationResponsePlan: vi.fn().mockResolvedValue({ status: "SUCCEEDED", command_id: "command-1", idempotency_key: "retry-1", result_code: "PREPARATION_RESPONSE_PLAN_CREATED", aggregate_refs: [], event_ids: [], replayed: false }),
+    } satisfies WizardApi;
+    const setMessage = vi.fn() as unknown as Dispatch<SetStateAction<HookMessage | null>>;
+    const { result } = renderWizardHook(api, setMessage);
+    act(() => { result.current.setWizardCaseId("case-1"); result.current.setWizardPackageId("package-1"); });
+    await act(async () => { await result.current.loadCollaboratorWizard(); });
+
+    expect(result.current.wizardResponsePlan.hasPriorDcePlan).toBe(true);
+    expect(result.current.wizardResponsePlan.exactPlan).toBeNull();
+    act(() => result.current.setWizardResponsePlanItem("requirement-1", { section_code: "METHOD", source_proposal_id: "proposal-1" }));
+    await act(async () => { await result.current.createWizardResponsePlan(); });
+
+    expect(api.createPreparationResponsePlan.mock.calls[0]?.[1].plan_id).toBe("plan-1");
+    expect(result.current.wizardResponsePlan.exactPlan?.dce_version_id).toBe("dce-1");
+  });
+
+  it("creates a draft only from the exact current plan and retries the same draft identity", async () => {
+    const current = responsePlan("SOURCES_CURRENT");
+    const packageWithDocument: PreparationPackage = {
+      ...preparation(),
+      aggregate_revision: 8,
+      generated_documents: [{ document_id: "document-1", version: 1, document_kind: "TECHNICAL_RESPONSE", state: "GENERATED", readiness_revision: 3 }],
+    };
+    const receipt = { status: "SUCCEEDED" as const, command_id: "draft-command", idempotency_key: "draft-retry", result_code: "TECHNICAL_RESPONSE_DRAFT_CREATED", aggregate_refs: [], event_ids: [], replayed: false };
+    const api = {
+      getCollaboratorPreparation: vi.fn().mockResolvedValue(packageWithDocument),
+      listCollaboratorTasks: vi.fn().mockResolvedValue({ case_id: "case-1", tasks: [] }),
+      evaluatePreparationReadiness: vi.fn(),
+      generateTechnicalDocument: vi.fn(),
+      createTechnicalResponseDraft: vi.fn().mockRejectedValueOnce(new TypeError("Synthetic network failure")).mockResolvedValue(receipt),
+      claimCollaboratorTask: vi.fn(),
+      recordCollaboratorTaskResult: vi.fn(),
+      completeCollaboratorTask: vi.fn(),
+      transmitPreparationSnapshot: vi.fn(),
+      getPreparationResponsePlans: vi.fn().mockResolvedValue({ package_id: "package-1", plans: [current] }),
+    } satisfies WizardApi;
+    const setMessage = vi.fn() as unknown as Dispatch<SetStateAction<HookMessage | null>>;
+    const { result } = renderWizardHook(api, setMessage);
+    act(() => { result.current.setWizardCaseId("case-1"); result.current.setWizardPackageId("package-1"); });
+    await act(async () => { await result.current.loadCollaboratorWizard(); });
+
+    expect(result.current.canCreateWizardResponseDraft).toBe(true);
+    await act(async () => { await result.current.createWizardResponseDraft(); });
+    expect(result.current.wizardResponsePlan.draftRequestState).toBe("UNKNOWN");
+    expect(result.current.canCreateWizardResponseDraft).toBe(false);
+    expect(api.createTechnicalResponseDraft).toHaveBeenCalledTimes(1);
+    await act(async () => { await result.current.retryWizardResponseDraft(); });
+
+    expect(api.createTechnicalResponseDraft).toHaveBeenCalledTimes(2);
+    expect(api.createTechnicalResponseDraft.mock.calls[0]).toEqual(api.createTechnicalResponseDraft.mock.calls[1]);
+    expect(api.createTechnicalResponseDraft.mock.calls[0]?.[1]).toMatchObject({
+      expected_package_revision: 8,
       source_document_id: "document-1",
-      section_codes: ["METHOD", "SOURCES"],
-      source_refs: ["requirement-1", "task-1"],
+      section_codes: ["METHOD"],
+      source_refs: ["proposal-1"],
     });
-    expect(result.current.wizardDraftSourceRefs).toBe("");
+    expect(result.current.wizardResponsePlan.draftRequestState).toBe("RECEIVED");
+  });
+
+  it("recovers the exact pending intent when returning after a late POST receipt", async () => {
+    const current = responsePlan("SOURCES_CURRENT");
+    const packageWithDocument: PreparationPackage = {
+      ...preparation(),
+      aggregate_revision: 8,
+      generated_documents: [{ document_id: "document-1", version: 1, document_kind: "TECHNICAL_RESPONSE", state: "GENERATED", readiness_revision: 3 }],
+    };
+    const receipt = { status: "SUCCEEDED" as const, command_id: "draft-command", idempotency_key: "draft-retry", result_code: "TECHNICAL_RESPONSE_DRAFT_CREATED", aggregate_refs: [], event_ids: [], replayed: false };
+    let finishPost!: (value: typeof receipt) => void;
+    const delayedPost = new Promise<typeof receipt>((resolve) => { finishPost = resolve; });
+    const api = {
+      getCollaboratorPreparation: vi.fn().mockResolvedValue(packageWithDocument),
+      listCollaboratorTasks: vi.fn().mockResolvedValue({ case_id: "case-1", tasks: [] }),
+      evaluatePreparationReadiness: vi.fn(),
+      generateTechnicalDocument: vi.fn(),
+      createTechnicalResponseDraft: vi.fn().mockReturnValueOnce(delayedPost).mockResolvedValue(receipt),
+      claimCollaboratorTask: vi.fn(),
+      recordCollaboratorTaskResult: vi.fn(),
+      completeCollaboratorTask: vi.fn(),
+      transmitPreparationSnapshot: vi.fn(),
+      getPreparationResponsePlans: vi.fn().mockResolvedValue({ package_id: "package-1", plans: [current] }),
+    } satisfies WizardApi;
+    const setMessage = vi.fn() as unknown as Dispatch<SetStateAction<HookMessage | null>>;
+    const { result } = renderWizardHook(api, setMessage);
+    act(() => { result.current.setWizardCaseId("case-1"); result.current.setWizardPackageId("package-1"); });
+    await act(async () => { await result.current.loadCollaboratorWizard(); });
+
+    let save!: Promise<void>;
+    act(() => { save = result.current.createWizardResponseDraft([{ requirement_id: "requirement-1", section_code: "METHOD", content: "Réponse de l’affaire A", missing: "" }]); });
+    await waitFor(() => expect(api.createTechnicalResponseDraft).toHaveBeenCalledTimes(1));
+    act(() => { result.current.setWizardCaseId("case-2"); result.current.setWizardPackageId("package-2"); });
+    await act(async () => { finishPost(receipt); await save; });
+    expect(result.current.canRetryWizardResponseDraft).toBe(false);
+    act(() => { result.current.setWizardCaseId("case-1"); result.current.setWizardPackageId("package-1"); });
+    expect(result.current.wizardResponsePlan.draftRequestState).toBe("UNKNOWN");
+    expect(result.current.canRetryWizardResponseDraft).toBe(true);
+    await act(async () => { await result.current.retryWizardResponseDraft(); });
+    expect(api.createTechnicalResponseDraft).toHaveBeenCalledTimes(2);
+    expect(api.createTechnicalResponseDraft.mock.calls[0]).toEqual(api.createTechnicalResponseDraft.mock.calls[1]);
+    expect(result.current.wizardResponsePlan.draftRequestState).toBe("RECEIVED");
+  });
+
+  it("drops a late draft readback after the selected case changes", async () => {
+    const current = responsePlan("SOURCES_CURRENT");
+    const packageWithDocument: PreparationPackage = {
+      ...preparation(),
+      aggregate_revision: 8,
+      generated_documents: [{ document_id: "document-1", version: 1, document_kind: "TECHNICAL_RESPONSE", state: "GENERATED", readiness_revision: 3 }],
+    };
+    const receipt = { status: "SUCCEEDED" as const, command_id: "draft-command", idempotency_key: "draft-retry", result_code: "TECHNICAL_RESPONSE_DRAFT_CREATED", aggregate_refs: [], event_ids: [], replayed: false };
+    let completeReadback!: (value: PreparationPackage) => void;
+    const delayedReadback = new Promise<PreparationPackage>((resolve) => { completeReadback = resolve; });
+    const api = {
+      getCollaboratorPreparation: vi.fn().mockResolvedValueOnce(packageWithDocument).mockReturnValueOnce(delayedReadback),
+      listCollaboratorTasks: vi.fn().mockResolvedValue({ case_id: "case-1", tasks: [] }),
+      evaluatePreparationReadiness: vi.fn(),
+      generateTechnicalDocument: vi.fn(),
+      createTechnicalResponseDraft: vi.fn().mockResolvedValue(receipt),
+      claimCollaboratorTask: vi.fn(),
+      recordCollaboratorTaskResult: vi.fn(),
+      completeCollaboratorTask: vi.fn(),
+      transmitPreparationSnapshot: vi.fn(),
+      getPreparationResponsePlans: vi.fn().mockResolvedValue({ package_id: "package-1", plans: [current] }),
+    } satisfies WizardApi;
+    const setMessage = vi.fn() as unknown as Dispatch<SetStateAction<HookMessage | null>>;
+    const { result } = renderWizardHook(api, setMessage);
+    act(() => { result.current.setWizardCaseId("case-1"); result.current.setWizardPackageId("package-1"); });
+    await act(async () => { await result.current.loadCollaboratorWizard(); });
+
+    vi.mocked(setMessage).mockClear();
+    let save!: Promise<void>;
+    act(() => { save = result.current.createWizardResponseDraft([{ requirement_id: "requirement-1", section_code: "METHOD", content: "Réponse A", missing: "" }]); });
+    await waitFor(() => expect(api.getCollaboratorPreparation).toHaveBeenCalledTimes(2));
+    act(() => { result.current.setWizardCaseId("case-2"); result.current.setWizardPackageId("package-2"); });
+    await act(async () => { completeReadback(packageWithDocument); await save; });
+    expect(api.getPreparationResponsePlans).toHaveBeenCalledTimes(1);
+    expect(setMessage).not.toHaveBeenCalledWith(expect.objectContaining({ tone: "success" }));
+  });
+
+  it("never resends a pending human contribution through another API connection", async () => {
+    const current = responsePlan("SOURCES_CURRENT");
+    const packageWithDocument: PreparationPackage = {
+      ...preparation(),
+      aggregate_revision: 8,
+      generated_documents: [{ document_id: "document-1", version: 1, document_kind: "TECHNICAL_RESPONSE", state: "GENERATED", readiness_revision: 3 }],
+    };
+    const receipt = { status: "SUCCEEDED" as const, command_id: "draft-command", idempotency_key: "draft-retry", result_code: "TECHNICAL_RESPONSE_DRAFT_CREATED", aggregate_refs: [], event_ids: [], replayed: false };
+    const api = {
+      getCollaboratorPreparation: vi.fn().mockResolvedValue(packageWithDocument),
+      listCollaboratorTasks: vi.fn().mockResolvedValue({ case_id: "case-1", tasks: [] }),
+      evaluatePreparationReadiness: vi.fn(),
+      generateTechnicalDocument: vi.fn(),
+      createTechnicalResponseDraft: vi.fn().mockRejectedValueOnce(new TypeError("Synthetic network failure")).mockResolvedValue(receipt),
+      claimCollaboratorTask: vi.fn(),
+      recordCollaboratorTaskResult: vi.fn(),
+      completeCollaboratorTask: vi.fn(),
+      transmitPreparationSnapshot: vi.fn(),
+      getPreparationResponsePlans: vi.fn().mockResolvedValue({ package_id: "package-1", plans: [current] }),
+    } satisfies WizardApi;
+    const setMessage = vi.fn() as unknown as Dispatch<SetStateAction<HookMessage | null>>;
+    const { result, rerender } = renderWizardHook(api, setMessage);
+    act(() => { result.current.setWizardCaseId("case-1"); result.current.setWizardPackageId("package-1"); });
+    await act(async () => { await result.current.loadCollaboratorWizard(); });
+
+    expect(result.current.canCreateWizardResponseDraft).toBe(true);
+    await act(async () => { await result.current.createWizardResponseDraft([{ requirement_id: "requirement-1", section_code: "METHOD", content: "Texte privé du dossier A", missing: "" }]); });
+    expect(result.current.wizardResponsePlan.draftRequestState).toBe("UNKNOWN");
+    expect(result.current.canCreateWizardResponseDraft).toBe(false);
+    expect(api.createTechnicalResponseDraft).toHaveBeenCalledTimes(1);
+    const originalPost = api.createTechnicalResponseDraft;
+    api.createTechnicalResponseDraft = vi.fn().mockResolvedValue(receipt);
+    rerender();
+    await act(async () => { await result.current.retryWizardResponseDraft(); });
+    expect(originalPost).toHaveBeenCalledTimes(1);
+    expect(api.createTechnicalResponseDraft).not.toHaveBeenCalled();
+  });
+
+  it("keeps a source byte verification failure UNKNOWN and retries only the same draft intent", async () => {
+    const current = responsePlan("SOURCES_CURRENT");
+    const packageWithDocument: PreparationPackage = {
+      ...preparation(),
+      aggregate_revision: 8,
+      generated_documents: [{ document_id: "document-1", version: 1, document_kind: "TECHNICAL_RESPONSE", state: "GENERATED", readiness_revision: 3 }],
+    };
+    const receipt = { status: "SUCCEEDED" as const, command_id: "draft-command", idempotency_key: "draft-retry", result_code: "TECHNICAL_RESPONSE_DRAFT_CREATED", aggregate_refs: [], event_ids: [], replayed: false };
+    const sourceUnknown = Object.assign(new Error("RESPONSE_PLAN_UNKNOWN"), {
+      status: 422,
+      detail: "RESPONSE_PLAN_UNKNOWN",
+    });
+    const api = {
+      getCollaboratorPreparation: vi.fn().mockResolvedValue(packageWithDocument),
+      listCollaboratorTasks: vi.fn().mockResolvedValue({ case_id: "case-1", tasks: [] }),
+      evaluatePreparationReadiness: vi.fn(),
+      generateTechnicalDocument: vi.fn(),
+      createTechnicalResponseDraft: vi.fn().mockRejectedValueOnce(sourceUnknown).mockResolvedValue(receipt),
+      claimCollaboratorTask: vi.fn(),
+      recordCollaboratorTaskResult: vi.fn(),
+      completeCollaboratorTask: vi.fn(),
+      transmitPreparationSnapshot: vi.fn(),
+      getPreparationResponsePlans: vi.fn().mockResolvedValue({ package_id: "package-1", plans: [current] }),
+    } satisfies WizardApi;
+    const setMessage = vi.fn() as unknown as Dispatch<SetStateAction<HookMessage | null>>;
+    const { result } = renderWizardHook(api, setMessage);
+    act(() => { result.current.setWizardCaseId("case-1"); result.current.setWizardPackageId("package-1"); });
+    await act(async () => { await result.current.loadCollaboratorWizard(); });
+
+    await act(async () => { await result.current.createWizardResponseDraft(); });
+    expect(result.current.wizardResponsePlan.draftRequestState).toBe("SOURCE_UNKNOWN");
+    expect(result.current.canCreateWizardResponseDraft).toBe(false);
+    await act(async () => { await result.current.retryWizardResponseDraft(); });
+    expect(api.createTechnicalResponseDraft).toHaveBeenCalledTimes(2);
+    expect(api.createTechnicalResponseDraft.mock.calls[0]).toEqual(api.createTechnicalResponseDraft.mock.calls[1]);
+    expect(result.current.wizardResponsePlan.draftRequestState).toBe("RECEIVED");
   });
 
   it("transmits a selected snapshot with an optimistic package revision and no external deposit", async () => {
@@ -246,7 +529,9 @@ describe("useCollaboratorWizard", () => {
       claimCollaboratorTask: vi.fn(),
       recordCollaboratorTaskResult: vi.fn(),
       completeCollaboratorTask: vi.fn(),
-      transmitPreparationSnapshot: vi.fn().mockResolvedValue({}),
+      transmitPreparationSnapshot: vi.fn()
+        .mockRejectedValueOnce(new Error("Connexion interrompue"))
+        .mockResolvedValueOnce({}),
     } satisfies WizardApi;
     const setMessage = vi.fn() as unknown as Dispatch<SetStateAction<HookMessage | null>>;
     const { result } = renderWizardHook(api, setMessage);
@@ -263,15 +548,136 @@ describe("useCollaboratorWizard", () => {
     await act(async () => {
       await result.current.transmitWizardSnapshot();
     });
+    const firstIntent = (api.transmitPreparationSnapshot as ReturnType<typeof vi.fn>).mock.calls[0];
+    await act(async () => {
+      await result.current.transmitWizardSnapshot();
+    });
 
-    expect(api.transmitPreparationSnapshot).toHaveBeenCalledWith("package-1", {
+    expect(api.transmitPreparationSnapshot).toHaveBeenNthCalledWith(1, "package-1", expect.objectContaining({
       snapshot_id: "snapshot-1",
       transmission_id: "transmission-1",
       expected_package_revision: 7,
-    });
+      command_id: expect.any(String),
+      idempotency_key: expect.any(String),
+      correlation_id: expect.any(String),
+    }));
+    expect(api.transmitPreparationSnapshot).toHaveBeenNthCalledWith(2, "package-1", firstIntent[1]);
     expect(setMessage).toHaveBeenLastCalledWith({
       tone: "success",
-      text: "Snapshot transmis au patron. Aucun dépôt externe n’est effectué par cette action.",
+      text: expect.stringContaining("transmission-1"),
     });
   });
+
+  it.each([undefined, {draft_id:"chosen-response",version:2,content_sha256:"a".repeat(64)}])("keeps exact snapshot intent after an unknown response: %j", async (selection) => {
+    const snapshotReceipt = {
+      status: "SUCCEEDED" as const,
+      command_id: "snapshot-command",
+      idempotency_key: "snapshot-key",
+      result_code: "PREPARATION_SNAPSHOT_CREATED",
+      aggregate_refs: [{ aggregate_type: "PreparationSnapshot", aggregate_id: "snapshot-1", aggregate_revision: 2 }],
+      event_ids: ["snapshot-event"],
+      replayed: false,
+    };
+    const api = {
+      getCollaboratorPreparation: vi.fn().mockResolvedValue(preparation()),
+      listCollaboratorTasks: vi.fn().mockResolvedValue({ case_id: "case-1", tasks: [] }),
+      evaluatePreparationReadiness: vi.fn(),
+      generateTechnicalDocument: vi.fn(),
+      createTechnicalResponseDraft: vi.fn(),
+      claimCollaboratorTask: vi.fn(),
+      recordCollaboratorTaskResult: vi.fn(),
+      completeCollaboratorTask: vi.fn(),
+      createPreparationSnapshot: vi.fn()
+        .mockRejectedValueOnce(new Error("Connexion interrompue"))
+        .mockResolvedValueOnce(snapshotReceipt),
+      transmitPreparationSnapshot: vi.fn(),
+    } satisfies WizardApi;
+    const setMessage = vi.fn() as unknown as Dispatch<SetStateAction<HookMessage | null>>;
+    const { result } = renderWizardHook(api, setMessage);
+    act(() => {
+      result.current.setWizardCaseId("case-1");
+      result.current.setWizardPackageId("package-1");
+      result.current.setWizardSnapshotId("snapshot-1");
+    });
+    await act(async () => {
+      await result.current.loadCollaboratorWizard();
+    });
+    await act(async () => {
+      await result.current.createWizardSnapshot(selection, selection ? [{requirement_id:"requirement-1",document_id:"proof-1",sha256:"b".repeat(64)}] : [], "Pièces administratives nécessaires à cette exigence.");
+    });
+    expect(result.current.wizardSnapshotRetryPending).toBe(true);
+    await act(async () => {
+      await result.current.createWizardSnapshot(selection ? {...selection,draft_id:"different-response"} : undefined);
+    });
+    expect(api.createPreparationSnapshot).toHaveBeenCalledTimes(2);
+    expect(api.createPreparationSnapshot.mock.calls[0][1].selected_response_draft).toEqual(selection);
+    expect(api.createPreparationSnapshot.mock.calls[0][1].selected_annexes).toEqual(selection ? [{requirement_id:"requirement-1",document_id:"proof-1",sha256:"b".repeat(64)}] : undefined);
+    expect(api.createPreparationSnapshot.mock.calls[1]).toEqual(api.createPreparationSnapshot.mock.calls[0]);
+    expect(result.current.wizardSnapshotReceipt).toEqual({
+      snapshot_id: "snapshot-1",
+      receipt: snapshotReceipt,
+    });
+    expect(result.current.wizardSnapshotId).toBe("snapshot-1");
+  });
+});
+
+describe('selected response scope', () => {
+  it.each(['snapshot','transmission'] as const)('does not publish a late %s receipt into another Case', async(kind)=>{
+    let resolve!: (value: unknown)=>void;
+    const delayed=new Promise(resolveValue=>{resolve=resolveValue});
+    const api={getCollaboratorPreparation:vi.fn().mockResolvedValue(preparation()),
+      listCollaboratorTasks:vi.fn().mockResolvedValue({case_id:'case-1',tasks:[]}),
+      createPreparationSnapshot:vi.fn().mockReturnValue(delayed),
+      transmitPreparationSnapshot:vi.fn().mockReturnValue(delayed)} as unknown as WizardApi;
+    const setMessage=vi.fn(); const{result}=renderWizardHook(api,setMessage);
+    act(()=>{result.current.setWizardCaseId('case-1');result.current.setWizardPackageId('package-1');result.current.setWizardSnapshotId('snapshot-1')});
+    await act(async()=>{await result.current.loadCollaboratorWizard()});setMessage.mockClear();
+    let action!:Promise<void>;
+    act(()=>{action=kind==='snapshot'?result.current.createWizardSnapshot({draft_id:'response-1',version:1,content_sha256:'a'.repeat(64)}):result.current.transmitWizardSnapshot()});
+    act(()=>{result.current.setWizardCaseId('case-2')});
+    await act(async()=>{resolve({status:'SUCCEEDED',command_id:'old',idempotency_key:'old',result_code:'RECORDED',aggregate_refs:[],event_ids:[],replayed:false});await action});
+    expect(result.current.wizardSnapshotReceipt).toBeNull();
+    expect(result.current.wizardTransmissionReceipt).toBeNull();
+    expect(setMessage).not.toHaveBeenCalled();
+  });
+});
+
+describe('frozen snapshot and transmission intents',()=>{
+  it.each(['snapshot','transmission'] as const)('restores UNKNOWN %s after navigating A to B to A',async(kind)=>{
+    const receipt={status:'SUCCEEDED',command_id:'saved',idempotency_key:'saved',result_code:'RECORDED',aggregate_refs:[],event_ids:[],replayed:false};
+    const write=vi.fn().mockRejectedValueOnce(new Error('lost response')).mockResolvedValueOnce(receipt);
+    const api={getCollaboratorPreparation:vi.fn().mockResolvedValue(preparation()),listCollaboratorTasks:vi.fn().mockResolvedValue({case_id:'case-1',tasks:[]}),createPreparationSnapshot:write,transmitPreparationSnapshot:write} as unknown as WizardApi;
+    const {result}=renderWizardHook(api,vi.fn());
+    act(()=>{result.current.setWizardCaseId('case-1');result.current.setWizardPackageId('package-1');result.current.setWizardSnapshotId('snapshot-1')});
+    await act(async()=>{await result.current.loadCollaboratorWizard()});
+    const submit=()=>kind==='snapshot'?result.current.createWizardSnapshot({draft_id:'chosen',version:2,content_sha256:'a'.repeat(64)}):result.current.transmitWizardSnapshot();
+    await act(async()=>{await submit()});
+    act(()=>result.current.setWizardCaseId('case-2'));
+    expect(result.current.wizardSnapshotRetryPending||result.current.wizardTransmissionRetryPending).toBe(false);
+    act(()=>result.current.setWizardCaseId('case-1'));
+    expect(kind==='snapshot'?result.current.wizardSnapshotRetryPending:result.current.wizardTransmissionRetryPending).toBe(true);
+    await act(async()=>{await submit()});expect(write.mock.calls[1]).toEqual(write.mock.calls[0]);
+  });
+  it.each([{kind:'snapshot',status:409},{kind:'transmission',status:409},{kind:'snapshot',status:408},{kind:'transmission',status:408},{kind:'snapshot',status:429},{kind:'transmission',status:429}] as const)('keeps uncertain transport frozen: %j',async({kind,status})=>{
+    const write=vi.fn().mockRejectedValueOnce(Object.assign(new Error('in progress'),{status,detail:status===409?'COMMAND_IN_PROGRESS':undefined})).mockResolvedValueOnce({status:'SUCCEEDED',command_id:'same',idempotency_key:'same',result_code:'RECORDED',aggregate_refs:[],event_ids:[],replayed:false});
+    const api={getCollaboratorPreparation:vi.fn().mockResolvedValue(preparation()),listCollaboratorTasks:vi.fn().mockResolvedValue({case_id:'case-1',tasks:[]}),createPreparationSnapshot:write,transmitPreparationSnapshot:write} as unknown as WizardApi;
+    const{result}=renderWizardHook(api,vi.fn());act(()=>{result.current.setWizardCaseId('case-1');result.current.setWizardPackageId('package-1');result.current.setWizardSnapshotId('snapshot-1')});await act(async()=>{await result.current.loadCollaboratorWizard()});
+    const submit=()=>kind==='snapshot'?result.current.createWizardSnapshot({draft_id:'chosen',version:2,content_sha256:'a'.repeat(64)}):result.current.transmitWizardSnapshot();
+    await act(async()=>{await submit()});expect(kind==='snapshot'?result.current.wizardSnapshotRetryPending:result.current.wizardTransmissionRetryPending).toBe(true);
+    await act(async()=>{await submit()});expect(write.mock.calls[1]).toEqual(write.mock.calls[0]);
+  });
+  it('does not apply a delayed post-snapshot read into another Case',async()=>{
+    let resolve!: (value:PreparationPackage)=>void;const late=new Promise<PreparationPackage>(r=>{resolve=r});
+    const api={getCollaboratorPreparation:vi.fn().mockResolvedValueOnce(preparation()).mockReturnValueOnce(late),listCollaboratorTasks:vi.fn().mockResolvedValue({case_id:'case-1',tasks:[]}),createPreparationSnapshot:vi.fn().mockResolvedValue({status:'SUCCEEDED',command_id:'saved',idempotency_key:'saved',result_code:'RECORDED',aggregate_refs:[],event_ids:[],replayed:false})} as unknown as WizardApi;
+    const{result}=renderWizardHook(api,vi.fn());act(()=>{result.current.setWizardCaseId('case-1');result.current.setWizardPackageId('package-1')});await act(async()=>{await result.current.loadCollaboratorWizard()});let action!:Promise<void>;act(()=>{action=result.current.createWizardSnapshot()});await waitFor(()=>expect(api.getCollaboratorPreparation).toHaveBeenCalledTimes(2));act(()=>result.current.setWizardCaseId('case-2'));await act(async()=>{resolve({...preparation(),aggregate_revision:99});await action});expect(result.current.wizardPackage?.aggregate_revision).not.toBe(99);
+  });
+});
+
+it('masks the loaded package immediately when the authenticated owner changes',async()=>{
+  const api={getCollaboratorPreparation:vi.fn().mockResolvedValue(preparation()),
+    listCollaboratorTasks:vi.fn().mockResolvedValue({case_id:'case-1',tasks:[]})} as unknown as ApiClient;
+  const{result,rerender}=renderHook(({owner})=>useCollaboratorWizard(api,vi.fn(),owner),{initialProps:{owner:'owner-a'}});
+  act(()=>{result.current.setWizardCaseId('case-1');result.current.setWizardPackageId('package-1')});
+  await act(async()=>{await result.current.loadCollaboratorWizard()});expect(result.current.wizardPackage).not.toBeNull();
+  rerender({owner:'owner-b'});expect(result.current.wizardPackage).toBeNull();
 });

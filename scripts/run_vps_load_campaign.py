@@ -10,7 +10,8 @@ from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+from urllib.parse import unquote, urlsplit
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 
 @dataclass(frozen=True, slots=True)
@@ -21,15 +22,42 @@ class RequestResult:
     error_code: str | None
 
 
+class _NoRedirects(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def _url_for_path(base_url: str, path: str) -> str:
+    if any(ord(char) < 32 or char == "\\" for char in base_url + path):
+        raise ValueError("HTTP destination contains invalid characters")
+    base, destination = urlsplit(base_url), urlsplit(path)
+    if (
+        base.scheme not in {"http", "https"}
+        or not base.hostname
+        or base.username is not None
+        or base.password is not None
+        or base.query
+        or base.fragment
+        or destination.scheme
+        or destination.netloc
+        or destination.fragment
+        or ".." in unquote(destination.path).split("/")
+    ):
+        raise ValueError("An explicit HTTP(S) origin and bounded request path are required")
+    # Parsing the port also rejects malformed authorities before any network operation.
+    _ = base.port
+    return f"{base_url.rstrip('/')}/{path.lstrip('/')}"
+
+
 def _request(base_url: str, path: str, token: str | None, timeout: float) -> RequestResult:
     started = time.perf_counter()
-    url = f"{base_url.rstrip('/')}/{path.lstrip('/')}"
+    url = _url_for_path(base_url, path)
     headers = {"Accept": "application/json, application/zip"}
     if token:
         headers["Authorization"] = f"Bearer {token}"
     request = Request(url, method="GET", headers=headers)
     try:
-        with urlopen(request, timeout=timeout) as response:
+        with build_opener(_NoRedirects()).open(request, timeout=timeout) as response:
             status = int(response.status)
             response.read(1024)
             error_code = None if 200 <= status < 300 else f"HTTP_{status}"
@@ -77,6 +105,8 @@ def main() -> int:
     paths = _load_paths(args.paths_file)
     if not paths:
         raise SystemExit("paths file must not be empty")
+    for path in paths:
+        _url_for_path(args.base_url, path)
     if args.dry_run:
         print(
             json.dumps(

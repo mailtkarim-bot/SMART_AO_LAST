@@ -94,6 +94,11 @@ class S3PrivateObjectStorage(GeneratedDocumentStorage):
             Key=_validate_key(storage_key),
         )
 
+    def read_bounded(self, *, storage_key: str, max_bytes: int) -> bytes:
+        if max_bytes <= 0:
+            raise ValueError("max_bytes must be positive")
+        return self._read_bounded(storage_key=storage_key, max_bytes=max_bytes)
+
     def _read_bounded(self, *, storage_key: str, max_bytes: int) -> bytes:
         response = self._client.get_object(
             Bucket=self._bucket,

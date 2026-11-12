@@ -5,6 +5,9 @@ from app.modules.enterprise.application.enterprise_library import (
     EnterpriseCompanyProjection,
     EnterpriseDocumentProjection,
 )
+from app.modules.enterprise.infrastructure.document_verification import (
+    document_verification_status_expression,
+)
 from app.modules.enterprise.infrastructure.models import (
     EnterpriseCompanyRecord,
     EnterpriseDocumentRecord,
@@ -33,20 +36,11 @@ class SqlAlchemyEnterpriseLibraryReader:
                     EnterpriseDocumentRecord.id,
                     EnterpriseDocumentRecord.document_kind,
                     EnterpriseDocumentRecord.document_label,
+                    EnterpriseDocumentRecord.sha256,
                     EnterpriseDocumentRecord.issued_at,
                     EnterpriseDocumentRecord.expires_at,
                     EnterpriseDocumentRecord.verification_status,
-                    sa.select(EnterpriseDocumentVerificationRecord.outcome)
-                    .where(
-                        EnterpriseDocumentVerificationRecord.tenant_id
-                        == EnterpriseDocumentRecord.tenant_id,
-                        EnterpriseDocumentVerificationRecord.document_id
-                        == EnterpriseDocumentRecord.id,
-                    )
-                    .order_by(EnterpriseDocumentVerificationRecord.revision.desc())
-                    .limit(1)
-                    .scalar_subquery()
-                    .label("latest_verification"),
+                    document_verification_status_expression().label("current_verification_status"),
                     sa.func.coalesce(
                         sa.select(sa.func.max(EnterpriseDocumentVerificationRecord.revision))
                         .where(
@@ -84,8 +78,9 @@ class SqlAlchemyEnterpriseLibraryReader:
                     document_label=row.document_label,
                     issued_at=row.issued_at,
                     expires_at=row.expires_at,
-                    verification_status=row.latest_verification or row.verification_status,
+                    verification_status=row.current_verification_status,
                     verification_revision=row.verification_revision,
+                    sha256=row.sha256,
                 )
                 for row in rows
             ),

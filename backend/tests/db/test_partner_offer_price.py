@@ -1,11 +1,13 @@
 from dataclasses import replace
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from typing import cast
 from uuid import uuid4
 
 import pytest
 import sqlalchemy as sa
 from app.interfaces.http.routes.patron_partner_offer_prices import (
+    ConsultationSecurityRuntime,
     build_patron_partner_offer_prices_router,
 )
 from app.modules.partner.infrastructure.models.partner_event import CasePartnerEventRecord
@@ -288,7 +290,9 @@ def test_http_price_projection_is_patron_only_and_contains_only_the_declared_val
     app.include_router(
         build_patron_partner_offer_prices_router(
             service=service,
-            security_runtime=SimpleNamespace(context_resolver=resolver),
+            security_runtime=cast(
+                ConsultationSecurityRuntime, SimpleNamespace(context_resolver=resolver)
+            ),
         )
     )
     client = TestClient(app)

@@ -1,0 +1,277 @@
+{
+  "synthetic": true,
+  "reference_kind": "CODEX_CALIBRATION_NOT_HUMAN_GOLDEN",
+  "version": 1,
+  "signature_definition": "document_family, claim, explicitly quoted numeric lot numbers; not presence/absence truth",
+  "cases": [
+    {
+      "id": "composition",
+      "text": "Le DCE comprend le CCAP et le CCTP.",
+      "expected": [
+        {
+          "document_family": "CCAP",
+          "claim": "PROVIDED_SIGNAL",
+          "lot_numbers": []
+        },
+        {
+          "document_family": "CCTP",
+          "claim": "PROVIDED_SIGNAL",
+          "lot_numbers": []
+        }
+      ]
+    },
+    {
+      "id": "composed",
+      "text": "Le dossier est composé du CCAP et du CCTP.",
+      "expected": [
+        {
+          "document_family": "CCAP",
+          "claim": "PROVIDED_SIGNAL",
+          "lot_numbers": []
+        },
+        {
+          "document_family": "CCTP",
+          "claim": "PROVIDED_SIGNAL",
+          "lot_numbers": []
+        }
+      ]
+    },
+    {
+      "id": "constituent_list",
+      "text": "Pièces constitutives du dossier :\n- CCAP\n- CCTP",
+      "expected": [
+        {
+          "document_family": "CCAP",
+          "claim": "PROVIDED_SIGNAL",
+          "lot_numbers": []
+        },
+        {
+          "document_family": "CCTP",
+          "claim": "PROVIDED_SIGNAL",
+          "lot_numbers": []
+        }
+      ]
+    },
+    {
+      "id": "bpu_full",
+      "text": "Le bordereau des prix unitaires est joint au DCE.",
+      "expected": [
+        {
+          "document_family": "BPU",
+          "claim": "PROVIDED_SIGNAL",
+          "lot_numbers": []
+        }
+      ]
+    },
+    {
+      "id": "rc_full",
+      "text": "Le règlement de consultation est fourni.",
+      "expected": [
+        {
+          "document_family": "RC",
+          "claim": "PROVIDED_SIGNAL",
+          "lot_numbers": []
+        }
+      ]
+    },
+    {
+      "id": "dpgf_passive",
+      "text": "La DPGF doit être remise.",
+      "expected": [
+        {
+          "document_family": "DPGF",
+          "claim": "SUBMISSION_SIGNAL",
+          "lot_numbers": []
+        }
+      ]
+    },
+    {
+      "id": "offer_heading",
+      "text": "Documents à joindre à l’offre :\n- acte d’engagement",
+      "expected": [
+        {
+          "document_family": "AE",
+          "claim": "SUBMISSION_SIGNAL",
+          "lot_numbers": []
+        }
+      ]
+    },
+    {
+      "id": "explicit_absence",
+      "text": "Le CCAP est absent du dossier.",
+      "expected": [
+        {
+          "document_family": "CCAP",
+          "claim": "NOT_PROVIDED_SIGNAL",
+          "lot_numbers": []
+        }
+      ]
+    },
+    {
+      "id": "negative",
+      "text": "Le CCAP n’est pas fourni.",
+      "expected": [
+        {
+          "document_family": "CCAP",
+          "claim": "NOT_PROVIDED_SIGNAL",
+          "lot_numbers": []
+        }
+      ]
+    },
+    {
+      "id": "no_longer",
+      "text": "Le CCAP n’est plus joint.",
+      "expected": [
+        {
+          "document_family": "CCAP",
+          "claim": "AMBIGUOUS",
+          "lot_numbers": []
+        }
+      ]
+    },
+    {
+      "id": "future",
+      "text": "Le CCAP pourra être fourni.",
+      "expected": [
+        {
+          "document_family": "CCAP",
+          "claim": "AMBIGUOUS",
+          "lot_numbers": []
+        }
+      ]
+    },
+    {
+      "id": "prohibited",
+      "text": "Il est interdit de joindre le CCAP.",
+      "expected": [
+        {
+          "document_family": "CCAP",
+          "claim": "PROHIBITED_SUBMISSION_SIGNAL",
+          "lot_numbers": []
+        }
+      ]
+    },
+    {
+      "id": "conditional",
+      "text": "Le CCTP est joint sauf pour le lot 2.",
+      "expected": [
+        {
+          "document_family": "CCTP",
+          "claim": "AMBIGUOUS",
+          "lot_numbers": []
+        }
+      ]
+    },
+    {
+      "id": "lot",
+      "text": "Le CCTP est joint pour le lot 03.",
+      "expected": [
+        {
+          "document_family": "CCTP",
+          "claim": "PROVIDED_SIGNAL",
+          "lot_numbers": [
+            3
+          ]
+        }
+      ]
+    },
+    {
+      "id": "scope_boundary",
+      "text": "Le CCAP est joint pour le lot 1. Le CCTP n’est pas joint pour le lot 2.",
+      "expected": [
+        {
+          "document_family": "CCAP",
+          "claim": "PROVIDED_SIGNAL",
+          "lot_numbers": [
+            1
+          ]
+        },
+        {
+          "document_family": "CCTP",
+          "claim": "NOT_PROVIDED_SIGNAL",
+          "lot_numbers": [
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "id": "list_header",
+      "text": "Composition du DCE :\n- CCAP\n- DPGF",
+      "expected": [
+        {
+          "document_family": "CCAP",
+          "claim": "PROVIDED_SIGNAL",
+          "lot_numbers": []
+        },
+        {
+          "document_family": "DPGF",
+          "claim": "PROVIDED_SIGNAL",
+          "lot_numbers": []
+        }
+      ]
+    },
+    {
+      "id": "reference",
+      "text": "Le CCAP est joint conformément au CCTP.",
+      "expected": [
+        {
+          "document_family": "CCAP",
+          "claim": "AMBIGUOUS",
+          "lot_numbers": []
+        },
+        {
+          "document_family": "CCTP",
+          "claim": "AMBIGUOUS",
+          "lot_numbers": []
+        }
+      ]
+    },
+    {
+      "id": "exclusion",
+      "text": "Le DCE comprend uniquement le CCAP, sans le CCTP.",
+      "expected": [
+        {
+          "document_family": "CCAP",
+          "claim": "AMBIGUOUS",
+          "lot_numbers": []
+        },
+        {
+          "document_family": "CCTP",
+          "claim": "AMBIGUOUS",
+          "lot_numbers": []
+        }
+      ]
+    },
+    {
+      "id": "no_announcement",
+      "text": "Le candidat doit respecter le CCAP.",
+      "expected": []
+    },
+    {
+      "id": "identifier",
+      "text": "Le dossier comprend la référence RC-44.",
+      "expected": []
+    },
+    {
+      "id": "incidental",
+      "text": "Le CCTP décrit les travaux.",
+      "expected": []
+    },
+    {
+      "id": "understanding",
+      "text": "Le candidat comprend le CCAP.",
+      "expected": []
+    },
+    {
+      "id": "planning_word",
+      "text": "La planification décrit le délai.",
+      "expected": []
+    },
+    {
+      "id": "applicability",
+      "text": "Le CCAP n’est pas applicable au lot 2.",
+      "expected": []
+    }
+  ]
+}

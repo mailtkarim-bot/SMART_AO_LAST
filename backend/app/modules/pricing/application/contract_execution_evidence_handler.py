@@ -41,10 +41,12 @@ class RecordContractExecutionEvidenceHandler(CommandHandler):
         if context.actor_kind != "PATRON_ADMIN" or context.membership_id is None:
             raise CommandExecutionError("PATRON_REQUIRED")
         case = session.scalar(
-            sa.select(CaseRecord).where(
+            sa.select(CaseRecord)
+            .where(
                 CaseRecord.tenant_id == tenant_id,
                 CaseRecord.id == command.case_id,
             )
+            .with_for_update()
         )
         if case is None:
             raise CommandExecutionError("CASE_NOT_FOUND_OR_FORBIDDEN")
@@ -89,6 +91,12 @@ class RecordContractExecutionEvidenceHandler(CommandHandler):
         except ValueError as error:
             raise CommandExecutionError(str(error)) from error
 
+        closure_review = None
+        if getattr(command, "closure_review", None) is not None:
+            from app.modules.pricing.application.case_closure_handler import validate_closure_review
+
+            closure_review = validate_closure_review(session, tenant_id, command)
+
         session.add(
             ContractExecutionEvidenceRecord(
                 id=command.act_id,
@@ -105,6 +113,7 @@ class RecordContractExecutionEvidenceHandler(CommandHandler):
                 evidence_refs_json=list(evidence.evidence_refs),
                 declared_event_date=evidence.declared_event_date,
                 actor_id=UUID(str(context.actor_id)),
+                closure_review_json=closure_review,
             )
         )
         event_date = (

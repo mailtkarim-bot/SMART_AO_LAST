@@ -23,7 +23,9 @@ def main() -> int:
 
     chunks: list[dict[str, object]] = []
     for path in sorted(args.corpus_root.glob("*.txt")):
-        for index, start in enumerate(range(0, min(len(path.read_text(errors="replace")), 12_000), 1_000)):
+        for index, start in enumerate(
+            range(0, min(len(path.read_text(errors="replace")), 12_000), 1_000)
+        ):
             text = path.read_text(errors="replace")[start : start + 1_000].strip()
             if text:
                 chunks.append(
@@ -42,7 +44,11 @@ def main() -> int:
 
     queries = (
         ("deadline", "Quelle est la date limite de réception des offres ?", "RC"),
-        ("common_requirements", "Quelles sont les prescriptions techniques communes du marché ?", "CCTC"),
+        (
+            "common_requirements",
+            "Quelles sont les prescriptions techniques communes du marché ?",
+            "CCTC",
+        ),
         ("schedule", "Quel est le calendrier prévisionnel des travaux ?", "Planning"),
     )
     torch.set_num_threads(1)
@@ -57,7 +63,9 @@ def main() -> int:
     )
     corpus = vectors[: len(chunks)]
     results = []
-    for (label, query, expected), query_vector in zip(queries, vectors[len(chunks) :], strict=True):
+    for (label, _query, expected), query_vector in zip(
+        queries, vectors[len(chunks) :], strict=True
+    ):
         scores = corpus @ query_vector
         order = np.argsort(-scores)[:3]
         top = [
@@ -73,7 +81,9 @@ def main() -> int:
                 "label": label,
                 "expected_source": expected,
                 "top": top,
-                "expected_found_in_top3": any(expected.lower() in item["source"].lower() for item in top),
+                "expected_found_in_top3": any(
+                    expected.lower() in item["source"].lower() for item in top
+                ),
             }
         )
     output = {

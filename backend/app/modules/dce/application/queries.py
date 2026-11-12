@@ -8,6 +8,9 @@ from enum import StrEnum
 from typing import Protocol
 from uuid import UUID
 
+from app.modules.dce.application.requirement_values import RcStructuredCandidate
+from app.modules.dce.application.source_anchor_projection import DceSourceAnchorProjection
+
 
 @dataclass(frozen=True, slots=True)
 class ConsultationProjection:
@@ -58,15 +61,104 @@ class CaseDceReadingCounters:
 
 @dataclass(frozen=True, slots=True)
 class CaseDceReadingRequirementProjection:
-    """One immutable DCE signal represented without source text or storage metadata."""
+    """One immutable DCE signal and its optional source provenance projection."""
 
     requirement_id: UUID
+    confirmation_revision: int | None
     requirement_type: str
     directive_signal: str
     confirmation_outcome: str
     uncertainty_status: str
     document_family: str
     source_locator_label: str
+    source_anchor: DceSourceAnchorProjection | None = None
+    structured_candidate: RcStructuredCandidate | None = None
+    source_proof_state: str = "UNKNOWN"
+    source_start_byte_offset: int | None = None
+    source_end_byte_offset: int | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class CaseDceDocumentCoverage:
+    """Safe admitted-piece metadata; extraction is not semantic completeness."""
+
+    document_id: UUID
+    extraction_id: UUID | None
+    document_family: str
+    extraction_status: str
+
+
+@dataclass(frozen=True, slots=True)
+class CaseDceCoverageException:
+    """Closed structural provenance or an explicitly unverified declaration."""
+
+    observation_id: UUID
+    kind: str
+    state: str
+    document_id: UUID | None
+    extraction_id: UUID | None
+    entry_path: tuple[int, ...]
+    document_family: str
+    source_state: str
+    lot_applicability: str = "UNKNOWN"
+    criticality: str = "UNKNOWN"
+
+
+@dataclass(frozen=True, slots=True)
+class CaseDceAnnouncementAnchor:
+    fragment_id: UUID
+    fragment_ordinal: int
+    locator_label: str
+    part: int
+    kind: str
+    start_byte_offset: int
+    end_byte_offset: int
+
+
+@dataclass(frozen=True, slots=True)
+class CaseDceAnnouncementProjection:
+    candidate_id: UUID
+    document_family: str
+    claim: str
+    lot_numbers: tuple[int, ...]
+    source_document_id: UUID
+    source_extraction_id: UUID
+    source_fragment_id: UUID
+    source_locator_label: str
+    source_locator_state: str
+    start_byte_offset: int
+    end_byte_offset: int
+    family_candidate_document_ids: tuple[UUID, ...]
+    context_fragment_id: UUID | None = None
+    context_locator_label: str | None = None
+    context_start_byte_offset: int | None = None
+    context_end_byte_offset: int | None = None
+    presence_status: str = "UNKNOWN"
+    applicability: str = "UNKNOWN"
+    criticality: str = "UNKNOWN"
+    conflict_state: str = "UNKNOWN"
+    rule_version: str = "1"
+    anchor_chain: tuple[CaseDceAnnouncementAnchor, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class CaseDceCoverageProjection:
+    """Known extraction coverage, with unrecorded inventory/lot facts explicit."""
+
+    case_scope_kind: str
+    documents: tuple[CaseDceDocumentCoverage, ...]
+    total_documents: int
+    completed_extractions: int
+    unread_documents: int
+    exceptions: tuple[CaseDceCoverageException, ...] = ()
+    announcements: tuple[CaseDceAnnouncementProjection, ...] = ()
+    announcement_scan_state: str = "UNKNOWN"
+    inventory_scope: str = "ADMITTED_DOCUMENTS_ONLY"
+    inventory_completeness: str = "UNKNOWN"
+    lot_applicability: str = "UNKNOWN"
+    critical_unread_documents: None = None
+    status: str = "REVIEW_REQUIRED"
+    analysis_complete: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -81,6 +173,7 @@ class CaseDceReadingProjection:
     source_received_at: datetime
     requirements: tuple[CaseDceReadingRequirementProjection, ...]
     counters: CaseDceReadingCounters
+    coverage: CaseDceCoverageProjection | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -148,6 +241,7 @@ class AssignedCaseProjection:
     dce_availability: str
     consultation_id: UUID | None
     applicable_dce_version_id: UUID | None
+    aggregate_revision: int = 0
 
 
 class AssignedCaseReader(Protocol):

@@ -36,6 +36,13 @@ class LocalGeneratedDocumentStorage(GeneratedDocumentStorage):
     def read(self, *, storage_key: str) -> bytes:
         return self._path(storage_key).read_bytes()
 
+    def read_bounded(self, *, storage_key: str, max_bytes: int) -> bytes:
+        from app.modules.dce.infrastructure.quarantine import LocalQuarantineStorageAdapter
+
+        return LocalQuarantineStorageAdapter(root=self._root).read_verified_bytes(
+            storage_key=storage_key, max_bytes=max_bytes
+        )
+
     def _path(self, storage_key: str) -> Path:
         relative = PurePosixPath(storage_key)
         if relative.is_absolute() or any(part in {"", ".", ".."} for part in relative.parts):

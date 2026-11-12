@@ -335,6 +335,9 @@ class SqlAlchemyCaseResolutionReader(CaseResolutionReader):
                     "UNKNOWN": "UNKNOWN",
                     "MODEL_INVALID": "UNKNOWN",
                 }[latest_capacity_run.status]
+                if latest_capacity_run.solver_id == "google-ortools-cp-sat-dated-v1":
+                    # A local declared plan never proves global execution capacity.
+                    capacity_state = "UNKNOWN"
                 capacity = CaseEconomicCoverageStatusProjection(
                     state=capacity_state,
                     source_refs=(

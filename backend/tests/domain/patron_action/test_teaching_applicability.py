@@ -1,4 +1,5 @@
 from datetime import date
+from typing import Literal
 from uuid import uuid4
 
 import pytest
@@ -21,7 +22,11 @@ def _snapshot(
 
 
 def _build(
-    *, decision: str = "APPLICABLE", source_case_id=None, target_case_id=None, snapshot=None
+    *,
+    decision: Literal["APPLICABLE", "NOT_APPLICABLE", "REVIEW_REQUIRED"] = "APPLICABLE",
+    source_case_id=None,
+    target_case_id=None,
+    snapshot=None,
 ):
     source_case_id = source_case_id or uuid4()
     target_case_id = target_case_id or source_case_id

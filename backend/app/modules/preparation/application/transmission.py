@@ -3,7 +3,8 @@ from __future__ import annotations
 import hashlib
 import json
 from datetime import datetime
-from uuid import UUID
+from typing import Any
+from uuid import NAMESPACE_URL, UUID, uuid5
 
 import sqlalchemy as sa
 from sqlalchemy.orm import Session, sessionmaker
@@ -18,6 +19,8 @@ from app.modules.preparation.infrastructure.models import (
     GeneratedTechnicalDocumentRecord,
     PreparationPackageRecord,
     PreparationReadinessRecord,
+    PreparationResponsePlanRecord,
+    PreparationReviewRecord,
     PreparationSnapshotRecord,
     PreparationTransmissionRecord,
     TechnicalResponseDraftRecord,
@@ -30,6 +33,7 @@ from app.platform.events.dispatcher import (
     HandlerOutcome,
     PendingDomainEvent,
 )
+from app.platform.persistence.models import CommandReceiptRecord
 from app.platform.security.authorization import (
     AuthorizationPolicyPort,
     AuthorizationRequest,
@@ -37,10 +41,13 @@ from app.platform.security.authorization import (
 )
 from app.platform.security.capabilities import Capability
 from app.platform.security.context import ActorContext, ActorKind, DataClassification
+from app.platform.storage.ports import GeneratedDocumentStorage
+
+_MAX_RESPONSE_DRAFT_BYTES = 100_000
 
 
 class PreparationTransmissionService:
-    """Collaborator-only orchestration for immutable preparation transmission."""
+    """Own immutable preparation transmission writes and Patron receipt reads."""
 
     def __init__(
         self,
@@ -75,6 +82,34 @@ class PreparationTransmissionService:
         )
         if not decision.allowed:
             raise PermissionError(decision.code)
+        sensitive = bool(getattr(command, "selected_annexes", []))
+        if command.command_type == TransmitPreparationSnapshotCommand.command_type:
+            with self._session_factory() as session:
+                snapshot = session.scalar(
+                    sa.select(PreparationSnapshotRecord).where(
+                        PreparationSnapshotRecord.tenant_id == actor.tenant_id,
+                        PreparationSnapshotRecord.package_id == package.id,
+                        PreparationSnapshotRecord.id == command.snapshot_id,
+                    )
+                )
+                sensitive = snapshot is not None and bool(snapshot.manifest_json.get("annexes"))
+        if sensitive:
+            decision = self._policy.authorize(
+                context=actor,
+                request=AuthorizationRequest(
+                    action=Capability.PREPARATION_TRANSMIT,
+                    resource=AuthorizationResource(
+                        resource_type="PREPARATION_PACKAGE",
+                        resource_id=package.id,
+                        tenant_id=actor.tenant_id,
+                        classification=DataClassification.PERSONAL_OR_ADMINISTRATIVE,
+                        case_id=package.case_id,
+                    ),
+                    evaluated_at=now,
+                ),
+            )
+            if not decision.allowed:
+                raise PermissionError(decision.code)
         return self._dispatcher.dispatch(
             command=command,
             context=CommandContext(
@@ -99,12 +134,155 @@ class PreparationTransmissionService:
                 )
             )
 
+    def read_transmissions(self, *, actor: ActorContext, package_id: UUID, now: datetime):
+        if actor.actor_kind not in {ActorKind.PATRON_ADMIN, ActorKind.PATRON_DELEGATE}:
+            raise PermissionError("PATRON_REQUIRED")
+        if actor.membership_id is None:
+            raise PermissionError("NOT_FOUND_OR_FORBIDDEN")
+        with self._session_factory() as session:
+            package = session.scalar(
+                sa.select(PreparationPackageRecord).where(
+                    PreparationPackageRecord.tenant_id == actor.tenant_id,
+                    PreparationPackageRecord.id == package_id,
+                )
+            )
+            if package is None:
+                raise PermissionError("NOT_FOUND_OR_FORBIDDEN")
+            decision = self._policy.authorize(
+                context=actor,
+                request=AuthorizationRequest(
+                    action=Capability.PREPARATION_REVIEW_DECIDE,
+                    resource=AuthorizationResource(
+                        resource_type="PREPARATION_PACKAGE",
+                        resource_id=package.id,
+                        tenant_id=actor.tenant_id,
+                        classification=DataClassification.INTERNAL_OPERATIONAL,
+                        case_id=package.case_id,
+                    ),
+                    evaluated_at=now,
+                ),
+            )
+            if not decision.allowed:
+                raise PermissionError(decision.code)
+            rows = session.execute(
+                sa.select(PreparationSnapshotRecord, PreparationTransmissionRecord)
+                .join(
+                    PreparationTransmissionRecord,
+                    sa.and_(
+                        PreparationTransmissionRecord.tenant_id
+                        == PreparationSnapshotRecord.tenant_id,
+                        PreparationTransmissionRecord.package_id
+                        == PreparationSnapshotRecord.package_id,
+                        PreparationTransmissionRecord.snapshot_id == PreparationSnapshotRecord.id,
+                    ),
+                )
+                .where(
+                    PreparationSnapshotRecord.tenant_id == actor.tenant_id,
+                    PreparationSnapshotRecord.package_id == package.id,
+                    PreparationTransmissionRecord.state == "TRANSMITTED_TO_PATRON",
+                )
+                .order_by(PreparationSnapshotRecord.version)
+            ).all()
+            deliveries = []
+            for snapshot, transmission in rows:
+                manifest = snapshot.manifest_json
+                try:
+                    manifest_bytes = json.dumps(
+                        manifest, sort_keys=True, separators=(",", ":")
+                    ).encode("utf-8")
+                except (TypeError, ValueError) as error:
+                    raise CommandExecutionError("PREPARATION_RECEIPT_UNKNOWN") from error
+                if (
+                    not isinstance(manifest, dict)
+                    or hashlib.sha256(manifest_bytes).hexdigest() != snapshot.manifest_sha256
+                    or manifest.get("package_id") != str(package.id)
+                    or manifest.get("case_id") != str(package.case_id)
+                ):
+                    raise CommandExecutionError("PREPARATION_RECEIPT_UNKNOWN")
+                snapshot_receipt = self.read_command_receipt(
+                    session=session,
+                    tenant_id=actor.tenant_id,
+                    command_id=snapshot.command_id,
+                    expected_command_type=CreatePreparationSnapshotCommand.command_type,
+                    expected_result_code="PREPARATION_SNAPSHOT_CREATED",
+                    expected_aggregate_type="PreparationSnapshot",
+                    expected_aggregate_id=snapshot.id,
+                    expected_aggregate_revision=snapshot.version,
+                )
+                transmission_receipt = self.read_command_receipt(
+                    session=session,
+                    tenant_id=actor.tenant_id,
+                    command_id=transmission.command_id,
+                    expected_command_type=TransmitPreparationSnapshotCommand.command_type,
+                    expected_result_code="PREPARATION_TRANSMITTED_TO_PATRON",
+                    expected_aggregate_type="PreparationTransmission",
+                    expected_aggregate_id=transmission.id,
+                )
+                deliveries.append((snapshot, transmission, snapshot_receipt, transmission_receipt))
+            return tuple(deliveries)
+
+    @staticmethod
+    def read_command_receipt(
+        *,
+        session: Session,
+        tenant_id: UUID,
+        command_id: UUID,
+        expected_command_type: str,
+        expected_result_code: str,
+        expected_aggregate_type: str,
+        expected_aggregate_id: UUID,
+        expected_aggregate_revision: int | None = None,
+    ) -> dict[str, object]:
+        receipt = session.scalar(
+            sa.select(CommandReceiptRecord).where(
+                CommandReceiptRecord.tenant_id == tenant_id,
+                CommandReceiptRecord.command_id == command_id,
+            )
+        )
+        if (
+            receipt is None
+            or receipt.status != "SUCCEEDED"
+            or receipt.command_type != expected_command_type
+            or receipt.result_code != expected_result_code
+            or receipt.response_body_json is None
+            or receipt.aggregate_refs_json is None
+        ):
+            raise CommandExecutionError("PREPARATION_RECEIPT_UNKNOWN")
+        body = receipt.response_body_json
+        references = body.get("aggregate_refs")
+        if (
+            body.get("status") != "SUCCEEDED"
+            or body.get("command_id") != str(command_id)
+            or body.get("idempotency_key") != str(receipt.idempotency_key)
+            or body.get("result_code") != expected_result_code
+            or not isinstance(references, list)
+            or len(references) != 1
+            or receipt.aggregate_refs_json != {"aggregate_refs": references}
+            or not isinstance(references[0], dict)
+            or references[0].get("aggregate_type") != expected_aggregate_type
+            or references[0].get("aggregate_id") != str(expected_aggregate_id)
+            or (
+                expected_aggregate_revision is not None
+                and references[0].get("aggregate_revision") != expected_aggregate_revision
+            )
+            or body.get("event_ids") != receipt.event_ids_json
+        ):
+            raise CommandExecutionError("PREPARATION_RECEIPT_UNKNOWN")
+        return body
+
 
 class PreparationTransmissionHandler:
     """Own immutable snapshots and append-only patron transmissions."""
 
-    def __init__(self, action_writer: PatronActionWriter | None = None) -> None:
+    def __init__(
+        self,
+        action_writer: PatronActionWriter | None = None,
+        storage: GeneratedDocumentStorage | None = None,
+        review_handler=None,
+    ) -> None:
+        self._review = review_handler
         self._action_writer = action_writer
+        self._storage = storage
 
     def execute(self, *, session: Session, command, context: CommandContext) -> HandlerOutcome:
         if context.actor_kind != ActorKind.COLLABORATEUR.value or context.membership_id is None:
@@ -151,6 +329,185 @@ class PreparationTransmissionHandler:
         if Capability.WORK_TASK_WRITE.value not in assignment.scope_actions_json:
             raise CommandExecutionError("ASSIGNMENT_SCOPE_FORBIDDEN")
 
+    @staticmethod
+    def _require_annex_scope(session, package, context):
+        assignment = session.scalar(
+            sa.select(CaseAssignmentRecord).where(
+                CaseAssignmentRecord.tenant_id == context.tenant_id,
+                CaseAssignmentRecord.id == package.assignment_id,
+                CaseAssignmentRecord.membership_id == context.membership_id,
+                CaseAssignmentRecord.state == "ACTIVE",
+            )
+        )
+        if (
+            assignment is None
+            or "PERSONAL_OR_ADMINISTRATIVE" not in assignment.scope_classifications_json
+        ):
+            raise CommandExecutionError("ASSIGNMENT_SCOPE_FORBIDDEN")
+
+    def validate_annexes(self, *, session, package, manifest, context):
+        from app.modules.preparation.infrastructure.annexes import validate_frozen_annexes
+
+        return validate_frozen_annexes(
+            session,
+            package=package,
+            manifest=manifest,
+            context=context,
+            storage=self._storage,
+            review=self._review,
+        )
+
+    def current_c10_review_manifest(
+        self,
+        *,
+        session: Session,
+        package: PreparationPackageRecord,
+        tenant_id: UUID,
+        selected_response_draft=None,
+    ) -> list[dict[str, object]] | None:
+        plan = session.scalar(
+            sa.select(PreparationResponsePlanRecord)
+            .where(
+                PreparationResponsePlanRecord.tenant_id == tenant_id,
+                PreparationResponsePlanRecord.package_id == package.id,
+            )
+            .order_by(PreparationResponsePlanRecord.version.desc())
+            .limit(1)
+        )
+        if plan is None:
+            if selected_response_draft is not None:
+                raise CommandExecutionError("RESPONSE_DRAFT_SELECTION_UNKNOWN")
+            return None
+        if plan.state != "SOURCES_CURRENT" or plan.dce_version_id != package.dce_version_id:
+            raise CommandExecutionError("RESPONSE_PLAN_UNKNOWN")
+        drafts = list(
+            session.scalars(
+                sa.select(TechnicalResponseDraftRecord)
+                .where(
+                    TechnicalResponseDraftRecord.tenant_id == tenant_id,
+                    TechnicalResponseDraftRecord.package_id == package.id,
+                )
+                .order_by(
+                    TechnicalResponseDraftRecord.draft_id,
+                    TechnicalResponseDraftRecord.version.desc(),
+                )
+            ).all()
+        )
+        latest_drafts: dict[UUID, TechnicalResponseDraftRecord] = {}
+        for draft in drafts:
+            latest_drafts.setdefault(draft.draft_id, draft)
+        current_drafts = [
+            draft
+            for draft in latest_drafts.values()
+            if draft.response_plan_id == plan.plan_id
+            and draft.response_plan_version == plan.version
+        ]
+        if selected_response_draft is not None:
+            from pydantic import ValidationError
+
+            from app.modules.preparation.public.contracts import SelectedResponseDraft
+
+            try:
+                selection = SelectedResponseDraft.model_validate(selected_response_draft)
+            except ValidationError as error:
+                raise CommandExecutionError("RESPONSE_DRAFT_SELECTION_UNKNOWN") from error
+            current_drafts = [
+                draft
+                for draft in current_drafts
+                if draft.draft_id == selection.draft_id
+                and draft.version == selection.version
+                and draft.content_sha256 == selection.content_sha256
+            ]
+            if len(current_drafts) != 1:
+                raise CommandExecutionError("RESPONSE_DRAFT_SELECTION_UNKNOWN")
+        if not current_drafts:
+            raise CommandExecutionError("RESPONSE_DRAFT_REQUIRED")
+        review_rows = list(
+            session.scalars(
+                sa.select(PreparationReviewRecord).where(
+                    PreparationReviewRecord.tenant_id == tenant_id,
+                    PreparationReviewRecord.package_id == package.id,
+                    PreparationReviewRecord.target_draft_id.is_not(None),
+                )
+            ).all()
+        )
+        latest_reviews: dict[UUID, PreparationReviewRecord] = {}
+        for review in review_rows:
+            current = latest_reviews.get(review.review_id)
+            if current is None or review.revision > current.revision:
+                latest_reviews[review.review_id] = review
+        entries: list[dict[str, object]] = []
+        for draft in sorted(current_drafts, key=lambda row: str(row.draft_id)):
+            if self._storage is None:
+                raise CommandExecutionError("RESPONSE_DRAFT_UNKNOWN")
+            try:
+                from app.modules.preparation.infrastructure.response_artifact import (
+                    read_response_artifact,
+                )
+
+                draft_content, decoded = read_response_artifact(self._storage, draft)
+            except Exception as error:
+                raise CommandExecutionError("RESPONSE_DRAFT_UNKNOWN") from error
+            if hashlib.sha256(draft_content).hexdigest() != draft.content_sha256:
+                raise CommandExecutionError("RESPONSE_DRAFT_UNKNOWN")
+            from app.modules.preparation.infrastructure.contribution_sources import (
+                validate_contribution_sources,
+            )
+
+            try:
+                if getattr(draft, "content_format", "MARKDOWN") == "DOCX":
+                    from app.modules.preparation.infrastructure.buyer_docx_sources import (
+                        validate_buyer_docx_sources,
+                    )
+
+                    validate_buyer_docx_sources(
+                        session,
+                        tenant_id=tenant_id,
+                        package=package,
+                        draft=draft,
+                        storage=self._storage,
+                    )
+                else:
+                    validate_contribution_sources(
+                        session,
+                        tenant_id=tenant_id,
+                        case_id=package.case_id,
+                        dce_version_id=package.dce_version_id,
+                        content=decoded,
+                    )
+            except UnicodeDecodeError as error:
+                raise CommandExecutionError("RESPONSE_DRAFT_UNKNOWN") from error
+            matching = [
+                review
+                for review in latest_reviews.values()
+                if review.target_draft_id == draft.draft_id
+                and review.target_draft_version == draft.version
+                and review.target_content_sha256 == draft.content_sha256
+            ]
+            if len(matching) != 1 or matching[0].state != "ACCEPTED":
+                raise CommandExecutionError("RESPONSE_DRAFT_REVIEW_REQUIRED")
+            accepted = matching[0]
+            entries.append(
+                {
+                    "draft_id": str(draft.draft_id),
+                    "version": draft.version,
+                    "content_sha256": draft.content_sha256,
+                    "response_plan_id": str(draft.response_plan_id),
+                    "response_plan_version": draft.response_plan_version,
+                    "review_id": str(accepted.review_id),
+                    "review_revision": accepted.revision,
+                    "review_state": accepted.state,
+                }
+            )
+            if getattr(draft, "content_format", "MARKDOWN") == "DOCX":
+                entries[-1]["content_format"] = "DOCX"
+                entries[-1]["content_provenance_sha256"] = hashlib.sha256(
+                    json.dumps(
+                        draft.content_provenance_json, sort_keys=True, separators=(",", ":")
+                    ).encode()
+                ).hexdigest()
+        return entries
+
     def _create_snapshot(
         self,
         *,
@@ -159,8 +516,17 @@ class PreparationTransmissionHandler:
         command,
         context: CommandContext,
     ) -> HandlerOutcome:
-        if package.state not in {"GENERATED", "A_REVIEW"}:
-            raise CommandExecutionError("PREPARATION_NOT_GENERATED")
+        if package.state not in {"GENERATED", "A_REVIEW", "READY"}:
+            has_c10_plan = session.scalar(
+                sa.select(PreparationResponsePlanRecord.id)
+                .where(
+                    PreparationResponsePlanRecord.tenant_id == context.tenant_id,
+                    PreparationResponsePlanRecord.package_id == package.id,
+                )
+                .limit(1)
+            )
+            if has_c10_plan is None:
+                raise CommandExecutionError("PREPARATION_NOT_GENERATED")
         readiness = session.scalar(
             sa.select(PreparationReadinessRecord)
             .where(
@@ -190,6 +556,15 @@ class PreparationTransmissionHandler:
         )
         if not documents:
             raise CommandExecutionError("TECHNICAL_DOCUMENT_REQUIRED")
+        selection = getattr(command, "selected_response_draft", None)
+        c10_review_manifest = self.current_c10_review_manifest(
+            session=session,
+            package=package,
+            tenant_id=package.tenant_id,
+            selected_response_draft=selection,
+        )
+        if package.state not in {"GENERATED", "A_REVIEW", "READY"}:
+            raise CommandExecutionError("PREPARATION_NOT_GENERATED")
         drafts = list(
             session.scalars(
                 sa.select(TechnicalResponseDraftRecord)
@@ -206,6 +581,82 @@ class PreparationTransmissionHandler:
         latest_drafts: dict[UUID, TechnicalResponseDraftRecord] = {}
         for draft in drafts:
             latest_drafts.setdefault(draft.draft_id, draft)
+        if c10_review_manifest is None:
+            snapshot_drafts = list(latest_drafts.values())
+        else:
+            c10_ids = {entry["draft_id"] for entry in c10_review_manifest}
+            snapshot_drafts = [
+                draft for draft in latest_drafts.values() if str(draft.draft_id) in c10_ids
+            ]
+        publication_events = []
+        if c10_review_manifest is not None:
+            content_hashes = {entry["content_sha256"] for entry in c10_review_manifest}
+            if self._storage is None:
+                raise CommandExecutionError("RESPONSE_DRAFT_UNKNOWN")
+            if len(content_hashes) != 1 or not snapshot_drafts:
+                raise CommandExecutionError("RESPONSE_DRAFT_AMBIGUOUS")
+            expected_hash = next(iter(content_hashes))
+            expected_format = getattr(snapshot_drafts[0], "content_format", "MARKDOWN")
+            if (
+                documents[0].document_kind != "TECHNICAL_RESPONSE"
+                or documents[0].content_sha256 != expected_hash
+                or getattr(documents[0], "content_format", "MARKDOWN") != expected_format
+            ):
+                content = self._storage.read(storage_key=snapshot_drafts[0].storage_key)
+                if hashlib.sha256(content).hexdigest() != expected_hash:
+                    raise CommandExecutionError("RESPONSE_DRAFT_UNKNOWN")
+                document_id = uuid5(
+                    NAMESPACE_URL,
+                    f"reviewed-technical-document:{context.tenant_id}:{command.command_id}",
+                )
+                extension = "docx" if expected_format == "DOCX" else "md"
+                storage_key = (
+                    f"generated-documents/{context.tenant_id}/{package.id}/"
+                    f"{document_id}.{extension}"
+                )
+                try:
+                    written = self._storage.write(storage_key=storage_key, content=content)
+                except FileExistsError:
+                    # A rolled-back attempt may have left these immutable bytes before its receipt.
+                    written = hashlib.sha256(
+                        self._storage.read(storage_key=storage_key)
+                    ).hexdigest()
+                if written != expected_hash:
+                    raise CommandExecutionError("RESPONSE_DRAFT_UNKNOWN")
+                published = GeneratedTechnicalDocumentRecord(
+                    id=document_id,
+                    tenant_id=context.tenant_id,
+                    package_id=package.id,
+                    readiness_id=readiness.id,
+                    version=max(doc.version for doc in documents) + 1,
+                    document_kind="TECHNICAL_RESPONSE",
+                    state="GENERATED",
+                    content_sha256=expected_hash,
+                    content_format=expected_format,
+                    storage_key=storage_key,
+                    actor_id=context.actor_id,
+                    membership_id=context.membership_id,
+                    command_id=command.command_id,
+                    correlation_id=context.correlation_id,
+                )
+                session.add(published)
+                session.flush()
+                documents = [published]
+                publication_events.append(
+                    PendingDomainEvent(
+                        aggregate_type="GeneratedTechnicalDocument",
+                        aggregate_id=published.id,
+                        aggregate_revision=published.version,
+                        event_type="ReviewedTechnicalDocumentPublished",
+                        payload={
+                            "package_id": str(package.id),
+                            "document_id": str(published.id),
+                            "version": published.version,
+                            "content_sha256": expected_hash,
+                            "source_drafts": c10_review_manifest,
+                        },
+                    )
+                )
         version = (
             session.scalar(
                 sa.select(
@@ -217,7 +668,7 @@ class PreparationTransmissionHandler:
             )
             + 1
         )
-        manifest = {
+        manifest: dict[str, Any] = {
             "schema_version": 1,
             "case_id": str(package.case_id),
             "package_id": str(package.id),
@@ -237,7 +688,9 @@ class PreparationTransmissionHandler:
                 }
                 for document in documents[:1]
             ],
-            "response_drafts": [
+            "response_drafts": c10_review_manifest
+            if c10_review_manifest is not None
+            else [
                 {
                     "draft_id": str(draft.draft_id),
                     "version": draft.version,
@@ -245,9 +698,31 @@ class PreparationTransmissionHandler:
                     "section_codes": sorted(draft.section_codes_json),
                     "source_refs": sorted(draft.source_refs_json),
                 }
-                for draft in latest_drafts.values()
+                for draft in snapshot_drafts
             ],
         }
+        if getattr(documents[0], "content_format", "MARKDOWN") == "DOCX":
+            manifest["documents"][0]["content_format"] = "DOCX"
+        if selection is not None:
+            manifest["selected_response_draft"] = selection.model_dump(mode="json")
+        if getattr(command, "selected_annexes", []):
+            self._require_annex_scope(session, package, context)
+            from app.modules.preparation.infrastructure.annexes import freeze_annexes
+
+            annexes = freeze_annexes(
+                session,
+                package=package,
+                selections=command.selected_annexes,
+                response=selection,
+                context=context,
+                storage=self._storage,
+                review=self._review,
+                snapshot_id=command.snapshot_id,
+            )
+            manifest["snapshot_id"] = str(command.snapshot_id)
+            manifest["annexes"] = annexes
+            manifest["annex_selection_note"] = command.annex_justification.strip()
+            manifest["documents"].extend({"kind": "SOURCE_ANNEX", **item} for item in annexes)
         manifest_sha256 = hashlib.sha256(
             json.dumps(manifest, sort_keys=True, separators=(",", ":")).encode("utf-8")
         ).hexdigest()
@@ -282,7 +757,8 @@ class PreparationTransmissionHandler:
                     "aggregate_revision": snapshot.version,
                 },
             ),
-            events=(
+            events=tuple(publication_events)
+            + (
                 PendingDomainEvent(
                     aggregate_type="PreparationSnapshot",
                     aggregate_id=snapshot.id,
@@ -317,6 +793,29 @@ class PreparationTransmissionHandler:
         )
         if snapshot is None:
             raise CommandExecutionError("SNAPSHOT_NOT_FOUND_OR_FORBIDDEN")
+        current_c10_review_manifest = self.current_c10_review_manifest(
+            session=session,
+            package=package,
+            tenant_id=package.tenant_id,
+            selected_response_draft=snapshot.manifest_json.get("selected_response_draft"),
+        )
+        if (
+            current_c10_review_manifest is not None
+            and snapshot.manifest_json.get("response_drafts") != current_c10_review_manifest
+        ):
+            raise CommandExecutionError("RESPONSE_DRAFT_REVIEW_REQUIRED")
+        if snapshot.manifest_json.get("annexes"):
+            self._require_annex_scope(session, package, context)
+            from app.modules.preparation.infrastructure.annexes import validate_frozen_annexes
+
+            validate_frozen_annexes(
+                session,
+                package=package,
+                manifest=snapshot.manifest_json,
+                context=context,
+                storage=self._storage,
+                review=self._review,
+            )
         existing = session.scalar(
             sa.select(PreparationTransmissionRecord).where(
                 PreparationTransmissionRecord.tenant_id == context.tenant_id,
@@ -395,9 +894,14 @@ class PreparationTransmissionHandler:
 
 
 def preparation_transmission_handlers(
-    *, action_writer: PatronActionWriter | None = None
+    *,
+    action_writer: PatronActionWriter | None = None,
+    storage: GeneratedDocumentStorage | None = None,
+    review_handler=None,
 ) -> dict[str, PreparationTransmissionHandler]:
-    handler = PreparationTransmissionHandler(action_writer=action_writer)
+    handler = PreparationTransmissionHandler(
+        action_writer=action_writer, storage=storage, review_handler=review_handler
+    )
     return {
         CreatePreparationSnapshotCommand.command_type: handler,
         TransmitPreparationSnapshotCommand.command_type: handler,

@@ -107,10 +107,12 @@ def test_groups_require_distinct_receipts_and_a_nonempty_human_reason():
         build_partner_offer_line_comparison(
             comparison_id=uuid4(),
             scope_review_id=uuid4(),
-            groups=(PartnerOfferLineGroup(
-                group_id=group.group_id,
-                disposition=group.disposition,
-                rationale=" ",
-                members=group.members,
-            ),),
+            groups=(
+                PartnerOfferLineGroup(
+                    group_id=group.group_id,
+                    disposition=group.disposition,
+                    rationale=" ",
+                    members=group.members,
+                ),
+            ),
         )

@@ -24,6 +24,20 @@ class DecisionSourceResponse(BaseModel):
     role: str
 
 
+class DecisionConditionContractEvidenceLinkResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    link_id: UUID
+    condition_id: UUID
+    context_id: UUID
+    dce_requirement_id: UUID
+    dce_requirement_revision: int
+    contract_impact_id: UUID
+    proof_revision: int
+    profile_version_id: UUID
+    profile_version: int
+    profile_content_sha256: str = Field(min_length=64, max_length=64, pattern=r"^[0-9a-f]{64}$")
+
+
 class PatronDecisionDossierResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -41,6 +55,9 @@ class PatronDecisionDossierResponse(BaseModel):
     risks: list[object]
     conditions: list[DecisionConditionResponse]
     sources: list[DecisionSourceResponse]
+    contract_evidence_links: list[DecisionConditionContractEvidenceLinkResponse] = Field(
+        default_factory=list
+    )
     context_fingerprint: str | None = Field(
         default=None,
         min_length=64,

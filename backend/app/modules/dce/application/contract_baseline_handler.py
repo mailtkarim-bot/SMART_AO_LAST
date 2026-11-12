@@ -13,6 +13,10 @@ from app.modules.dce.application.contract_baseline_commands import (
 from app.modules.dce.infrastructure.models.contract_baseline import (
     ContractBaselineDeviationImpactRecord,
 )
+from app.modules.dce.infrastructure.models.dce_requirement_confirmations import (
+    DceRequirementConfirmationCurrentRecord,
+)
+from app.modules.dce.infrastructure.models.dce_requirements import DceRequirementRecord
 from app.platform.events.dispatcher import (
     CommandContext,
     CommandExecutionError,
@@ -31,6 +35,7 @@ class RecordContractBaselineImpactHandler(CommandHandler):
         context: CommandContext,
     ) -> HandlerOutcome:
         tenant_id = UUID(str(context.tenant_id))
+        exact_baseline_observation_id = command.baseline_observation_id
         if (
             session.scalar(
                 sa.select(CaseRecord.id).where(
@@ -44,13 +49,57 @@ class RecordContractBaselineImpactHandler(CommandHandler):
             command.deviation_statement is None or command.impact_statement is None
         ):
             raise CommandExecutionError("CONFIRMED_CHAIN_INCOMPLETE")
+        if command.dce_requirement_id is not None:
+            requirement_source_observation = session.scalar(
+                sa.select(DceRequirementRecord.source_observation_id)
+                .join(
+                    DceRequirementConfirmationCurrentRecord,
+                    sa.and_(
+                        DceRequirementConfirmationCurrentRecord.tenant_id
+                        == DceRequirementRecord.tenant_id,
+                        DceRequirementConfirmationCurrentRecord.requirement_id
+                        == DceRequirementRecord.id,
+                    ),
+                )
+                .join(
+                    CaseRecord,
+                    sa.and_(
+                        CaseRecord.tenant_id == DceRequirementRecord.tenant_id,
+                        CaseRecord.applicable_dce_version_id == DceRequirementRecord.dce_version_id,
+                    ),
+                )
+                .where(
+                    DceRequirementRecord.tenant_id == tenant_id,
+                    DceRequirementRecord.id == command.dce_requirement_id,
+                    CaseRecord.id == command.case_id,
+                    CaseRecord.lifecycle == "ACTIVE",
+                    DceRequirementConfirmationCurrentRecord.revision
+                    == command.dce_requirement_revision,
+                    DceRequirementConfirmationCurrentRecord.outcome == "CONFIRMED",
+                )
+            )
+            if requirement_source_observation is None:
+                raise CommandExecutionError("DCE_REQUIREMENT_NOT_CURRENTLY_CONFIRMED")
+            if (
+                exact_baseline_observation_id is not None
+                and requirement_source_observation != exact_baseline_observation_id
+            ):
+                raise CommandExecutionError("BASELINE_OBSERVATION_NOT_EXACT_REQUIREMENT_SOURCE")
+            exact_baseline_observation_id = requirement_source_observation
+            exact_requirement_reference = (
+                f"DCE_REQUIREMENT:{command.dce_requirement_id}@{command.dce_requirement_revision}"
+            )
+            if exact_requirement_reference not in command.baseline_source_refs:
+                raise CommandExecutionError("EXACT_DCE_REQUIREMENT_SOURCE_REFERENCE_REQUIRED")
+        if exact_baseline_observation_id is None:
+            raise CommandExecutionError("BASELINE_OBSERVATION_REQUIRED")
         if command.proof_revision > 1:
             previous = session.scalar(
                 sa.select(ContractBaselineDeviationImpactRecord.id).where(
                     ContractBaselineDeviationImpactRecord.tenant_id == tenant_id,
                     ContractBaselineDeviationImpactRecord.case_id == command.case_id,
                     ContractBaselineDeviationImpactRecord.baseline_observation_id
-                    == command.baseline_observation_id,
+                    == exact_baseline_observation_id,
                     ContractBaselineDeviationImpactRecord.proof_revision
                     == command.proof_revision - 1,
                 )
@@ -70,7 +119,9 @@ class RecordContractBaselineImpactHandler(CommandHandler):
                 id=command.proof_id,
                 tenant_id=tenant_id,
                 case_id=command.case_id,
-                baseline_observation_id=command.baseline_observation_id,
+                baseline_observation_id=exact_baseline_observation_id,
+                dce_requirement_id=command.dce_requirement_id,
+                dce_requirement_revision=command.dce_requirement_revision,
                 proof_revision=command.proof_revision,
                 baseline_source_refs_json=list(command.baseline_source_refs),
                 baseline_statement=command.baseline_statement,
@@ -120,12 +171,12 @@ class ContractBaselineImpactReadService:
         decision = self._policy.authorize(
             context=actor,
             request=AuthorizationRequest(
-                action=Capability.CASE_DCE_READ,
+                action=Capability.PRICING_READ,
                 resource=AuthorizationResource(
                     resource_type="CONTRACT_BASELINE_IMPACT",
                     resource_id=case_id,
                     tenant_id=actor.tenant_id,
-                    classification=DataClassification.INTERNAL_OPERATIONAL,
+                    classification=DataClassification.FINANCIAL_PRIVATE,
                     case_id=case_id,
                 ),
                 evaluated_at=now,
@@ -144,3 +195,48 @@ class ContractBaselineImpactReadService:
                     .order_by(ContractBaselineDeviationImpactRecord.proof_revision.desc())
                 ).all()
             )
+
+
+class ContractBaselineImpactWriteService:
+    def __init__(self, *, dispatcher, policy) -> None:
+        self._dispatcher = dispatcher
+        self._policy = policy
+
+    def execute(self, *, actor, command, now):
+        from app.platform.events.dispatcher import CommandContext
+        from app.platform.security.authorization import AuthorizationRequest, AuthorizationResource
+        from app.platform.security.capabilities import Capability
+        from app.platform.security.context import ActorKind, DataClassification
+
+        if actor.actor_kind is not ActorKind.PATRON_ADMIN or actor.membership_id is None:
+            raise PermissionError("PATRON_REQUIRED")
+        decision = self._policy.authorize(
+            context=actor,
+            request=AuthorizationRequest(
+                action=Capability.PRICING_WRITE,
+                resource=AuthorizationResource(
+                    resource_type="CONTRACT_BASELINE_IMPACT",
+                    resource_id=command.proof_id,
+                    tenant_id=actor.tenant_id,
+                    classification=DataClassification.FINANCIAL_PRIVATE,
+                    case_id=command.case_id,
+                ),
+                evaluated_at=now,
+            ),
+        )
+        if not decision.allowed:
+            raise PermissionError(decision.code)
+        return self._dispatcher.dispatch(
+            command=command,
+            context=CommandContext(
+                tenant_id=actor.tenant_id,
+                actor_id=actor.actor_id,
+                actor_kind=actor.actor_kind.value,
+                received_at=now,
+                identity_id=actor.identity_id,
+                membership_id=actor.membership_id,
+                session_id=actor.session_id,
+                case_id=command.case_id,
+                correlation_id=actor.correlation_id,
+            ),
+        )

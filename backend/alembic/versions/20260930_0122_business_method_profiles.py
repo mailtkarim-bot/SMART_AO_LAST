@@ -93,9 +93,7 @@ def upgrade() -> None:
         ),
         sa.CheckConstraint("version_number > 0", name="vnum"),
         sa.CheckConstraint("schema_version = 1", name="schema"),
-        sa.CheckConstraint(
-            "content_sha256 ~ '^[0-9a-f]{64}$'", name="hash"
-        ),
+        sa.CheckConstraint("content_sha256 ~ '^[0-9a-f]{64}$'", name="hash"),
         sa.CheckConstraint(
             "jsonb_typeof(profile_json) = 'object' "
             "AND profile_json ? 'schema_version' "
@@ -138,8 +136,10 @@ def upgrade() -> None:
             "updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
         ),
         sa.ForeignKeyConstraint(
-            ["tenant_id", "case_id"], ["cases.tenant_id", "cases.id"],
-            name="fk_case_business_method_adoption__case", ondelete="RESTRICT",
+            ["tenant_id", "case_id"],
+            ["cases.tenant_id", "cases.id"],
+            name="fk_case_business_method_adoption__case",
+            ondelete="RESTRICT",
         ),
         sa.ForeignKeyConstraint(
             ["tenant_id", "profile_version_id", "profile_version", "profile_content_sha256"],

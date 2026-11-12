@@ -1,0 +1,15 @@
+{
+  "reference_kind": "CODEX_SYNTHETIC_NOT_HUMAN_GOLDEN",
+  "unit": "one signal per requirement kind and explicit clause; source quote and directive, not normalized date or applicability",
+  "cases": [
+    {"id":"offer-lots", "text":"Pour le lot 2, le mémoire technique est obligatoire. Pour le lot 3, le mémoire technique est facultatif.", "expected":[["RC_CONTENT_OFFER","REQUIRED_SIGNAL","Pour le lot 2, le mémoire technique est obligatoire."],["RC_CONTENT_OFFER","OPTIONAL_SIGNAL","Pour le lot 3, le mémoire technique est facultatif."]]},
+    {"id":"deadlines", "text":"Date limite de remise pour le lot 2 : 21/11/2034 à 10h00. Date limite de remise pour le lot 3 : 22/11/2034 à 14h00.", "expected":[["RC_SUBMISSION_DEADLINE","UNSPECIFIED","Date limite de remise pour le lot 2 : 21/11/2034 à 10h00."],["RC_SUBMISSION_DEADLINE","UNSPECIFIED","Date limite de remise pour le lot 3 : 22/11/2034 à 14h00."]]},
+    {"id":"visits", "text":"La visite de site est obligatoire pour le lot 2. La visite de site est facultative pour le lot 3.", "expected":[["RC_SITE_VISIT","REQUIRED_SIGNAL","La visite de site est obligatoire pour le lot 2."],["RC_SITE_VISIT","OPTIONAL_SIGNAL","La visite de site est facultative pour le lot 3."]]},
+    {"id":"negation", "text":"Le candidat ne doit pas joindre le mémoire technique.", "expected":[["RC_CONTENT_OFFER","UNSPECIFIED","Le candidat ne doit pas joindre le mémoire technique."]]},
+    {"id":"condition", "text":"Le mémoire technique est obligatoire si le lot 2 est retenu.", "expected":[["RC_CONTENT_OFFER","UNSPECIFIED","Le mémoire technique est obligatoire si le lot 2 est retenu."]]},
+    {"id":"same-clause-conflict", "text":"La visite de site est obligatoire et facultative selon le lot.", "expected":[["RC_SITE_VISIT","UNSPECIFIED","La visite de site est obligatoire et facultative selon le lot."]]},
+    {"id":"rectificatif-source", "text":"Rectificatif V2 : date limite de remise reportée au 25/11/2034. Ancienne date limite de remise V1 : 20/11/2034.", "expected":[["RC_SUBMISSION_DEADLINE","UNSPECIFIED","Rectificatif V2 : date limite de remise reportée au 25/11/2034."],["RC_SUBMISSION_DEADLINE","UNSPECIFIED","Ancienne date limite de remise V1 : 20/11/2034."]]},
+    {"id":"validity", "text":"La validité des offres pour le lot 2 est de 90 jours. La validité des offres pour le lot 3 est de 120 jours.", "expected":[["RC_OFFER_VALIDITY","UNSPECIFIED","La validité des offres pour le lot 2 est de 90 jours."],["RC_OFFER_VALIDITY","UNSPECIFIED","La validité des offres pour le lot 3 est de 120 jours."]]},
+    {"id":"mentions-not-obligations", "text":"Le mémoire technique est mentionné à titre documentaire. La visite de site est décrite à titre informatif.", "expected":[["RC_CONTENT_OFFER","UNSPECIFIED","Le mémoire technique est mentionné à titre documentaire."],["RC_SITE_VISIT","UNSPECIFIED","La visite de site est décrite à titre informatif."]]}
+  ]
+}

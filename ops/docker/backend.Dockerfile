@@ -27,30 +27,33 @@ ARG SMART_AO_INSTALL_OBJECT_STORAGE=0
 ARG SMART_AO_INSTALL_CONNECTORS=0
 ARG SMART_AO_INSTALL_NOTIFICATIONS=0
 ARG SMART_AO_INSTALL_CALENDAR=0
-RUN python -m pip install --no-cache-dir --upgrade pip==26.1.2 \
-    && python -m pip install --no-cache-dir uv==0.12.1 \
-    && uv sync --frozen --no-dev --no-editable \
+RUN python -m pip install --no-cache-dir --upgrade pip==26.2.0 \
+    && python -m pip install --no-cache-dir uv==0.13.8 \
+    && set -- \
     && if [ "$SMART_AO_INSTALL_RAG" = "1" ]; then \
-        uv sync --frozen --no-dev --no-editable --extra rag; \
+        set -- "$@" --extra rag; \
     fi \
     && if [ "$SMART_AO_INSTALL_DOCUMENT_ADVANCED" = "1" ]; then \
-        uv sync --frozen --no-dev --no-editable --extra document-advanced; \
+        set -- "$@" --extra document-advanced; \
     fi \
     && if [ "$SMART_AO_INSTALL_DOCUMENT_OCR" = "1" ]; then \
-        uv sync --frozen --no-dev --no-editable --extra document-ocr; \
+        set -- "$@" --extra document-ocr; \
     fi \
     && if [ "$SMART_AO_INSTALL_OBJECT_STORAGE" = "1" ]; then \
-        uv sync --frozen --no-dev --no-editable --extra object-storage; \
+        set -- "$@" --extra object-storage; \
     fi \
     && if [ "$SMART_AO_INSTALL_CONNECTORS" = "1" ]; then \
-        uv sync --frozen --no-dev --no-editable --extra connectors; \
+        set -- "$@" --extra connectors; \
     fi \
     && if [ "$SMART_AO_INSTALL_NOTIFICATIONS" = "1" ]; then \
-        uv sync --frozen --no-dev --no-editable --extra notifications; \
+        set -- "$@" --extra notifications; \
     fi \
     && if [ "$SMART_AO_INSTALL_CALENDAR" = "1" ]; then \
-        uv sync --frozen --no-dev --no-editable --extra calendar; \
+        set -- "$@" --extra calendar; \
     fi \
+    && uv sync --frozen --no-dev --no-editable "$@" \
+    && /usr/local/bin/python -m pip uninstall --yes pip \
+    && /usr/local/bin/python -c "import importlib.util; assert importlib.util.find_spec('pip') is None" \
     && chown -R smartao:smartao /app
 
 USER smartao

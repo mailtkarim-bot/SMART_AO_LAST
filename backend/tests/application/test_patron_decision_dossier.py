@@ -51,6 +51,7 @@ def test_patron_decision_dossier_projects_selected_context_and_conditions(sessio
         validity="CURRENT",
         context_status="FROZEN",
         final_justification="Validation patronale",
+        selected_final_context_id=context_id,
     )
     context = SimpleNamespace(
         id=context_id,
@@ -76,6 +77,7 @@ def test_patron_decision_dossier_projects_selected_context_and_conditions(sessio
     session.scalars.side_effect = [
         MagicMock(all=lambda: [reference]),
         MagicMock(all=lambda: [condition]),
+        MagicMock(all=lambda: []),
     ]
     result = _service(session).read(
         actor=actor,
@@ -103,6 +105,7 @@ def test_patron_decision_dossier_falls_back_to_latest_context(session_factory):
         validity="CURRENT",
         context_status="FROZEN",
         final_justification=None,
+        selected_final_context_id=None,
     )
     context = SimpleNamespace(
         id=uuid4(),
@@ -111,8 +114,12 @@ def test_patron_decision_dossier_falls_back_to_latest_context(session_factory):
         context_fingerprint="b" * 64,
     )
     session = MagicMock()
-    session.scalar.side_effect = [record, None, context]
-    session.scalars.side_effect = [MagicMock(all=lambda: []), MagicMock(all=lambda: [])]
+    session.scalar.side_effect = [record, context]
+    session.scalars.side_effect = [
+        MagicMock(all=lambda: []),
+        MagicMock(all=lambda: []),
+        MagicMock(all=lambda: []),
+    ]
     result = _service(session).read(
         actor=actor,
         case_id=case_id,
@@ -140,6 +147,7 @@ def test_patron_decision_dossier_refuses_missing_record_and_context(session_fact
         validity="CURRENT",
         context_status="INCOMPLETE",
         final_justification=None,
+        selected_final_context_id=None,
     )
     missing_context = MagicMock()
     missing_context.scalar.side_effect = [record, None, None]

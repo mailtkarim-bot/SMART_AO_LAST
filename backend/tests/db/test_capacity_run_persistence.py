@@ -62,6 +62,46 @@ def _command(actor, case_id: UUID) -> CapacityRunCommand:
 
 @pytest.mark.db
 @pytest.mark.security
+def test_unknown_capacity_inputs_survive_sql_roundtrip_and_reject_empty_replay(
+    session_factory: sessionmaker[Session],
+) -> None:
+    actor, _assignment_id, case_id, _requirement_id = _seed(session_factory)
+    input_port = MutableInputPort(
+        CaseCapacityPlanInput(tenant_id=actor.tenant_id, case_id=case_id, source_revision=3)
+    )
+    service = CapacityRunService(
+        planner=CaseCapacityPlanningService(input_port=input_port),
+        repository=SqlAlchemyCapacityRunRepository(session_factory),
+    )
+    command = _command(actor, case_id)
+    first = service.execute(command)
+    replay = service.execute(command)
+    assert replay.replayed is True
+    assert replay.run_id == first.run_id
+    assert replay.audit_event_id == first.audit_event_id
+    with session_factory() as session:
+        run = session.get(OptimizationRunRecord, first.run_id)
+        assert run is not None
+        assert run.status == "UNKNOWN"
+        assert run.input_snapshot_json == {"demands": None, "supplies": None}
+        unknown_hash = run.input_sha256
+    input_port.value = replace(input_port.value, demands=(), supplies=())
+    with pytest.raises(CapacityRunIdempotencyConflict):
+        service.execute(command)
+    known_empty = service.execute(_command(actor, case_id))
+    with session_factory() as session:
+        run = session.get(OptimizationRunRecord, known_empty.run_id)
+        assert run is not None
+        assert run.status == "OPTIMAL"
+        assert run.input_snapshot_json == {"demands": [], "supplies": []}
+        assert run.input_sha256 != unknown_hash
+        old = session.get(OptimizationRunRecord, first.run_id)
+        assert old is not None
+        assert old.status == "UNKNOWN"
+
+
+@pytest.mark.db
+@pytest.mark.security
 def test_capacity_run_is_idempotent_audited_and_append_only(
     session_factory: sessionmaker[Session],
 ) -> None:

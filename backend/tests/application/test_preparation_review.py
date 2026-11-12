@@ -7,6 +7,10 @@ from uuid import uuid4
 
 import pytest
 import sqlalchemy as sa
+from app.modules.dce.infrastructure.quarantine import LocalQuarantineStorageAdapter
+from app.modules.membership.infrastructure.collab_capability_reader import (
+    SqlAlchemyCollaboratorCapabilityReader,
+)
 from app.modules.preparation.application.commands import GenerateTechnicalDocumentCommand
 from app.modules.preparation.application.review import (
     PreparationReviewHandler,
@@ -24,6 +28,9 @@ from app.modules.preparation.infrastructure.dce_preparation_reader import (
     SqlAlchemyPreparationDceReader,
 )
 from app.modules.preparation.infrastructure.document_storage import LocalGeneratedDocumentStorage
+from app.modules.preparation.infrastructure.response_plan_reader import (
+    SqlAlchemyPreparationResponsePlanSourceReader,
+)
 from app.platform.events.dispatcher import (
     CommandContext,
     CommandDispatcher,
@@ -35,6 +42,8 @@ from app.platform.security.capabilities import Capability, capabilities_for
 from app.platform.security.context import ActorKind
 from app.platform.security.models import (
     CaseAssignmentRecord,
+    PreparationPackageRecord,
+    PreparationResponsePlanRecord,
     PreparationReviewCorrectionRecord,
     PreparationReviewRecord,
     TechnicalResponseDraftRecord,
@@ -64,7 +73,13 @@ def services(session_factory: sessionmaker[Session], tmp_path: Path):
                 storage=storage,
                 dce_reader=SqlAlchemyPreparationDceReader(),
             ),
-            **preparation_review_handlers(storage=storage),
+            **preparation_review_handlers(
+                storage=storage,
+                source_reader=SqlAlchemyPreparationResponsePlanSourceReader(
+                    capability_reader=SqlAlchemyCollaboratorCapabilityReader(session_factory)
+                ),
+                source_storage=LocalQuarantineStorageAdapter(root=tmp_path / "dce-private"),
+            ),
         },
     )
     policy = AuthorizationPolicy()
@@ -307,11 +322,11 @@ def test_review_is_versioned_idempotent_and_corrections_are_append_only(
 
 @pytest.mark.db
 @pytest.mark.security
-def test_response_draft_is_versioned_replayed_and_financial_payload_is_rejected(
+def test_response_draft_requires_a_current_response_plan_before_storage(
     services, session_factory: sessionmaker[Session]
 ) -> None:
     _, review = services
-    actor, _, _, requirement_id, package_id, document_id = _prepare_document(
+    actor, _, case_id, requirement_id, package_id, document_id = _prepare_document(
         services, session_factory
     )
     draft_id = uuid4()
@@ -326,17 +341,69 @@ def test_response_draft_is_versioned_replayed_and_financial_payload_is_rejected(
         section_codes=["METHOD", "SOURCES"],
         source_refs=[requirement_id],
     )
-    created = review.execute(actor=actor, command=command, now=NOW)
-    replay = review.execute(actor=actor, command=command, now=NOW)
-    assert created.result_code == "TECHNICAL_RESPONSE_DRAFT_CREATED"
-    assert replay.replayed is True
+    with pytest.raises(CommandExecutionError, match="RESPONSE_PLAN_REQUIRED"):
+        review.execute(actor=actor, command=command, now=NOW)
     with session_factory() as session:
-        draft = session.scalar(sa.select(TechnicalResponseDraftRecord))
-        assert draft.version == 1
-        assert draft.state == "DRAFT"
-        assert draft.section_codes_json == ["METHOD", "SOURCES"]
-        assert "storage_key" not in {"section_codes_json", "source_refs_json"}
-        assert draft.content_sha256
+        assert (
+            session.scalar(sa.select(sa.func.count()).select_from(TechnicalResponseDraftRecord))
+            == 0
+        )
+
+    with session_factory.begin() as session:
+        dce_version_id = session.scalar(
+            sa.select(PreparationPackageRecord.dce_version_id).where(
+                PreparationPackageRecord.tenant_id == actor.tenant_id,
+                PreparationPackageRecord.id == package_id,
+            )
+        )
+        content = {
+            "schema_version": 1,
+            "case_id": str(case_id),
+            "package_id": str(package_id),
+            "dce_version_id": str(dce_version_id),
+            "items": [
+                {
+                    "requirement_id": str(requirement_id),
+                    "requirement_state": "UNKNOWN",
+                    "section_code": "METHOD",
+                    "source_proposal_id": None,
+                    "source_capability_version_id": None,
+                    "source_validity_state": "UNKNOWN",
+                    "source_evidence_state": "UNKNOWN",
+                }
+            ],
+        }
+        session.add(
+            PreparationResponsePlanRecord(
+                id=uuid4(),
+                tenant_id=actor.tenant_id,
+                plan_id=uuid4(),
+                package_id=package_id,
+                dce_version_id=dce_version_id,
+                version=1,
+                state="UNKNOWN",
+                content_json=content,
+                plan_sha256="a" * 64,
+                source_evidence_json=[],
+                source_evidence_sha256="b" * 64,
+                actor_id=actor.actor_id,
+                membership_id=actor.membership_id,
+                command_id=uuid4(),
+                idempotency_key=uuid4(),
+                correlation_id=None,
+            )
+        )
+    with pytest.raises(CommandExecutionError, match="RESPONSE_PLAN_UNKNOWN"):
+        review.execute(
+            actor=actor,
+            command=command.model_copy(update={"command_id": uuid4(), "idempotency_key": uuid4()}),
+            now=NOW,
+        )
+    with session_factory() as session:
+        assert (
+            session.scalar(sa.select(sa.func.count()).select_from(TechnicalResponseDraftRecord))
+            == 0
+        )
 
     with pytest.raises(ValueError, match="FINANCIAL_DATA_FORBIDDEN"):
         AddPreparationCorrectionCommand(
@@ -350,9 +417,7 @@ def test_response_draft_is_versioned_replayed_and_financial_payload_is_rejected(
         )
 
     drafts = review.read_response_drafts(actor=_patron(actor), package_id=package_id, now=NOW)
-    assert len(drafts) == 1
-    assert drafts[0].draft_id == draft_id
-    assert drafts[0].section_codes_json == ["METHOD", "SOURCES"]
+    assert drafts == ()
     with pytest.raises(PermissionError, match="PATRON_REQUIRED"):
         review.read_response_drafts(actor=actor, package_id=package_id, now=NOW)
 
@@ -512,11 +577,7 @@ def test_correction_requires_returned_review_and_draft_rejects_invalid_inputs(
             ),
             now=NOW,
         )
-    monkeypatch.setattr(
-        "app.modules.preparation.application.review.contains_forbidden_text",
-        lambda content: True,
-    )
-    with pytest.raises(CommandExecutionError, match="FINANCIAL_DATA_FORBIDDEN"):
+    with pytest.raises(CommandExecutionError, match="RESPONSE_PLAN_REQUIRED"):
         review.execute(
             actor=actor,
             command=CreateTechnicalResponseDraftCommand(
@@ -548,3 +609,21 @@ def test_review_handler_rejects_unknown_command_type() -> None:
                 received_at=NOW,
             ),
         )
+
+
+def test_c10_review_contract_binds_exact_response_draft_content() -> None:
+    command = RequestPreparationReviewCommand(
+        command_id=uuid4(),
+        idempotency_key=uuid4(),
+        review_id=uuid4(),
+        package_id=uuid4(),
+        target_document_id=uuid4(),
+        target_version=1,
+        target_draft_id=uuid4(),
+        target_draft_version=2,
+        target_content_sha256="a" * 64,
+        expected_package_revision=4,
+    )
+
+    assert command.target_draft_version == 2
+    assert command.target_content_sha256 == "a" * 64

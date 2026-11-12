@@ -1,3 +1,4 @@
+import { controlFixture } from "./finalControl.testdata";
 import type { Dispatch, SetStateAction } from "react";
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -25,7 +26,7 @@ type SubmissionApi = Pick<
   | "recordSubmissionEvidence"
 >;
 type SignatureApi = SubmissionApi &
-  Pick<ApiClient, "requestSubmissionSignature" | "getSubmissionSignature">;
+  Pick<ApiClient, "requestSubmissionSignature" | "getSubmissionSignature" | "getSubmissionFinalControl">;
 
 const packageReceipt = (replayed = false): SubmissionPackageReceipt => ({
   status: "SUCCEEDED",
@@ -67,6 +68,14 @@ const manifestProjection = (authorized: "AUTHORIZED" | "NOT_AUTHORIZED" = "NOT_A
   manifest: { entries: [{ path: "dce/index.pdf" }], exclusions: ["storage_key", "amounts"] },
   authorization_status: authorized,
   external_submission: "NOT_PERFORMED",
+});
+
+const c10ManifestProjection = (): SubmissionPackageManifestProjection => ({
+  ...manifestProjection(),
+  manifest: {
+    ...manifestProjection().manifest,
+    preparation_source: { snapshot_id: "snapshot-1" },
+  },
 });
 
 const evidenceProjection = (): SubmissionEvidenceProjection[] => [{
@@ -223,7 +232,7 @@ describe("useSubmissionActions", () => {
     const api = {
       prepareSubmissionPackage: vi.fn(),
       authorizeSubmissionPackage: authorize,
-      getSubmissionPackageManifest: vi.fn(),
+      getSubmissionPackageManifest: vi.fn().mockResolvedValue(manifestProjection()),
       getSubmissionEvidence: vi.fn(),
       downloadSubmissionPackage: vi.fn(),
       recordSubmissionEvidence: vi.fn(),
@@ -233,8 +242,10 @@ describe("useSubmissionActions", () => {
 
     act(() => {
       result.current.setSubmissionPackageId("submission-package-1");
-      result.current.setSubmissionPackageVersion("3");
       result.current.setSubmissionAuthorizationRationale("Contrôle P5 validé.");
+    });
+    await act(async () => {
+      await result.current.loadSubmissionPackageManifest();
     });
     await act(async () => {
       await result.current.authorizeSubmissionPackage();
@@ -254,12 +265,460 @@ describe("useSubmissionActions", () => {
         idempotency_key: expect.any(String),
         authorization_id: expect.any(String),
       }),
+      "c".repeat(64),
     );
     expect(result.current.submissionAuthorized).toBe(true);
     expect(setMessage).toHaveBeenLastCalledWith({
       tone: "success",
       text: "Autorisation P5 déjà enregistrée; état rechargé.",
     });
+  });
+
+  it("requires the exact C10 manifest to be loaded before P5", async () => {
+    const authorize = vi.fn();
+    const api = {
+      prepareSubmissionPackage: vi.fn(),
+      authorizeSubmissionPackage: authorize,
+      getSubmissionPackageManifest: vi.fn(),
+      getSubmissionEvidence: vi.fn(),
+      downloadSubmissionPackage: vi.fn(),
+      recordSubmissionEvidence: vi.fn(),
+    } satisfies SubmissionApi;
+    const setMessage = vi.fn() as unknown as Dispatch<SetStateAction<HookMessage | null>>;
+    const { result } = renderSubmissionHook(api, setMessage);
+
+    act(() => {
+      result.current.setSubmissionPackageId("submission-package-1");
+      result.current.setSubmissionPackageVersion("3");
+    });
+    await act(async () => {
+      await result.current.authorizeSubmissionPackage();
+    });
+
+    expect(authorize).not.toHaveBeenCalled();
+    expect(setMessage).toHaveBeenLastCalledWith({
+      tone: "error",
+      text: "Relisez le manifeste exact du candidat C10 avant l’autorisation P5.",
+    });
+  });
+
+  it("sends the reviewed C10 manifest hash with P5", async () => {
+    const authorize = vi.fn().mockResolvedValue(authorizationReceipt());
+    const api = {
+      prepareSubmissionPackage: vi.fn(),
+      authorizeSubmissionPackage: authorize,
+      getSubmissionPackageManifest: vi.fn().mockResolvedValue(c10ManifestProjection()),
+      getSubmissionEvidence: vi.fn(),
+      downloadSubmissionPackage: vi.fn(),
+      recordSubmissionEvidence: vi.fn(),
+    } satisfies SubmissionApi;
+    const setMessage = vi.fn() as unknown as Dispatch<SetStateAction<HookMessage | null>>;
+    const { result } = renderSubmissionHook(api, setMessage);
+
+    act(() => result.current.setSubmissionPackageId("submission-package-1"));
+    await act(async () => {
+      await result.current.loadSubmissionPackageManifest();
+    });
+    await act(async () => {
+      await result.current.authorizeSubmissionPackage();
+    });
+
+    expect(authorize).toHaveBeenCalledWith(
+      "submission-package-1",
+      3,
+      "Paquet relu et autorisé pour la remise humaine.",
+      expect.objectContaining({
+        command_id: expect.any(String),
+        idempotency_key: expect.any(String),
+        authorization_id: expect.any(String),
+      }),
+      "c".repeat(64),
+    );
+  });
+
+  it("sends only one P5 request while a double-click is in flight", async () => {
+    const authorize = vi.fn().mockResolvedValue(authorizationReceipt());
+    const api = {
+      prepareSubmissionPackage: vi.fn(),
+      authorizeSubmissionPackage: authorize,
+      getSubmissionPackageManifest: vi.fn().mockResolvedValue(c10ManifestProjection()),
+      getSubmissionEvidence: vi.fn(),
+      downloadSubmissionPackage: vi.fn(),
+      recordSubmissionEvidence: vi.fn(),
+    } satisfies SubmissionApi;
+    const setMessage = vi.fn() as unknown as Dispatch<SetStateAction<HookMessage | null>>;
+    const { result } = renderSubmissionHook(api, setMessage);
+
+    act(() => result.current.setSubmissionPackageId("submission-package-1"));
+    await act(async () => {
+      await result.current.loadSubmissionPackageManifest();
+    });
+    await act(async () => {
+      const first = result.current.authorizeSubmissionPackage();
+      const second = result.current.authorizeSubmissionPackage();
+      await Promise.all([first, second]);
+    });
+
+    expect(authorize).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not let an old duplicate P5 response erase a newer UNKNOWN intent", async () => {
+    let finishFirst: ((receipt: SubmissionPackageAuthorizationReceipt) => void) | undefined;
+    let finishDuplicate: ((receipt: SubmissionPackageAuthorizationReceipt) => void) | undefined;
+    let failSecond: ((error: Error) => void) | undefined;
+    const authorize = vi.fn().mockImplementation((id: string) => {
+      if (id === "submission-package-1") {
+        return new Promise<SubmissionPackageAuthorizationReceipt>((resolve) => {
+          if (!finishFirst) finishFirst = resolve;
+          else finishDuplicate = resolve;
+        });
+      }
+      return new Promise<SubmissionPackageAuthorizationReceipt>((_resolve, reject) => {
+        failSecond = reject;
+      });
+    });
+    const api = {
+      prepareSubmissionPackage: vi.fn(),
+      authorizeSubmissionPackage: authorize,
+      getSubmissionPackageManifest: vi.fn()
+        .mockResolvedValueOnce(c10ManifestProjection())
+        .mockResolvedValueOnce({ ...c10ManifestProjection(), submission_package_id: "submission-package-2" }),
+      getSubmissionEvidence: vi.fn(),
+      downloadSubmissionPackage: vi.fn(),
+      recordSubmissionEvidence: vi.fn(),
+    } satisfies SubmissionApi;
+    const setMessage = vi.fn() as unknown as Dispatch<SetStateAction<HookMessage | null>>;
+    const { result } = renderSubmissionHook(api, setMessage);
+    act(() => result.current.setSubmissionPackageId("submission-package-1"));
+    await act(async () => { await result.current.loadSubmissionPackageManifest(); });
+    let first: Promise<void> | undefined;
+    let duplicate: Promise<void> | undefined;
+    act(() => {
+      first = result.current.authorizeSubmissionPackage();
+      duplicate = result.current.authorizeSubmissionPackage();
+    });
+    await act(async () => { finishFirst?.(authorizationReceipt()); await first; });
+    act(() => result.current.setSubmissionPackageId("submission-package-2"));
+    await act(async () => { await result.current.loadSubmissionPackageManifest(); });
+    let second: Promise<void> | undefined;
+    act(() => { second = result.current.authorizeSubmissionPackage(); });
+    await act(async () => { finishDuplicate?.(authorizationReceipt()); await duplicate; });
+    await act(async () => { failSecond?.(new Error("Résultat UNKNOWN")); await second; });
+    act(() => result.current.setSubmissionAuthorizationRationale("Autre motif après UNKNOWN."));
+    let changedRetry: Promise<void> | undefined;
+    act(() => { changedRetry = result.current.authorizeSubmissionPackage(); });
+    await act(async () => { failSecond?.(new Error("Résultat UNKNOWN")); await changedRetry; });
+    expect(authorize.mock.calls.filter(([id]) => id === "submission-package-2")).toHaveLength(1);
+  });
+
+  it.each(["IN_FLIGHT", "UNKNOWN"])("keeps P5 %s when an earlier prepare response arrives", async (state) => {
+    let finishPreparation: ((receipt: SubmissionPackageReceipt) => void) | undefined;
+    let failAuthorization: ((error: Error) => void) | undefined;
+    const authorize = vi.fn().mockImplementation(() => new Promise((_resolve, reject) => {
+      failAuthorization = reject;
+    }));
+    const api = {
+      prepareSubmissionPackage: vi.fn().mockImplementation(() => new Promise((resolve) => {
+        finishPreparation = resolve;
+      })),
+      authorizeSubmissionPackage: authorize,
+      getSubmissionPackageManifest: vi.fn().mockResolvedValue(c10ManifestProjection()),
+      getSubmissionEvidence: vi.fn(),
+      downloadSubmissionPackage: vi.fn(),
+      recordSubmissionEvidence: vi.fn(),
+    } satisfies SubmissionApi;
+    const setMessage = vi.fn() as unknown as Dispatch<SetStateAction<HookMessage | null>>;
+    const { result } = renderSubmissionHook(api, setMessage);
+    act(() => {
+      result.current.setSubmissionPackageId("submission-package-1");
+      result.current.setPreparationPackageId("preparation-2");
+    });
+    await act(async () => { await result.current.loadSubmissionPackageManifest(); });
+    let preparation: Promise<void> | undefined;
+    let authorization: Promise<void> | undefined;
+    act(() => { preparation = result.current.prepareSubmissionPackage(); });
+    act(() => { authorization = result.current.authorizeSubmissionPackage(); });
+    if (state === "UNKNOWN") {
+      await act(async () => { failAuthorization?.(new Error("Résultat UNKNOWN")); await authorization; });
+    }
+    await act(async () => {
+      finishPreparation?.({ ...packageReceipt(), aggregate_refs: [{ aggregate_type: "SubmissionPackage", aggregate_id: "submission-package-2", aggregate_revision: 1 }] });
+      await preparation;
+    });
+    if (state === "IN_FLIGHT") {
+      await act(async () => { failAuthorization?.(new Error("Résultat UNKNOWN")); await authorization; });
+    }
+    expect(result.current.submissionPackageId).toBe("submission-package-1");
+    act(() => result.current.setSubmissionAuthorizationRationale("Motif modifié."));
+    let retry: Promise<void> | undefined;
+    act(() => { retry = result.current.authorizeSubmissionPackage(); });
+    await act(async () => { failAuthorization?.(new Error("Résultat UNKNOWN")); await retry; });
+    expect(authorize).toHaveBeenCalledTimes(1);
+  });
+
+  it("ignores a stale manifest read while preserving an exact UNKNOWN retry", async () => {
+    let finishManifest: ((projection: SubmissionPackageManifestProjection) => void) | undefined;
+    const authorize = vi.fn()
+      .mockRejectedValueOnce(new Error("Résultat UNKNOWN"))
+      .mockResolvedValueOnce(authorizationReceipt(true));
+    const api = {
+      prepareSubmissionPackage: vi.fn(),
+      authorizeSubmissionPackage: authorize,
+      getSubmissionPackageManifest: vi.fn()
+        .mockResolvedValueOnce(c10ManifestProjection())
+        .mockImplementationOnce(() => new Promise((resolve) => { finishManifest = resolve; })),
+      getSubmissionEvidence: vi.fn(),
+      downloadSubmissionPackage: vi.fn(),
+      recordSubmissionEvidence: vi.fn(),
+    } satisfies SubmissionApi;
+    const setMessage = vi.fn() as unknown as Dispatch<SetStateAction<HookMessage | null>>;
+    const { result } = renderSubmissionHook(api, setMessage);
+    act(() => result.current.setSubmissionPackageId("submission-package-1"));
+    await act(async () => { await result.current.loadSubmissionPackageManifest(); });
+    act(() => result.current.setSubmissionPackageId("submission-package-2"));
+    let read: Promise<void> | undefined;
+    act(() => { read = result.current.loadSubmissionPackageManifest(); });
+    act(() => result.current.setSubmissionPackageId("submission-package-1"));
+    await act(async () => { await result.current.authorizeSubmissionPackage(); });
+    await act(async () => {
+      finishManifest?.({ ...c10ManifestProjection(), submission_package_id: "submission-package-2" });
+      await read;
+    });
+    await act(async () => { await result.current.authorizeSubmissionPackage(); });
+    expect(authorize).toHaveBeenCalledTimes(2);
+    expect(authorize.mock.calls[0]).toEqual(authorize.mock.calls[1]);
+  });
+
+  it("does not overwrite a confirmed P5 with a manifest read started before the act", async () => {
+    let finishManifest: ((projection: SubmissionPackageManifestProjection) => void) | undefined;
+    const api = {
+      prepareSubmissionPackage: vi.fn(),
+      authorizeSubmissionPackage: vi.fn().mockResolvedValue(authorizationReceipt()),
+      getSubmissionPackageManifest: vi.fn().mockResolvedValueOnce(c10ManifestProjection())
+        .mockImplementationOnce(() => new Promise((resolve) => { finishManifest = resolve; })),
+      getSubmissionEvidence: vi.fn(),
+      downloadSubmissionPackage: vi.fn(),
+      recordSubmissionEvidence: vi.fn(),
+    } satisfies SubmissionApi;
+    const { result } = renderSubmissionHook(api, vi.fn());
+    act(() => result.current.setSubmissionPackageId("submission-package-1"));
+    await act(async () => { await result.current.loadSubmissionPackageManifest(); });
+    let read: Promise<void> | undefined;
+    act(() => { read = result.current.loadSubmissionPackageManifest(); });
+    await act(async () => { await result.current.authorizeSubmissionPackage(); });
+    await act(async () => { finishManifest?.(c10ManifestProjection()); await read; });
+    expect(result.current.submissionAuthorized).toBe(true);
+  });
+
+  it("does not download an export response after its scoped component unmounts", async () => {
+    let finishExport: ((archive: Blob) => void) | undefined;
+    const api = {
+      prepareSubmissionPackage: vi.fn(),
+      authorizeSubmissionPackage: vi.fn(),
+      getSubmissionPackageManifest: vi.fn(),
+      getSubmissionEvidence: vi.fn(),
+      downloadSubmissionPackage: vi.fn().mockImplementation(() => new Promise((resolve) => { finishExport = resolve; })),
+      recordSubmissionEvidence: vi.fn(),
+    } satisfies SubmissionApi;
+    const createObjectURL = vi.fn().mockReturnValue("blob:old-session");
+    const setMessage = vi.fn();
+    vi.stubGlobal("URL", { ...URL, createObjectURL, revokeObjectURL: vi.fn() });
+    const { result, unmount } = renderSubmissionHook(api, setMessage);
+    act(() => result.current.setSubmissionPackageId("submission-package-1"));
+    let request: Promise<void> | undefined;
+    act(() => { request = result.current.exportSubmissionPackage(); });
+    unmount();
+    await act(async () => { finishExport?.(new Blob(["private-old-session"])); await request; });
+    expect(createObjectURL).not.toHaveBeenCalled();
+    expect(setMessage).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
+  it("does not turn an unknown P5 result into a different intent", async () => {
+    const authorize = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("réponse réseau inconnue"))
+      .mockResolvedValueOnce(authorizationReceipt(true));
+    const api = {
+      prepareSubmissionPackage: vi.fn(),
+      authorizeSubmissionPackage: authorize,
+      getSubmissionPackageManifest: vi.fn().mockResolvedValue(c10ManifestProjection()),
+      getSubmissionEvidence: vi.fn(),
+      downloadSubmissionPackage: vi.fn(),
+      recordSubmissionEvidence: vi.fn(),
+    } satisfies SubmissionApi;
+    const setMessage = vi.fn() as unknown as Dispatch<SetStateAction<HookMessage | null>>;
+    const { result } = renderSubmissionHook(api, setMessage);
+
+    act(() => result.current.setSubmissionPackageId("submission-package-1"));
+    await act(async () => {
+      await result.current.loadSubmissionPackageManifest();
+    });
+    await act(async () => {
+      await result.current.authorizeSubmissionPackage();
+    });
+    act(() => result.current.setSubmissionAuthorizationRationale("Motif différent."));
+    await act(async () => {
+      await result.current.authorizeSubmissionPackage();
+    });
+
+    expect(authorize).toHaveBeenCalledTimes(1);
+    expect(setMessage).toHaveBeenLastCalledWith({
+      tone: "warning",
+      text: "Une autorisation P5 reste à confirmer pour le candidat relu. Restaurez cette intention exacte pour la rejouer.",
+    });
+
+    act(() => result.current.setSubmissionAuthorizationRationale("Paquet relu et autorisé pour la remise humaine."));
+    await act(async () => {
+      await result.current.authorizeSubmissionPackage();
+    });
+    expect(authorize).toHaveBeenCalledTimes(2);
+    expect(authorize.mock.calls[0]).toEqual(authorize.mock.calls[1]);
+  });
+
+  it("reconciles a P5 conflict with the exact manifest GET", async () => {
+    const conflict = Object.assign(new Error("conflit de version"), { status: 409 });
+    const getManifest = vi
+      .fn()
+      .mockResolvedValueOnce(c10ManifestProjection())
+      .mockResolvedValueOnce(manifestProjection("AUTHORIZED"));
+    const api = {
+      prepareSubmissionPackage: vi.fn(),
+      authorizeSubmissionPackage: vi.fn().mockRejectedValue(conflict),
+      getSubmissionPackageManifest: getManifest,
+      getSubmissionEvidence: vi.fn(),
+      downloadSubmissionPackage: vi.fn(),
+      recordSubmissionEvidence: vi.fn(),
+    } satisfies SubmissionApi;
+    const setMessage = vi.fn() as unknown as Dispatch<SetStateAction<HookMessage | null>>;
+    const { result } = renderSubmissionHook(api, setMessage);
+
+    act(() => result.current.setSubmissionPackageId("submission-package-1"));
+    await act(async () => {
+      await result.current.loadSubmissionPackageManifest();
+    });
+    await act(async () => {
+      await result.current.authorizeSubmissionPackage();
+    });
+
+    expect(getManifest).toHaveBeenCalledTimes(2);
+    expect(result.current.submissionAuthorized).toBe(true);
+    expect(result.current.submissionManifest?.authorization_status).toBe("AUTHORIZED");
+  });
+
+  it("does not project a conflict GET onto a different currently selected package", async () => {
+    const conflict = Object.assign(new Error("conflit de version"), { status: 409 });
+    let resolveConflictManifest: ((projection: SubmissionPackageManifestProjection) => void) | undefined;
+    let notifyConflictGetStarted: (() => void) | undefined;
+    const conflictGetStarted = new Promise<void>((resolve) => {
+      notifyConflictGetStarted = resolve;
+    });
+    const getManifest = vi.fn().mockImplementationOnce(() => Promise.resolve(c10ManifestProjection()));
+    getManifest.mockImplementationOnce(
+      () => {
+        notifyConflictGetStarted?.();
+        return new Promise<SubmissionPackageManifestProjection>((resolve) => {
+          resolveConflictManifest = resolve;
+        });
+      },
+    );
+    const api = {
+      prepareSubmissionPackage: vi.fn(),
+      authorizeSubmissionPackage: vi.fn().mockRejectedValue(conflict),
+      getSubmissionPackageManifest: getManifest,
+      getSubmissionEvidence: vi.fn(),
+      downloadSubmissionPackage: vi.fn(),
+      recordSubmissionEvidence: vi.fn(),
+    } satisfies SubmissionApi;
+    const setMessage = vi.fn() as unknown as Dispatch<SetStateAction<HookMessage | null>>;
+    const { result } = renderSubmissionHook(api, setMessage);
+
+    act(() => result.current.setSubmissionPackageId("submission-package-1"));
+    await act(async () => {
+      await result.current.loadSubmissionPackageManifest();
+    });
+    let request: Promise<void> | undefined;
+    act(() => {
+      request = result.current.authorizeSubmissionPackage();
+    });
+    await conflictGetStarted;
+    act(() => result.current.setSubmissionPackageId("submission-package-2"));
+    resolveConflictManifest?.(manifestProjection("AUTHORIZED"));
+    await act(async () => {
+      await request;
+    });
+
+    expect(result.current.submissionAuthorized).toBe(false);
+    expect(result.current.submissionManifest).toBeNull();
+  });
+
+  it("releases a P5 intent only after a definitive client refusal", async () => {
+    const refusal = Object.assign(new Error("source C10 périmée"), { status: 422 });
+    const authorize = vi
+      .fn()
+      .mockRejectedValueOnce(refusal)
+      .mockResolvedValueOnce(authorizationReceipt());
+    const api = {
+      prepareSubmissionPackage: vi.fn(),
+      authorizeSubmissionPackage: authorize,
+      getSubmissionPackageManifest: vi.fn().mockResolvedValue(c10ManifestProjection()),
+      getSubmissionEvidence: vi.fn(),
+      downloadSubmissionPackage: vi.fn(),
+      recordSubmissionEvidence: vi.fn(),
+    } satisfies SubmissionApi;
+    const setMessage = vi.fn() as unknown as Dispatch<SetStateAction<HookMessage | null>>;
+    const { result } = renderSubmissionHook(api, setMessage);
+
+    act(() => result.current.setSubmissionPackageId("submission-package-1"));
+    await act(async () => {
+      await result.current.loadSubmissionPackageManifest();
+    });
+    await act(async () => {
+      await result.current.authorizeSubmissionPackage();
+    });
+    act(() => result.current.setSubmissionAuthorizationRationale("Nouveau contrôle après refus."));
+    await act(async () => {
+      await result.current.authorizeSubmissionPackage();
+    });
+
+    expect(authorize).toHaveBeenCalledTimes(2);
+    expect(authorize.mock.calls[1]?.[2]).toBe("Nouveau contrôle après refus.");
+    expect(authorize.mock.calls[0]?.[3]).not.toEqual(authorize.mock.calls[1]?.[3]);
+  });
+
+  it("does not project a P5 receipt onto a different currently selected package", async () => {
+    let resolveAuthorization: ((receipt: SubmissionPackageAuthorizationReceipt) => void) | undefined;
+    const authorize = vi.fn().mockImplementation(
+      () => new Promise<SubmissionPackageAuthorizationReceipt>((resolve) => {
+        resolveAuthorization = resolve;
+      }),
+    );
+    const api = {
+      prepareSubmissionPackage: vi.fn(),
+      authorizeSubmissionPackage: authorize,
+      getSubmissionPackageManifest: vi.fn().mockResolvedValue(c10ManifestProjection()),
+      getSubmissionEvidence: vi.fn(),
+      downloadSubmissionPackage: vi.fn(),
+      recordSubmissionEvidence: vi.fn(),
+    } satisfies SubmissionApi;
+    const setMessage = vi.fn() as unknown as Dispatch<SetStateAction<HookMessage | null>>;
+    const { result } = renderSubmissionHook(api, setMessage);
+
+    act(() => result.current.setSubmissionPackageId("submission-package-1"));
+    await act(async () => {
+      await result.current.loadSubmissionPackageManifest();
+    });
+    let request: Promise<void> | undefined;
+    act(() => {
+      request = result.current.authorizeSubmissionPackage();
+    });
+    act(() => result.current.setSubmissionPackageId("submission-package-2"));
+    resolveAuthorization?.(authorizationReceipt());
+    await act(async () => {
+      await request;
+    });
+
+    expect(result.current.submissionAuthorized).toBe(false);
   });
 
   it("loads the exact bounded manifest and reflects the P5 status", async () => {
@@ -398,7 +857,8 @@ describe("useSubmissionActions", () => {
       getSubmissionEvidence: vi.fn(),
       downloadSubmissionPackage: vi.fn(),
       recordSubmissionEvidence: vi.fn(),
-      requestSubmissionSignature: vi.fn().mockResolvedValue(signatureReceipt()),
+      getSubmissionFinalControl: vi.fn().mockResolvedValue({ ...controlFixture("submission-package-1"), package_version: 2 }),
+      requestSubmissionSignature: vi.fn().mockImplementation((_id, _version, metadata) => Promise.resolve({ ...signatureReceipt(), aggregate_refs: [{ aggregate_type: "SubmissionSignature", aggregate_id: metadata.signature_id, aggregate_revision: 1 }] })),
       getSubmissionSignature: vi.fn(),
     } satisfies SignatureApi;
     const setMessage = vi.fn() as unknown as Dispatch<SetStateAction<HookMessage | null>>;
@@ -408,17 +868,20 @@ describe("useSubmissionActions", () => {
       result.current.setSubmissionPackageId(" submission-package-1 ");
       result.current.setSignaturePackageVersion("2");
     });
+    await act(async () => result.current.loadFinalControl());
+    act(() => result.current.setSignatureRationale("Pièce exacte relue, demande synthétique."));
+    act(() => result.current.setSignatureConfirmed(true));
     await act(async () => {
       await result.current.requestSignature();
     });
 
-    expect(api.requestSubmissionSignature).toHaveBeenCalledWith("submission-package-1", 2);
-    expect(result.current.signatureId).toBe("signature-1");
+    expect(api.requestSubmissionSignature).toHaveBeenCalledWith("submission-package-1", 2, expect.objectContaining({ expected_manifest_sha256: "c".repeat(64), rationale: "Pièce exacte relue, demande synthétique." }));
+    expect(result.current.signatureId).toBe(api.requestSubmissionSignature.mock.calls[0][2].signature_id);
     expect(result.current.signatureStatus).toBe("REQUESTED");
     expect(result.current.signatureRevision).toBe(1);
     expect(setMessage).toHaveBeenCalledWith({
       tone: "success",
-      text: "Demande de signature enregistrée. Aucun dépôt externe n’a été effectué.",
+      text: "Demande enregistrée. Relisez le contrôle pour connaître les faits de signature. Aucun dépôt effectué.",
     });
   });
 
@@ -430,15 +893,16 @@ describe("useSubmissionActions", () => {
       getSubmissionEvidence: vi.fn(),
       downloadSubmissionPackage: vi.fn(),
       recordSubmissionEvidence: vi.fn(),
+      getSubmissionFinalControl: vi.fn().mockResolvedValue({ ...controlFixture("submission-package-1"), package_version: 2 }),
       requestSubmissionSignature: vi.fn(),
       getSubmissionSignature: vi.fn().mockResolvedValue(signatureProjection()),
     } satisfies SignatureApi;
     const setMessage = vi.fn() as unknown as Dispatch<SetStateAction<HookMessage | null>>;
     const { result } = renderSubmissionHook(api, setMessage);
 
-    act(() => {
-      result.current.setSignatureId("signature-1");
-    });
+    act(() => result.current.setSubmissionPackageId("submission-package-1"));
+    await act(async () => result.current.loadFinalControl());
+    act(() => result.current.setSignatureId("signature-1"));
     await act(async () => {
       await result.current.loadSignature();
     });

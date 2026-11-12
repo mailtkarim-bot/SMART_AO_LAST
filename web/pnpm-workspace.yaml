@@ -1,0 +1,4 @@
+# Security fix until ESLint adopts minimatch 11; its callers use Minimatch.match only.
+overrides:
+  'eslint>minimatch': 11.0.1
+  '@eslint/config-array>minimatch': 11.0.1

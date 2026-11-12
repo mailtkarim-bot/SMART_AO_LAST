@@ -94,6 +94,53 @@ class Service:
             raise self.error
         return _result(replayed=self.calls > 1)
 
+    def read_transmissions(self, **kwargs):
+        if self.error is not None:
+            raise self.error
+        snapshot_id, transmission_id = uuid4(), uuid4()
+        snapshot_receipt = {
+            "status": "SUCCEEDED",
+            "command_id": str(uuid4()),
+            "idempotency_key": str(uuid4()),
+            "result_code": "PREPARATION_SNAPSHOT_CREATED",
+            "aggregate_refs": [
+                {
+                    "aggregate_type": "PreparationSnapshot",
+                    "aggregate_id": str(snapshot_id),
+                    "aggregate_revision": 2,
+                }
+            ],
+            "event_ids": [str(uuid4())],
+        }
+        transmission_receipt = {
+            "status": "SUCCEEDED",
+            "command_id": str(uuid4()),
+            "idempotency_key": str(uuid4()),
+            "result_code": "PREPARATION_TRANSMITTED_TO_PATRON",
+            "aggregate_refs": [
+                {
+                    "aggregate_type": "PreparationTransmission",
+                    "aggregate_id": str(transmission_id),
+                    "aggregate_revision": 9,
+                }
+            ],
+            "event_ids": [str(uuid4())],
+        }
+        snapshot = SimpleNamespace(
+            id=snapshot_id,
+            version=2,
+            state="READY_FOR_PATRON_REVIEW",
+            created_at=datetime.now(UTC),
+            manifest_sha256="a" * 64,
+            manifest_json={"package_id": str(kwargs["package_id"]), "case_id": str(uuid4())},
+        )
+        transmission = SimpleNamespace(
+            id=transmission_id,
+            state="TRANSMITTED_TO_PATRON",
+            created_at=datetime.now(UTC),
+        )
+        return ((snapshot, transmission, snapshot_receipt, transmission_receipt),)
+
 
 @pytest.mark.parametrize("authorization", [None, "Basic test-token", "Bearer"])
 def test_transmission_routes_reject_missing_or_malformed_bearer(authorization) -> None:
@@ -208,3 +255,48 @@ def test_transmit_snapshot_route_accepts_valid_contract() -> None:
 
     assert response.status_code == 201
     assert service.calls == 1
+
+
+def test_patron_receipt_read_is_tenant_route_and_no_store() -> None:
+    client = _client(Service())
+    package_id = uuid4()
+
+    response = client.get(
+        f"/api/v1/preparation/{package_id}/transmissions",
+        headers={"Authorization": "Bearer test-token"},
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.headers["Cache-Control"] == "no-store"
+    delivery = response.json()["deliveries"][0]
+    assert delivery["snapshot_receipt"]["aggregate_refs"][0]["aggregate_revision"] == 2
+    assert delivery["transmission_receipt"]["aggregate_refs"][0]["aggregate_revision"] == 9
+
+
+def test_patron_receipt_read_maps_inconsistent_receipt_to_unprocessable() -> None:
+    client = _client(Service(error=CommandExecutionError("PREPARATION_RECEIPT_UNKNOWN")))
+
+    response = client.get(
+        f"/api/v1/preparation/{uuid4()}/transmissions",
+        headers={"Authorization": "Bearer test-token"},
+    )
+
+    assert response.status_code == 422
+    assert response.json() == {"detail": "PREPARATION_RECEIPT_UNKNOWN"}
+
+
+def test_patron_transmission_read_returns_persisted_snapshot_and_command_receipts() -> None:
+    client = _client(Service())
+    package_id = uuid4()
+
+    response = client.get(
+        f"/api/v1/preparation/{package_id}/transmissions",
+        headers={"Authorization": "Bearer test-token"},
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.headers["Cache-Control"] == "no-store"
+    delivery = response.json()["deliveries"][0]
+    assert delivery["snapshot_version"] == 2
+    assert delivery["snapshot_receipt"]["aggregate_refs"][0]["aggregate_revision"] == 2
+    assert delivery["transmission_receipt"]["aggregate_refs"][0]["aggregate_revision"] == 9

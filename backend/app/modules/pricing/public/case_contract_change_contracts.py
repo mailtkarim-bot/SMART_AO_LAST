@@ -1,0 +1,452 @@
+from datetime import datetime
+from typing import Literal
+from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from app.modules.pricing.application.case_contract_change_commands import (
+    A1EngagementSourceInput,
+    validate_impact_declaration_payload,
+)
+from app.modules.pricing.public.operational_change_contracts import (
+    OperationalActionDetails,
+    OperationalChangeContext,
+    OperationalPublication,
+)
+
+
+class RecordCaseContractChangeEventRequest(BaseModel):
+    operational_context: OperationalChangeContext | None = None
+    model_config = ConfigDict(extra="forbid")
+
+    command_id: UUID
+    idempotency_key: UUID
+    correlation_id: UUID
+    event_id: UUID
+    handover_snapshot_id: UUID
+    change_kind: Literal["ORDER_OF_SERVICE", "CHANGE_REQUEST", "ADDENDUM", "SCHEDULE_CHANGE"]
+    contract_instrument_version_id: UUID | None = None
+    issuer: str | None = Field(default=None, max_length=240)
+    summary: str = Field(min_length=1, max_length=2_000)
+    scope_note: str = Field(min_length=1, max_length=2_000)
+    source_refs: list[str] = Field(min_length=1, max_length=32)
+    evidence_refs: list[str] = Field(min_length=1, max_length=32)
+    declared_received_at: datetime
+
+
+class RecordCaseContractChangeApplicabilityRequest(BaseModel):
+    operational_review: OperationalChangeContext | None = None
+    model_config = ConfigDict(extra="forbid")
+
+    command_id: UUID
+    idempotency_key: UUID
+    correlation_id: UUID
+    review_id: UUID
+    handover_snapshot_id: UUID
+    contract_instrument_version_id: UUID
+    expected_revision: int = Field(ge=0)
+    decision: Literal["APPLICABLE_TO_HANDOVER", "NOT_APPLICABLE", "NEEDS_CLARIFICATION"]
+    delta_state: Literal["UNKNOWN", "DECLARED"] = "UNKNOWN"
+    delta_note: str | None = Field(default=None, max_length=2_000)
+    rationale: str = Field(min_length=1, max_length=2_000)
+    evidence_refs: list[str] = Field(min_length=1, max_length=32)
+
+    @model_validator(mode="after")
+    def delta_note_matches_state(self):
+        if self.delta_state == "DECLARED" and not (self.delta_note and self.delta_note.strip()):
+            raise ValueError("DECLARED_DELTA_NOTE_REQUIRED")
+        if self.delta_state == "UNKNOWN" and self.delta_note is not None:
+            raise ValueError("UNKNOWN_DELTA_NOTE_MUST_BE_EMPTY")
+        return self
+
+
+class RecordCaseContractChangeActionRequest(BaseModel):
+    operational_details: OperationalActionDetails | None = None
+    model_config = ConfigDict(extra="forbid")
+
+    command_id: UUID
+    idempotency_key: UUID
+    correlation_id: UUID
+    action_id: UUID
+    applicability_review_id: UUID
+    expected_revision: int = Field(ge=0)
+    action_summary: str = Field(min_length=1, max_length=2_000)
+    evidence_refs: list[str] = Field(min_length=1, max_length=32)
+    due_at: datetime | None = None
+    due_date_absence_reason: str | None = Field(default=None, max_length=500)
+
+
+class RecordCaseContractChangeActionImpactRelationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    command_id: UUID
+    idempotency_key: UUID
+    correlation_id: UUID
+    relation_id: UUID
+    expected_revision: int = Field(ge=0)
+    state: Literal["LINKED", "UNKNOWN", "NOT_APPLICABLE"]
+    declaration_ids: list[UUID] = Field(default_factory=list, max_length=32)
+    rationale: str = Field(min_length=1, max_length=2_000)
+    unknown_reason: str | None = Field(default=None, max_length=1_000)
+
+    @model_validator(mode="after")
+    def state_matches_declarations(self):
+        if len(set(self.declaration_ids)) != len(self.declaration_ids):
+            raise ValueError("C4_DECLARATION_IDS_MUST_BE_UNIQUE")
+        if self.state == "LINKED":
+            if not self.declaration_ids or self.unknown_reason is not None:
+                raise ValueError("C4_LINKED_REQUIRES_DECLARATIONS")
+        elif self.declaration_ids or not (self.unknown_reason and self.unknown_reason.strip()):
+            raise ValueError("C4_NON_LINKED_REQUIRES_REASON_AND_NO_DECLARATIONS")
+        return self
+
+
+class PrepareCaseContractChangeEvidenceUploadRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    command_id: UUID
+    idempotency_key: UUID
+    correlation_id: UUID
+    evidence_object_id: UUID
+    c4_relation_id: UUID
+    evidence_kind: Literal["EXECUTION_EVIDENCE", "EXTERNAL_CONFIRMATION"]
+    expected_byte_size: int = Field(gt=0, le=150_000_000)
+
+
+class PrepareCaseContractChangeEvidenceUploadResponse(BaseModel):
+    evidence_object_id: UUID
+    state: Literal["AWAITING_UPLOAD", "UPLOADING", "CLEAN", "REJECTED"]
+    expires_at: str
+    replayed: bool
+
+
+class CaseContractChangeEvidenceUploadResponse(BaseModel):
+    evidence_object_id: UUID
+    version: Literal[1]
+    state: Literal["CLEAN"]
+    sha256: str
+    actual_byte_size: int
+    media_type: str
+
+
+class RecordCaseContractChangeExternalConfirmationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    command_id: UUID
+    idempotency_key: UUID
+    correlation_id: UUID
+    confirmation_id: UUID
+    c4_relation_id: UUID
+    evidence_object_id: UUID
+    expected_revision: int = Field(ge=0)
+    received_at: datetime
+    external_party: str | None = Field(default=None, max_length=240)
+    rationale: str = Field(min_length=1, max_length=2_000)
+
+    @model_validator(mode="after")
+    def received_at_must_be_aware(self):
+        if self.received_at.tzinfo is None or self.received_at.utcoffset() is None:
+            raise ValueError("C5_EXTERNAL_CONFIRMATION_RECEIVED_AT_MUST_BE_AWARE")
+        return self
+
+
+class RecordCaseContractChangeActionExecutionRequest(BaseModel):
+    operational_publication: OperationalPublication | None = None
+    model_config = ConfigDict(extra="forbid")
+
+    command_id: UUID
+    idempotency_key: UUID
+    correlation_id: UUID
+    act_id: UUID
+    c4_relation_id: UUID
+    expected_revision: int = Field(ge=0)
+    declared_state: Literal[
+        "DECLARED_PERFORMED", "DECLARED_PARTIAL", "DECLARED_NOT_PERFORMED", "UNKNOWN"
+    ]
+    declared_summary: str | None = Field(default=None, max_length=2_000)
+    unknown_reason: str | None = Field(default=None, max_length=1_000)
+    evidence_refs: list[str] = Field(default_factory=list, max_length=32)
+    evidence_object_ids: list[UUID] = Field(default_factory=list, max_length=16)
+    external_confirmation_state: Literal["UNKNOWN", "NOT_CONFIRMED"] = "UNKNOWN"
+    external_confirmation_note: str | None = Field(default=None, max_length=1_000)
+
+    @model_validator(mode="after")
+    def validate_declaration(self):
+        if self.declared_state == "UNKNOWN":
+            if self.declared_summary is not None or not (
+                self.unknown_reason and self.unknown_reason.strip()
+            ):
+                raise ValueError("C5_UNKNOWN_REQUIRES_REASON_ONLY")
+        elif not (self.declared_summary and self.declared_summary.strip()) or (
+            self.unknown_reason is not None
+        ):
+            raise ValueError("C5_DECLARATION_REQUIRES_SUMMARY_ONLY")
+        if self.external_confirmation_state == "NOT_CONFIRMED":
+            if not (self.external_confirmation_note and self.external_confirmation_note.strip()):
+                raise ValueError("C5_NOT_CONFIRMED_REQUIRES_NOTE")
+        elif self.external_confirmation_note is not None:
+            raise ValueError("C5_UNKNOWN_CONFIRMATION_MUST_NOT_HAVE_NOTE")
+        if any(not value.strip() for value in self.evidence_refs):
+            raise ValueError("C5_EVIDENCE_REFERENCE_MUST_NOT_BE_EMPTY")
+        if len(set(self.evidence_object_ids)) != len(self.evidence_object_ids):
+            raise ValueError("C5_EVIDENCE_OBJECT_IDS_MUST_BE_UNIQUE")
+        return self
+
+
+class RecordCaseContractChangeEngagementLinkRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    command_id: UUID
+    idempotency_key: UUID
+    correlation_id: UUID
+    linkage_id: UUID
+    expected_revision: int = Field(ge=0)
+    state: Literal["LINKED", "UNKNOWN"]
+    selected_sources: list[A1EngagementSourceInput] = Field(max_length=32)
+    rationale: str = Field(min_length=1, max_length=2_000)
+    unknown_reason: str | None = Field(default=None, max_length=1_000)
+
+    @model_validator(mode="after")
+    def state_matches_sources(self):
+        if self.state == "LINKED" and (
+            not self.selected_sources or self.unknown_reason is not None
+        ):
+            raise ValueError("LINKED_REQUIRES_SELECTED_SOURCES")
+        if self.state == "UNKNOWN" and (
+            self.selected_sources or not (self.unknown_reason and self.unknown_reason.strip())
+        ):
+            raise ValueError("UNKNOWN_REQUIRES_REASON_AND_NO_SELECTION")
+        return self
+
+
+class RecordCaseContractChangeImpactDeclarationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    command_id: UUID
+    idempotency_key: UUID
+    correlation_id: UUID
+    declaration_id: UUID
+    linkage_id: UUID
+    source: A1EngagementSourceInput
+    expected_revision: int = Field(ge=0)
+    axis: Literal["SCOPE", "COST", "CASH", "SCHEDULE", "CAPACITY"]
+    impact_state: Literal["DECLARED", "UNKNOWN"]
+    impact_summary: str | None = Field(default=None, max_length=2_000)
+    impact_unknown_reason: str | None = Field(default=None, max_length=1_000)
+    measurement_state: Literal["DECLARED", "UNKNOWN", "NOT_APPLICABLE"]
+    value_as_declared: str | None = Field(
+        default=None,
+        max_length=80,
+        pattern=r"^-?[0-9]+([,.][0-9]{1,6})?$",
+    )
+    currency_code: str | None = Field(default=None, pattern=r"^[A-Z]{3}$")
+    unit: str | None = Field(default=None, max_length=32)
+    measurement_unknown_reason: str | None = Field(default=None, max_length=1_000)
+    assumptions: list[str] = Field(default_factory=list, max_length=32)
+    source_refs: list[str] = Field(min_length=1, max_length=32)
+    evidence_refs: list[str] = Field(default_factory=list, max_length=32)
+    rationale: str = Field(min_length=1, max_length=2_000)
+
+    @model_validator(mode="after")
+    def validate_declared_impact(self):
+        validate_impact_declaration_payload(
+            axis=self.axis,
+            impact_state=self.impact_state,
+            impact_summary=self.impact_summary,
+            impact_unknown_reason=self.impact_unknown_reason,
+            measurement_state=self.measurement_state,
+            value_as_declared=self.value_as_declared,
+            currency_code=self.currency_code,
+            unit=self.unit,
+            measurement_unknown_reason=self.measurement_unknown_reason,
+            evidence_refs=self.evidence_refs,
+        )
+        return self
+
+
+class ContractChangeInstrumentResponse(BaseModel):
+    contract_instrument_version_id: UUID
+    instrument_kind: Literal["SIGNED_CONTRACT", "AMENDMENT"]
+    version_reference: str
+    source_refs: list[str]
+    evidence_refs: list[str]
+
+
+class ContractChangeApplicabilityResponse(BaseModel):
+    source_reasons: list[str] = Field(default_factory=list)
+    source_state: str = "UNKNOWN"
+    operational_review: dict[str, object] | None = None
+    review_id: UUID
+    revision: int
+    contract_instrument_version_id: UUID
+    decision: Literal["APPLICABLE_TO_HANDOVER", "NOT_APPLICABLE", "NEEDS_CLARIFICATION"]
+    delta_state: Literal["UNKNOWN", "DECLARED"]
+    delta_note: str | None
+    rationale: str
+    evidence_refs: list[str]
+    recorded_at: str
+    contract_instrument: ContractChangeInstrumentResponse | None
+
+
+class ContractChangeActionResponse(BaseModel):
+    source_reasons: list[str] = Field(default_factory=list)
+    source_state: str = "UNKNOWN"
+    operational_details: dict[str, object] | None = None
+    action_id: UUID
+    revision: int
+    applicability_review_id: UUID
+    summary: str
+    evidence_refs: list[str]
+    due_at: str | None
+    due_date_absence_reason: str | None
+    state: Literal["RECORDED"]
+    recorded_at: str
+
+
+class ContractChangeEngagementLinkResponse(BaseModel):
+    linkage_id: UUID
+    revision: int
+    state: Literal["LINKED", "UNKNOWN"]
+    selected_sources: list[dict[str, object]]
+    rationale: str
+    unknown_reason: str | None
+    recorded_at: str
+
+
+class ContractChangeImpactDeclarationResponse(BaseModel):
+    declaration_id: UUID
+    linkage_id: UUID
+    source: dict[str, object]
+    axis: Literal["SCOPE", "COST", "CASH", "SCHEDULE", "CAPACITY"]
+    revision: int
+    impact_state: Literal["DECLARED", "UNKNOWN"]
+    impact_summary: str | None
+    impact_unknown_reason: str | None
+    measurement_state: Literal["DECLARED", "UNKNOWN", "NOT_APPLICABLE"]
+    value_as_declared: str | None
+    currency_code: str | None
+    unit: str | None
+    measurement_unknown_reason: str | None
+    assumptions: list[str]
+    source_refs: list[str]
+    evidence_refs: list[str]
+    rationale: str
+    linkage_state: Literal["CURRENT", "REVIEW_REQUIRED"]
+    recorded_at: str
+
+
+class ContractChangeActionImpactRelationResponse(BaseModel):
+    relation_id: UUID
+    action_id: UUID
+    applicability_review_id: UUID
+    revision: int
+    state: Literal["LINKED", "UNKNOWN", "NOT_APPLICABLE"]
+    declaration_ids: list[UUID]
+    rationale: str
+    unknown_reason: str | None
+    projection_state: Literal["CURRENT", "REVIEW_REQUIRED"]
+    recorded_at: str
+
+
+class ContractChangeEvidenceObjectResponse(BaseModel):
+    evidence_object_id: UUID
+    action_id: UUID
+    c4_relation_id: UUID
+    version: Literal[1]
+    evidence_kind: Literal["EXECUTION_EVIDENCE", "EXTERNAL_CONFIRMATION"]
+    sha256: str | None
+    actual_byte_size: int | None
+    media_type: str | None
+    state: Literal["AWAITING_UPLOAD", "UPLOADING", "CLEAN", "REJECTED"]
+    expires_at: str
+    recorded_at: str
+
+
+class ContractChangeExternalConfirmationResponse(BaseModel):
+    confirmation_id: UUID
+    act_id: UUID
+    evidence_object_id: UUID
+    evidence_sha256: str
+    revision: int
+    received_at: str
+    external_party: str | None
+    rationale: str
+    actor_id: UUID
+    recorded_at: str
+
+
+class ContractChangeActionExecutionResponse(BaseModel):
+    source_reasons: list[str] = Field(default_factory=list)
+    source_state: str = "UNKNOWN"
+    operational_publication: dict[str, object] | None = None
+    act_id: UUID
+    action_id: UUID
+    c4_relation_id: UUID
+    revision: int
+    declared_state: Literal[
+        "DECLARED_PERFORMED", "DECLARED_PARTIAL", "DECLARED_NOT_PERFORMED", "UNKNOWN"
+    ]
+    declared_summary: str | None
+    unknown_reason: str | None
+    evidence_refs: list[str]
+    evidence_state: Literal["UNKNOWN", "REFERENCED", "RETRIEVED"]
+    evidence_objects: list["ContractChangeEvidenceObjectResponse"] = Field(default_factory=list)
+    external_confirmation_state: Literal["UNKNOWN", "NOT_CONFIRMED", "CONFIRMED"]
+    external_confirmation_note: str | None
+    external_confirmation_acts: list["ContractChangeExternalConfirmationResponse"] = Field(
+        default_factory=list
+    )
+    c4_projection_state: Literal["CURRENT", "REVIEW_REQUIRED", "SUPERSEDED"]
+    actor_id: UUID
+    recorded_at: str
+
+
+class ContractChangeEventResponse(BaseModel):
+    operational_timeline: list[dict[str, object]] = Field(default_factory=list)
+    recorded_at: str | None = None
+    source_reasons: list[str] = Field(default_factory=list)
+    source_state: str = "UNKNOWN"
+    current_operational_context: dict[str, object] | None = None
+    operational_context: dict[str, object] | None = None
+    event_id: UUID
+    case_id: UUID
+    handover_snapshot_id: UUID
+    outcome_id: UUID | None
+    lot_reference: str
+    offer_package_id: UUID | None
+    offer_package_version: int | None
+    offer_manifest_sha256: str | None
+    offer_source_locator: str | None
+    change_kind: Literal["ORDER_OF_SERVICE", "CHANGE_REQUEST", "ADDENDUM", "SCHEDULE_CHANGE"]
+    issuer: str | None
+    summary: str
+    scope_note: str
+    source_refs: list[str]
+    evidence_refs: list[str]
+    declared_received_at: str
+    declared_instrument: ContractChangeInstrumentResponse | None
+    applicability_state: Literal[
+        "UNKNOWN", "APPLICABLE_TO_HANDOVER", "NOT_APPLICABLE", "NEEDS_CLARIFICATION"
+    ]
+    applicability_history: list[ContractChangeApplicabilityResponse]
+    actions: list[ContractChangeActionResponse]
+    a1_engagements_state: Literal["KNOWN", "UNKNOWN"]
+    a1_engagements: list[dict[str, object]]
+    engagement_linkage_state: Literal["LINKED", "UNKNOWN"]
+    engagement_linkage_history: list[ContractChangeEngagementLinkResponse]
+    impact_declarations: list[ContractChangeImpactDeclarationResponse]
+    action_impact_relations: list[ContractChangeActionImpactRelationResponse]
+    action_execution_acts: list[ContractChangeActionExecutionResponse]
+    evidence_objects: list[ContractChangeEvidenceObjectResponse] = Field(default_factory=list)
+
+
+class CaseContractChangeEventListResponse(BaseModel):
+    truncated: bool = False
+    case_id: UUID
+    events: list[ContractChangeEventResponse] = Field(default_factory=list)
+
+
+class RecordCaseContractChangeResponse(BaseModel):
+    status: str
+    result_code: str
+    replayed: bool

@@ -2,10 +2,12 @@ from dataclasses import dataclass
 from enum import StrEnum
 from uuid import UUID
 
+
 class PaymentCycleReviewDecision(StrEnum):
     ACCEPTED_FOR_PLANNING = "ACCEPTED_FOR_PLANNING"
     REVIEW_REQUIRED = "REVIEW_REQUIRED"
     REJECTED = "REJECTED"
+
 
 @dataclass(frozen=True, slots=True)
 class PaymentCycleReview:

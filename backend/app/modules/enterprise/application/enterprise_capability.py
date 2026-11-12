@@ -12,6 +12,9 @@ from app.modules.enterprise.application.enterprise_capability_commands import (
     CreateEnterpriseCapabilityCommand,
 )
 from app.modules.enterprise.application.ports import EnterpriseCapabilityContextReader
+from app.modules.enterprise.infrastructure.document_verification import (
+    current_document_verification_status,
+)
 from app.modules.enterprise.infrastructure.models import (
     EnterpriseCapabilityProofLinkRecord,
     EnterpriseCapabilityRecord,
@@ -352,7 +355,13 @@ class AddEnterpriseCapabilityVersionHandler:
         )
         if len(documents) != len(command.proof_document_ids):
             raise CommandExecutionError("PROOF_NOT_FOUND_OR_FORBIDDEN")
-        if any(document.verification_status == "REJECTED" for document in documents):
+        if any(
+            current_document_verification_status(
+                session, tenant_id=context.tenant_id, document_id=document.id
+            )
+            == "REJECTED"
+            for document in documents
+        ):
             raise CommandExecutionError("PROOF_NOT_AUTHORIZED")
         latest_number = (
             session.scalar(

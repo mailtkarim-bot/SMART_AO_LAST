@@ -1,0 +1,571 @@
+{
+  "schema_version": 1,
+  "synthetic": true,
+  "held_out": true,
+  "tenant_id": "00000000-0000-0000-0000-000000001645",
+  "case_id": "00000000-0000-0000-0000-000000001646",
+  "version_id": "00000000-0000-0000-0000-000000001647",
+  "documents": [
+    {
+      "id": "00000000-0000-0000-0000-000000001b59",
+      "tenant_id": "00000000-0000-0000-0000-000000001645",
+      "case_id": "00000000-0000-0000-0000-000000001646",
+      "version_id": "00000000-0000-0000-0000-000000001647",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 1,
+      "family": "RC",
+      "text": "Lot 401 : la visite médicale est requise."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000001b5a",
+      "tenant_id": "00000000-0000-0000-0000-000000001645",
+      "case_id": "00000000-0000-0000-0000-000000001646",
+      "version_id": "00000000-0000-0000-0000-000000001647",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 2,
+      "family": "RC",
+      "text": "Lot 401 : la visite médicale n’est pas exigée."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000001b5b",
+      "tenant_id": "00000000-0000-0000-0000-000000001645",
+      "case_id": "00000000-0000-0000-0000-000000001646",
+      "version_id": "00000000-0000-0000-0000-000000001647",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 3,
+      "family": "RC",
+      "text": "Lot 402 : la visite médicale est obligatoire sauf autorisation écrite."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000001b5c",
+      "tenant_id": "00000000-0000-0000-0000-000000001645",
+      "case_id": "00000000-0000-0000-0000-000000001646",
+      "version_id": "00000000-0000-0000-0000-000000001647",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 4,
+      "family": "RC",
+      "text": "Si le poste est exposé. Lot 403 : la visite médicale est requise."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000001b5d",
+      "tenant_id": "00000000-0000-0000-0000-000000001645",
+      "case_id": "00000000-0000-0000-0000-000000001646",
+      "version_id": "00000000-0000-0000-0000-000000001647",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 5,
+      "family": "RC",
+      "text": "Lot 404 : la visite médicale est obligatoire. texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte texte . Sauf dispense."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000001b5e",
+      "tenant_id": "00000000-0000-0000-0000-000000001645",
+      "case_id": "00000000-0000-0000-0000-000000001646",
+      "version_id": "00000000-0000-0000-0000-000000001647",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 6,
+      "family": "RC",
+      "text": "Lot 405 : la visite du site est exigée."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000001b5f",
+      "tenant_id": "00000000-0000-0000-0000-000000001645",
+      "case_id": "00000000-0000-0000-0000-000000001646",
+      "version_id": "00000000-0000-0000-0000-000000001647",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 7,
+      "family": "RC",
+      "text": "Lot 406 : la visite de chantier est facultative."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000001b60",
+      "tenant_id": "00000000-0000-0000-0000-000000001645",
+      "case_id": "00000000-0000-0000-0000-000000001646",
+      "version_id": "00000000-0000-0000-0000-000000001647",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 8,
+      "family": "RC",
+      "text": "Lot 407 : la visite est obligatoire."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000001b61",
+      "tenant_id": "00000000-0000-0000-0000-000000001645",
+      "case_id": "00000000-0000-0000-0000-000000001646",
+      "version_id": "00000000-0000-0000-0000-000000001647",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 9,
+      "family": "RC",
+      "text": "Lot 408 : la visite est facultative."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000001b62",
+      "tenant_id": "00000000-0000-0000-0000-000000001645",
+      "case_id": "00000000-0000-0000-0000-000000001646",
+      "version_id": "00000000-0000-0000-0000-000000001647",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 10,
+      "family": "RC",
+      "text": "Lot 409 : la visite n’est pas exigée."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000001b63",
+      "tenant_id": "00000000-0000-0000-0000-000000001645",
+      "case_id": "00000000-0000-0000-0000-000000001646",
+      "version_id": "00000000-0000-0000-0000-000000001647",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 11,
+      "family": "RC",
+      "text": "Lot 410 : la visite médicale est citée dans une annexe."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000001b64",
+      "tenant_id": "00000000-0000-0000-0000-000000001645",
+      "case_id": "00000000-0000-0000-0000-000000001646",
+      "version_id": "00000000-0000-0000-0000-000000001647",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 12,
+      "family": "RC",
+      "text": "Exemple : ‘ Cette visite n’est pas effectuée. Lot 411 : la visite médicale est obligatoire. Fin. ’"
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000001b65",
+      "tenant_id": "00000000-0000-0000-0000-000000001645",
+      "case_id": "00000000-0000-0000-0000-000000001646",
+      "version_id": "00000000-0000-0000-0000-000000001647",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 13,
+      "family": "RC",
+      "text": "Lot 412 : la DPGF est obligatoire."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000001b66",
+      "tenant_id": "00000000-0000-0000-0000-000000001645",
+      "case_id": "00000000-0000-0000-0000-000000001646",
+      "version_id": "00000000-0000-0000-0000-000000001647",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 14,
+      "family": "RC",
+      "text": "Lot 413 : le DC2 est exigé."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000001bbc",
+      "tenant_id": "00000000-0000-0000-0000-00000000270f",
+      "case_id": "00000000-0000-0000-0000-000000001646",
+      "version_id": "00000000-0000-0000-0000-000000001647",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 1,
+      "family": "RC",
+      "text": "Lot 405 : la visite médicale est obligatoire."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000001bbd",
+      "tenant_id": "00000000-0000-0000-0000-000000001645",
+      "case_id": "00000000-0000-0000-0000-00000000270f",
+      "version_id": "00000000-0000-0000-0000-000000001647",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 1,
+      "family": "RC",
+      "text": "Lot 405 : la visite médicale est obligatoire."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000001bbe",
+      "tenant_id": "00000000-0000-0000-0000-000000001645",
+      "case_id": "00000000-0000-0000-0000-000000001646",
+      "version_id": "00000000-0000-0000-0000-00000000270f",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 1,
+      "family": "RC",
+      "text": "Lot 405 : la visite médicale est obligatoire."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000001bbf",
+      "tenant_id": "00000000-0000-0000-0000-000000001645",
+      "case_id": "00000000-0000-0000-0000-000000001646",
+      "version_id": "00000000-0000-0000-0000-000000001647",
+      "classification": "FINANCIAL_PRIVATE",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 1,
+      "family": "RC",
+      "text": "Lot 405 : la visite médicale est obligatoire."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000001bc0",
+      "tenant_id": "00000000-0000-0000-0000-000000001645",
+      "case_id": "00000000-0000-0000-0000-000000001646",
+      "version_id": "00000000-0000-0000-0000-000000001647",
+      "classification": "PERSONAL_DATA",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 1,
+      "family": "RC",
+      "text": "Lot 405 : la visite médicale est obligatoire."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000001bc1",
+      "tenant_id": "00000000-0000-0000-0000-000000001645",
+      "case_id": "00000000-0000-0000-0000-000000001646",
+      "version_id": "00000000-0000-0000-0000-000000001647",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": false,
+      "extraction_status": "COMPLETED",
+      "page": 1,
+      "family": "RC",
+      "text": "Lot 405 : la visite médicale est obligatoire."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000001bc2",
+      "tenant_id": "00000000-0000-0000-0000-000000001645",
+      "case_id": "00000000-0000-0000-0000-000000001646",
+      "version_id": "00000000-0000-0000-0000-000000001647",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "REVIEW_REQUIRED",
+      "page": 1,
+      "family": "RC",
+      "text": "Lot 405 : la visite médicale est obligatoire."
+    }
+  ],
+  "queries": [
+    {
+      "id": "j7-medical",
+      "text": "Une visite médicale est-elle facultative ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000001b59",
+        "00000000-0000-0000-0000-000000001b5a",
+        "00000000-0000-0000-0000-000000001b5b",
+        "00000000-0000-0000-0000-000000001b5c",
+        "00000000-0000-0000-0000-000000001b5d"
+      ],
+      "critical": true,
+      "review_required": true,
+      "expected_conflicts": [],
+      "expected_unknown": true,
+      "expected_query_lot": null,
+      "expected_query_anchor": null,
+      "expected_refusal": null,
+      "expected_visit_subject": "VISIT_MEDICAL",
+      "expected_visit_anchor": "visite médicale"
+    },
+    {
+      "id": "j7-med401",
+      "text": "La visite médicale est-elle obligatoire pour le lot 401 ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000001b59",
+        "00000000-0000-0000-0000-000000001b5a"
+      ],
+      "critical": true,
+      "review_required": true,
+      "expected_conflicts": [
+        {
+          "sources": [
+            "00000000-0000-0000-0000-000000001b59",
+            "00000000-0000-0000-0000-000000001b5a"
+          ],
+          "subject": "VISIT_MEDICAL",
+          "lot": 401,
+          "version": "00000000-0000-0000-0000-000000001647",
+          "kind": "OPPOSITION"
+        }
+      ],
+      "expected_unknown": false,
+      "expected_query_lot": 401,
+      "expected_query_anchor": "lot 401",
+      "expected_refusal": null,
+      "expected_visit_subject": "VISIT_MEDICAL",
+      "expected_visit_anchor": "visite médicale"
+    },
+    {
+      "id": "j7-cond402",
+      "text": "La visite médicale est-elle exigée pour le lot 402 ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000001b5b"
+      ],
+      "critical": true,
+      "review_required": true,
+      "expected_conflicts": [],
+      "expected_unknown": true,
+      "expected_query_lot": 402,
+      "expected_query_anchor": "lot 402",
+      "expected_refusal": null,
+      "expected_visit_subject": "VISIT_MEDICAL",
+      "expected_visit_anchor": "visite médicale"
+    },
+    {
+      "id": "j7-cond403",
+      "text": "La visite médicale est-elle requise pour le lot 403 ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000001b5c"
+      ],
+      "critical": true,
+      "review_required": true,
+      "expected_conflicts": [],
+      "expected_unknown": true,
+      "expected_query_lot": 403,
+      "expected_query_anchor": "lot 403",
+      "expected_refusal": null,
+      "expected_visit_subject": "VISIT_MEDICAL",
+      "expected_visit_anchor": "visite médicale"
+    },
+    {
+      "id": "j7-cond404",
+      "text": "La visite médicale est-elle obligatoire pour le lot 404 ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000001b5d"
+      ],
+      "critical": true,
+      "review_required": true,
+      "expected_conflicts": [],
+      "expected_unknown": true,
+      "expected_query_lot": 404,
+      "expected_query_anchor": "lot 404",
+      "expected_refusal": null,
+      "expected_visit_subject": "VISIT_MEDICAL",
+      "expected_visit_anchor": "visite médicale"
+    },
+    {
+      "id": "j7-site405",
+      "text": "La visite du site est-elle obligatoire pour le lot 405 ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000001b5e"
+      ],
+      "critical": true,
+      "review_required": false,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": 405,
+      "expected_query_anchor": "lot 405",
+      "expected_refusal": null,
+      "expected_visit_subject": "VISIT_SITE",
+      "expected_visit_anchor": "visite du site"
+    },
+    {
+      "id": "j7-site406",
+      "text": "Une visite de chantier est-elle obligatoire pour le lot 406 ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000001b5f"
+      ],
+      "critical": true,
+      "review_required": false,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": 406,
+      "expected_query_anchor": "lot 406",
+      "expected_refusal": null,
+      "expected_visit_subject": "VISIT_SITE",
+      "expected_visit_anchor": "visite de chantier"
+    },
+    {
+      "id": "j7-site",
+      "text": "La visite de chantier est-elle facultative ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000001b5e",
+        "00000000-0000-0000-0000-000000001b5f"
+      ],
+      "critical": true,
+      "review_required": true,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": null,
+      "expected_query_anchor": null,
+      "expected_refusal": null,
+      "expected_visit_subject": "VISIT_SITE",
+      "expected_visit_anchor": "visite de chantier"
+    },
+    {
+      "id": "j7-generic",
+      "text": "Quelles sont les obligations de visite ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000001b60",
+        "00000000-0000-0000-0000-000000001b61",
+        "00000000-0000-0000-0000-000000001b62"
+      ],
+      "critical": true,
+      "review_required": true,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": null,
+      "expected_query_anchor": null,
+      "expected_refusal": null,
+      "expected_visit_subject": null,
+      "expected_visit_anchor": null
+    },
+    {
+      "id": "j7-dc2",
+      "text": "Le DC2 est-il requis ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000001b66"
+      ],
+      "critical": true,
+      "review_required": true,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": null,
+      "expected_query_anchor": null,
+      "expected_refusal": null,
+      "expected_visit_subject": null,
+      "expected_visit_anchor": null
+    },
+    {
+      "id": "j7-med405",
+      "text": "La visite médicale est-elle obligatoire pour le lot 405 ?",
+      "expected": [],
+      "critical": false,
+      "review_required": false,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": 405,
+      "expected_query_anchor": "lot 405",
+      "expected_refusal": null,
+      "expected_visit_subject": "VISIT_MEDICAL",
+      "expected_visit_anchor": "visite médicale"
+    },
+    {
+      "id": "j7-site401",
+      "text": "La visite de chantier est-elle obligatoire pour le lot 401 ?",
+      "expected": [],
+      "critical": false,
+      "review_required": false,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": 401,
+      "expected_query_anchor": "lot 401",
+      "expected_refusal": null,
+      "expected_visit_subject": "VISIT_SITE",
+      "expected_visit_anchor": "visite de chantier"
+    },
+    {
+      "id": "j7-reference",
+      "text": "La visite médicale est-elle obligatoire pour le lot 410 ?",
+      "expected": [],
+      "critical": false,
+      "review_required": false,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": 410,
+      "expected_query_anchor": "lot 410",
+      "expected_refusal": null,
+      "expected_visit_subject": "VISIT_MEDICAL",
+      "expected_visit_anchor": "visite médicale"
+    },
+    {
+      "id": "j7-quoted",
+      "text": "La visite médicale est-elle obligatoire pour le lot 411 ?",
+      "expected": [],
+      "critical": false,
+      "review_required": false,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": 411,
+      "expected_query_anchor": "lot 411",
+      "expected_refusal": null,
+      "expected_visit_subject": "VISIT_MEDICAL",
+      "expected_visit_anchor": "visite médicale"
+    },
+    {
+      "id": "j7-ambiguous",
+      "text": "Comparer visite médicale et visite de chantier ?",
+      "expected": [],
+      "critical": false,
+      "review_required": false,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": null,
+      "expected_query_anchor": null,
+      "expected_refusal": null,
+      "expected_visit_subject": "UNKNOWN",
+      "expected_visit_anchor": null
+    },
+    {
+      "id": "j7-hour",
+      "text": "À quelle heure commence la visite médicale ?",
+      "expected": [],
+      "critical": false,
+      "review_required": false,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": null,
+      "expected_query_anchor": null,
+      "expected_refusal": null,
+      "expected_visit_subject": "UNKNOWN",
+      "expected_visit_anchor": null
+    },
+    {
+      "id": "j7-dpgf",
+      "text": "La DPGF est-elle obligatoire pour le lot 412 ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000001b65"
+      ],
+      "critical": true,
+      "review_required": false,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": 412,
+      "expected_query_anchor": "lot 412",
+      "expected_refusal": "FINANCIAL_SCOPE_REFUSED",
+      "expected_visit_subject": null,
+      "expected_visit_anchor": null
+    },
+    {
+      "id": "j7-margin",
+      "text": "Quelle marge privée pour le lot 401 ?",
+      "expected": [],
+      "critical": false,
+      "review_required": false,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": 401,
+      "expected_query_anchor": "lot 401",
+      "expected_refusal": "FINANCIAL_SCOPE_REFUSED",
+      "expected_visit_subject": null,
+      "expected_visit_anchor": null
+    },
+    {
+      "id": "j7-ral",
+      "text": "Quelle couleur RAL pour le portail ?",
+      "expected": [],
+      "critical": false,
+      "review_required": false,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": null,
+      "expected_query_anchor": null,
+      "expected_refusal": null,
+      "expected_visit_subject": null,
+      "expected_visit_anchor": null
+    }
+  ]
+}

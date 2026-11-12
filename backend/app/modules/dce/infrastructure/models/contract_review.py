@@ -14,11 +14,26 @@ class ContractProofReviewRecord(TenantScopedRecord, Base):
     __tablename__ = "contract_proof_reviews"
     __table_args__ = (
         sa.ForeignKeyConstraint(["tenant_id"], ["tenants.id"], ondelete="RESTRICT"),
-        sa.ForeignKeyConstraint(["tenant_id", "proof_id"], ["contract_baseline_deviation_impacts.tenant_id", "contract_baseline_deviation_impacts.id"], ondelete="RESTRICT"),
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "proof_id"],
+            [
+                "contract_baseline_deviation_impacts.tenant_id",
+                "contract_baseline_deviation_impacts.id",
+            ],
+            ondelete="RESTRICT",
+        ),
         sa.UniqueConstraint("tenant_id", "id", name="uq_contract_proof_reviews__tenant_id"),
-        sa.UniqueConstraint("tenant_id", "proof_id", "reviewed_revision", name="uq_contract_proof_reviews__functional"),
+        sa.UniqueConstraint(
+            "tenant_id",
+            "proof_id",
+            "reviewed_revision",
+            name="uq_contract_proof_reviews__functional",
+        ),
         sa.CheckConstraint("reviewed_revision > 0", name="contract_review_revision_positive"),
-        sa.CheckConstraint("decision IN ('ACCEPTED', 'REJECTED', 'NEEDS_CLARIFICATION')", name="contract_review_decision_closed"),
+        sa.CheckConstraint(
+            "decision IN ('ACCEPTED', 'REJECTED', 'NEEDS_CLARIFICATION')",
+            name="contract_review_decision_closed",
+        ),
     )
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
     proof_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)

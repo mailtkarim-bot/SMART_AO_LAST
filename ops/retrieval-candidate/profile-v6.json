@@ -1,0 +1,9 @@
+{
+  "revision": "614241f622f53c4eeff9890bdc4f31cfecc418b3",
+  "model_manifest_sha256": "f5dd7c7b84301e0bd9d5bbb00046f865247cad162ea083d1cfae0cc74ea737a2",
+  "runtime_manifest_sha256": "8f8f0b12c9ffc89faa021b7b6ed8c1113cdedb62b39bb1118e5dc1e64a16d171",
+  "segment_chars": 1000,
+  "overlap_chars": 150,
+  "minimum_score": 0.85,
+  "review_policy": "rc-type-proof-v6"
+}

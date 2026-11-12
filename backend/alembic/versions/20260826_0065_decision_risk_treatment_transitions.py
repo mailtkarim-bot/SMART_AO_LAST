@@ -55,9 +55,7 @@ def upgrade() -> None:
             ondelete="RESTRICT",
         ),
         sa.PrimaryKeyConstraint("id", name="pk_decision_risk_treatment_transitions"),
-        sa.UniqueConstraint(
-            "tenant_id", "id", name="uq_decision_risk_transitions__tenant_id"
-        ),
+        sa.UniqueConstraint("tenant_id", "id", name="uq_decision_risk_transitions__tenant_id"),
         sa.UniqueConstraint(
             "tenant_id", "command_id", name="uq_decision_risk_transitions__command"
         ),

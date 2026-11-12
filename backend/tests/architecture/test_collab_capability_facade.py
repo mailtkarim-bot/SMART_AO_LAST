@@ -1,6 +1,5 @@
 from datetime import UTC, datetime
 from types import SimpleNamespace
-from typing import cast
 from unittest.mock import Mock
 from uuid import uuid4
 
@@ -48,15 +47,21 @@ def test_facade_proposes_through_reader_port_and_dispatcher() -> None:
         case_id=case_id,
     )
     dispatcher = Mock()
-    command = SimpleNamespace(
-        command_type="ProposeCapabilityForCase",
+    command = ProposeCapabilityForCaseCommand(
+        command_id=uuid4(),
+        idempotency_key=uuid4(),
+        proposal_id=uuid4(),
         case_id=case_id,
         assignment_id=assignment_id,
+        capability_id=uuid4(),
+        capability_version_id=uuid4(),
+        requirement_id=uuid4(),
+        justification="Synthetic human proposal",
     )
 
     result = _service(reader, dispatcher, _authorized_policy()).propose_capability(
         actor=actor,
-        command=cast(ProposeCapabilityForCaseCommand, command),
+        command=command,
         now=NOW,
     )
 
@@ -70,6 +75,13 @@ def test_facade_proposes_through_reader_port_and_dispatcher() -> None:
         received_at=NOW,
     )
     dispatcher.dispatch.assert_called_once()
+    dispatched = dispatcher.dispatch.call_args.kwargs["command"]
+    assert dispatched.proposal_id != command.proposal_id
+    from uuid import NAMESPACE_URL, uuid5
+
+    assert dispatched.proposal_id == uuid5(
+        NAMESPACE_URL, f"case-capability-proposal:{actor.tenant_id}:{command.command_id}"
+    )
 
 
 def test_facade_reads_assessments_after_assignment_preflight() -> None:
@@ -96,6 +108,7 @@ def test_facade_reads_assessments_after_assignment_preflight() -> None:
         tenant_id=actor.tenant_id,
         case_id=case_id,
         assignment_id=assignment_id,
+        evaluated_at=NOW,
     )
 
 
@@ -118,3 +131,23 @@ def test_facade_rejects_non_collaborator_before_using_reader() -> None:
 
     reader.require_active_assignment.assert_not_called()
     policy.authorize.assert_not_called()
+
+
+def test_facade_case_only_read_uses_server_resolved_assignment() -> None:
+    actor = make_actor_context(actor_kind=ActorKind.COLLABORATEUR)
+    case_id, assignment_id = uuid4(), uuid4()
+    reader, dispatcher = Mock(), Mock()
+    reader.require_active_assignment.return_value = AssignmentProjection(
+        id=assignment_id, case_id=case_id
+    )
+    reader.read_assessments.return_value = CollaboratorCapabilityAssessmentProjection(
+        proposals=(), gaps=()
+    )
+    _service(reader, dispatcher, _authorized_policy()).read_assessments(
+        actor=actor, case_id=case_id, now=NOW
+    )
+    assert reader.require_active_assignment.call_args.kwargs["assignment_id"] is None
+    reader.read_assessments.assert_called_once_with(
+        tenant_id=actor.tenant_id, case_id=case_id, assignment_id=assignment_id, evaluated_at=NOW
+    )
+    dispatcher.dispatch.assert_not_called()

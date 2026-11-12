@@ -57,7 +57,7 @@ export function TeachingApplicabilityPanel({
       {readStatus === "READY" && applicabilities?.map((act) => (
         <article key={act.applicability_id} className="detail-panel">
           <h4>{act.source_case_label} · enseignement {act.source_rex_id}</h4>
-          <p>{act.decision} · validité lors de la déclaration : {act.source_validity_at_recording} · validité actuelle : {act.source_validity_current}</p>
+          <p>{act.decision} · validité lors de la déclaration : {act.source_validity_at_recording} · validité actuelle : {act.source_validity_current} (calendaire) · contexte source/cible : {act.context_state??"UNKNOWN"}</p>
           <p>Motif : {act.rationale}</p>
           <p>Source cible déclarée : {act.target_source_locator}</p>
           <TeachingSnapshotDetails snapshot={act.source_snapshot} />
@@ -144,7 +144,7 @@ function TeachingSourceReview({
       <p>Validité : {source.source_validity} · portée : {String(source.snapshot.scope)} · revue source : {String(source.snapshot.validation)}</p>
       <TeachingSnapshotDetails snapshot={source.snapshot} />
       {source.source_validity === "EXPIRED" && <p role="status">EXPIRED · cette revue ne renouvelle pas la validité de la source.</p>}
-      {!source.can_assess && <p role="status">{source.block_reason ?? "SOURCE_NOT_AVAILABLE_FOR_APPLICABILITY"} · aucune déclaration d’applicabilité positive n’est ouverte.</p>}
+      {!source.can_assess && <p role="status">{source.block_reason==="EXECUTION_REX_USE_CLOSURE_REVIEW"?<a href="#case-closure">Revoir cet enseignement d’exécution dans Réception et sortie de l’Affaire cible.</a>:source.block_reason ?? "SOURCE_NOT_AVAILABLE_FOR_APPLICABILITY"} · aucune déclaration d’applicabilité positive n’est ouverte dans ce panneau.</p>}
       {source.can_assess && (
         <form aria-label={`Revoir ${source.source_rex_id} pour ${targetCaseId}`} onSubmit={(event) => void submit(event)}>
           <label htmlFor={`${formId}-decision`}>Décision humaine d’applicabilité</label>

@@ -171,6 +171,7 @@ class _LibraryService:
             document_label="Extrait Kbis",
             issued_at=NOW,
             expires_at=NOW + timedelta(days=365),
+            sha256="a" * 64,
             verification_status="VALIDATED",
             verification_revision=3,
         )

@@ -1,0 +1,1550 @@
+{
+  "schema_version": 1,
+  "synthetic": true,
+  "held_out": true,
+  "tenant_id": "00000000-0000-0000-0000-000000002b5d",
+  "case_id": "00000000-0000-0000-0000-000000002b5e",
+  "version_id": "00000000-0000-0000-0000-000000002b5f",
+  "documents": [
+    {
+      "id": "00000000-0000-0000-0000-000000002bc1",
+      "tenant_id": "00000000-0000-0000-0000-000000002b5d",
+      "case_id": "00000000-0000-0000-0000-000000002b5e",
+      "version_id": "00000000-0000-0000-0000-000000002b5f",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 1,
+      "family": "RC",
+      "text": "Lot 921 : la visite médicale est exigée. Lot 921 : le DC2 est requis."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000002bc2",
+      "tenant_id": "00000000-0000-0000-0000-000000002b5d",
+      "case_id": "00000000-0000-0000-0000-000000002b5e",
+      "version_id": "00000000-0000-0000-0000-000000002b5f",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 2,
+      "family": "RC",
+      "text": "Lot 922 : la visite de site n'est pas requise. Lot 922 : le mémoire technique est obligatoire."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000002bc3",
+      "tenant_id": "00000000-0000-0000-0000-000000002b5d",
+      "case_id": "00000000-0000-0000-0000-000000002b5e",
+      "version_id": "00000000-0000-0000-0000-000000002b5f",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 3,
+      "family": "RC",
+      "text": "Lot 923 : le DC2 est exigé. Lot 923 : la DPGF est requise."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000002bc4",
+      "tenant_id": "00000000-0000-0000-0000-000000002b5d",
+      "case_id": "00000000-0000-0000-0000-000000002b5e",
+      "version_id": "00000000-0000-0000-0000-000000002b5f",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 4,
+      "family": "RC",
+      "text": "Lot 924 : la visite médicale est obligatoire. Sauf dispense écrite."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000002bc5",
+      "tenant_id": "00000000-0000-0000-0000-000000002b5d",
+      "case_id": "00000000-0000-0000-0000-000000002b5e",
+      "version_id": "00000000-0000-0000-0000-000000002b5f",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 5,
+      "family": "RC",
+      "text": "Lot 925 : le mémoire technique n'est pas requis."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000002bc6",
+      "tenant_id": "00000000-0000-0000-0000-000000002b5d",
+      "case_id": "00000000-0000-0000-0000-000000002b5e",
+      "version_id": "00000000-0000-0000-0000-000000002b5f",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 6,
+      "family": "RC",
+      "text": "Lot 926 : le DC1 est requis."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000002bc7",
+      "tenant_id": "00000000-0000-0000-0000-000000002b5d",
+      "case_id": "00000000-0000-0000-0000-000000002b5e",
+      "version_id": "00000000-0000-0000-0000-000000002b5f",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 7,
+      "family": "RC",
+      "text": "Lot 927 : la visite des locaux est obligatoire."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000002bc8",
+      "tenant_id": "00000000-0000-0000-0000-000000002b5d",
+      "case_id": "00000000-0000-0000-0000-000000002b5e",
+      "version_id": "00000000-0000-0000-0000-000000002b5f",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 8,
+      "family": "RC",
+      "text": "Pour le lot 928, fournir le DC2 et un mémoire technique."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000002bc9",
+      "tenant_id": "00000000-0000-0000-0000-000000002b5d",
+      "case_id": "00000000-0000-0000-0000-000000002b5e",
+      "version_id": "00000000-0000-0000-0000-000000002b5f",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 9,
+      "family": "RC",
+      "text": "« Lot 929 : le mémoire technique est requis. » Ceci est une citation."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000002bca",
+      "tenant_id": "00000000-0000-0000-0000-000000002b5d",
+      "case_id": "00000000-0000-0000-0000-000000002b5e",
+      "version_id": "00000000-0000-0000-0000-000000002b5f",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 10,
+      "family": "RC",
+      "text": "Lot 930 : le DC2 est mentionné dans un exemple."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000002bcb",
+      "tenant_id": "00000000-0000-0000-0000-000000002b5d",
+      "case_id": "00000000-0000-0000-0000-000000002b5e",
+      "version_id": "00000000-0000-0000-0000-000000002b5f",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 11,
+      "family": "RC",
+      "text": "Lot 931 : les variantes sont interdites. Lot 931 : le DC1 est requis."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000002bcc",
+      "tenant_id": "00000000-0000-0000-0000-000000002b5d",
+      "case_id": "00000000-0000-0000-0000-000000002b5e",
+      "version_id": "00000000-0000-0000-0000-000000002b5f",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 12,
+      "family": "RC",
+      "text": "Les dimensions des menuiseries sont précisées sur le plan architectural."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000002d51",
+      "tenant_id": "00000000-0000-0000-0000-000000002c25",
+      "case_id": "00000000-0000-0000-0000-000000002c26",
+      "version_id": "00000000-0000-0000-0000-000000002c27",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 1,
+      "family": "RC",
+      "text": "Lot 922 : la visite médicale est obligatoire."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000002d52",
+      "tenant_id": "00000000-0000-0000-0000-000000002b5d",
+      "case_id": "00000000-0000-0000-0000-000000002c8a",
+      "version_id": "00000000-0000-0000-0000-000000002c8b",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "COMPLETED",
+      "page": 1,
+      "family": "RC",
+      "text": "Lot 922 : la visite médicale est obligatoire."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000002d53",
+      "tenant_id": "00000000-0000-0000-0000-000000002b5d",
+      "case_id": "00000000-0000-0000-0000-000000002b5e",
+      "version_id": "00000000-0000-0000-0000-000000002cef",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": false,
+      "extraction_status": "COMPLETED",
+      "page": 1,
+      "family": "RC",
+      "text": "Lot 922 : la visite médicale est obligatoire."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000002d54",
+      "tenant_id": "00000000-0000-0000-0000-000000002b5d",
+      "case_id": "00000000-0000-0000-0000-000000002b5e",
+      "version_id": "00000000-0000-0000-0000-000000002b5f",
+      "classification": "INTERNAL_OPERATIONAL",
+      "current": true,
+      "extraction_status": "REVIEW_REQUIRED",
+      "page": 1,
+      "family": "RC",
+      "text": "Lot 922 : la visite médicale est obligatoire."
+    }
+  ],
+  "queries": [
+    {
+      "id": "j11-dc2-remettre",
+      "text": "Faut-il remettre le DC2 pour le lot 923 ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000002bc3"
+      ],
+      "expected_clause_ids": [
+        "c-dc2"
+      ],
+      "family": "simple_paraphrase",
+      "critical": true,
+      "review_required": false,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": 923,
+      "expected_query_anchor": "lot 923",
+      "expected_refusal": null,
+      "expected_visit_subject": null,
+      "expected_visit_anchor": null,
+      "expected_intent": {
+        "subject": "DC2",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED"
+      },
+      "expected_query_anchors": [
+        {
+          "signal": "DEMAND",
+          "start_byte": 0,
+          "end_byte": 16,
+          "excerpt": "Faut-il remettre"
+        },
+        {
+          "signal": "SUBJECT",
+          "start_byte": 20,
+          "end_byte": 23,
+          "excerpt": "DC2"
+        },
+        {
+          "signal": "LOT",
+          "start_byte": 32,
+          "end_byte": 39,
+          "excerpt": "lot 923"
+        }
+      ]
+    },
+    {
+      "id": "j11-med-realiser",
+      "text": "Faut-il réaliser une visite médicale pour le lot 921 ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000002bc1"
+      ],
+      "expected_clause_ids": [
+        "a-med"
+      ],
+      "family": "simple_paraphrase",
+      "critical": true,
+      "review_required": false,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": 921,
+      "expected_query_anchor": "lot 921",
+      "expected_refusal": null,
+      "expected_visit_subject": "VISIT_MEDICAL",
+      "expected_visit_anchor": "visite médicale",
+      "expected_intent": {
+        "subject": "VISIT_MEDICAL",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED"
+      },
+      "expected_query_anchors": [
+        {
+          "signal": "DEMAND",
+          "start_byte": 0,
+          "end_byte": 17,
+          "excerpt": "Faut-il réaliser"
+        },
+        {
+          "signal": "SUBJECT",
+          "start_byte": 22,
+          "end_byte": 38,
+          "excerpt": "visite médicale"
+        },
+        {
+          "signal": "LOT",
+          "start_byte": 47,
+          "end_byte": 54,
+          "excerpt": "lot 921"
+        }
+      ]
+    },
+    {
+      "id": "j11-form-necessary",
+      "text": "Le formulaire DC2 est-il nécessaire pour le lot 923 ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000002bc3"
+      ],
+      "expected_clause_ids": [
+        "c-dc2"
+      ],
+      "family": "simple_paraphrase",
+      "critical": true,
+      "review_required": false,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": 923,
+      "expected_query_anchor": "lot 923",
+      "expected_refusal": null,
+      "expected_visit_subject": null,
+      "expected_visit_anchor": null,
+      "expected_intent": {
+        "subject": "DC2",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED"
+      },
+      "expected_query_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 14,
+          "end_byte": 17,
+          "excerpt": "DC2"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 25,
+          "end_byte": 36,
+          "excerpt": "nécessaire"
+        },
+        {
+          "signal": "LOT",
+          "start_byte": 45,
+          "end_byte": 52,
+          "excerpt": "lot 923"
+        }
+      ]
+    },
+    {
+      "id": "j11-memory-presenter",
+      "text": "Le mémoire technique doit-il être présenté pour le lot 922 ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000002bc2"
+      ],
+      "expected_clause_ids": [
+        "b-memory"
+      ],
+      "family": "simple_paraphrase",
+      "critical": true,
+      "review_required": false,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": 922,
+      "expected_query_anchor": "lot 922",
+      "expected_refusal": null,
+      "expected_visit_subject": null,
+      "expected_visit_anchor": null,
+      "expected_intent": {
+        "subject": "MEMOIRE_TECHNIQUE",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED"
+      },
+      "expected_query_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 3,
+          "end_byte": 21,
+          "excerpt": "mémoire technique"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 22,
+          "end_byte": 46,
+          "excerpt": "doit-il être présenté"
+        },
+        {
+          "signal": "LOT",
+          "start_byte": 55,
+          "end_byte": 62,
+          "excerpt": "lot 922"
+        }
+      ]
+    },
+    {
+      "id": "j11-participation",
+      "text": "La participation à la visite des locaux est-elle obligatoire pour le lot 927 ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000002bc7"
+      ],
+      "expected_clause_ids": [
+        "g-site"
+      ],
+      "family": "simple_paraphrase",
+      "critical": true,
+      "review_required": false,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": 927,
+      "expected_query_anchor": "lot 927",
+      "expected_refusal": null,
+      "expected_visit_subject": "VISIT_SITE",
+      "expected_visit_anchor": "visite des locaux",
+      "expected_intent": {
+        "subject": "VISIT_SITE",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED"
+      },
+      "expected_query_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 23,
+          "end_byte": 40,
+          "excerpt": "visite des locaux"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 50,
+          "end_byte": 61,
+          "excerpt": "obligatoire"
+        },
+        {
+          "signal": "LOT",
+          "start_byte": 70,
+          "end_byte": 77,
+          "excerpt": "lot 927"
+        }
+      ]
+    },
+    {
+      "id": "j11-generic-required",
+      "text": "Quelles visites sont requises par le règlement ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000002bc1",
+        "00000000-0000-0000-0000-000000002bc2",
+        "00000000-0000-0000-0000-000000002bc4",
+        "00000000-0000-0000-0000-000000002bc7"
+      ],
+      "expected_clause_ids": [
+        "a-med",
+        "b-site",
+        "d-med",
+        "g-site"
+      ],
+      "family": "simple_generic",
+      "critical": true,
+      "review_required": true,
+      "expected_conflicts": [],
+      "expected_unknown": true,
+      "expected_query_lot": null,
+      "expected_query_anchor": null,
+      "expected_refusal": null,
+      "expected_visit_subject": null,
+      "expected_visit_anchor": null,
+      "expected_intent": {
+        "subject": "VISIT",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED"
+      },
+      "expected_query_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 8,
+          "end_byte": 15,
+          "excerpt": "visites"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 21,
+          "end_byte": 29,
+          "excerpt": "requises"
+        }
+      ]
+    },
+    {
+      "id": "j11-generic-imposed",
+      "text": "Les visites sont-elles imposées ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000002bc1",
+        "00000000-0000-0000-0000-000000002bc2",
+        "00000000-0000-0000-0000-000000002bc4",
+        "00000000-0000-0000-0000-000000002bc7"
+      ],
+      "expected_clause_ids": [
+        "a-med",
+        "b-site",
+        "d-med",
+        "g-site"
+      ],
+      "family": "simple_generic",
+      "critical": true,
+      "review_required": true,
+      "expected_conflicts": [],
+      "expected_unknown": true,
+      "expected_query_lot": null,
+      "expected_query_anchor": null,
+      "expected_refusal": null,
+      "expected_visit_subject": null,
+      "expected_visit_anchor": null,
+      "expected_intent": {
+        "subject": "VISIT",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED"
+      },
+      "expected_query_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 4,
+          "end_byte": 11,
+          "excerpt": "visites"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 23,
+          "end_byte": 32,
+          "excerpt": "imposées"
+        }
+      ]
+    },
+    {
+      "id": "j11-site-estce",
+      "text": "Est-ce que la visite du site est obligatoire pour le lot 922 ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000002bc2"
+      ],
+      "expected_clause_ids": [
+        "b-site"
+      ],
+      "family": "simple_paraphrase",
+      "critical": true,
+      "review_required": false,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": 922,
+      "expected_query_anchor": "lot 922",
+      "expected_refusal": null,
+      "expected_visit_subject": "VISIT_SITE",
+      "expected_visit_anchor": "visite du site",
+      "expected_intent": {
+        "subject": "VISIT_SITE",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED"
+      },
+      "expected_query_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 14,
+          "end_byte": 28,
+          "excerpt": "visite du site"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 33,
+          "end_byte": 44,
+          "excerpt": "obligatoire"
+        },
+        {
+          "signal": "LOT",
+          "start_byte": 53,
+          "end_byte": 60,
+          "excerpt": "lot 922"
+        }
+      ]
+    },
+    {
+      "id": "j11-med-condition",
+      "text": "Une visite médicale est-elle facultative pour le lot 924 ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000002bc4"
+      ],
+      "expected_clause_ids": [
+        "d-med"
+      ],
+      "family": "simple_paraphrase",
+      "critical": true,
+      "review_required": true,
+      "expected_conflicts": [],
+      "expected_unknown": true,
+      "expected_query_lot": 924,
+      "expected_query_anchor": "lot 924",
+      "expected_refusal": null,
+      "expected_visit_subject": "VISIT_MEDICAL",
+      "expected_visit_anchor": "visite médicale",
+      "expected_intent": {
+        "subject": "VISIT_MEDICAL",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED"
+      },
+      "expected_query_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 4,
+          "end_byte": 20,
+          "excerpt": "visite médicale"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 30,
+          "end_byte": 41,
+          "excerpt": "facultative"
+        },
+        {
+          "signal": "LOT",
+          "start_byte": 50,
+          "end_byte": 57,
+          "excerpt": "lot 924"
+        }
+      ]
+    },
+    {
+      "id": "j11-dc1-joint",
+      "text": "Le DC1 doit-il être joint pour le lot 926 ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000002bc6"
+      ],
+      "expected_clause_ids": [
+        "f-dc1"
+      ],
+      "family": "simple_paraphrase",
+      "critical": true,
+      "review_required": false,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": 926,
+      "expected_query_anchor": "lot 926",
+      "expected_refusal": null,
+      "expected_visit_subject": null,
+      "expected_visit_anchor": null,
+      "expected_intent": {
+        "subject": "DC1",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED"
+      },
+      "expected_query_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 3,
+          "end_byte": 6,
+          "excerpt": "DC1"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 7,
+          "end_byte": 26,
+          "excerpt": "doit-il être joint"
+        },
+        {
+          "signal": "LOT",
+          "start_byte": 35,
+          "end_byte": 42,
+          "excerpt": "lot 926"
+        }
+      ]
+    },
+    {
+      "id": "j11-memory-fournir",
+      "text": "Faut-il fournir un mémoire technique pour le lot 925 ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000002bc5"
+      ],
+      "expected_clause_ids": [
+        "e-memory"
+      ],
+      "family": "simple_paraphrase",
+      "critical": true,
+      "review_required": false,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": 925,
+      "expected_query_anchor": "lot 925",
+      "expected_refusal": null,
+      "expected_visit_subject": null,
+      "expected_visit_anchor": null,
+      "expected_intent": {
+        "subject": "MEMOIRE_TECHNIQUE",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED"
+      },
+      "expected_query_anchors": [
+        {
+          "signal": "DEMAND",
+          "start_byte": 0,
+          "end_byte": 15,
+          "excerpt": "Faut-il fournir"
+        },
+        {
+          "signal": "SUBJECT",
+          "start_byte": 19,
+          "end_byte": 37,
+          "excerpt": "mémoire technique"
+        },
+        {
+          "signal": "LOT",
+          "start_byte": 46,
+          "end_byte": 53,
+          "excerpt": "lot 925"
+        }
+      ]
+    },
+    {
+      "id": "j11-variants",
+      "text": "Les variantes sont-elles permises pour le lot 931 ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000002bcb"
+      ],
+      "expected_clause_ids": [
+        "k-variants"
+      ],
+      "family": "classic",
+      "critical": true,
+      "review_required": false,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": 931,
+      "expected_query_anchor": "lot 931",
+      "expected_refusal": null,
+      "expected_visit_subject": null,
+      "expected_visit_anchor": null,
+      "expected_intent": {
+        "subject": "VARIANTS",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED"
+      },
+      "expected_query_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 4,
+          "end_byte": 13,
+          "excerpt": "variantes"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 25,
+          "end_byte": 33,
+          "excerpt": "permises"
+        },
+        {
+          "signal": "LOT",
+          "start_byte": 42,
+          "end_byte": 49,
+          "excerpt": "lot 931"
+        }
+      ]
+    },
+    {
+      "id": "j11-site-effectuee",
+      "text": "La visite des locaux doit-elle être effectuée pour le lot 927 ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000002bc7"
+      ],
+      "expected_clause_ids": [
+        "g-site"
+      ],
+      "family": "simple_paraphrase",
+      "critical": true,
+      "review_required": false,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": 927,
+      "expected_query_anchor": "lot 927",
+      "expected_refusal": null,
+      "expected_visit_subject": "VISIT_SITE",
+      "expected_visit_anchor": "visite des locaux",
+      "expected_intent": {
+        "subject": "VISIT_SITE",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED"
+      },
+      "expected_query_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 3,
+          "end_byte": 20,
+          "excerpt": "visite des locaux"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 21,
+          "end_byte": 47,
+          "excerpt": "doit-elle être effectuée"
+        },
+        {
+          "signal": "LOT",
+          "start_byte": 56,
+          "end_byte": 63,
+          "excerpt": "lot 927"
+        }
+      ]
+    },
+    {
+      "id": "j11-lot-first",
+      "text": "Pour le lot 923, faut-il joindre le DC2 ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000002bc3"
+      ],
+      "expected_clause_ids": [
+        "c-dc2"
+      ],
+      "family": "unseen_order",
+      "critical": true,
+      "review_required": false,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": 923,
+      "expected_query_anchor": "lot 923",
+      "expected_refusal": null,
+      "expected_visit_subject": null,
+      "expected_visit_anchor": null,
+      "expected_intent": {
+        "subject": "DC2",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED"
+      },
+      "expected_query_anchors": [
+        {
+          "signal": "LOT",
+          "start_byte": 8,
+          "end_byte": 15,
+          "excerpt": "lot 923"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 17,
+          "end_byte": 32,
+          "excerpt": "faut-il joindre"
+        },
+        {
+          "signal": "SUBJECT",
+          "start_byte": 36,
+          "end_byte": 39,
+          "excerpt": "DC2"
+        }
+      ]
+    },
+    {
+      "id": "j11-form-passive",
+      "text": "Le formulaire DC1 doit-il être fourni pour le lot 926 ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000002bc6"
+      ],
+      "expected_clause_ids": [
+        "f-dc1"
+      ],
+      "family": "unseen_form",
+      "critical": true,
+      "review_required": false,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": 926,
+      "expected_query_anchor": "lot 926",
+      "expected_refusal": null,
+      "expected_visit_subject": null,
+      "expected_visit_anchor": null,
+      "expected_intent": {
+        "subject": "DC1",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED"
+      },
+      "expected_query_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 14,
+          "end_byte": 17,
+          "excerpt": "DC1"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 18,
+          "end_byte": 38,
+          "excerpt": "doit-il être fourni"
+        },
+        {
+          "signal": "LOT",
+          "start_byte": 47,
+          "end_byte": 54,
+          "excerpt": "lot 926"
+        }
+      ]
+    },
+    {
+      "id": "j11-source-imperative",
+      "text": "Faut-il joindre le DC2 pour le lot 928 ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000002bc8"
+      ],
+      "expected_clause_ids": [
+        "h-dc2"
+      ],
+      "family": "source_limit",
+      "critical": true,
+      "review_required": false,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": 928,
+      "expected_query_anchor": "lot 928",
+      "expected_refusal": null,
+      "expected_visit_subject": null,
+      "expected_visit_anchor": null,
+      "expected_intent": {
+        "subject": "DC2",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED"
+      },
+      "expected_query_anchors": [
+        {
+          "signal": "DEMAND",
+          "start_byte": 0,
+          "end_byte": 15,
+          "excerpt": "Faut-il joindre"
+        },
+        {
+          "signal": "SUBJECT",
+          "start_byte": 19,
+          "end_byte": 22,
+          "excerpt": "DC2"
+        },
+        {
+          "signal": "LOT",
+          "start_byte": 31,
+          "end_byte": 38,
+          "excerpt": "lot 928"
+        }
+      ]
+    },
+    {
+      "id": "j11-multi",
+      "text": "Faut-il présenter le DC2 et un mémoire technique pour le lot 928 ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000002bc8"
+      ],
+      "expected_clause_ids": [
+        "h-dc2",
+        "h-memory"
+      ],
+      "family": "multi_limit",
+      "critical": true,
+      "review_required": false,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": 928,
+      "expected_query_anchor": "lot 928",
+      "expected_refusal": null,
+      "expected_visit_subject": null,
+      "expected_visit_anchor": null,
+      "expected_intent": {
+        "subject": "UNKNOWN",
+        "demand": "UNKNOWN",
+        "coverage": "AMBIGUOUS"
+      },
+      "expected_query_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 22,
+          "end_byte": 25,
+          "excerpt": "DC2"
+        },
+        {
+          "signal": "SUBJECT",
+          "start_byte": 32,
+          "end_byte": 50,
+          "excerpt": "mémoire technique"
+        },
+        {
+          "signal": "LOT",
+          "start_byte": 59,
+          "end_byte": 66,
+          "excerpt": "lot 928"
+        }
+      ]
+    },
+    {
+      "id": "j11-quote",
+      "text": "Le mémoire technique est-il requis pour le lot 929 ?",
+      "expected": [],
+      "expected_clause_ids": [],
+      "family": "negative",
+      "critical": false,
+      "review_required": false,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": 929,
+      "expected_query_anchor": "lot 929",
+      "expected_refusal": null,
+      "expected_visit_subject": null,
+      "expected_visit_anchor": null,
+      "expected_intent": {
+        "subject": "MEMOIRE_TECHNIQUE",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED"
+      },
+      "expected_query_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 3,
+          "end_byte": 21,
+          "excerpt": "mémoire technique"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 29,
+          "end_byte": 35,
+          "excerpt": "requis"
+        },
+        {
+          "signal": "LOT",
+          "start_byte": 44,
+          "end_byte": 51,
+          "excerpt": "lot 929"
+        }
+      ]
+    },
+    {
+      "id": "j11-mention",
+      "text": "Le DC2 doit-il être remis pour le lot 930 ?",
+      "expected": [],
+      "expected_clause_ids": [],
+      "family": "negative",
+      "critical": false,
+      "review_required": false,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": 930,
+      "expected_query_anchor": "lot 930",
+      "expected_refusal": null,
+      "expected_visit_subject": null,
+      "expected_visit_anchor": null,
+      "expected_intent": {
+        "subject": "DC2",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED"
+      },
+      "expected_query_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 3,
+          "end_byte": 6,
+          "excerpt": "DC2"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 7,
+          "end_byte": 26,
+          "excerpt": "doit-il être remis"
+        },
+        {
+          "signal": "LOT",
+          "start_byte": 35,
+          "end_byte": 42,
+          "excerpt": "lot 930"
+        }
+      ]
+    },
+    {
+      "id": "j11-wrong-document",
+      "text": "Faut-il joindre le DC1 pour le lot 923 ?",
+      "expected": [],
+      "expected_clause_ids": [],
+      "family": "negative",
+      "critical": false,
+      "review_required": false,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": 923,
+      "expected_query_anchor": "lot 923",
+      "expected_refusal": null,
+      "expected_visit_subject": null,
+      "expected_visit_anchor": null,
+      "expected_intent": {
+        "subject": "DC1",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED"
+      },
+      "expected_query_anchors": [
+        {
+          "signal": "DEMAND",
+          "start_byte": 0,
+          "end_byte": 15,
+          "excerpt": "Faut-il joindre"
+        },
+        {
+          "signal": "SUBJECT",
+          "start_byte": 19,
+          "end_byte": 22,
+          "excerpt": "DC1"
+        },
+        {
+          "signal": "LOT",
+          "start_byte": 31,
+          "end_byte": 38,
+          "excerpt": "lot 923"
+        }
+      ]
+    },
+    {
+      "id": "j11-hour",
+      "text": "À quelle heure se fait la visite du lot 922 ?",
+      "expected": [],
+      "expected_clause_ids": [],
+      "family": "unsupported_demand",
+      "critical": false,
+      "review_required": false,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": 922,
+      "expected_query_anchor": "lot 922",
+      "expected_refusal": null,
+      "expected_visit_subject": "UNKNOWN",
+      "expected_visit_anchor": null,
+      "expected_intent": {
+        "subject": "VISIT",
+        "demand": "DATE_TIME",
+        "coverage": "UNSUPPORTED"
+      },
+      "expected_query_anchors": [
+        {
+          "signal": "DEMAND",
+          "start_byte": 0,
+          "end_byte": 15,
+          "excerpt": "À quelle heure"
+        },
+        {
+          "signal": "SUBJECT",
+          "start_byte": 27,
+          "end_byte": 33,
+          "excerpt": "visite"
+        },
+        {
+          "signal": "LOT",
+          "start_byte": 37,
+          "end_byte": 44,
+          "excerpt": "lot 922"
+        }
+      ]
+    },
+    {
+      "id": "j11-date",
+      "text": "Quand faut-il présenter le DC2 pour le lot 923 ?",
+      "expected": [],
+      "expected_clause_ids": [],
+      "family": "unsupported_demand",
+      "critical": false,
+      "review_required": false,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": 923,
+      "expected_query_anchor": "lot 923",
+      "expected_refusal": null,
+      "expected_visit_subject": null,
+      "expected_visit_anchor": null,
+      "expected_intent": {
+        "subject": "DC2",
+        "demand": "DATE_TIME",
+        "coverage": "UNSUPPORTED"
+      },
+      "expected_query_anchors": [
+        {
+          "signal": "DEMAND",
+          "start_byte": 0,
+          "end_byte": 5,
+          "excerpt": "Quand"
+        },
+        {
+          "signal": "SUBJECT",
+          "start_byte": 28,
+          "end_byte": 31,
+          "excerpt": "DC2"
+        },
+        {
+          "signal": "LOT",
+          "start_byte": 40,
+          "end_byte": 47,
+          "excerpt": "lot 923"
+        }
+      ]
+    },
+    {
+      "id": "j11-location",
+      "text": "Où doit avoir lieu la visite de site pour le lot 922 ?",
+      "expected": [],
+      "expected_clause_ids": [],
+      "family": "unsupported_demand",
+      "critical": false,
+      "review_required": false,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": 922,
+      "expected_query_anchor": "lot 922",
+      "expected_refusal": null,
+      "expected_visit_subject": "UNKNOWN",
+      "expected_visit_anchor": null,
+      "expected_intent": {
+        "subject": "VISIT_SITE",
+        "demand": "LOCATION",
+        "coverage": "UNSUPPORTED"
+      },
+      "expected_query_anchors": [
+        {
+          "signal": "DEMAND",
+          "start_byte": 0,
+          "end_byte": 3,
+          "excerpt": "Où"
+        },
+        {
+          "signal": "SUBJECT",
+          "start_byte": 23,
+          "end_byte": 37,
+          "excerpt": "visite de site"
+        },
+        {
+          "signal": "LOT",
+          "start_byte": 46,
+          "end_byte": 53,
+          "excerpt": "lot 922"
+        }
+      ]
+    },
+    {
+      "id": "j11-alternative",
+      "text": "Le DC1 ou le DC2 est-il requis pour le lot 923 ?",
+      "expected": [],
+      "expected_clause_ids": [],
+      "family": "ambiguous",
+      "critical": false,
+      "review_required": false,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": 923,
+      "expected_query_anchor": "lot 923",
+      "expected_refusal": null,
+      "expected_visit_subject": null,
+      "expected_visit_anchor": null,
+      "expected_intent": {
+        "subject": "UNKNOWN",
+        "demand": "UNKNOWN",
+        "coverage": "AMBIGUOUS"
+      },
+      "expected_query_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 3,
+          "end_byte": 6,
+          "excerpt": "DC1"
+        },
+        {
+          "signal": "SUBJECT",
+          "start_byte": 13,
+          "end_byte": 16,
+          "excerpt": "DC2"
+        },
+        {
+          "signal": "LOT",
+          "start_byte": 39,
+          "end_byte": 46,
+          "excerpt": "lot 923"
+        }
+      ]
+    },
+    {
+      "id": "j11-lots",
+      "text": "Le DC2 est-il requis pour le lot 923 ou 924 ?",
+      "expected": [],
+      "expected_clause_ids": [],
+      "family": "ambiguous",
+      "critical": false,
+      "review_required": false,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": null,
+      "expected_query_anchor": null,
+      "expected_refusal": null,
+      "expected_visit_subject": null,
+      "expected_visit_anchor": null,
+      "expected_intent": {
+        "subject": "DC2",
+        "demand": "UNKNOWN",
+        "coverage": "AMBIGUOUS"
+      },
+      "expected_query_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 3,
+          "end_byte": 6,
+          "excerpt": "DC2"
+        }
+      ]
+    },
+    {
+      "id": "j11-colour",
+      "text": "Quel RAL prévoir pour les façades ?",
+      "expected": [],
+      "expected_clause_ids": [],
+      "family": "unsupported_topic",
+      "critical": false,
+      "review_required": false,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": null,
+      "expected_query_anchor": null,
+      "expected_refusal": null,
+      "expected_visit_subject": null,
+      "expected_visit_anchor": null,
+      "expected_intent": {
+        "subject": "UNKNOWN",
+        "demand": "UNKNOWN",
+        "coverage": "UNKNOWN"
+      },
+      "expected_query_anchors": []
+    },
+    {
+      "id": "j11-dpgf",
+      "text": "Faut-il fournir la DPGF pour le lot 923 ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000002bc3"
+      ],
+      "expected_clause_ids": [
+        "c-dpgf"
+      ],
+      "family": "financial_refusal",
+      "critical": true,
+      "review_required": false,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": 923,
+      "expected_query_anchor": "lot 923",
+      "expected_refusal": "FINANCIAL_SCOPE_REFUSED",
+      "expected_visit_subject": null,
+      "expected_visit_anchor": null,
+      "expected_intent": null,
+      "expected_query_anchors": []
+    },
+    {
+      "id": "j11-margin",
+      "text": "Quelle marge retenir pour le lot 923 ?",
+      "expected": [],
+      "expected_clause_ids": [],
+      "family": "financial_refusal",
+      "critical": false,
+      "review_required": false,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": 923,
+      "expected_query_anchor": "lot 923",
+      "expected_refusal": "FINANCIAL_SCOPE_REFUSED",
+      "expected_visit_subject": null,
+      "expected_visit_anchor": null,
+      "expected_intent": null,
+      "expected_query_anchors": []
+    },
+    {
+      "id": "j11-caps",
+      "text": "FAUT-IL JOINDRE LE DC2 POUR LE lot 923 ?",
+      "expected": [
+        "00000000-0000-0000-0000-000000002bc3"
+      ],
+      "expected_clause_ids": [
+        "c-dc2"
+      ],
+      "family": "simple_paraphrase",
+      "critical": true,
+      "review_required": false,
+      "expected_conflicts": [],
+      "expected_unknown": false,
+      "expected_query_lot": 923,
+      "expected_query_anchor": "lot 923",
+      "expected_refusal": null,
+      "expected_visit_subject": null,
+      "expected_visit_anchor": null,
+      "expected_intent": {
+        "subject": "DC2",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED"
+      },
+      "expected_query_anchors": [
+        {
+          "signal": "DEMAND",
+          "start_byte": 0,
+          "end_byte": 15,
+          "excerpt": "FAUT-IL JOINDRE"
+        },
+        {
+          "signal": "SUBJECT",
+          "start_byte": 19,
+          "end_byte": 22,
+          "excerpt": "DC2"
+        },
+        {
+          "signal": "LOT",
+          "start_byte": 31,
+          "end_byte": 38,
+          "excerpt": "lot 923"
+        }
+      ]
+    }
+  ],
+  "clause_inventory": [
+    {
+      "id": "a-med",
+      "source_fragment_id": "00000000-0000-0000-0000-000000002bc1",
+      "start_byte": 0,
+      "end_byte": 42,
+      "excerpt": "Lot 921 : la visite médicale est exigée.",
+      "subject": "VISIT_MEDICAL",
+      "lot": 921,
+      "value": "REQUIRED",
+      "kind": "ASSERTION"
+    },
+    {
+      "id": "a-dc2",
+      "source_fragment_id": "00000000-0000-0000-0000-000000002bc1",
+      "start_byte": 43,
+      "end_byte": 71,
+      "excerpt": "Lot 921 : le DC2 est requis.",
+      "subject": "DC2",
+      "lot": 921,
+      "value": "REQUIRED",
+      "kind": "ASSERTION"
+    },
+    {
+      "id": "b-site",
+      "source_fragment_id": "00000000-0000-0000-0000-000000002bc2",
+      "start_byte": 0,
+      "end_byte": 46,
+      "excerpt": "Lot 922 : la visite de site n'est pas requise.",
+      "subject": "VISIT_SITE",
+      "lot": 922,
+      "value": "NOT_REQUIRED",
+      "kind": "NEGATION"
+    },
+    {
+      "id": "b-memory",
+      "source_fragment_id": "00000000-0000-0000-0000-000000002bc2",
+      "start_byte": 47,
+      "end_byte": 95,
+      "excerpt": "Lot 922 : le mémoire technique est obligatoire.",
+      "subject": "MEMOIRE_TECHNIQUE",
+      "lot": 922,
+      "value": "REQUIRED",
+      "kind": "ASSERTION"
+    },
+    {
+      "id": "c-dc2",
+      "source_fragment_id": "00000000-0000-0000-0000-000000002bc3",
+      "start_byte": 0,
+      "end_byte": 28,
+      "excerpt": "Lot 923 : le DC2 est exigé.",
+      "subject": "DC2",
+      "lot": 923,
+      "value": "REQUIRED",
+      "kind": "ASSERTION"
+    },
+    {
+      "id": "c-dpgf",
+      "source_fragment_id": "00000000-0000-0000-0000-000000002bc3",
+      "start_byte": 29,
+      "end_byte": 59,
+      "excerpt": "Lot 923 : la DPGF est requise.",
+      "subject": "DPGF",
+      "lot": 923,
+      "value": "REQUIRED",
+      "kind": "ASSERTION"
+    },
+    {
+      "id": "d-med",
+      "source_fragment_id": "00000000-0000-0000-0000-000000002bc4",
+      "start_byte": 0,
+      "end_byte": 46,
+      "excerpt": "Lot 924 : la visite médicale est obligatoire.",
+      "subject": "VISIT_MEDICAL",
+      "lot": 924,
+      "value": "UNKNOWN",
+      "kind": "UNKNOWN"
+    },
+    {
+      "id": "e-memory",
+      "source_fragment_id": "00000000-0000-0000-0000-000000002bc5",
+      "start_byte": 0,
+      "end_byte": 49,
+      "excerpt": "Lot 925 : le mémoire technique n'est pas requis.",
+      "subject": "MEMOIRE_TECHNIQUE",
+      "lot": 925,
+      "value": "NOT_REQUIRED",
+      "kind": "NEGATION"
+    },
+    {
+      "id": "f-dc1",
+      "source_fragment_id": "00000000-0000-0000-0000-000000002bc6",
+      "start_byte": 0,
+      "end_byte": 28,
+      "excerpt": "Lot 926 : le DC1 est requis.",
+      "subject": "DC1",
+      "lot": 926,
+      "value": "REQUIRED",
+      "kind": "ASSERTION"
+    },
+    {
+      "id": "g-site",
+      "source_fragment_id": "00000000-0000-0000-0000-000000002bc7",
+      "start_byte": 0,
+      "end_byte": 47,
+      "excerpt": "Lot 927 : la visite des locaux est obligatoire.",
+      "subject": "VISIT_SITE",
+      "lot": 927,
+      "value": "REQUIRED",
+      "kind": "ASSERTION"
+    },
+    {
+      "id": "h-dc2",
+      "source_fragment_id": "00000000-0000-0000-0000-000000002bc8",
+      "start_byte": 0,
+      "end_byte": 57,
+      "excerpt": "Pour le lot 928, fournir le DC2 et un mémoire technique.",
+      "subject": "DC2",
+      "lot": 928,
+      "value": "REQUIRED",
+      "kind": "ASSERTION"
+    },
+    {
+      "id": "h-memory",
+      "source_fragment_id": "00000000-0000-0000-0000-000000002bc8",
+      "start_byte": 0,
+      "end_byte": 57,
+      "excerpt": "Pour le lot 928, fournir le DC2 et un mémoire technique.",
+      "subject": "MEMOIRE_TECHNIQUE",
+      "lot": 928,
+      "value": "REQUIRED",
+      "kind": "ASSERTION"
+    },
+    {
+      "id": "k-variants",
+      "source_fragment_id": "00000000-0000-0000-0000-000000002bcb",
+      "start_byte": 0,
+      "end_byte": 40,
+      "excerpt": "Lot 931 : les variantes sont interdites.",
+      "subject": "VARIANTS",
+      "lot": 931,
+      "value": "FORBIDDEN",
+      "kind": "ASSERTION"
+    },
+    {
+      "id": "k-dc1",
+      "source_fragment_id": "00000000-0000-0000-0000-000000002bcb",
+      "start_byte": 41,
+      "end_byte": 69,
+      "excerpt": "Lot 931 : le DC1 est requis.",
+      "subject": "DC1",
+      "lot": 931,
+      "value": "REQUIRED",
+      "kind": "ASSERTION"
+    }
+  ],
+  "annotation_origin": "synthetic authoring; independent technical review, no human admission"
+}

@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Header, HTTPException, status
+from fastapi import APIRouter, Header, HTTPException, Response, status
 from fastapi.responses import JSONResponse
 
 from app.interfaces.http.dependencies.auth import resolve_bearer_context as _resolve_context
@@ -12,6 +12,7 @@ from app.modules.membership.application.collab_capability import (
     CollaboratorCapabilityAssessmentService,
 )
 from app.modules.membership.public.collab_capability_contracts import (
+    CapabilityCandidateResponse,
     CapabilityGapResponse,
     CapabilityProposalResponse,
     CollaboratorCapabilityAssessmentResponse,
@@ -69,7 +70,7 @@ def build_collaborator_capability_router(
         try:
             result = service.propose_capability(
                 actor=context,
-                command=request.to_command(case_id=case_id),
+                command=request.to_command(case_id=case_id, tenant_id=context.tenant_id),
                 now=datetime.now(tz=UTC),
             )
         except PermissionError as error:
@@ -77,6 +78,8 @@ def build_collaborator_capability_router(
         except (IdempotencyKeyReusedError, CommandInProgressError) as error:
             raise HTTPException(status_code=409, detail="IDEMPOTENCY_CONFLICT") from error
         except CommandExecutionError as error:
+            if str(error) == "command receipt collision could not be resolved":
+                raise HTTPException(status_code=409, detail="IDEMPOTENCY_CONFLICT") from error
             if str(error) == "NOT_FOUND_OR_FORBIDDEN":
                 raise HTTPException(status_code=404, detail="NOT_FOUND_OR_FORBIDDEN") from error
             if str(error) in {"SCOPE_DENIED", "ASSIGNMENT_REQUIRED"}:
@@ -108,7 +111,7 @@ def build_collaborator_capability_router(
         try:
             result = service.report_gap(
                 actor=context,
-                command=request.to_command(case_id=case_id),
+                command=request.to_command(case_id=case_id, tenant_id=context.tenant_id),
                 now=datetime.now(tz=UTC),
             )
         except PermissionError as error:
@@ -116,6 +119,8 @@ def build_collaborator_capability_router(
         except (IdempotencyKeyReusedError, CommandInProgressError) as error:
             raise HTTPException(status_code=409, detail="IDEMPOTENCY_CONFLICT") from error
         except CommandExecutionError as error:
+            if str(error) == "command receipt collision could not be resolved":
+                raise HTTPException(status_code=409, detail="IDEMPOTENCY_CONFLICT") from error
             if str(error) == "NOT_FOUND_OR_FORBIDDEN":
                 raise HTTPException(status_code=404, detail="NOT_FOUND_OR_FORBIDDEN") from error
             if str(error) in {"SCOPE_DENIED", "ASSIGNMENT_REQUIRED"}:
@@ -132,6 +137,51 @@ def build_collaborator_capability_router(
         )
 
     @router.get(
+        "/cases/{case_id}/capability-candidates",
+        response_model=list[CapabilityCandidateResponse],
+        responses={
+            401: {"description": "Bearer absent, invalide ou expiré."},
+            403: {"description": "Affectation ou scope insuffisant."},
+            404: {"description": "Ressource absente du tenant."},
+        },
+    )
+    def read_candidates(
+        case_id: UUID,
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> list[CapabilityCandidateResponse]:
+        context = _resolve_context(
+            authorization=authorization, context_resolver=security_runtime.context_resolver
+        )
+        try:
+            candidates = service.read_candidates(
+                actor=context, case_id=case_id, now=datetime.now(tz=UTC)
+            )
+        except PermissionError as error:
+            raise HTTPException(status_code=403, detail="FORBIDDEN") from error
+        except CommandExecutionError as error:
+            if str(error) == "NOT_FOUND_OR_FORBIDDEN":
+                raise HTTPException(status_code=404, detail="NOT_FOUND_OR_FORBIDDEN") from error
+            raise HTTPException(status_code=403, detail="FORBIDDEN") from error
+        response.headers["Cache-Control"] = "no-store"
+        return [
+            CapabilityCandidateResponse(
+                capability_id=item.capability_id,
+                capability_kind=item.capability_kind,
+                name=item.name,
+                version_id=item.version_id,
+                version_number=item.version_number,
+                title=item.title,
+                valid_from=item.valid_from,
+                valid_until=item.valid_until,
+                validity_state=item.validity_state,
+                source_evidence_state=item.source_evidence_state,
+                evaluated_at=item.evaluated_at,
+            )
+            for item in candidates
+        ]
+
+    @router.get(
         "/cases/{case_id}/capability-assessments",
         response_model=CollaboratorCapabilityAssessmentResponse,
         responses={
@@ -142,7 +192,8 @@ def build_collaborator_capability_router(
     )
     def read_assessments(
         case_id: UUID,
-        assignment_id: UUID,
+        response: Response,
+        assignment_id: UUID | None = None,
         authorization: str | None = Header(default=None),
     ) -> CollaboratorCapabilityAssessmentResponse:
         context = _resolve_context(
@@ -161,6 +212,7 @@ def build_collaborator_capability_router(
             if str(error) == "NOT_FOUND_OR_FORBIDDEN":
                 raise HTTPException(status_code=404, detail="NOT_FOUND_OR_FORBIDDEN") from error
             raise HTTPException(status_code=403, detail="FORBIDDEN") from error
+        response.headers["Cache-Control"] = "no-store"
         return CollaboratorCapabilityAssessmentResponse(
             proposals=[
                 CapabilityProposalResponse(
@@ -175,6 +227,10 @@ def build_collaborator_capability_router(
                     validity_state=item.validity_state,
                     justification=item.justification,
                     source_locator=item.source_locator,
+                    source_evidence_state=getattr(item, "source_evidence_state", "UNKNOWN"),
+                    source_evidence_evaluated_at=getattr(
+                        item, "source_evidence_evaluated_at", None
+                    ),
                 )
                 for item in projection.proposals
             ],

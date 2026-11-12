@@ -56,6 +56,7 @@ class AssignmentHistoryResponse(PublicResponseModel):
 
 PatronAssignmentScopeAction = Literal[
     "case.dce.read",
+    "case.handover.receipt.write",
     "dce.requirement.confirm",
     "document.administrative.read",
     "preparation.transmit",
@@ -207,15 +208,31 @@ class PatronFinancialReportSummaryResponse(PublicResponseModel):
     forecast_cashflow_minor: int
 
 
+class FinancialMarginCalculationResponse(PublicResponseModel):
+    state: Literal["CALCULATED", "UNKNOWN"]
+    basis: Literal["DECLARED_BASE_CATEGORIES"]
+    missing_categories: list[
+        Literal["SALES", "DIRECT_COST", "OVERHEAD", "SUBCONTRACTING", "CONTINGENCY"]
+    ]
+    basis_line_ids: list[UUID]
+    total_cost_minor: int | None
+    gross_margin_minor: int | None
+    gross_margin_rate_bps: int | None
+    unknown_reason: Literal["MISSING_BASE_CATEGORY", "INVALID_BASE_AMOUNT"] | None
+    rate_unknown_reason: Literal["ZERO_SALES"] | None
+
+
 class PatronFinancialReportResponse(PublicResponseModel):
     report_id: UUID
     case_id: UUID
     status: Literal["PUBLISHED"]
+    aggregate_revision: int = Field(ge=0)
     currency_code: str
     calculated_at: datetime
     ruleset_version: int = Field(ge=1)
     summary: PatronFinancialReportSummaryResponse
     lines: list[PatronFinancialReportLineResponse]
+    margin_calculation: FinancialMarginCalculationResponse
 
 
 class PatronFinancialReportDraftResponse(PublicResponseModel):
@@ -230,3 +247,4 @@ class PatronFinancialReportDraftResponse(PublicResponseModel):
     ruleset_version: int = Field(ge=1)
     summary: PatronFinancialReportSummaryResponse
     lines: list[PatronFinancialReportLineResponse]
+    margin_calculation: FinancialMarginCalculationResponse

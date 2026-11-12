@@ -1,0 +1,275 @@
+{
+  "purpose": "DEVELOPMENT_SYNTHETIC_ONLY",
+  "version": 1,
+  "documents": [
+    {
+      "file": "rc.txt",
+      "family": "RC",
+      "sha256": "b45865c3cb53179a3077a0febef62579c387f225751714c8a661b427bd360116",
+      "facts": [
+        {
+          "line": 2,
+          "quote": "Lot 1 : le DC1 est obligatoire.",
+          "expected_kind": "RC_DOCUMENT_CANDIDATURE",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 3,
+          "quote": "Lot 2 : le DC2 est obligatoire.",
+          "expected_kind": "RC_DOCUMENT_CANDIDATURE",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 4,
+          "quote": "Lot 1 : la visite de chantier est obligatoire.",
+          "expected_kind": "RC_SITE_VISIT",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 5,
+          "quote": "Lot 2 : la visite du chantier est facultative.",
+          "expected_kind": "RC_SITE_VISIT",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 6,
+          "quote": "Les visites de site ne sont pas obligatoires pour le lot 2.",
+          "expected_kind": "RC_SITE_VISIT",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 7,
+          "quote": "Le mémoire technique est obligatoire pour les lots 1 et 2.",
+          "expected_kind": "RC_CONTENT_OFFER",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 8,
+          "quote": "La date limite de remise des offres est le 30 novembre 2026 à 12h00 UTC.",
+          "expected_kind": "RC_SUBMISSION_DEADLINE",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 9,
+          "quote": "Le dépôt électronique est obligatoire sur https://achat.example.test/ecole.",
+          "expected_kind": "RC_RESPONSE_CHANNEL",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 10,
+          "quote": "Le format PDF est obligatoire.",
+          "expected_kind": "RC_FILE_CONSTRAINT",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 11,
+          "quote": "Le critère prix (40%) et la valeur technique (60%) sont annoncés.",
+          "expected_kind": "RC_AWARD_CRITERION",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 12,
+          "quote": "La négociation est possible.",
+          "expected_kind": "RC_NEGOTIATION",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 13,
+          "quote": "La durée de validité des offres est de 120 jours.",
+          "expected_kind": "RC_OFFER_VALIDITY",
+          "coverage": "SUPPORTED_SIGNAL"
+        }
+      ],
+      "financial_rag_evaluation": null
+    },
+    {
+      "file": "ccap.txt",
+      "family": "CCAP",
+      "sha256": "ddc20ad53eb69bae60ebad98a3390c1fbb0ffba2224a3b7b951a8f2c421c61a1",
+      "facts": [
+        {
+          "line": 1,
+          "quote": "Les pénalités de retard sont applicables aux lots 1 et 2.",
+          "expected_kind": "CCAP_PENALTIES",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 2,
+          "quote": "Une retenue de garantie de 5% est prévue pour les lots 1 et 2.",
+          "expected_kind": "CCAP_RETENTION_GUARANTEE",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 3,
+          "quote": "Une garantie à première demande est possible.",
+          "expected_kind": "CCAP_GUARANTEE",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 4,
+          "quote": "Une assurance décennale est exigée pour le lot 1.",
+          "expected_kind": "CCAP_INSURANCE",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 5,
+          "quote": "La sous-traitance est soumise à acceptation pour les lots 1 et 2.",
+          "expected_kind": "CCAP_SUBCONTRACTING",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 6,
+          "quote": "Le délai de paiement est de trente jours.",
+          "axis": "CASH",
+          "expected_kind": null,
+          "coverage": "UNSUPPORTED_SEMANTICS"
+        },
+        {
+          "line": 7,
+          "quote": "La réception doit donner lieu à un procès-verbal avec réserves.",
+          "axis": "RIGHTS",
+          "expected_kind": null,
+          "coverage": "UNSUPPORTED_SEMANTICS"
+        }
+      ],
+      "financial_rag_evaluation": null
+    },
+    {
+      "file": "cctp-lot-1.txt",
+      "family": "CCTP",
+      "sha256": "c597541e703305feed7677d909e46c1c6df46fca51ff62a3f28aa7cabdd74dae",
+      "facts": [
+        {
+          "line": 1,
+          "quote": "Une certification professionnelle est exigée pour le lot 1.",
+          "expected_kind": "CCAP_QUALIFICATIONS",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 2,
+          "quote": "Les variantes ne sont pas autorisées pour le lot 1.",
+          "expected_kind": "CCTP_VARIANTS",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 3,
+          "quote": "Lot 1 : isolation des murs de résistance thermique R égale à 4.",
+          "axis": "TECHNICAL",
+          "expected_kind": null,
+          "coverage": "UNSUPPORTED_SEMANTICS"
+        },
+        {
+          "line": 4,
+          "quote": "Lot 1 : livraison des matériaux uniquement entre 7h00 et 9h00.",
+          "axis": "CONSTRUCTIBILITY",
+          "expected_kind": null,
+          "coverage": "UNSUPPORTED_SEMANTICS"
+        }
+      ],
+      "financial_rag_evaluation": null
+    },
+    {
+      "file": "cctp-lot-2.txt",
+      "family": "CCTP",
+      "sha256": "2dc70a6d77bdbe711f614e4fbdb021ee10688d56b71266c42accf45b51e57834",
+      "facts": [
+        {
+          "line": 1,
+          "quote": "Une habilitation électrique est exigée pour le lot 2.",
+          "expected_kind": "CCAP_QUALIFICATIONS",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 2,
+          "quote": "Les options sont facultatives pour le lot 2.",
+          "expected_kind": "CCTP_VARIANTS",
+          "coverage": "SUPPORTED_SIGNAL"
+        },
+        {
+          "line": 3,
+          "quote": "Lot 2 : remplacer les luminaires existants par des appareils LED.",
+          "axis": "TECHNICAL",
+          "expected_kind": null,
+          "coverage": "UNSUPPORTED_SEMANTICS"
+        },
+        {
+          "line": 4,
+          "quote": "Lot 2 : maintenir l'alimentation de secours pendant les travaux.",
+          "axis": "TECHNICAL",
+          "expected_kind": null,
+          "coverage": "UNSUPPORTED_SEMANTICS"
+        }
+      ],
+      "financial_rag_evaluation": null
+    },
+    {
+      "file": "planning.txt",
+      "family": "PLANNING",
+      "sha256": "c8f7c1510d1513777004563ffc10b8c44d6a758dd181a33a19ec256d5d530f1c",
+      "facts": [
+        {
+          "line": 1,
+          "quote": "Lot 1 : travaux du 4 janvier au 12 février 2027.",
+          "axis": "CAPACITY",
+          "expected_kind": null,
+          "coverage": "UNSUPPORTED_SEMANTICS"
+        },
+        {
+          "line": 2,
+          "quote": "Lot 2 : intervention après réception des supports du lot 1.",
+          "axis": "CAPACITY",
+          "expected_kind": null,
+          "coverage": "UNSUPPORTED_SEMANTICS"
+        },
+        {
+          "line": 3,
+          "quote": "Une équipe de trois électriciens doit être mobilisable pour le lot 2.",
+          "axis": "CAPACITY",
+          "expected_kind": null,
+          "coverage": "UNSUPPORTED_SEMANTICS"
+        }
+      ],
+      "financial_rag_evaluation": null
+    },
+    {
+      "file": "pgc.txt",
+      "family": "OTHER",
+      "sha256": "a37b76f1d182c3333e562fd9083d6ac2cc34e65e54c6cf1551207c5f95e93ac2",
+      "facts": [
+        {
+          "line": 1,
+          "quote": "Lot 1 : le retrait des matériaux amiantés est interdit sans diagnostic préalable.",
+          "axis": "HSE",
+          "expected_kind": null,
+          "coverage": "UNSUPPORTED_SEMANTICS"
+        },
+        {
+          "line": 2,
+          "quote": "Les circulations scolaires doivent rester séparées du chantier.",
+          "axis": "HSE",
+          "expected_kind": null,
+          "coverage": "UNSUPPORTED_SEMANTICS"
+        }
+      ],
+      "financial_rag_evaluation": null
+    },
+    {
+      "file": "dpgf.txt",
+      "family": "DPGF",
+      "sha256": "cdb73917f8ac8d5c9626835db1375387c0ba5df9257ea8d4da422744eb3fa2e5",
+      "facts": [],
+      "financial_rag_evaluation": "NOT_EVALUABLE"
+    },
+    {
+      "file": "bordereau.txt",
+      "family": "OTHER",
+      "sha256": "c1534fb229b6a9af941a107ccb03ad7e4256163bad7404d0bb0f65e00650decd",
+      "facts": [],
+      "financial_rag_evaluation": null
+    }
+  ],
+  "lots": [
+    1,
+    2
+  ]
+}

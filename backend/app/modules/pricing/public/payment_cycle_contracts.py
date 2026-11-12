@@ -15,12 +15,14 @@ class RecordPaymentCycleRequest(BaseModel):
     cash_assumption: str | None = None
     post_reception_cost_note: str | None = None
 
+
 class RecordPaymentCycleResponse(BaseModel):
     command_id: UUID
     idempotency_key: UUID
     cycle_id: UUID
     result_code: str
     replayed: bool
+
 
 class QualifyPaymentCycleRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -29,11 +31,13 @@ class QualifyPaymentCycleRequest(BaseModel):
     cash_assumption: str | None = None
     post_reception_cost_note: str | None = None
 
+
 class PaymentUnknownAuditEntryResponse(BaseModel):
     cycle_id: UUID
     status: Literal["SOURCE_SIGNAL_ONLY", "REVIEW_REQUIRED", "UNKNOWN"]
     source_refs: tuple[str, ...]
     trigger_event: str
+
 
 class PaymentUnknownAuditResponse(BaseModel):
     status_counts: dict[str, int]

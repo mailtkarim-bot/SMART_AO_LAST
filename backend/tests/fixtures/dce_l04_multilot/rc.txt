@@ -1,0 +1,13 @@
+Marché synthétique de rénovation d'une école - version initiale.
+Lot 1 : le DC1 est obligatoire.
+Lot 2 : le DC2 est obligatoire.
+Lot 1 : la visite de chantier est obligatoire.
+Lot 2 : la visite du chantier est facultative.
+Les visites de site ne sont pas obligatoires pour le lot 2.
+Le mémoire technique est obligatoire pour les lots 1 et 2.
+La date limite de remise des offres est le 30 novembre 2026 à 12h00 UTC.
+Le dépôt électronique est obligatoire sur https://achat.example.test/ecole.
+Le format PDF est obligatoire.
+Le critère prix (40%) et la valeur technique (60%) sont annoncés.
+La négociation est possible.
+La durée de validité des offres est de 120 jours.

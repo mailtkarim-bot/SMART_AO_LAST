@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Header, HTTPException, status
+from fastapi import APIRouter, Header, HTTPException, Response, status
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from app.interfaces.http.dependencies.auth import resolve_bearer_context as _resolve_context
@@ -15,6 +15,7 @@ from app.modules.submission.public.contracts import (
     SubmissionPackageCommandResponse,
     SubmissionPackageManifestResponse,
 )
+from app.modules.submission.public.final_control_contracts import SubmissionFinalControlProjection
 from app.platform.events.dispatcher import (
     CommandExecutionError,
     CommandInProgressError,
@@ -152,6 +153,7 @@ def build_patron_submission_router(
     )
     def read_submission_manifest(
         submission_package_id: UUID,
+        response: Response,
         authorization: str | None = Header(default=None),
     ) -> SubmissionPackageManifestResponse:
         context = _resolve_context(
@@ -170,7 +172,37 @@ def build_patron_submission_router(
             raise HTTPException(status_code=403, detail="FORBIDDEN") from error
         except CommandExecutionError as error:
             raise HTTPException(status_code=422, detail=str(error)) from error
+        response.headers["Cache-Control"] = "no-store"
         return SubmissionPackageManifestResponse.model_validate(manifest)
+
+    @router.get(
+        "/submission-packages/{submission_package_id}/final-control",
+        response_model=SubmissionFinalControlProjection,
+    )
+    def read_final_control(
+        submission_package_id: UUID,
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SubmissionFinalControlProjection:
+        actor = _resolve_context(
+            authorization=authorization,
+            context_resolver=security_runtime.context_resolver,
+        )
+        try:
+            result = service.read_final_control(
+                actor=actor,
+                submission_package_id=submission_package_id,
+                now=datetime.now(tz=UTC),
+            )
+        except PermissionError as error:
+            code = 404 if str(error) == "NOT_FOUND_OR_FORBIDDEN" else 403
+            raise HTTPException(
+                status_code=code, detail="NOT_FOUND_OR_FORBIDDEN" if code == 404 else "FORBIDDEN"
+            ) from error
+        except CommandExecutionError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+        response.headers["Cache-Control"] = "no-store"
+        return result
 
     @router.get(
         "/submission-packages/{submission_package_id}/export",

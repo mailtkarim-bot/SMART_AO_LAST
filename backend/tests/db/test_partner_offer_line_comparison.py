@@ -1,9 +1,11 @@
 from dataclasses import replace
 from types import SimpleNamespace
+from typing import cast
 from uuid import uuid4
 
 import pytest
 from app.interfaces.http.routes.patron_partner_offer_line_comparisons import (
+    ConsultationSecurityRuntime,
     build_patron_partner_offer_line_comparisons_router,
 )
 from app.modules.pricing.application.partner_offer_line_comparison_commands import (
@@ -131,7 +133,9 @@ def test_http_line_comparison_is_idempotent_source_backed_and_keeps_unknowns(
     app.include_router(
         build_patron_partner_offer_line_comparisons_router(
             service=line_service,
-            security_runtime=SimpleNamespace(context_resolver=resolver),
+            security_runtime=cast(
+                ConsultationSecurityRuntime, SimpleNamespace(context_resolver=resolver)
+            ),
         )
     )
     client = TestClient(app)

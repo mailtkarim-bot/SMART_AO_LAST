@@ -56,8 +56,6 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.drop_constraint("cost_basis_thresholds_non_negative", "pricing_scenarios", type_="check")
     op.drop_constraint("cost_basis_rates_valid", "pricing_scenarios", type_="check")
-    op.drop_constraint(
-        "cost_basis_reserves_non_negative", "pricing_scenarios", type_="check"
-    )
+    op.drop_constraint("cost_basis_reserves_non_negative", "pricing_scenarios", type_="check")
     for name, _ in reversed(_COLUMNS):
         op.drop_column("pricing_scenarios", name)

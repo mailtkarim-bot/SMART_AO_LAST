@@ -4,6 +4,7 @@ from uuid import UUID
 from pydantic import Field
 from app.platform.events.command_contracts import ApplicationCommand
 
+
 class RecordCaseInterviewCommand(ApplicationCommand):
     command_type = "RecordCaseInterview"
     interview_id: UUID

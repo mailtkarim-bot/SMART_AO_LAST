@@ -53,6 +53,7 @@ describe("PartnerOfferPricesPanel", () => {
         .mockResolvedValueOnce(unknownOffer)
         .mockResolvedValueOnce(declaredOffer),
       listPartnerOfferScopeReviews: vi.fn().mockResolvedValue({ case_id: "case-1", reviews: [] }),
+      listPartnerOfferLineComparisons: vi.fn().mockResolvedValue({ case_id: "case-1", comparisons: [] }),
       declarePartnerOfferPrice: vi.fn().mockResolvedValue({
         status: "SUCCEEDED",
         result_code: "PARTNER_OFFER_PRICE_DECLARED",
@@ -93,6 +94,7 @@ describe("PartnerOfferPricesPanel", () => {
         .mockResolvedValueOnce(unknownOffer)
         .mockResolvedValueOnce(declaredOffer),
       listPartnerOfferScopeReviews: vi.fn().mockResolvedValue({ case_id: "case-1", reviews: [] }),
+      listPartnerOfferLineComparisons: vi.fn().mockResolvedValue({ case_id: "case-1", comparisons: [] }),
       declarePartnerOfferPrice: vi.fn()
         .mockRejectedValueOnce({ status: 500 })
         .mockResolvedValueOnce({
@@ -122,14 +124,18 @@ describe("PartnerOfferPricesPanel", () => {
   });
 
   it("does not query private offer values while C08 is inactive", () => {
-    const api = { listPartnerOfferPrices: vi.fn() };
+    const api = { listPartnerOfferPrices: vi.fn(), listPartnerOfferLineComparisons: vi.fn() };
     render(<PartnerOfferPricesPanel api={client(api)} caseId="case-1" enabled={false} />);
     expect(screen.getByRole("status")).toHaveTextContent("Ouvrez C08");
     expect(api.listPartnerOfferPrices).not.toHaveBeenCalled();
   });
 
   it("renders a neutral refusal when the financial endpoint denies access", async () => {
-    const api = { listPartnerOfferPrices: vi.fn().mockRejectedValue({ status: 403 }) };
+    const api = {
+      listPartnerOfferPrices: vi.fn().mockRejectedValue({ status: 403 }),
+      listPartnerOfferScopeReviews: vi.fn().mockRejectedValue({ status: 403 }),
+      listPartnerOfferLineComparisons: vi.fn().mockRejectedValue({ status: 403 }),
+    };
     render(<PartnerOfferPricesPanel api={client(api)} caseId="case-1" enabled />);
     expect(await screen.findByText("FORBIDDEN · lecture financière réservée au Patron habilité.")).toBeInTheDocument();
     expect(screen.queryByText("1234,50")).not.toBeInTheDocument();

@@ -61,9 +61,7 @@ def upgrade() -> None:
         sa.CheckConstraint("total_minor >= 0", name="total_minor_non_negative"),
         sa.CheckConstraint("source_sha256 ~ '^[a-f0-9]{64}$'", name="source_sha256"),
     )
-    op.create_index(
-        "ix_pricing_import_batches_tenant_id", "pricing_import_batches", ["tenant_id"]
-    )
+    op.create_index("ix_pricing_import_batches_tenant_id", "pricing_import_batches", ["tenant_id"])
     op.create_index(
         "ix_pricing_import_batches__tenant_case",
         "pricing_import_batches",
@@ -134,9 +132,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.execute(
-        "DROP TRIGGER IF EXISTS pricing_import_rows_append_only ON pricing_import_rows"
-    )
+    op.execute("DROP TRIGGER IF EXISTS pricing_import_rows_append_only ON pricing_import_rows")
     op.execute(
         "DROP TRIGGER IF EXISTS pricing_import_batches_append_only ON pricing_import_batches"
     )

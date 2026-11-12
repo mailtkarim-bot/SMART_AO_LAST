@@ -1,0 +1,13 @@
+Consultation synthétique pour aménager un centre technique.
+Le formulaire DC1 est requis au titre du lot 4.
+La candidature du lot 8 doit comprendre le DC2.
+Pour le lot 4, une visite des chantiers est obligatoire.
+La visite de chantier pour le lot 8 est facultative.
+Les visites du chantier ne sont pas exigées pour le lot 8.
+Pour les lots 4 et 8, le mémoire technique est obligatoire.
+La date limite de réception des offres est le 15 janvier 2027 à 10h15 UTC.
+Le dépôt dématérialisé s'effectue sur https://achat.example.test/centre.
+Les offres doivent respecter le format PDF.
+Le critère prix (45%) complète la valeur technique (55%).
+La négociation est annoncée dans la procédure.
+Le délai de validité des offres est de 150 jours.

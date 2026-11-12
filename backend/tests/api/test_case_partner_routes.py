@@ -1,10 +1,11 @@
 from datetime import UTC, datetime
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 from uuid import uuid4
 
 import pytest
 from app.interfaces.http.routes.case_partners import build_case_partner_router
+from app.interfaces.http.routes.consultations import ConsultationSecurityRuntime
 from app.modules.partner.public.contracts import (
     CasePartnerEventResponse,
     DeclareCasePartnerEngagementRequest,
@@ -75,7 +76,9 @@ class PartnerService:
 def _router(service):
     return build_case_partner_router(
         service=service,
-        security_runtime=SimpleNamespace(context_resolver=Resolver()),
+        security_runtime=cast(
+            ConsultationSecurityRuntime, SimpleNamespace(context_resolver=Resolver())
+        ),
     )
 
 

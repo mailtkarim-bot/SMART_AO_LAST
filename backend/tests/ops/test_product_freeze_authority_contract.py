@@ -63,11 +63,7 @@ def test_product_freeze_and_traceability_contract_are_active() -> None:
     archived_filename = "SMART_AO_Cahier_Directeur_Produit_Metier_OWNER_FREEZE_v2.0.md"
     assert not (DOCS_ROOT / "Actifs" / "01_Cahiers_des_charges" / archived_filename).exists()
     assert (
-        DOCS_ROOT
-        / "Archive"
-        / "01_Cahiers_remplaces"
-        / "Produit_metier"
-        / archived_filename
+        DOCS_ROOT / "Archive" / "01_Cahiers_remplaces" / "Produit_metier" / archived_filename
     ).is_file()
     assert list((DOCS_ROOT / "Actifs" / "01_Cahiers_des_charges").glob("*OWNER_FREEZE*.md")) == [
         ACTIVE_FREEZE
@@ -117,10 +113,7 @@ def test_integral_specs_preserve_every_source_chapter_and_body_line() -> None:
         body = body.split(f"\n<!-- END {marker} -->", 1)[0]
         actual = [line for line in body.splitlines() if not line.startswith('<a id="')]
         prefix = entry["prefix"]
-        restored = [
-            re.sub(rf"^#{{1,6}} {prefix}-[0-9]{{3}} — ", "# ", line)
-            for line in actual
-        ]
+        restored = [re.sub(rf"^#{{1,6}} {prefix}-[0-9]{{3}} — ", "# ", line) for line in actual]
         normalized = [_normalize_relocated_archive_link(line) for line in expected]
         restored = [_normalize_relocated_archive_link(line) for line in restored]
         normalized = [re.sub(r"^#{1,6} ", "# ", line) for line in normalized]

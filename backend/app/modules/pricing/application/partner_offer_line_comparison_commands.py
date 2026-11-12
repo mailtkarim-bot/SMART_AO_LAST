@@ -3,8 +3,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.platform.events.command_contracts import ApplicationCommand
 from app.modules.pricing.domain.partner_offer_line_comparison import LineFieldState
+from app.platform.events.command_contracts import ApplicationCommand
 
 
 class PartnerOfferLineMemberCommand(BaseModel):

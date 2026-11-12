@@ -47,6 +47,10 @@ class PricingScenarioResponse(BaseModel):
     floor_sales_minor: int
     target_sales_minor: int
     source_snapshot_revision: int
+    source_snapshot_id: UUID | None = None
+    source_basis_state: Literal["DECLARED_COMPLETE", "UNKNOWN"] = "UNKNOWN"
+    source_basis_reason: str | None = "UNQUALIFIED_HISTORY"
+    currency_code: str | None = None
 
 
 class TransitionPricingScenarioRequest(BaseModel):

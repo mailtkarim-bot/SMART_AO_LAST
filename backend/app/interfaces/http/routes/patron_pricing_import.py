@@ -106,6 +106,11 @@ def build_patron_pricing_import_router(
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(error)
             ) from error
 
+        if preview.truncated:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="IMPORT_PREVIEW_INCOMPLETE",
+            )
         receipt = None
         if creation_service is not None:
             if command_id is None or idempotency_key is None:
@@ -138,6 +143,7 @@ def build_patron_pricing_import_router(
                                 unit_price_minor=row.unit_price_minor,
                                 total_minor=row.total_minor,
                                 errors=list(row.errors),
+                                source_locator=getattr(row, "source_locator", None),
                             )
                             for row in preview.rows
                         ],
@@ -190,6 +196,7 @@ def build_patron_pricing_import_router(
                     unit_price_minor=row.unit_price_minor,
                     total_minor=row.total_minor,
                     errors=list(row.errors),
+                    source_locator=getattr(row, "source_locator", None),
                 )
                 for row in preview.rows
             ],
@@ -271,6 +278,7 @@ def build_patron_pricing_import_router(
                         unit_price_minor=row.unit_price_minor,
                         total_minor=row.total_minor,
                         errors=list(row.errors),
+                        source_locator=getattr(row, "source_locator", None),
                     )
                     for row in projection.rows
                 ],

@@ -11,6 +11,7 @@ class ExportVerificationOutcome(StrEnum):
     MISMATCH = "MISMATCH"
     UNAVAILABLE = "UNAVAILABLE"
 
+
 @dataclass(frozen=True, slots=True)
 class ExportProofVerificationRecord:
     export_id: UUID
@@ -23,5 +24,8 @@ class ExportProofVerificationRecord:
             self.calculated_sha256 is None or len(self.calculated_sha256) != 64
         ):
             raise ValueError("MATCH_HASH_REQUIRED")
-        if self.outcome is ExportVerificationOutcome.UNAVAILABLE and self.calculated_sha256 is not None:
+        if (
+            self.outcome is ExportVerificationOutcome.UNAVAILABLE
+            and self.calculated_sha256 is not None
+        ):
             raise ValueError("UNAVAILABLE_HASH_FORBIDDEN")

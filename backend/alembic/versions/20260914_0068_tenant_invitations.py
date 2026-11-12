@@ -53,9 +53,7 @@ def upgrade() -> None:
             ondelete="RESTRICT",
         ),
         sa.PrimaryKeyConstraint("id", name="pk_tenant_invitations"),
-        sa.UniqueConstraint(
-            "tenant_id", "membership_id", name="uq_invitations__membership"
-        ),
+        sa.UniqueConstraint("tenant_id", "membership_id", name="uq_invitations__membership"),
         sa.UniqueConstraint("token_hash", name="uq_invitations__token_hash"),
     )
     op.create_index(

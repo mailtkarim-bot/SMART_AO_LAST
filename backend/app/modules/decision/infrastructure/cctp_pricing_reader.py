@@ -121,6 +121,9 @@ class SqlAlchemyDecisionCctpPricingCrossingReader:
 
         candidates: list[DecisionCctpPricingCrossingProjection] = []
         for fragment_id, _ordinal, locator_json, text in fragments:
+            # Cell context has not been qualified for automatic price/decision comparisons.
+            if isinstance(locator_json, dict) and locator_json.get("kind") == "docx_table_cell":
+                continue
             for batch_id, document_kind, row_number, code, designation, unit in rows:
                 match = match_cctp_to_pricing_row(
                     cctp_text=text,

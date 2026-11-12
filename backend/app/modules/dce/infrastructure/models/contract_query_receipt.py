@@ -15,9 +15,13 @@ class ContractQueryReceiptRecord(TenantScopedRecord, Base):
     __tablename__ = "contract_query_receipts"
     __table_args__ = (
         sa.ForeignKeyConstraint(["tenant_id"], ["tenants.id"], ondelete="RESTRICT"),
-        sa.ForeignKeyConstraint(["tenant_id", "case_id"], ["cases.tenant_id", "cases.id"], ondelete="RESTRICT"),
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "case_id"], ["cases.tenant_id", "cases.id"], ondelete="RESTRICT"
+        ),
         sa.UniqueConstraint("tenant_id", "id", name="uq_contract_query_receipts__tenant_id"),
-        sa.CheckConstraint("limit_value > 0 AND limit_value <= 100", name="contract_query_receipt_limit_closed"),
+        sa.CheckConstraint(
+            "limit_value > 0 AND limit_value <= 100", name="contract_query_receipt_limit_closed"
+        ),
         sa.CheckConstraint("offset_value >= 0", name="contract_query_receipt_offset_closed"),
     )
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
@@ -27,4 +31,3 @@ class ContractQueryReceiptRecord(TenantScopedRecord, Base):
     limit_value: Mapped[int] = mapped_column(sa.Integer, nullable=False)
     offset_value: Mapped[int] = mapped_column(sa.Integer, nullable=False)
     actor_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
-

@@ -222,18 +222,11 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.execute("DROP TRIGGER trg_dce_extract_frag_parent ON dce_document_extraction_fragments")
     op.execute("DROP FUNCTION validate_dce_extraction_fragment_parent()")
-    op.execute(
-        "DROP TRIGGER trg_dce_extract_frag_append_only "
-        "ON dce_document_extraction_fragments"
-    )
+    op.execute("DROP TRIGGER trg_dce_extract_frag_append_only ON dce_document_extraction_fragments")
     op.execute("DROP TRIGGER trg_dce_extract_append_only ON dce_document_extractions")
     op.execute("DROP FUNCTION prevent_dce_extraction_mutation()")
-    op.execute(
-        "DROP INDEX IF EXISTS ix_dce_document_extraction_fragments_tenant_id"
-    )
-    op.execute(
-        "DROP INDEX IF EXISTS ix_dce_document_extraction_fragments__tenant_id"
-    )
+    op.execute("DROP INDEX IF EXISTS ix_dce_document_extraction_fragments_tenant_id")
+    op.execute("DROP INDEX IF EXISTS ix_dce_document_extraction_fragments__tenant_id")
     op.drop_index(
         "ix_dce_extract_frag__tenant_extraction",
         "dce_document_extraction_fragments",

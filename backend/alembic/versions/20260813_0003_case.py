@@ -87,8 +87,7 @@ def upgrade() -> None:
             name="consultation_required_unless_manual",
         ),
         sa.CheckConstraint(
-            "business_origin <> 'MANUAL' OR "
-            "NULLIF(BTRIM(origin_rationale), '') IS NOT NULL",
+            "business_origin <> 'MANUAL' OR NULLIF(BTRIM(origin_rationale), '') IS NOT NULL",
             name="manual_origin_rationale",
         ),
         sa.CheckConstraint(
@@ -109,8 +108,7 @@ def upgrade() -> None:
             name="commercial_stage",
         ),
         sa.CheckConstraint(
-            "decision_readiness IN "
-            "('NOT_ASSESSED', 'NOT_READY', 'READY_WITH_UNKNOWNS', 'READY')",
+            "decision_readiness IN ('NOT_ASSESSED', 'NOT_READY', 'READY_WITH_UNKNOWNS', 'READY')",
             name="decision_readiness",
         ),
         sa.CheckConstraint(
@@ -118,18 +116,15 @@ def upgrade() -> None:
             name="dce_freshness",
         ),
         sa.CheckConstraint(
-            "responsibility_status IN "
-            "('UNASSIGNED', 'ASSIGNED', 'ASSIGNMENT_REVIEW_REQUIRED')",
+            "responsibility_status IN ('UNASSIGNED', 'ASSIGNED', 'ASSIGNMENT_REVIEW_REQUIRED')",
             name="responsibility_status",
         ),
         sa.CheckConstraint(
-            "lifecycle <> 'STOPPED' OR "
-            "(stopped_reason IS NOT NULL AND stopped_at IS NOT NULL)",
+            "lifecycle <> 'STOPPED' OR (stopped_reason IS NOT NULL AND stopped_at IS NOT NULL)",
             name="stopped_reason_when_stopped",
         ),
         sa.CheckConstraint(
-            "lifecycle <> 'ARCHIVED' OR "
-            "(archived_reason IS NOT NULL AND archived_at IS NOT NULL)",
+            "lifecycle <> 'ARCHIVED' OR (archived_reason IS NOT NULL AND archived_at IS NOT NULL)",
             name="archived_reason_when_archived",
         ),
     )

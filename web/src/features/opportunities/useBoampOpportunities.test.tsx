@@ -23,6 +23,7 @@ const observation = (id = "observation-1"): BoampObservation => ({
   department_codes: ["59"],
   market_types: ["TRAVAUX"],
   source_status: "EN_COURS",
+  source_captures: [],
   score_version: "BOAMP_PUBLIC_V1",
   score: 82,
   score_explanation: { keyword_hits: ["réhabilitation"] },
@@ -53,6 +54,57 @@ function renderBoampHook(
 }
 
 describe("useBoampOpportunities", () => {
+  it('blocks a second click while a case creation is sending',async()=>{
+    let complete:(value:unknown)=>void=()=>{};
+    const api={listBoampObservations:vi.fn().mockResolvedValue({observations:[{...observation(),p0_state:'TARGETED',p0_decision:'QUALIFIED',p0_qualification_id:'q1'}]}),qualifyBoampObservation:vi.fn(),createCaseFromBoampObservation:vi.fn().mockImplementation(()=>new Promise(r=>{complete=r;}))};
+    const {result}=renderBoampHook(api,vi.fn());
+    await act(async()=>{await result.current.refreshObservations();});
+    act(()=>{void result.current.createCaseFromSelected();void result.current.createCaseFromSelected();});
+    expect(api.createCaseFromBoampObservation).toHaveBeenCalledTimes(1);
+    const input=api.createCaseFromBoampObservation.mock.calls[0][1];
+    await act(async()=>{complete({status:'SUCCEEDED',command_id:input.command_id,idempotency_key:input.idempotency_key,result_code:'CASE_CREATED',case_id:'case-1',version:0,event_ids:[],replayed:false});});
+    expect(result.current.pending).toBeNull();
+  });
+  it('masks cached source data after access is refused without losing an unknown intent',async()=>{
+    const api={listBoampObservations:vi.fn().mockResolvedValue({observations:[observation()]}),qualifyBoampObservation:vi.fn().mockRejectedValueOnce(new Error('lost')).mockRejectedValue(Object.assign(new Error('FORBIDDEN'),{status:403})),createCaseFromBoampObservation:vi.fn()};
+    const {result}=renderBoampHook(api,vi.fn());
+    await act(async()=>{await result.current.refreshObservations();});
+    await act(async()=>{await result.current.qualifySelected();});
+    await act(async()=>{await result.current.qualifySelected();});
+    expect(result.current.pending?.phase).toBe('UNKNOWN');
+    expect(result.current.observations).toEqual([]);
+  });
+  it('does not start an old owner action after the scope changes',async()=>{
+    const api={listBoampObservations:vi.fn().mockResolvedValue({observations:[observation()]}),qualifyBoampObservation:vi.fn().mockRejectedValue(new Error('unavailable')),createCaseFromBoampObservation:vi.fn()};
+    const {result,rerender}=renderHook(({owner})=>useBoampOpportunities(api as unknown as ApiClient,vi.fn(),undefined,owner),{initialProps:{owner:'a'}});
+    await act(async()=>{await result.current.refreshObservations();});
+    const oldAction=result.current.qualifySelected;
+    rerender({owner:'b'});
+    await act(async()=>{await oldAction();});
+    expect(api.qualifyBoampObservation).not.toHaveBeenCalled();
+  });
+  it("freezes qualification IDs and decision after an unknown result",async()=>{
+    const api={listBoampObservations:vi.fn().mockResolvedValue({observations:[observation()]}),qualifyBoampObservation:vi.fn().mockRejectedValue(new Error('lost response')),createCaseFromBoampObservation:vi.fn()};
+    const {result}=renderBoampHook(api,vi.fn());
+    await act(async()=>{await result.current.refreshObservations();});
+    await act(async()=>{await result.current.qualifySelected();});
+    act(()=>result.current.setDecision('REJECTED'));
+    await act(async()=>{await result.current.qualifySelected();});
+    expect(api.qualifyBoampObservation.mock.calls[1]).toEqual(api.qualifyBoampObservation.mock.calls[0]);
+    expect(api.qualifyBoampObservation.mock.calls[0][1].command_id).toBeTruthy();
+    expect(api.listBoampObservations).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not expose an old owner's late observation reply",async()=>{
+    let resolveOld:(value:unknown)=>void=()=>{};
+    const api={listBoampObservations:vi.fn().mockImplementationOnce(()=>new Promise(r=>{resolveOld=r;})).mockResolvedValue({observations:[{...observation(),observation_id:'owner-b'}]}),qualifyBoampObservation:vi.fn(),createCaseFromBoampObservation:vi.fn()};
+    const {result,rerender}=renderHook(({owner})=>useBoampOpportunities(api as unknown as ApiClient,vi.fn(),undefined,owner),{initialProps:{owner:'a'}});
+    act(()=>{void result.current.refreshObservations();});
+    rerender({owner:'b'});
+    await act(async()=>{await result.current.refreshObservations();});
+    await act(async()=>resolveOld({observations:[{...observation(),observation_id:'private-owner-a'}]}));
+    expect(result.current.observations.map(o=>o.observation_id)).toEqual(['owner-b']);
+  });
   it("loads observations and selects the first item", async () => {
     const api = {
       listBoampObservations: vi.fn().mockResolvedValue({ observations: [observation()] }),
@@ -91,10 +143,11 @@ describe("useBoampOpportunities", () => {
       await result.current.qualifySelected();
     });
 
-    expect(api.qualifyBoampObservation).toHaveBeenCalledWith("observation-1", {
+    expect(api.qualifyBoampObservation).toHaveBeenCalledWith("observation-1", expect.objectContaining({
       decision: "QUALIFIED",
       reason_code: "RELEVANT_PUBLIC_SIGNAL",
-    });
+      command_id:expect.any(String),idempotency_key:expect.any(String),
+    }));
     expect(setMessage).toHaveBeenCalledWith({
       tone: "success",
       text: "Qualification déjà enregistrée : rejeu idempotent.",
@@ -141,18 +194,18 @@ describe("useBoampOpportunities", () => {
   it("creates a qualified case and reuses the same command after an unknown result", async () => {
     const createCaseFromBoampObservation = vi.fn()
       .mockRejectedValueOnce(new Error("résultat inconnu"))
-      .mockResolvedValue({
+      .mockImplementation(async (_id,input) => ({
         status: "SUCCEEDED",
-        command_id: "command-1",
-        idempotency_key: "idempotency-1",
+        command_id: input.command_id,
+        idempotency_key: input.idempotency_key,
         result_code: "CASE_CREATED",
         case_id: "case-1",
         version: 1,
         event_ids: ["event-1"],
         replayed: true,
-      });
+      }));
     const api = {
-      listBoampObservations: vi.fn().mockResolvedValue({ observations: [observation()] }),
+      listBoampObservations: vi.fn().mockResolvedValue({ observations: [{...observation(),p0_state:"TARGETED",p0_decision:"QUALIFIED",p0_qualification_id:"qualification-1"}] }),
       qualifyBoampObservation: vi.fn().mockResolvedValue({
         qualification_id: "qualification-1",
         event_id: "event-1",
@@ -166,7 +219,7 @@ describe("useBoampOpportunities", () => {
     await act(async () => { await result.current.refreshObservations(); });
     await act(async () => { await result.current.qualifySelected(); });
     await act(async () => {
-      await expect(result.current.createCaseFromSelected()).rejects.toThrow("résultat inconnu");
+      await result.current.createCaseFromSelected();
     });
     await act(async () => { await result.current.createCaseFromSelected(); });
 

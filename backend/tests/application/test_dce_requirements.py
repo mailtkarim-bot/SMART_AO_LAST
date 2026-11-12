@@ -1,6 +1,7 @@
 # ruff: noqa: F401, F811
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 from uuid import UUID, uuid4
@@ -259,3 +260,152 @@ def test_requirements_are_atomic_sourced_immutable_and_replayed(
         requirement = session.get(DceRequirementRecord, requirements[0].id)
         assert requirement is not None
         requirement.confirmation_status = "CONFIRMED"
+
+
+@pytest.mark.parametrize(
+    "case",
+    json.loads(
+        (Path(__file__).parents[1] / "fixtures/rc_requirements_holdout_v1.json").read_text()
+    )["cases"],
+    ids=lambda x: x["id"],
+)
+def test_rc_holdout_extraction_analysis_and_materialization_keep_every_clause(
+    session_factory, tmp_path, case
+):
+    from collections import Counter
+    from hashlib import sha256
+
+    from app.modules.dce.infrastructure.models.dce_extraction import (
+        DceDocumentExtractionFragmentRecord,
+    )
+    from app.modules.dce.infrastructure.models.dce_rc_analysis import (
+        DceRcRequirementObservationRecord,
+        DceRcRequirementSourceRecord,
+    )
+    from app.modules.dce.infrastructure.quarantine import LocalQuarantineStorageAdapter
+
+    storage = LocalQuarantineStorageAdapter(root=tmp_path)
+    tenant, document, version = _seed_admitted_document(
+        session_factory, storage=storage, source_bytes=case["text"].encode()
+    )
+    analysis = _extract_then_analyze(
+        session_factory=session_factory,
+        storage=storage,
+        tenant_id=tenant,
+        document_id=document,
+        dce_version_id=version,
+    )
+    analysis_id = analysis.aggregate_refs[0]["aggregate_id"]
+    service = DceRequirementsService(
+        session_factory=session_factory,
+        dispatcher=CommandDispatcher(
+            session_factory=session_factory,
+            handlers={
+                "RecordDceRequirementMaterializationRun": (
+                    RecordDceRequirementMaterializationRunHandler()
+                )
+            },
+        ),
+    )
+    first = service.materialize(
+        tenant_id=tenant, dce_version_id=version, dce_rc_analysis_id=analysis_id, now=NOW
+    )
+    replay = service.materialize(
+        tenant_id=tenant, dce_version_id=version, dce_rc_analysis_id=analysis_id, now=NOW
+    )
+    assert first.result_code == "DCE_REQUIREMENTS_MATERIALIZED" and replay.replayed
+    with session_factory() as session:
+        requirements = list(
+            session.scalars(
+                sa.select(DceRequirementRecord).where(DceRequirementRecord.tenant_id == tenant)
+            )
+        )
+        actual = []
+        for requirement in requirements:
+            observation = session.get(
+                DceRcRequirementObservationRecord, requirement.source_observation_id
+            )
+            source = session.scalar(
+                sa.select(DceRcRequirementSourceRecord).where(
+                    DceRcRequirementSourceRecord.observation_id == observation.id
+                )
+            )
+            fragment = session.get(DceDocumentExtractionFragmentRecord, source.fragment_id)
+            assert sha256(fragment.text.encode()).hexdigest() == fragment.text_sha256
+            assert (
+                fragment.text.encode()[source.start_byte_offset : source.end_byte_offset].decode()
+                == observation.excerpt
+            )
+            assert requirement.confirmation_status == "PENDING_HUMAN_CONFIRMATION"
+            assert requirement.uncertainty_status == "SOURCE_SIGNAL_ONLY"
+            assert requirement.directive_signal == observation.directive
+            assert observation.rule_version == "11"
+            actual.append(
+                (observation.requirement_kind, observation.directive, observation.excerpt.strip())
+            )
+        assert Counter(actual) == Counter(tuple(x) for x in case["expected"])
+    with pytest.raises(ValueError, match="DCE_VERSION_NOT_REQUIREMENTS_READY"):
+        service.materialize(
+            tenant_id=uuid4(), dce_version_id=version, dce_rc_analysis_id=analysis_id, now=NOW
+        )
+
+
+@pytest.mark.parametrize(
+    "text,status",
+    [
+        ("Si le lot 2 est retenu :\n- Le mémoire technique est obligatoire.", "FAILED_SAFE"),
+        ("Si " + "contexte " * 160 + "le mémoire technique est obligatoire.", "REJECTED_LIMIT"),
+    ],
+)
+def test_unproven_rc_context_never_materializes_partial_obligations(
+    session_factory, tmp_path, text, status
+):
+    from app.modules.dce.infrastructure.models.dce_rc_analysis import DceRcAnalysisRunRecord
+    from app.modules.dce.infrastructure.quarantine import LocalQuarantineStorageAdapter
+
+    storage = LocalQuarantineStorageAdapter(root=tmp_path)
+    tenant, document, version = _seed_admitted_document(
+        session_factory, storage=storage, source_bytes=text.encode()
+    )
+    result = _extract_then_analyze(
+        session_factory=session_factory,
+        storage=storage,
+        tenant_id=tenant,
+        document_id=document,
+        dce_version_id=version,
+    )
+    analysis_id = result.aggregate_refs[0]["aggregate_id"]
+    with session_factory() as session:
+        run = session.get(DceRcAnalysisRunRecord, UUID(str(analysis_id)))
+        assert run.status == status
+        assert session.scalar(sa.select(sa.func.count()).select_from(DceRequirementRecord)) == 0
+    service = DceRequirementsService(
+        session_factory=session_factory,
+        dispatcher=CommandDispatcher(session_factory=session_factory, handlers={}),
+    )
+    with pytest.raises(ValueError, match="DCE_RC_ANALYSIS_COMPLETED_REQUIRED"):
+        service.materialize(
+            tenant_id=tenant, dce_version_id=version, dce_rc_analysis_id=analysis_id, now=NOW
+        )
+
+
+def test_profile_url_survives_the_complete_rc_materialization_chain(session_factory, tmp_path):
+    quote = (
+        "Le dépôt électronique se fait via le profil d'acheteur "
+        "https://plateforme.test/depot?lot=2."
+    )
+    test_rc_holdout_extraction_analysis_and_materialization_keep_every_clause(
+        session_factory,
+        tmp_path,
+        {"text": quote, "expected": [["RC_RESPONSE_CHANNEL", "UNSPECIFIED", quote]]},
+    )
+
+
+def test_independent_negation_does_not_block_persisted_offer_requirement(session_factory, tmp_path):
+    quote = "- Le mémoire technique est obligatoire."
+    text = "Le candidat ne doit pas remettre de papier. Contenu de l'offre :\n" + quote
+    test_rc_holdout_extraction_analysis_and_materialization_keep_every_clause(
+        session_factory,
+        tmp_path,
+        {"text": text, "expected": [["RC_CONTENT_OFFER", "REQUIRED_SIGNAL", quote]]},
+    )

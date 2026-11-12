@@ -1,5 +1,18 @@
+import type {CashView} from "../features/pricing/cashScheduleTypes";
+import type { SubmissionFinalControl, SubmissionSignatureIntentMetadata } from "../shared/types";
+import type { ResponseCoverage } from "../shared/types";
+import type {ClosureDossier, ClosureOperation, ClosureReceipt} from "../features/decision/closureTypes";
+import type {OperationalChangeView} from "../shared/types";
+import type {AnalysisDossierHistoryPage,AnalysisDossierInput,AnalysisDossierReceipt,AnalysisAssessmentInput,AnalysisAssessmentReceipt} from "../shared/types";
+import type {CardDecision} from "../features/decision/commitmentTypes";
 import type {
   AssignedCase,
+  HandoverContractOptions,
+  AcknowledgeHandoverInput,
+  CaseAnalysisSummary,
+  CapabilityAssessments,
+  CapabilityCandidate,
+  ProposeCapabilityInput,
   CaseResolution,
   CreateCaseInput,
   CreateCaseResponse,
@@ -10,6 +23,8 @@ import type {
   BackendReadiness,
   CommandReceipt,
   DraftReport,
+  PublishedFinancialReport,
+  FinancialReportPublicationReceipt,
   FinancialCategory,
   PatronAssignment,
   PatronAssignmentInteractions,
@@ -17,6 +32,10 @@ import type {
   PatronAction,
   PatronDecisionDossier,
   PricingScenario,
+  CreatePricingScenarioInput,
+  PricingScenarioCreationReceipt,
+  PricingScenarioStateChangeInput,
+  PricingScenarioTransitionReceipt,
   SubmissionEvidenceReceipt,
   SubmissionEvidenceProjection,
   SubmissionPackageReceipt,
@@ -34,17 +53,30 @@ import type {
   TotpEnrollment,
   TotpStepUpResponse,
   PreparationReviewList,
+  PreparationTransmissionList,
+  CreatePreparationSnapshotInput,
+  BuyerDocxInputs,
+  CreateBuyerDocxResponseDraftInput,
+  SelectedResponseDraft,
+  TransmitPreparationSnapshotInput,
+  PreparationResponsePlanList,
   PreparationResponseDraftList,
   RequestPreparationReviewInput,
   DecidePreparationReviewInput,
   AddPreparationCorrectionInput,
   CreateTechnicalResponseDraftInput,
+  CreatePreparationResponsePlanInput,
   PreparationPackage,
   CommitPricingImportRequest,
   PricingImportCommitReceipt,
   PricingImportPreview,
   PricingImportBatchRead,
   EnterpriseCompany,
+  BusinessMethodProfileAdoption,
+  BusinessMethodProfileReceipt,
+  BusinessMethodProfileVersions,
+  AdoptBusinessMethodProfileInput,
+  PublishBusinessMethodProfileInput,
   EnterpriseCompanyInput,
   EnterpriseDocumentUploadInput,
   EnterpriseDocumentVerificationInput,
@@ -62,6 +94,10 @@ import type {
   CaseDceReading,
   CaseExecutionCommandReceipt,
   CaseExecutionResults,
+  CaseHandoverOfferOptions,
+  CaseHandoverSnapshots,
+  CaseHandoverSnapshotItem,
+  CaseContractChangeEventList,
   CaseRexList,
   CaseInterviewList,
   CaseTeachingSources,
@@ -75,8 +111,23 @@ import type {
   DeclarePartnerOfferPriceInput,
   PartnerOfferScopeReviewList,
   RecordPartnerOfferScopeReviewInput,
+  PartnerOfferLineComparisonList,
+  RecordPartnerOfferLineComparisonInput,
   RecordCaseInterviewInput,
   RecordCaseOutcomeInput,
+  RecordCaseHandoverInput,
+  RecordCaseHandoverReceipt,
+  RecordCaseContractChangeEventInput,
+  RecordCaseContractChangeApplicabilityInput,
+  RecordCaseContractChangeActionInput,
+  RecordCaseContractChangeActionImpactRelationInput,
+  RecordCaseContractChangeActionExecutionInput,
+  PrepareCaseContractChangeEvidenceUploadInput,
+  PrepareCaseContractChangeEvidenceUploadResponse,
+  CaseContractChangeEvidenceUploadResponse,
+  RecordCaseContractChangeExternalConfirmationInput,
+  RecordCaseContractChangeEngagementLinkInput,
+  RecordCaseContractChangeImpactDeclarationInput,
   RecordCaseRexInput,
   RecordCaseOrderInput,
   RecordCaseP6ControlInput,
@@ -88,6 +139,8 @@ import type {
   FreezeDecisionContextResponse,
   ResolveDecisionConditionRequest,
   ResolveDecisionConditionResponse,
+  RecordContractBaselineImpactInput,
+  LinkDecisionConditionContractEvidenceInput,
   FinalizeGoNoGoDecisionRequest,
   FinalizeGoNoGoDecisionResponse,
   DecisionRiskRequirementPage,
@@ -132,6 +185,7 @@ import type {
 } from "../shared/types";
 
 const makeId = () => crypto.randomUUID();
+export type FinancialCommandIdentity = { command_id: string; idempotency_key: string; correlation_id: string };
 
 function readCookie(name: string): string | undefined {
   if (typeof document === "undefined") return undefined;
@@ -383,6 +437,41 @@ export function createApiClient(
     listAssignedCases: () => request<AssignedCase[]>("/api/v1/cases/assigned"),
     listCaseExecutionResults: (caseId: string) =>
       request<CaseExecutionResults>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/execution-results`),
+    listCaseHandoverOfferOptions: (caseId: string) =>
+      request<CaseHandoverOfferOptions>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/p7-handover-options`),
+    listCaseHandoverContracts: (caseId: string) => request<HandoverContractOptions>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/p7-handover/contracts`),
+    listCaseHandoverHistory: (caseId: string, before?:string) => request<CaseHandoverSnapshots>(`/api/v1/cases/${encodeURIComponent(caseId)}/p7-handover/history${before?`?before_snapshot_id=${encodeURIComponent(before)}`:""}`),
+    acknowledgeCaseHandover: (caseId:string,snapshotId:string,input:AcknowledgeHandoverInput) => request<RecordCaseHandoverReceipt>(`/api/v1/cases/${encodeURIComponent(caseId)}/p7-handover/${encodeURIComponent(snapshotId)}/receipts`,{method:"POST",body:JSON.stringify(input)}),
+    getCaseHandoverSnapshot: (caseId:string,snapshotId:string)=>request<CaseHandoverSnapshotItem>(`/api/v1/cases/${encodeURIComponent(caseId)}/p7-handover/${encodeURIComponent(snapshotId)}`),
+    listCaseHandoverSnapshots: (caseId: string) =>
+      request<CaseHandoverSnapshots>(`/api/v1/cases/${encodeURIComponent(caseId)}/p7-handover`),
+    downloadCaseHandoverOffer: (caseId: string, snapshotId: string) =>
+      requestBlob(`/api/v1/cases/${encodeURIComponent(caseId)}/p7-handover/${encodeURIComponent(snapshotId)}/offer-document`),
+    recordCaseHandover: (caseId: string, input: RecordCaseHandoverInput) =>
+      request<RecordCaseHandoverReceipt>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/p7-handover`, { method: "POST", body: JSON.stringify(input) }),
+    listOperationalCaseContractChangeEvents:(caseId:string)=>request<{case_id:string;events:OperationalChangeView[];truncated:boolean}>(`/api/v1/cases/${encodeURIComponent(caseId)}/contract-change-events`),
+    listCaseContractChangeEvents: (caseId: string) =>
+      request<CaseContractChangeEventList>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-change-events`),
+    recordCaseContractChangeEvent: (caseId: string, input: RecordCaseContractChangeEventInput) =>
+      request<CaseExecutionCommandReceipt>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-change-events`, { method: "POST", body: JSON.stringify(input) }),
+    recordCaseContractChangeApplicability: (caseId: string, eventId: string, input: RecordCaseContractChangeApplicabilityInput) =>
+      request<CaseExecutionCommandReceipt>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-change-events/${encodeURIComponent(eventId)}/applicability`, { method: "POST", body: JSON.stringify(input) }),
+    recordCaseContractChangeAction: (caseId: string, eventId: string, input: RecordCaseContractChangeActionInput) =>
+      request<CaseExecutionCommandReceipt>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-change-events/${encodeURIComponent(eventId)}/actions`, { method: "POST", body: JSON.stringify(input) }),
+    recordCaseContractChangeEngagementLink: (caseId: string, eventId: string, input: RecordCaseContractChangeEngagementLinkInput) =>
+      request<CaseExecutionCommandReceipt>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-change-events/${encodeURIComponent(eventId)}/engagement-links`, { method: "POST", body: JSON.stringify(input) }),
+    recordCaseContractChangeImpactDeclaration: (caseId: string, eventId: string, input: RecordCaseContractChangeImpactDeclarationInput) =>
+      request<CaseExecutionCommandReceipt>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-change-events/${encodeURIComponent(eventId)}/impact-declarations`, { method: "POST", body: JSON.stringify(input) }),
+    recordCaseContractChangeActionImpactRelation: (caseId: string, eventId: string, actionId: string, input: RecordCaseContractChangeActionImpactRelationInput) =>
+      request<CaseExecutionCommandReceipt>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-change-events/${encodeURIComponent(eventId)}/actions/${encodeURIComponent(actionId)}/impact-links`, { method: "POST", body: JSON.stringify(input) }),
+    recordCaseContractChangeActionExecution: (caseId: string, eventId: string, actionId: string, input: RecordCaseContractChangeActionExecutionInput) =>
+      request<CaseExecutionCommandReceipt>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-change-events/${encodeURIComponent(eventId)}/actions/${encodeURIComponent(actionId)}/execution-acts`, { method: "POST", body: JSON.stringify(input) }),
+    prepareCaseContractChangeEvidenceUpload: (caseId: string, eventId: string, actionId: string, input: PrepareCaseContractChangeEvidenceUploadInput) =>
+      request<PrepareCaseContractChangeEvidenceUploadResponse>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-change-events/${encodeURIComponent(eventId)}/actions/${encodeURIComponent(actionId)}/evidence-objects`, { method: "POST", body: JSON.stringify(input) }),
+    uploadCaseContractChangeEvidence: (caseId: string, eventId: string, actionId: string, evidenceObjectId: string, idempotencyKey: string, file: Blob) =>
+      request<CaseContractChangeEvidenceUploadResponse>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-change-events/${encodeURIComponent(eventId)}/actions/${encodeURIComponent(actionId)}/evidence-objects/${encodeURIComponent(evidenceObjectId)}/content`, { method: "PUT", headers: { "Idempotency-Key": idempotencyKey, "Content-Type": "application/octet-stream" }, body: file }),
+    recordCaseContractChangeExternalConfirmation: (caseId: string, eventId: string, actionId: string, actId: string, input: RecordCaseContractChangeExternalConfirmationInput) =>
+      request<CaseExecutionCommandReceipt>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-change-events/${encodeURIComponent(eventId)}/actions/${encodeURIComponent(actionId)}/execution-acts/${encodeURIComponent(actId)}/external-confirmations`, { method: "POST", body: JSON.stringify(input) }),
     listCaseRex: (caseId: string) =>
       request<CaseRexList>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/rex`),
     listCaseInterviews: (caseId: string) =>
@@ -409,6 +498,10 @@ export function createApiClient(
       request<CaseExecutionCommandReceipt>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/partner-offer-prices/${encodeURIComponent(receiptEventId)}/declarations`, { method: "POST", body: JSON.stringify(input) }),
     listPartnerOfferScopeReviews: (caseId: string) =>
       request<PartnerOfferScopeReviewList>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/partner-offer-scope-reviews`),
+    listPartnerOfferLineComparisons: (caseId: string) =>
+      request<PartnerOfferLineComparisonList>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/partner-offer-line-comparisons`),
+    recordPartnerOfferLineComparison: (caseId: string, input: RecordPartnerOfferLineComparisonInput) =>
+      request<CaseExecutionCommandReceipt>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/partner-offer-line-comparisons`, { method: "POST", body: JSON.stringify(input) }),
     recordPartnerOfferScopeReview: (caseId: string, input: RecordPartnerOfferScopeReviewInput) =>
       request<CaseExecutionCommandReceipt>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/partner-offer-scope-reviews`, { method: "POST", body: JSON.stringify(input) }),
     recordCaseRex: (p7ResultId: string, input: RecordCaseRexInput) =>
@@ -501,6 +594,13 @@ export function createApiClient(
           }),
         },
       ),
+    getCaseAnalysisDossierHistory: (caseId:string,before?:number) => request<AnalysisDossierHistoryPage>(`/api/v1/cases/${encodeURIComponent(caseId)}/analysis-dossier-history${before===undefined?"":`?before_revision=${before}`}`),
+    recordCaseAnalysisDossier: (caseId:string,input:AnalysisDossierInput) => request<AnalysisDossierReceipt>(`/api/v1/cases/${encodeURIComponent(caseId)}/analysis-dossier-reviews`,{method:"POST",body:JSON.stringify(input)}),
+    recordCaseAnalysisAssessment: (caseId:string,input:AnalysisAssessmentInput) => request<AnalysisAssessmentReceipt>(`/api/v1/cases/${encodeURIComponent(caseId)}/analysis-assessments`,{method:"POST",body:JSON.stringify(input)}),
+    getCaseAnalysisSummary: (caseId: string) =>
+      request<CaseAnalysisSummary>(`/api/v1/cases/${encodeURIComponent(caseId)}/analysis-summary`),
+    confirmDceRequirement: (requirementId: string, input: import("../features/decision/commitmentTypes").RequirementConfirmationInput) =>
+      request<CommandReceipt>(`/api/v1/dce-requirements/${encodeURIComponent(requirementId)}/confirmations`, {method: "POST", body: JSON.stringify(input)}),
     getCaseDceReading: (caseId: string) =>
       request<CaseDceReading>(
         `/api/v1/cases/${encodeURIComponent(caseId)}/dce-reading`,
@@ -557,11 +657,20 @@ export function createApiClient(
           method: "POST",
           body: JSON.stringify({
             ...input,
-            command_id: makeId(),
-            idempotency_key: makeId(),
-            correlation_id: makeId(),
+            command_id: input.command_id ?? makeId(),
+            idempotency_key: input.idempotency_key ?? makeId(),
+            correlation_id: input.correlation_id ?? makeId(),
           }),
         },
+      ),
+    getCapabilityAssessments: (caseId: string) =>
+      request<CapabilityAssessments>(`/api/v1/collaborator/cases/${encodeURIComponent(caseId)}/capability-assessments`),
+    getCapabilityCandidates: (caseId: string) =>
+      request<CapabilityCandidate[]>(`/api/v1/collaborator/cases/${encodeURIComponent(caseId)}/capability-candidates`),
+    proposeCapability: (caseId: string, input: ProposeCapabilityInput) =>
+      request<CommandReceipt>(
+        `/api/v1/collaborator/cases/${encodeURIComponent(caseId)}/capability-proposals`,
+        { method: "POST", body: JSON.stringify(input) },
       ),
     getCaseResolution: (caseId: string) =>
       request<CaseResolution>(
@@ -593,6 +702,11 @@ export function createApiClient(
       request<ContractBaselineImpactPage>(
         `/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-baseline-impacts`,
       ),
+    recordContractBaselineImpact: (caseId: string, input: RecordContractBaselineImpactInput) =>
+      request(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-baseline-impacts`, {
+        method: "POST",
+        body: JSON.stringify(input),
+      }),
     listContractProofReviews: (caseId: string) =>
       request<ContractProofReviewPage>(
         `/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-proof-reviews`,
@@ -600,6 +714,10 @@ export function createApiClient(
     getContractQueryExportAudit: (caseId: string, exportId: string) =>
       request<ContractQueryExportAudit>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/contract-query-exports/${encodeURIComponent(exportId)}/audit`),
     listPaymentCycles: (caseId: string) => request<PaymentCycle[]>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/payment-post-reception-cycles`),
+    getCashSchedule: (caseId:string) => request<CashView>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/cash-schedule`),
+    recordCashSchedule: (caseId:string,input:Record<string,unknown>) => request<{command_id:string;idempotency_key:string;revision_id:string;result_code:string;replayed:boolean}>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/cash-schedule`,{method:"POST",body:JSON.stringify(input)}),
+    getCaseClosure: (caseId: string) => request<ClosureDossier>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/closure`),
+    recordClosureOperation: (caseId: string, operation: ClosureOperation, input: Record<string,unknown>) => request<ClosureReceipt>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/closure/${operation}`, {method:"POST", body:JSON.stringify(input)}),
     recordPaymentCycle: (caseId: string, input: Record<string, unknown>) => request(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/payment-post-reception-cycles`, { method: "POST", body: JSON.stringify(input) }),
     qualifyPaymentCycle: (caseId: string, cycleId: string, input: Record<string, unknown>) => request(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/payment-cycles/${encodeURIComponent(cycleId)}/cash-assumptions`, { method: "POST", body: JSON.stringify(input) }),
     recordPaymentCycleReview: (cycleId: string, input: Record<string, unknown>) => request(`/api/v1/patron/payment-cycles/${encodeURIComponent(cycleId)}/reviews`, { method: "POST", body: JSON.stringify(input) }),
@@ -735,6 +853,16 @@ export function createApiClient(
           }),
         },
       ),
+    linkDecisionConditionContractEvidence: (
+      caseId: string,
+      decisionId: string,
+      conditionId: string,
+      input: LinkDecisionConditionContractEvidenceInput,
+    ) =>
+      request(
+        `/api/v1/patron/cases/${encodeURIComponent(caseId)}/decisions/${encodeURIComponent(decisionId)}/conditions/${encodeURIComponent(conditionId)}/contract-evidence`,
+        { method: "POST", body: JSON.stringify(input) },
+      ),
     finalizeDecision: (
       caseId: string,
       decisionId: string,
@@ -758,6 +886,37 @@ export function createApiClient(
     listPricingScenarios: (caseId: string) =>
       request<PricingScenario[]>(
         `/api/v1/patron/cases/${encodeURIComponent(caseId)}/pricing-scenarios`,
+      ),
+    createPricingScenario: (caseId: string, input: CreatePricingScenarioInput) =>
+      request<PricingScenarioCreationReceipt>(
+        `/api/v1/patron/cases/${encodeURIComponent(caseId)}/pricing-scenarios`,
+        { method: "POST", body: JSON.stringify({
+          command_id: input.command_id, idempotency_key: input.idempotency_key, correlation_id: input.correlation_id,
+          scenario_id: input.scenario_id, source_snapshot_id: input.source_snapshot_id,
+          scenario_key: input.scenario_key, scenario_type: input.scenario_type,
+          sales_adjustment_bps: input.sales_adjustment_bps, cost_adjustment_bps: input.cost_adjustment_bps,
+          penalty_reserve_minor: input.penalty_reserve_minor, retention_reserve_minor: input.retention_reserve_minor,
+          guarantee_reserve_minor: input.guarantee_reserve_minor, floor_margin_rate_bps: input.floor_margin_rate_bps,
+          target_margin_rate_bps: input.target_margin_rate_bps, assumptions: input.assumptions,
+        }) },
+      ),
+    selectPricingScenario: (caseId: string, scenarioId: string, input: PricingScenarioStateChangeInput) =>
+      request<PricingScenarioTransitionReceipt>(
+        `/api/v1/patron/cases/${encodeURIComponent(caseId)}/pricing-scenarios/${encodeURIComponent(scenarioId)}/selection`,
+        { method: "POST", body: JSON.stringify({
+          command_id: input.command_id, idempotency_key: input.idempotency_key,
+          correlation_id: input.correlation_id, transition_id: input.transition_id,
+          expected_version: input.expected_version, reason_code: input.reason_code,
+        }) },
+      ),
+    archivePricingScenario: (caseId: string, scenarioId: string, input: PricingScenarioStateChangeInput) =>
+      request<PricingScenarioTransitionReceipt>(
+        `/api/v1/patron/cases/${encodeURIComponent(caseId)}/pricing-scenarios/${encodeURIComponent(scenarioId)}/archive`,
+        { method: "POST", body: JSON.stringify({
+          command_id: input.command_id, idempotency_key: input.idempotency_key,
+          correlation_id: input.correlation_id, transition_id: input.transition_id,
+          expected_version: input.expected_version, reason_code: input.reason_code,
+        }) },
       ),
     listEnterpriseCapabilities: (companyId: string) =>
       request<{ capabilities: EnterpriseCapability[] }>(
@@ -784,6 +943,54 @@ export function createApiClient(
       ),
     getEnterpriseCompany: () =>
       request<EnterpriseCompany>("/api/v1/patron/enterprise/company"),
+    listBusinessMethodProfileVersions: (companyId: string) =>
+      request<BusinessMethodProfileVersions>(
+        `/api/v1/patron/enterprise/companies/${encodeURIComponent(companyId)}/business-method-profile/versions`,
+      ),
+    publishBusinessMethodProfile: (
+      companyId: string,
+      input: PublishBusinessMethodProfileInput,
+    ) =>
+      request<BusinessMethodProfileReceipt>(
+        `/api/v1/patron/enterprise/companies/${encodeURIComponent(companyId)}/business-method-profile/versions`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            command_id: input.command_id ?? makeId(),
+            idempotency_key: input.idempotency_key ?? makeId(),
+            correlation_id: input.correlation_id ?? makeId(),
+            expected_version: input.expected_version,
+            profile: input.profile,
+          }),
+        },
+      ),
+    listBusinessMethodProfileAdoptions: (caseId: string) =>
+      request<BusinessMethodProfileAdoption[]>(
+        `/api/v1/patron/cases/${encodeURIComponent(caseId)}/business-method-profile/adoptions`,
+      ),
+    getBusinessMethodProfileAdoption: (caseId: string) =>
+      request<BusinessMethodProfileAdoption | null>(
+        `/api/v1/patron/cases/${encodeURIComponent(caseId)}/business-method-profile/adoption`,
+      ),
+    adoptBusinessMethodProfile: (
+      caseId: string,
+      input: AdoptBusinessMethodProfileInput,
+    ) =>
+      request<BusinessMethodProfileReceipt>(
+        `/api/v1/patron/cases/${encodeURIComponent(caseId)}/business-method-profile/adoptions`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            command_id: input.command_id ?? makeId(),
+            idempotency_key: input.idempotency_key ?? makeId(),
+            correlation_id: input.correlation_id ?? makeId(),
+            expected_adoption_revision: input.expected_adoption_revision,
+            profile_version_id: input.profile_version_id,
+            profile_version: input.profile_version,
+            profile_content_sha256: input.profile_content_sha256,
+          }),
+        },
+      ),
     createEnterpriseCompany: (input: EnterpriseCompanyInput) =>
       request<EnterpriseReceipt>("/api/v1/patron/enterprise/company", {
         method: "POST",
@@ -858,6 +1065,16 @@ export function createApiClient(
         },
       );
     },
+    getCommitmentCard:(caseId:string)=>request<import("../features/decision/commitmentTypes").CommitmentCard>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/commitment-card`),
+    getCommitmentDecision:(caseId:string,decisionId:string)=>request<{case_id:string;decision:CardDecision}>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/commitment-card/decisions/${encodeURIComponent(decisionId)}`),
+    getCommitmentHistory:(caseId:string,beforeDecisionId:string)=>request<{case_id:string;history:CardDecision[];next_before_decision_id:string|null}>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/commitment-card/history?before_decision_id=${encodeURIComponent(beforeDecisionId)}`),
+    linkConditionAssessment:(caseId:string,decisionId:string,conditionId:string,input:import("../features/decision/commitmentTypes").AssessmentLinkInput)=>request<import("../features/decision/commitmentTypes").CardReceipt>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/decisions/${encodeURIComponent(decisionId)}/conditions/${encodeURIComponent(conditionId)}/assessment-links`,{method:"POST",body:JSON.stringify(input)}),
+    getDatedCapacity:(caseId:string)=>request<import("../features/capacity/types").CapacityProjection>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/capacity`),
+    recordDatedCapacity:(caseId:string,input:import("../features/capacity/types").CapacityInput)=>request<import("../features/capacity/types").CapacityReceipt>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/capacity`,{method:"POST",body:JSON.stringify(input)}),
+    getPricingPositions:(caseId:string,batchId:string,offset=0,search="")=>request<import("../shared/types").PricingPositions>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/pricing-import/${encodeURIComponent(batchId)}/positions?offset=${offset}&search=${encodeURIComponent(search)}`),
+    getPricingPosition:(caseId:string,batchId:string,positionId:string)=>request<import("../shared/types").PricingPositions>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/pricing-import/${encodeURIComponent(batchId)}/positions/${encodeURIComponent(positionId)}`),
+    recordPricingPosition:(caseId:string,batchId:string,positionId:string,input:import("../shared/types").PositionReviewInput)=>request<import("../shared/types").PositionReviewReceipt>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/pricing-import/${encodeURIComponent(batchId)}/positions/${encodeURIComponent(positionId)}/reviews`,{method:"POST",body:JSON.stringify(input)}),
+    getPricingPositionHistory:(caseId:string,batchId:string,positionId:string,before?:number)=>request<import("../shared/types").PositionHistory>(`/api/v1/patron/cases/${encodeURIComponent(caseId)}/pricing-import/${encodeURIComponent(batchId)}/positions/${encodeURIComponent(positionId)}/history${before===undefined?"":`?before_revision=${before}`}`),
     getPricingImport: (caseId: string, batchId: string) =>
       request<PricingImportBatchRead>(
         `/api/v1/patron/cases/${encodeURIComponent(caseId)}/pricing-import/${encodeURIComponent(batchId)}`,
@@ -903,6 +1120,7 @@ export function createApiClient(
       expectedPackageVersion: number,
       rationale: string,
       metadata: CommandMetadata = {},
+      expectedManifestSha256?: string,
     ) =>
       request<SubmissionPackageAuthorizationReceipt>(
         `/api/v1/patron/submission-packages/${encodeURIComponent(submissionPackageId)}/authorize`,
@@ -914,6 +1132,7 @@ export function createApiClient(
             authorization_id: metadata.authorization_id ?? makeId(),
             ...(metadata.correlation_id ? { correlation_id: metadata.correlation_id } : {}),
             expected_package_version: expectedPackageVersion,
+            ...(expectedManifestSha256 ? { expected_manifest_sha256: expectedManifestSha256 } : {}),
             rationale,
           }),
         },
@@ -921,6 +1140,10 @@ export function createApiClient(
     getSubmissionPackageManifest: (submissionPackageId: string) =>
       request<SubmissionPackageManifestProjection>(
         `/api/v1/patron/submission-packages/${encodeURIComponent(submissionPackageId)}/manifest`,
+      ),
+    getSubmissionFinalControl: (submissionPackageId: string) =>
+      request<SubmissionFinalControl>(
+        `/api/v1/patron/submission-packages/${encodeURIComponent(submissionPackageId)}/final-control`,
       ),
     downloadSubmissionPackage: (submissionPackageId: string): Promise<Blob> =>
       requestBlob(
@@ -931,9 +1154,33 @@ export function createApiClient(
       request<PreparationReviewList>(
         `/api/v1/preparation/${encodeURIComponent(packageId)}/reviews`,
       ),
+    listPreparationTransmissions: (packageId: string) =>
+      request<PreparationTransmissionList>(
+        `/api/v1/preparation/${encodeURIComponent(packageId)}/transmissions`,
+      ),
+    inspectBuyerDocxInputs: (packageId:string,source:SelectedResponseDraft) =>
+      request<BuyerDocxInputs>(`/api/v1/preparation/${encodeURIComponent(packageId)}/buyer-docx-inputs`,
+        {method:"POST",body:JSON.stringify({source_response:source})}),
+    createBuyerDocxResponseDraft: (packageId:string,input:CreateBuyerDocxResponseDraftInput) =>
+      request<CommandReceipt>(`/api/v1/preparation/${encodeURIComponent(packageId)}/buyer-response-drafts`,
+        {method:"POST",body:JSON.stringify(input)}),
+    downloadResponseDraft: (packageId:string,draftId:string,version:number,collaborator=false) =>
+      requestBlob(`/api/v1/${collaborator?"collaborator/":""}preparation/${encodeURIComponent(packageId)}/response-drafts/${encodeURIComponent(draftId)}/versions/${version}/content`),
+    readResponseCoverage: (packageId: string, selection: SelectedResponseDraft, collaborator = false) =>
+      request<ResponseCoverage>(`/api/v1/${collaborator ? "collaborator/" : ""}preparation/${encodeURIComponent(packageId)}/response-coverage`,
+        {method: "POST", body: JSON.stringify(selection)}),
     listPreparationResponseDrafts: (packageId: string) =>
       request<PreparationResponseDraftList>(
         `/api/v1/preparation/${encodeURIComponent(packageId)}/response-drafts`,
+      ),
+    getPreparationResponsePlans: (packageId: string) =>
+      request<PreparationResponsePlanList>(
+        `/api/v1/preparation/${encodeURIComponent(packageId)}/response-plans`,
+      ),
+    createPreparationResponsePlan: (packageId: string, input: CreatePreparationResponsePlanInput) =>
+      request<CommandReceipt>(
+        `/api/v1/preparation/${encodeURIComponent(packageId)}/response-plans`,
+        { method: "POST", body: JSON.stringify(input) },
       ),
     requestPreparationReview: (packageId: string, input: RequestPreparationReviewInput) =>
       request<CommandReceipt>(
@@ -1145,15 +1392,16 @@ export function createApiClient(
       ),
     createPreparationSnapshot: (
       packageId: string,
-      input: { snapshot_id: string; expected_package_revision: number },
+      input: CreatePreparationSnapshotInput,
     ) =>
       request<CommandReceipt>(
         `/api/v1/collaborator/preparation/${encodeURIComponent(packageId)}/snapshots`,
         {
           method: "POST",
           body: JSON.stringify({
-            command_id: makeId(),
-            idempotency_key: makeId(),
+            command_id: input.command_id ?? makeId(),
+            idempotency_key: input.idempotency_key ?? makeId(),
+            correlation_id: input.correlation_id ?? makeId(),
             package_id: packageId,
             ...input,
           }),
@@ -1161,29 +1409,33 @@ export function createApiClient(
       ),
     transmitPreparationSnapshot: (
       packageId: string,
-      input: { snapshot_id: string; transmission_id: string; expected_package_revision: number },
+      input: TransmitPreparationSnapshotInput,
     ) =>
       request<CommandReceipt>(
         `/api/v1/collaborator/preparation/${encodeURIComponent(packageId)}/transmissions`,
         {
           method: "POST",
           body: JSON.stringify({
-            command_id: makeId(),
-            idempotency_key: makeId(),
+            command_id: input.command_id ?? makeId(),
+            idempotency_key: input.idempotency_key ?? makeId(),
+            correlation_id: input.correlation_id ?? makeId(),
             package_id: packageId,
             ...input,
           }),
         },
       ),
-    requestSubmissionSignature: (submissionPackageId: string, expectedPackageVersion: number) =>
+    requestSubmissionSignature: (
+      submissionPackageId: string, expectedPackageVersion: number,
+      metadata?: SubmissionSignatureIntentMetadata,
+    ) =>
       request<SubmissionSignatureReceipt>(
         `/api/v1/patron/submission-packages/${encodeURIComponent(submissionPackageId)}/signatures`,
         {
           method: "POST",
           body: JSON.stringify({
-            command_id: makeId(),
-            idempotency_key: makeId(),
-            signature_id: makeId(),
+            ...(metadata ?? {
+              command_id: makeId(), idempotency_key: makeId(), signature_id: makeId(),
+            }),
             expected_package_version: expectedPackageVersion,
           }),
         },
@@ -1217,14 +1469,15 @@ export function createApiClient(
       request<SubmissionEvidenceProjection[]>(
         `/api/v1/patron/submission-packages/${encodeURIComponent(submissionPackageId)}/evidence`,
       ),
-    createDraft: (caseId: string) =>
+    createDraft: (caseId: string, identity?: FinancialCommandIdentity) =>
       request<CommandReceipt>(
         `/api/v1/patron/cases/${encodeURIComponent(caseId)}/financial-reports/drafts`,
         {
           method: "POST",
           body: JSON.stringify({
-            command_id: makeId(),
-            idempotency_key: makeId(),
+            command_id: identity?.command_id ?? makeId(),
+            idempotency_key: identity?.idempotency_key ?? makeId(),
+            correlation_id: identity?.correlation_id ?? makeId(),
             currency_code: "EUR",
             ruleset_version: 1,
           }),
@@ -1233,6 +1486,27 @@ export function createApiClient(
     getDraft: (caseId: string, reportId: string) =>
       request<DraftReport>(
         `/api/v1/patron/cases/${encodeURIComponent(caseId)}/financial-reports/${encodeURIComponent(reportId)}/draft`,
+      ),
+    getPublishedFinancialReport: (caseId: string, reportId: string) =>
+      request<PublishedFinancialReport>(
+        `/api/v1/patron/cases/${encodeURIComponent(caseId)}/financial-reports/${encodeURIComponent(reportId)}`,
+      ),
+    publishFinancialReport: (
+      caseId: string,
+      reportId: string,
+      input: FinancialCommandIdentity & { expected_revision: number },
+    ) =>
+      request<FinancialReportPublicationReceipt>(
+        `/api/v1/patron/cases/${encodeURIComponent(caseId)}/financial-reports/${encodeURIComponent(reportId)}/publications`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            command_id: input.command_id,
+            idempotency_key: input.idempotency_key,
+            correlation_id: input.correlation_id,
+            expected_revision: input.expected_revision,
+          }),
+        },
       ),
     addLine: (
       caseId: string,
@@ -1244,15 +1518,16 @@ export function createApiClient(
         unit: string;
         amount_minor: number;
         expected_revision: number;
-      },
+      } & Partial<FinancialCommandIdentity>,
     ) =>
       request<CommandReceipt>(
         `/api/v1/patron/cases/${encodeURIComponent(caseId)}/financial-reports/${encodeURIComponent(reportId)}/lines`,
         {
           method: "POST",
           body: JSON.stringify({
-            command_id: makeId(),
-            idempotency_key: makeId(),
+            command_id: input.command_id ?? makeId(),
+            idempotency_key: input.idempotency_key ?? makeId(),
+            correlation_id: input.correlation_id ?? makeId(),
             expected_revision: input.expected_revision,
             category: input.category,
             label: input.label,

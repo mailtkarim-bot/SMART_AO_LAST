@@ -75,6 +75,5 @@ def downgrade() -> None:
     op.create_check_constraint(
         "state",
         "dce_staged_objects",
-        "state IN ('AWAITING_UPLOAD', 'QUARANTINED', 'CLEAN', 'REJECTED', "
-        "'CONSUMED', 'EXPIRED')",
+        "state IN ('AWAITING_UPLOAD', 'QUARANTINED', 'CLEAN', 'REJECTED', 'CONSUMED', 'EXPIRED')",
     )

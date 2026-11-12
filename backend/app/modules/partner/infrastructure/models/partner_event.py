@@ -14,17 +14,21 @@ from app.platform.persistence.base import Base, TenantScopedRecord
 class CasePartnerEventRecord(TenantScopedRecord, Base):
     __tablename__ = "case_partner_events"
     __table_args__ = (
+        sa.PrimaryKeyConstraint("tenant_id", "case_id", "event_id"),
         sa.ForeignKeyConstraint(
             ["tenant_id", "case_id"],
             ["cases.tenant_id", "cases.id"],
             ondelete="RESTRICT",
         ),
         sa.ForeignKeyConstraint(
-            ["tenant_id", "related_event_id"],
-            ["case_partner_events.tenant_id", "case_partner_events.event_id"],
+            ["tenant_id", "case_id", "related_event_id"],
+            [
+                "case_partner_events.tenant_id",
+                "case_partner_events.case_id",
+                "case_partner_events.event_id",
+            ],
             ondelete="RESTRICT",
         ),
-        sa.UniqueConstraint("tenant_id", "event_id", name="uq_case_partner_events__tenant_event"),
         sa.UniqueConstraint(
             "tenant_id", "case_id", "event_id", name="uq_case_partner_events__tenant_case_event"
         ),
@@ -83,13 +87,14 @@ class CasePartnerEventRecord(TenantScopedRecord, Base):
         sa.Index(
             "uq_case_partner_events__receipt_engagement",
             "tenant_id",
+            "case_id",
             "related_event_id",
             unique=True,
             postgresql_where=sa.text("event_type = 'ENGAGEMENT_DECLARED'"),
         ),
     )
 
-    event_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    event_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     case_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     partner_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
     revision: Mapped[int] = mapped_column(sa.Integer, nullable=False)

@@ -27,12 +27,20 @@ def _payload() -> dict[str, object]:
         department_codes=("59",),
         market_types=("TRAVAUX",),
         source_status="EN_COURS",
+        source_contract_version="BOAMP_EXPLORE_V2_1_ALLOWLIST_V1",
+        source_response_sha256="a" * 64,
     )
     return {
         "schema": "SMART_AO_OPPORTUNITY_INGESTION_REPORT_V1",
         "pages_read": 1,
         "truncated": False,
-        "candidates": [{**candidate.snapshot(), "fingerprint_sha256": candidate.fingerprint()}],
+        "candidates": [
+            {
+                **candidate.staging_snapshot(),
+                "fingerprint_sha256": candidate.fingerprint(),
+                "transport_fingerprint_sha256": candidate.transport_fingerprint(),
+            }
+        ],
     }
 
 
@@ -48,6 +56,13 @@ def test_persistence_script_rejects_tampered_fingerprint_and_extra_fields() -> N
     cast(list[dict[str, Any]], tampered["candidates"])[0]["fingerprint_sha256"] = "b" * 64
     with pytest.raises(ValueError, match="fingerprint"):
         persist_script._read_candidates(tampered)
+
+    transport_tampered = _payload()
+    cast(list[dict[str, Any]], transport_tampered["candidates"])[0]["source_response_sha256"] = (
+        "b" * 64
+    )
+    with pytest.raises(ValueError, match="transport provenance"):
+        persist_script._read_candidates(transport_tampered)
 
     extra = _payload()
     cast(list[dict[str, Any]], extra["candidates"])[0]["financial_amount"] = "100"

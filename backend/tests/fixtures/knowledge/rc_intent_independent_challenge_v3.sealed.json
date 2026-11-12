@@ -1,0 +1,1105 @@
+{
+  "synthetic": true,
+  "held_out": false,
+  "cases": [
+    {
+      "id": "IND-V3-01",
+      "text": "Pour préparer notre offre, la visite est-elle obligatoire ?",
+      "query_sha256": "1a0cd1a2a4413db59af62cc0096fcadc6496affb9559616ee50c972ba9479293",
+      "expected_intent": {
+        "subject": "VISIT",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "UNIQUE_EXPLICIT_REQUEST",
+      "expected_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 31,
+          "end_byte": 37,
+          "excerpt": "visite"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 47,
+          "end_byte": 58,
+          "excerpt": "obligatoire"
+        }
+      ],
+      "expected_contexts": [
+        {
+          "signal": "NEUTRAL_CONTEXT",
+          "start_byte": 0,
+          "end_byte": 28,
+          "excerpt": "Pour préparer notre offre, "
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "IND-V3-02",
+      "text": "La visite est-elle requise, pour information ?",
+      "query_sha256": "b49b0679a4767184044ce020c5affe5ed34e115f1d67c9add41dbc39acd71555",
+      "expected_intent": {
+        "subject": "VISIT",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "UNIQUE_EXPLICIT_REQUEST",
+      "expected_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 3,
+          "end_byte": 9,
+          "excerpt": "visite"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 19,
+          "end_byte": 26,
+          "excerpt": "requise"
+        }
+      ],
+      "expected_contexts": [
+        {
+          "signal": "NEUTRAL_CONTEXT",
+          "start_byte": 26,
+          "end_byte": 45,
+          "excerpt": ", pour information "
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "IND-V3-03",
+      "text": "Dans le cadre de notre réponse : la visite de site est-elle obligatoire ?",
+      "query_sha256": "738b17e08d117c480c750bc341f0d3cf0bf8041ddbb6f13444ac409933dc758a",
+      "expected_intent": {
+        "subject": "VISIT_SITE",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "UNIQUE_EXPLICIT_REQUEST",
+      "expected_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 37,
+          "end_byte": 51,
+          "excerpt": "visite de site"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 61,
+          "end_byte": 72,
+          "excerpt": "obligatoire"
+        }
+      ],
+      "expected_contexts": [
+        {
+          "signal": "NEUTRAL_CONTEXT",
+          "start_byte": 0,
+          "end_byte": 34,
+          "excerpt": "Dans le cadre de notre réponse : "
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "IND-V3-04",
+      "text": "À titre de précision — la visite de site est-elle exigée, pour rédiger une réponse ?",
+      "query_sha256": "582504e24ebd78afb6b2bb9ee1439fff03d57c850fc4c7eb7dfb2e3a6f4f05dc",
+      "expected_intent": {
+        "subject": "VISIT_SITE",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "UNIQUE_EXPLICIT_REQUEST",
+      "expected_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 30,
+          "end_byte": 44,
+          "excerpt": "visite de site"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 54,
+          "end_byte": 61,
+          "excerpt": "exigée"
+        }
+      ],
+      "expected_contexts": [
+        {
+          "signal": "NEUTRAL_CONTEXT",
+          "start_byte": 0,
+          "end_byte": 27,
+          "excerpt": "À titre de précision — "
+        },
+        {
+          "signal": "NEUTRAL_CONTEXT",
+          "start_byte": 61,
+          "end_byte": 90,
+          "excerpt": ", pour rédiger une réponse "
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "IND-V3-05",
+      "text": "Pour la constitution de notre dossier, la visite médicale est-elle requise ?",
+      "query_sha256": "e33722b81da0b94cbda7b32b8c2e9b5bbc8571dffb4534eaafb323060253e1b9",
+      "expected_intent": {
+        "subject": "VISIT_MEDICAL",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "UNIQUE_EXPLICIT_REQUEST",
+      "expected_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 42,
+          "end_byte": 58,
+          "excerpt": "visite médicale"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 68,
+          "end_byte": 75,
+          "excerpt": "requise"
+        }
+      ],
+      "expected_contexts": [
+        {
+          "signal": "NEUTRAL_CONTEXT",
+          "start_byte": 0,
+          "end_byte": 39,
+          "excerpt": "Pour la constitution de notre dossier, "
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "IND-V3-06",
+      "text": "La visite médicale est-elle obligatoire, dans le cadre de la candidature ?",
+      "query_sha256": "e1db685b8f3375d5e644b90b3315cf20509d2a1525ad21d8d2a4297a7c41d4a6",
+      "expected_intent": {
+        "subject": "VISIT_MEDICAL",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "UNIQUE_EXPLICIT_REQUEST",
+      "expected_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 3,
+          "end_byte": 19,
+          "excerpt": "visite médicale"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 29,
+          "end_byte": 40,
+          "excerpt": "obligatoire"
+        }
+      ],
+      "expected_contexts": [
+        {
+          "signal": "NEUTRAL_CONTEXT",
+          "start_byte": 40,
+          "end_byte": 74,
+          "excerpt": ", dans le cadre de la candidature "
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "IND-V3-07",
+      "text": "POUR INFORMATION : le DC1 est-il obligatoire ?",
+      "query_sha256": "47cce0cecdec5f6417aee47022cb75583698670a8145ed95f830133023ce56d0",
+      "expected_intent": {
+        "subject": "DC1",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "UNIQUE_EXPLICIT_REQUEST",
+      "expected_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 22,
+          "end_byte": 25,
+          "excerpt": "DC1"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 33,
+          "end_byte": 44,
+          "excerpt": "obligatoire"
+        }
+      ],
+      "expected_contexts": [
+        {
+          "signal": "NEUTRAL_CONTEXT",
+          "start_byte": 0,
+          "end_byte": 19,
+          "excerpt": "POUR INFORMATION : "
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "IND-V3-08",
+      "text": "Pour compléter notre candidature — doit-on fournir le DC1, à titre de précision ?",
+      "query_sha256": "072b306198469152c80508ee31edc73a558dbce339a07ef32595066ddcaf7d39",
+      "expected_intent": {
+        "subject": "DC1",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "UNIQUE_EXPLICIT_REQUEST",
+      "expected_anchors": [
+        {
+          "signal": "DEMAND",
+          "start_byte": 38,
+          "end_byte": 53,
+          "excerpt": "doit-on fournir"
+        },
+        {
+          "signal": "SUBJECT",
+          "start_byte": 57,
+          "end_byte": 60,
+          "excerpt": "DC1"
+        }
+      ],
+      "expected_contexts": [
+        {
+          "signal": "NEUTRAL_CONTEXT",
+          "start_byte": 0,
+          "end_byte": 38,
+          "excerpt": "Pour compléter notre candidature — "
+        },
+        {
+          "signal": "NEUTRAL_CONTEXT",
+          "start_byte": 60,
+          "end_byte": 85,
+          "excerpt": ", à titre de précision "
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "IND-V3-09",
+      "text": "Pour organiser notre dossier, le DC2 est-il requis ?",
+      "query_sha256": "a29da3c008ba6f0716dc0341c634531a5be6b2184fde7536eec4933ab08e4d82",
+      "expected_intent": {
+        "subject": "DC2",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "UNIQUE_EXPLICIT_REQUEST",
+      "expected_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 33,
+          "end_byte": 36,
+          "excerpt": "DC2"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 44,
+          "end_byte": 50,
+          "excerpt": "requis"
+        }
+      ],
+      "expected_contexts": [
+        {
+          "signal": "NEUTRAL_CONTEXT",
+          "start_byte": 0,
+          "end_byte": 30,
+          "excerpt": "Pour organiser notre dossier, "
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "IND-V3-10",
+      "text": "Faut-il fournir le DC2, pour la préparation de notre offre ?",
+      "query_sha256": "c3efacb1663766a8e1729ad2ee396a8725c4d13b1ebb87915a35481f1db9be58",
+      "expected_intent": {
+        "subject": "DC2",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "UNIQUE_EXPLICIT_REQUEST",
+      "expected_anchors": [
+        {
+          "signal": "DEMAND",
+          "start_byte": 0,
+          "end_byte": 15,
+          "excerpt": "Faut-il fournir"
+        },
+        {
+          "signal": "SUBJECT",
+          "start_byte": 19,
+          "end_byte": 22,
+          "excerpt": "DC2"
+        }
+      ],
+      "expected_contexts": [
+        {
+          "signal": "NEUTRAL_CONTEXT",
+          "start_byte": 22,
+          "end_byte": 60,
+          "excerpt": ", pour la préparation de notre offre "
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "IND-V3-11",
+      "text": "Dans le cadre de la réponse, le mémoire technique est-il exigé ?",
+      "query_sha256": "4631a4ab4935aa9175849547d7942ef83934a6b2cc50d8858df60b50bf2cde34",
+      "expected_intent": {
+        "subject": "MEMOIRE_TECHNIQUE",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "UNIQUE_EXPLICIT_REQUEST",
+      "expected_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 33,
+          "end_byte": 51,
+          "excerpt": "mémoire technique"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 59,
+          "end_byte": 65,
+          "excerpt": "exigé"
+        }
+      ],
+      "expected_contexts": [
+        {
+          "signal": "NEUTRAL_CONTEXT",
+          "start_byte": 0,
+          "end_byte": 30,
+          "excerpt": "Dans le cadre de la réponse, "
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "IND-V3-12",
+      "text": "Pour rédiger notre offre : le mémoire technique est-il obligatoire, pour information ?",
+      "query_sha256": "84a40fe611c7c2d2316514c70a8bbc0bfb5c47005e1923d10fcdc4e13faef9c2",
+      "expected_intent": {
+        "subject": "MEMOIRE_TECHNIQUE",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "UNIQUE_EXPLICIT_REQUEST",
+      "expected_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 31,
+          "end_byte": 49,
+          "excerpt": "mémoire technique"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 57,
+          "end_byte": 68,
+          "excerpt": "obligatoire"
+        }
+      ],
+      "expected_contexts": [
+        {
+          "signal": "NEUTRAL_CONTEXT",
+          "start_byte": 0,
+          "end_byte": 28,
+          "excerpt": "Pour rédiger notre offre : "
+        },
+        {
+          "signal": "NEUTRAL_CONTEXT",
+          "start_byte": 68,
+          "end_byte": 87,
+          "excerpt": ", pour information "
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "IND-V3-13",
+      "text": "À titre de précision, les variantes sont-elles obligatoires ?",
+      "query_sha256": "479b72a094b3c672678fe7e7c2f6f921793f49373fb59f9f1c2935df96161438",
+      "expected_intent": {
+        "subject": "VARIANTS",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "UNIQUE_EXPLICIT_REQUEST",
+      "expected_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 28,
+          "end_byte": 37,
+          "excerpt": "variantes"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 49,
+          "end_byte": 61,
+          "excerpt": "obligatoires"
+        }
+      ],
+      "expected_contexts": [
+        {
+          "signal": "NEUTRAL_CONTEXT",
+          "start_byte": 0,
+          "end_byte": 24,
+          "excerpt": "À titre de précision, "
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "IND-V3-14",
+      "text": "Les variantes sont-elles requises, pour constituer une offre ?",
+      "query_sha256": "5a1ba261d3bedf042afca4ddc8e57735edae9208214bafa6e0095f6315dd44d3",
+      "expected_intent": {
+        "subject": "VARIANTS",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "UNIQUE_EXPLICIT_REQUEST",
+      "expected_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 4,
+          "end_byte": 13,
+          "excerpt": "variantes"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 25,
+          "end_byte": 33,
+          "excerpt": "requises"
+        }
+      ],
+      "expected_contexts": [
+        {
+          "signal": "NEUTRAL_CONTEXT",
+          "start_byte": 33,
+          "end_byte": 61,
+          "excerpt": ", pour constituer une offre "
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "IND-V3-15",
+      "text": "Pour  préparer  notre  dossier : le DC1 est-il requis pour le lot 17 ?",
+      "query_sha256": "1107c81dda88ef86ea85ff558e37f49e0221586c2058f0a95e1cc31eb6c36e31",
+      "expected_intent": {
+        "subject": "DC1",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED",
+        "scope_state": "CANDIDATE",
+        "lot": 17
+      },
+      "expected_reason": "UNIQUE_EXPLICIT_REQUEST",
+      "expected_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 37,
+          "end_byte": 40,
+          "excerpt": "DC1"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 48,
+          "end_byte": 54,
+          "excerpt": "requis"
+        },
+        {
+          "signal": "LOT",
+          "start_byte": 63,
+          "end_byte": 69,
+          "excerpt": "lot 17"
+        }
+      ],
+      "expected_contexts": [
+        {
+          "signal": "NEUTRAL_CONTEXT",
+          "start_byte": 0,
+          "end_byte": 34,
+          "excerpt": "Pour  préparer  notre  dossier : "
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "IND-V3-16",
+      "text": "Dans le cadre de notre candidature — le DC2 est-il obligatoire pour le lot n° 208, pour information ?",
+      "query_sha256": "d772fe8526095d33c3ba472c372645f5e8f77c314b44b2798f8c3a8afecf5c3e",
+      "expected_intent": {
+        "subject": "DC2",
+        "demand": "OBLIGATION",
+        "coverage": "COVERED",
+        "scope_state": "CANDIDATE",
+        "lot": 208
+      },
+      "expected_reason": "UNIQUE_EXPLICIT_REQUEST",
+      "expected_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 42,
+          "end_byte": 45,
+          "excerpt": "DC2"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 53,
+          "end_byte": 64,
+          "excerpt": "obligatoire"
+        },
+        {
+          "signal": "LOT",
+          "start_byte": 73,
+          "end_byte": 84,
+          "excerpt": "lot n° 208"
+        }
+      ],
+      "expected_contexts": [
+        {
+          "signal": "NEUTRAL_CONTEXT",
+          "start_byte": 0,
+          "end_byte": 39,
+          "excerpt": "Dans le cadre de notre candidature — "
+        },
+        {
+          "signal": "NEUTRAL_CONTEXT",
+          "start_byte": 84,
+          "end_byte": 103,
+          "excerpt": ", pour information "
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "IND-V3-17",
+      "text": "Pour information, quand faut-il fournir le DC1 ?",
+      "query_sha256": "f0ca326ea37e30381ecb4a38e9bd72083e30db848e898c421986805dfd6ec98a",
+      "expected_intent": {
+        "subject": "DC1",
+        "demand": "DATE_TIME",
+        "coverage": "UNSUPPORTED",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "UNSUPPORTED_TIME",
+      "expected_anchors": [
+        {
+          "signal": "DEMAND",
+          "start_byte": 18,
+          "end_byte": 23,
+          "excerpt": "quand"
+        },
+        {
+          "signal": "SUBJECT",
+          "start_byte": 43,
+          "end_byte": 46,
+          "excerpt": "DC1"
+        }
+      ],
+      "expected_contexts": [
+        {
+          "signal": "NEUTRAL_CONTEXT",
+          "start_byte": 0,
+          "end_byte": 18,
+          "excerpt": "Pour information, "
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "IND-V3-18",
+      "text": "Où se déroule la visite de site, à titre de précision ?",
+      "query_sha256": "00d8290bfc09a14fba4934bed1a72e3bd7cfd2cce55f5ccbce53d492d4ad652a",
+      "expected_intent": {
+        "subject": "VISIT_SITE",
+        "demand": "LOCATION",
+        "coverage": "UNSUPPORTED",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "UNSUPPORTED_LOCATION",
+      "expected_anchors": [
+        {
+          "signal": "DEMAND",
+          "start_byte": 0,
+          "end_byte": 3,
+          "excerpt": "Où"
+        },
+        {
+          "signal": "SUBJECT",
+          "start_byte": 19,
+          "end_byte": 33,
+          "excerpt": "visite de site"
+        }
+      ],
+      "expected_contexts": [
+        {
+          "signal": "NEUTRAL_CONTEXT",
+          "start_byte": 33,
+          "end_byte": 58,
+          "excerpt": ", à titre de précision "
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "IND-V3-19",
+      "text": "Si nous déposons une candidature, le DC2 est-il obligatoire ?",
+      "query_sha256": "c07bdaad6f4a7210f88f2143da2c0f8a9549ca1b927f27abcc1fcc25c87266b8",
+      "expected_intent": {
+        "subject": "DC2",
+        "demand": "OBLIGATION",
+        "coverage": "UNSUPPORTED",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "UNSUPPORTED_CONDITION",
+      "expected_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 38,
+          "end_byte": 41,
+          "excerpt": "DC2"
+        },
+        {
+          "signal": "DEMAND",
+          "start_byte": 49,
+          "end_byte": 60,
+          "excerpt": "obligatoire"
+        }
+      ],
+      "expected_contexts": [],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "IND-V3-20",
+      "text": "Pour préparer notre offre, à quelles conditions le mémoire technique est-il requis ?",
+      "query_sha256": "cf2f35306ee4a74d6ed0d415a3d7892967037725b6787e261dad12ebb3fc9bc6",
+      "expected_intent": {
+        "subject": "MEMOIRE_TECHNIQUE",
+        "demand": "OBLIGATION",
+        "coverage": "UNSUPPORTED",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "UNSUPPORTED_CONDITION",
+      "expected_anchors": [
+        {
+          "signal": "DEMAND",
+          "start_byte": 28,
+          "end_byte": 49,
+          "excerpt": "à quelles conditions"
+        },
+        {
+          "signal": "SUBJECT",
+          "start_byte": 53,
+          "end_byte": 71,
+          "excerpt": "mémoire technique"
+        }
+      ],
+      "expected_contexts": [
+        {
+          "signal": "NEUTRAL_CONTEXT",
+          "start_byte": 0,
+          "end_byte": 28,
+          "excerpt": "Pour préparer notre offre, "
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "IND-V3-21",
+      "text": "Pour information, le DC1 et le DC2 sont-ils obligatoires ?",
+      "query_sha256": "94237483de20e64094a1e8faedb1ace164e7349755902d192ce01a6b4a559c46",
+      "expected_intent": {
+        "subject": "UNKNOWN",
+        "demand": "UNKNOWN",
+        "coverage": "AMBIGUOUS",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "MULTIPLE_SUBJECTS",
+      "expected_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 21,
+          "end_byte": 24,
+          "excerpt": "DC1"
+        },
+        {
+          "signal": "SUBJECT",
+          "start_byte": 31,
+          "end_byte": 34,
+          "excerpt": "DC2"
+        }
+      ],
+      "expected_contexts": [
+        {
+          "signal": "NEUTRAL_CONTEXT",
+          "start_byte": 0,
+          "end_byte": 18,
+          "excerpt": "Pour information, "
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "IND-V3-22",
+      "text": "À titre de précision, la visite est-elle obligatoire et quand a-t-elle lieu ?",
+      "query_sha256": "9c10112f6d1278f07aa84b7f69996fd1d59ba71640137ab4f3faf17971c8c392",
+      "expected_intent": {
+        "subject": "VISIT",
+        "demand": "UNKNOWN",
+        "coverage": "AMBIGUOUS",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "MULTIPLE_DEMANDS",
+      "expected_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 27,
+          "end_byte": 33,
+          "excerpt": "visite"
+        }
+      ],
+      "expected_contexts": [
+        {
+          "signal": "NEUTRAL_CONTEXT",
+          "start_byte": 0,
+          "end_byte": 24,
+          "excerpt": "À titre de précision, "
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "IND-V3-23",
+      "text": "Pour organiser notre offre, le DC2 est-il requis pour le lot 0 ?",
+      "query_sha256": "2e350c5f2a7de6f0ba9a8e726c5452af8b85e74e81a2d6eb63f4d6745f395cfc",
+      "expected_intent": {
+        "subject": "DC2",
+        "demand": "UNKNOWN",
+        "coverage": "AMBIGUOUS",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "INVALID_LOT",
+      "expected_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 31,
+          "end_byte": 34,
+          "excerpt": "DC2"
+        }
+      ],
+      "expected_contexts": [
+        {
+          "signal": "NEUTRAL_CONTEXT",
+          "start_byte": 0,
+          "end_byte": 28,
+          "excerpt": "Pour organiser notre offre, "
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "IND-V3-24",
+      "text": "Le DC1 est-il obligatoire pour le lot 8 ou le lot 9, pour information ?",
+      "query_sha256": "3d410d45a754b6b46d01de1f77c10c013d35cd7cf5c3308bb7e720d8006440f4",
+      "expected_intent": {
+        "subject": "DC1",
+        "demand": "UNKNOWN",
+        "coverage": "AMBIGUOUS",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "MULTIPLE_LOTS",
+      "expected_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 3,
+          "end_byte": 6,
+          "excerpt": "DC1"
+        }
+      ],
+      "expected_contexts": [
+        {
+          "signal": "NEUTRAL_CONTEXT",
+          "start_byte": 51,
+          "end_byte": 70,
+          "excerpt": ", pour information "
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "IND-V3-25",
+      "text": "Pour information, le mémoire technique est-il obligatoire, à quelle date faut-il le fournir ?",
+      "query_sha256": "9286fa6f4a887a8bd1c186e608dd65471397960d93bd7d9fc51d11f92cd984be",
+      "expected_intent": {
+        "subject": "MEMOIRE_TECHNIQUE",
+        "demand": "UNKNOWN",
+        "coverage": "AMBIGUOUS",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "MULTIPLE_DEMANDS",
+      "expected_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 21,
+          "end_byte": 39,
+          "excerpt": "mémoire technique"
+        }
+      ],
+      "expected_contexts": [
+        {
+          "signal": "NEUTRAL_CONTEXT",
+          "start_byte": 0,
+          "end_byte": 18,
+          "excerpt": "Pour information, "
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "IND-V3-26",
+      "text": "Pour information, « le DC1 est-il obligatoire ? »",
+      "query_sha256": "3e30513ba4abb980c8d8581b9979ff8d761d6e61049efb0d91eab8feb6bf8e4a",
+      "expected_intent": {
+        "subject": "DC1",
+        "demand": "UNKNOWN",
+        "coverage": "UNKNOWN",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "NON_ACTIVE_REQUEST",
+      "expected_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 24,
+          "end_byte": 27,
+          "excerpt": "DC1"
+        }
+      ],
+      "expected_contexts": [
+        {
+          "signal": "NEUTRAL_CONTEXT",
+          "start_byte": 0,
+          "end_byte": 18,
+          "excerpt": "Pour information, "
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "IND-V3-27",
+      "text": "Pour préparer notre candidature, le DC2 est obligatoire.",
+      "query_sha256": "a208998a8226fb78b44470098bc0b8b59c79324585588df1263387fb49d6f8cd",
+      "expected_intent": {
+        "subject": "DC2",
+        "demand": "UNKNOWN",
+        "coverage": "UNKNOWN",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "INSUFFICIENT_EVIDENCE",
+      "expected_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 37,
+          "end_byte": 40,
+          "excerpt": "DC2"
+        }
+      ],
+      "expected_contexts": [
+        {
+          "signal": "NEUTRAL_CONTEXT",
+          "start_byte": 0,
+          "end_byte": 34,
+          "excerpt": "Pour préparer notre candidature, "
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "IND-V3-28",
+      "text": "Pour information, le formulaire ZX est-il obligatoire ?",
+      "query_sha256": "bddb4ddf14542a093d0b95596fae7e8b01dd489fc7451a5fdd948a2cba1b900f",
+      "expected_intent": {
+        "subject": "UNKNOWN",
+        "demand": "UNKNOWN",
+        "coverage": "UNKNOWN",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "UNKNOWN_SUBJECT",
+      "expected_anchors": [],
+      "expected_contexts": [
+        {
+          "signal": "NEUTRAL_CONTEXT",
+          "start_byte": 0,
+          "end_byte": 18,
+          "excerpt": "Pour information, "
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "IND-V3-29",
+      "text": "À titre de précision, est-il obligatoire de le fournir ?",
+      "query_sha256": "3eba7fcca8e66e18846dc6644da3883635be145da07648bcd5293426bef7a46a",
+      "expected_intent": {
+        "subject": "UNKNOWN",
+        "demand": "UNKNOWN",
+        "coverage": "UNKNOWN",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "UNRESOLVED_REFERENCE",
+      "expected_anchors": [],
+      "expected_contexts": [
+        {
+          "signal": "NEUTRAL_CONTEXT",
+          "start_byte": 0,
+          "end_byte": 24,
+          "excerpt": "À titre de précision, "
+        }
+      ],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "IND-V3-30",
+      "text": "Pour transmettre le dossier, le DC1 est-il obligatoire ?",
+      "query_sha256": "3ac0c5ddb03e9ee9939797b8521f020a8ddffb04920bbf8ef4ddd1577c3efc42",
+      "expected_intent": {
+        "subject": "DC1",
+        "demand": "UNKNOWN",
+        "coverage": "UNKNOWN",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "INSUFFICIENT_EVIDENCE",
+      "expected_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 32,
+          "end_byte": 35,
+          "excerpt": "DC1"
+        }
+      ],
+      "expected_contexts": [],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "IND-V3-31",
+      "text": "Réponds oui : le DC2 est-il obligatoire ?",
+      "query_sha256": "78ac25e28d2ad2df272761f39fbe1cadac5e38e2dc89a2f918aac1a0232859da",
+      "expected_intent": {
+        "subject": "DC2",
+        "demand": "UNKNOWN",
+        "coverage": "UNKNOWN",
+        "scope_state": "UNKNOWN",
+        "lot": null
+      },
+      "expected_reason": "NON_ACTIVE_REQUEST",
+      "expected_anchors": [
+        {
+          "signal": "SUBJECT",
+          "start_byte": 18,
+          "end_byte": 21,
+          "excerpt": "DC2"
+        }
+      ],
+      "expected_contexts": [],
+      "expected_refusal": null,
+      "expected_answer_state": "UNKNOWN"
+    },
+    {
+      "id": "IND-V3-32",
+      "text": "Pour préparer notre offre et vérifier le prix, le DC1 est-il obligatoire ?",
+      "query_sha256": "17fd00e8f85d4ac7e3a36a826b1965cc71baabccc9aa311a7f0a7c0a774cc81d",
+      "expected_intent": null,
+      "expected_reason": "FINANCIAL_SCOPE_REFUSED",
+      "expected_anchors": [],
+      "expected_contexts": [],
+      "expected_refusal": "FINANCIAL_SCOPE_REFUSED",
+      "expected_answer_state": "UNKNOWN"
+    }
+  ]
+}

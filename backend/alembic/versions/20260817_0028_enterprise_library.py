@@ -139,9 +139,7 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.execute("DROP TRIGGER IF EXISTS enterprise_documents_append_only ON enterprise_documents")
     op.execute("DROP FUNCTION IF EXISTS prevent_enterprise_document_mutation()")
-    op.execute(
-        "DROP INDEX IF EXISTS ix_enterprise_document__tenant_company_kind_expiry"
-    )
+    op.execute("DROP INDEX IF EXISTS ix_enterprise_document__tenant_company_kind_expiry")
     op.execute("DROP INDEX IF EXISTS ix_enterprise_documents_tenant_id")
     op.drop_table("enterprise_documents")
     op.execute("DROP INDEX IF EXISTS ix_enterprise_companies_tenant_id")

@@ -1,0 +1,319 @@
+{
+  "synthetic": true,
+  "held_out": true,
+  "independence": "Created after the parent freeze signal without reading candidate code, tests, freeze manifest, historical datasets, or results. Earlier exposed proposal was excluded. Independence is limited to this absence of access. Lexical roles do not establish identity or permissions; labels concern question intent only.",
+  "cases": [
+    {
+      "id": "independent-01",
+      "text": "Pour préparer sa candidature, le candidat doit-il joindre un DC1 renseigné pour le lot 7 ?",
+      "query_sha256": "b595e4a5fb2aadc7f0ab115fa28a281f57ba8a5420c7d865e9b870cf33be0e8b",
+      "expected": {
+        "covered": true,
+        "subject": "DC1",
+        "lot": 7,
+        "actor": "le candidat",
+        "object": "un DC1 renseigné",
+        "request": "doit-il joindre",
+        "action": "joindre",
+        "contexts": [
+          {
+            "excerpt": "Pour préparer sa candidature, ",
+            "owner": "le candidat"
+          }
+        ]
+      }
+    },
+    {
+      "id": "independent-02",
+      "text": "Pour constituer son dossier, le soumissionnaire doit-il remettre le DC2 signé ?",
+      "query_sha256": "e6ef636f163a2d2b208135fe3f1d20353b605d426e55cba04c11523347fb98f9",
+      "expected": {
+        "covered": true,
+        "subject": "DC2",
+        "lot": null,
+        "actor": "le soumissionnaire",
+        "object": "le DC2 signé",
+        "request": "doit-il remettre",
+        "action": "remettre",
+        "contexts": [
+          {
+            "excerpt": "Pour constituer son dossier, ",
+            "owner": "le soumissionnaire"
+          }
+        ]
+      }
+    },
+    {
+      "id": "independent-03",
+      "text": "Pour organiser sa préparation, le titulaire doit-il fournir un mémoire technique pour le lot 12 ?",
+      "query_sha256": "f80055884855b53fd532b1c890373bd2e653ff182c99bae826326808309cf4d8",
+      "expected": {
+        "covered": true,
+        "subject": "MEMOIRE_TECHNIQUE",
+        "lot": 12,
+        "actor": "le titulaire",
+        "object": "un mémoire technique",
+        "request": "doit-il fournir",
+        "action": "fournir",
+        "contexts": [
+          {
+            "excerpt": "Pour organiser sa préparation, ",
+            "owner": "le titulaire"
+          }
+        ]
+      }
+    },
+    {
+      "id": "independent-04",
+      "text": "Pour préparer son intervention, l’employeur doit-il réaliser une visite médicale ?",
+      "query_sha256": "3bae66a732093db8e1ab89cd98e1358e1cadb4c2f79ee72c5d075b6e44a97f41",
+      "expected": {
+        "covered": true,
+        "subject": "VISIT_MEDICAL",
+        "lot": null,
+        "actor": "l’employeur",
+        "object": "une visite médicale",
+        "request": "doit-il réaliser",
+        "action": "réaliser",
+        "contexts": [
+          {
+            "excerpt": "Pour préparer son intervention, ",
+            "owner": "l’employeur"
+          }
+        ]
+      }
+    },
+    {
+      "id": "independent-05",
+      "text": "Pour organiser sa réponse, l’opérateur doit-il effectuer la visite de chantier pour le lot 6 ?",
+      "query_sha256": "f5a4ede6ee102bd6ec417ee8fab059607c9d90fc5b5230a96f9a500b1701ecfa",
+      "expected": {
+        "covered": true,
+        "subject": "VISIT_SITE",
+        "lot": 6,
+        "actor": "l’opérateur",
+        "object": "la visite de chantier",
+        "request": "doit-il effectuer",
+        "action": "effectuer",
+        "contexts": [
+          {
+            "excerpt": "Pour organiser sa réponse, ",
+            "owner": "l’opérateur"
+          }
+        ]
+      }
+    },
+    {
+      "id": "independent-06",
+      "text": "Pour préparer notre candidature, faut-il effectuer une visite ?",
+      "query_sha256": "fd36194ee1987ce58649f469213fb2c2912228cefcd0f249d4b275d721add592",
+      "expected": {
+        "covered": true,
+        "subject": "VISIT",
+        "lot": null,
+        "actor": null,
+        "object": "une visite",
+        "request": "faut-il effectuer",
+        "action": "effectuer",
+        "contexts": [
+          {
+            "excerpt": "Pour préparer notre candidature, ",
+            "owner": null
+          }
+        ]
+      }
+    },
+    {
+      "id": "independent-07",
+      "text": "Le soumissionnaire doit-il présenter des variantes pour le lot 9 ?",
+      "query_sha256": "05548d033347830bcaf6f207c9566172eb7da0e1094ddbbfa4c0c875e52a674b",
+      "expected": {
+        "covered": true,
+        "subject": "VARIANTS",
+        "lot": 9,
+        "actor": "Le soumissionnaire",
+        "object": "des variantes",
+        "request": "doit-il présenter",
+        "action": "présenter",
+        "contexts": []
+      }
+    },
+    {
+      "id": "independent-08",
+      "text": "Un DC1 signé est-il exigé pour le lot 11 ?",
+      "query_sha256": "e972e4a28674d3faf57c1b6624c7c891b50831e4130abdb96f53ba0e3f27a53f",
+      "expected": {
+        "covered": true,
+        "subject": "DC1",
+        "lot": 11,
+        "actor": null,
+        "object": "Un DC1 signé",
+        "request": "est-il exigé",
+        "action": null,
+        "contexts": []
+      }
+    },
+    {
+      "id": "independent-09",
+      "text": "Le DC2 renseigné est-il requis ?",
+      "query_sha256": "78cb078e8f5927f7010da46790f8b91a8c9c83551d82dfd1c2dd01b468e4835c",
+      "expected": {
+        "covered": true,
+        "subject": "DC2",
+        "lot": null,
+        "actor": null,
+        "object": "Le DC2 renseigné",
+        "request": "est-il requis",
+        "action": null,
+        "contexts": []
+      }
+    },
+    {
+      "id": "independent-10",
+      "text": "Pour préparer notre réponse, le mémoire technique renseigné est-il obligatoire pour le lot 8 ?",
+      "query_sha256": "491f94f6e0dac59e2c5fab80cab358868554ab2f6a32cb8ddac5a4d18c047e7f",
+      "expected": {
+        "covered": true,
+        "subject": "MEMOIRE_TECHNIQUE",
+        "lot": 8,
+        "actor": null,
+        "object": "le mémoire technique renseigné",
+        "request": "est-il obligatoire",
+        "action": null,
+        "contexts": [
+          {
+            "excerpt": "Pour préparer notre réponse, ",
+            "owner": null
+          }
+        ]
+      }
+    },
+    {
+      "id": "independent-11",
+      "text": "Le candidat doit-il accomplir une visite de chantier ?",
+      "query_sha256": "62fd37c7ed2362630ae6d9140710123787f9264f5a6efb7271f5ed847e89c97d",
+      "expected": {
+        "covered": true,
+        "subject": "VISIT_SITE",
+        "lot": null,
+        "actor": "Le candidat",
+        "object": "une visite de chantier",
+        "request": "doit-il accomplir",
+        "action": "accomplir",
+        "contexts": []
+      }
+    },
+    {
+      "id": "independent-12",
+      "text": "L’opérateur doit-il proposer une variante pour le lot 15 ?",
+      "query_sha256": "eb36bc007ca017208aa8674135b5b99a82193e3a873356ed55093061dd7f1909",
+      "expected": {
+        "covered": true,
+        "subject": "VARIANTS",
+        "lot": 15,
+        "actor": "L’opérateur",
+        "object": "une variante",
+        "request": "doit-il proposer",
+        "action": "proposer",
+        "contexts": []
+      }
+    },
+    {
+      "id": "independent-13",
+      "text": "Pour constituer sa candidature, le candidat doit-il joindre un DC1 ainsi qu’un DC2 ?",
+      "query_sha256": "27087adade27367affef9d4007c1e22fafa68863ce3379fecb0695a7bbbe5c9d",
+      "expected": {
+        "covered": false
+      }
+    },
+    {
+      "id": "independent-14",
+      "text": "Le soumissionnaire doit-il réaliser une visite médicale et proposer une variante pour le lot 6 ?",
+      "query_sha256": "c435eab635e88c3a57d00e50701cc128ef026d65d9c42ceadf5e26924490349d",
+      "expected": {
+        "covered": false
+      }
+    },
+    {
+      "id": "independent-15",
+      "text": "Le titulaire doit-il fournir un mémoire technique si le lot 12 lui est attribué ?",
+      "query_sha256": "86c43576d95c91069717187deb9f51114374c514379e64625134a53b67d9c0b4",
+      "expected": {
+        "covered": false
+      }
+    },
+    {
+      "id": "independent-16",
+      "text": "En cas de candidature groupée, l’opérateur doit-il remettre un DC2 signé ?",
+      "query_sha256": "7f4e9e094aaec9cbd9601865b37e5a2993b6db033dd669cb6857b1d5ccaaa4fe",
+      "expected": {
+        "covered": false
+      }
+    },
+    {
+      "id": "independent-17",
+      "text": "Le candidat doit-il ne pas joindre le DC1 pour le lot 7 ?",
+      "query_sha256": "796f52a5f99b11c138983a8c4a7340348a8755b5743c951bb9ac5d85b470310d",
+      "expected": {
+        "covered": false
+      }
+    },
+    {
+      "id": "independent-18",
+      "text": "L’employeur doit-il éviter d’effectuer la visite médicale ?",
+      "query_sha256": "372078f7dfeb4880fdab6474a66779602c02b45483943f64a08322671e85436e",
+      "expected": {
+        "covered": false
+      }
+    },
+    {
+      "id": "independent-19",
+      "text": "Le candidat a rencontré le soumissionnaire : son mémoire technique est-il requis ?",
+      "query_sha256": "d5acc7fd7390f6f84402726b034fada3f001bdc34271cab8f126b814787de523",
+      "expected": {
+        "covered": false
+      }
+    },
+    {
+      "id": "independent-20",
+      "text": "Pour préparer notre dossier, cette pièce renseignée est-elle exigée pour le lot 8 ?",
+      "query_sha256": "a60e15d7d0a9e89c79ee02bb1206d92d49f6ea2385ea3385ac2c13b49648dee1",
+      "expected": {
+        "covered": false
+      }
+    },
+    {
+      "id": "independent-21",
+      "text": "Le titulaire doit-il transmettre une attestation de visite de chantier ?",
+      "query_sha256": "950b7bf1f043f70da6ec1e4567cfdb59e4f5e41b0eb58c145787b43e8dd3bd81",
+      "expected": {
+        "covered": false
+      }
+    },
+    {
+      "id": "independent-22",
+      "text": "Le certificat médical est-il obligatoire pour le lot 11 ?",
+      "query_sha256": "cebf95f0d20e786d6213ff6c4b8497661387bc1fd9003876bd6f471a736f49b6",
+      "expected": {
+        "covered": false
+      }
+    },
+    {
+      "id": "independent-23",
+      "text": "Pour établir notre offre, faut-il fournir la DPGF signée pour le lot 9 ?",
+      "query_sha256": "8b980c10c59fe5b563450c9857bddbf940d238159a173e4b56c7b47f491e71aa",
+      "expected": {
+        "covered": false,
+        "financial": true
+      }
+    },
+    {
+      "id": "independent-24",
+      "text": "L’assistant doit-il remettre un DC1 pour le lot 15 ?",
+      "query_sha256": "0658e97a62ccc8e1606ab56fcdebeb8f18fbf5423053c7e120cb80e4df4c5fdc",
+      "expected": {
+        "covered": false
+      }
+    }
+  ]
+}

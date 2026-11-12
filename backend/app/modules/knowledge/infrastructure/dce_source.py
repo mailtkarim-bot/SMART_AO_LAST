@@ -1,17 +1,43 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from hashlib import sha256
 from uuid import UUID
 
 import sqlalchemy as sa
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import Session, aliased, sessionmaker
+from sqlalchemy.sql.elements import ColumnElement
 
 from app.modules.case.infrastructure.models.case import CaseRecord
 from app.modules.dce.infrastructure.models.dce_extraction import (
     DceDocumentExtractionFragmentRecord,
     DceDocumentExtractionRecord,
 )
+from app.modules.dce.infrastructure.models.dce_version import DceDocumentRecord
 from app.modules.knowledge.domain.retrieval import DataClassification, RetrievalChunk
+
+
+def current_completed_extraction() -> ColumnElement[bool]:
+    """Use the RC analyser's conservative ordering, including equal-time refusals."""
+    extraction = DceDocumentExtractionRecord
+    newer = aliased(DceDocumentExtractionRecord)
+    superseded = (
+        sa.select(newer.id)
+        .where(
+            newer.tenant_id == extraction.tenant_id,
+            newer.dce_document_id == extraction.dce_document_id,
+            sa.or_(
+                newer.created_at > extraction.created_at,
+                sa.and_(
+                    newer.created_at == extraction.created_at,
+                    sa.or_(newer.status != "COMPLETED", newer.id > extraction.id),
+                ),
+            ),
+        )
+        .correlate(extraction)
+        .exists()
+    )
+    return sa.and_(extraction.status == "COMPLETED", ~superseded)
 
 
 class SqlAlchemyDceRetrievalSource:
@@ -43,6 +69,16 @@ class SqlAlchemyDceRetrievalSource:
                     ),
                 )
                 .join(
+                    DceDocumentRecord,
+                    sa.and_(
+                        DceDocumentRecord.tenant_id == DceDocumentExtractionRecord.tenant_id,
+                        DceDocumentRecord.id == DceDocumentExtractionRecord.dce_document_id,
+                        DceDocumentRecord.dce_version_id
+                        == DceDocumentExtractionRecord.dce_version_id,
+                        DceDocumentRecord.sha256 == DceDocumentExtractionRecord.input_sha256,
+                    ),
+                )
+                .join(
                     CaseRecord,
                     sa.and_(
                         CaseRecord.tenant_id == DceDocumentExtractionRecord.tenant_id,
@@ -54,13 +90,19 @@ class SqlAlchemyDceRetrievalSource:
                 .where(
                     DceDocumentExtractionFragmentRecord.tenant_id == tenant_id,
                     DceDocumentExtractionRecord.dce_version_id == dce_version_id,
-                    DceDocumentExtractionRecord.status == "COMPLETED",
+                    current_completed_extraction(),
                 )
                 .order_by(
                     DceDocumentExtractionFragmentRecord.ordinal,
                     DceDocumentExtractionFragmentRecord.id,
                 )
             ).all()
+
+        if any(
+            sha256(fragment.text.encode()).hexdigest() != fragment.text_sha256
+            for fragment, _ in rows
+        ):
+            raise ValueError("DCE_FRAGMENT_INTEGRITY_MISMATCH")
 
         return tuple(
             RetrievalChunk(
@@ -75,4 +117,6 @@ class SqlAlchemyDceRetrievalSource:
                 classification=DataClassification.INTERNAL_OPERATIONAL,
             )
             for fragment, extraction in rows
+            # Cross-cell conditions remain unqualified outside the human L04 review.
+            if fragment.locator_json.get("kind") != "docx_table_cell"
         )

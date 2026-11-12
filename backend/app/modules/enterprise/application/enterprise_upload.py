@@ -465,11 +465,13 @@ class VerifyEnterpriseDocumentHandler:
         if context.actor_kind != ActorKind.PATRON_ADMIN.value or context.membership_id is None:
             raise CommandExecutionError("ENTERPRISE_LIBRARY_PATRON_REQUIRED")
         document = session.scalar(
-            sa.select(EnterpriseDocumentRecord).where(
+            sa.select(EnterpriseDocumentRecord)
+            .where(
                 EnterpriseDocumentRecord.tenant_id == context.tenant_id,
                 EnterpriseDocumentRecord.company_id == command.company_id,
                 EnterpriseDocumentRecord.id == command.document_id,
             )
+            .with_for_update()
         )
         if document is None:
             raise CommandExecutionError("NOT_FOUND_OR_FORBIDDEN")

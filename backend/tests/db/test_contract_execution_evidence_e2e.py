@@ -402,10 +402,14 @@ def test_rectification_keeps_act_source_version_and_requests_requalification(
         replaced_contract_instrument_version_id=instrument_version_command.contract_instrument_version_id,
         rationale="Déclaration Patron sourcée à partir de l’avenant enregistré.",
     )
-    assert supersession_dispatcher.dispatch(
-        command=declaration, context=actor_context
-    ).result_code == "CONTRACT_INSTRUMENT_SUPERSESSION_DECLARED"
-    assert supersession_dispatcher.dispatch(command=declaration, context=actor_context).replayed is True
+    assert (
+        supersession_dispatcher.dispatch(command=declaration, context=actor_context).result_code
+        == "CONTRACT_INSTRUMENT_SUPERSESSION_DECLARED"
+    )
+    assert (
+        supersession_dispatcher.dispatch(command=declaration, context=actor_context).replayed
+        is True
+    )
     duplicate_declaration = declaration.model_copy(
         update={"command_id": uuid4(), "idempotency_key": uuid4(), "supersession_id": uuid4()}
     )
@@ -426,14 +430,17 @@ def test_rectification_keeps_act_source_version_and_requests_requalification(
     assert len(declarations) == 1
     assert declarations[0].replacing_version.version_reference == "AVENANT-1-2026-09-29"
     assert declarations[0].replaced_version.version_reference == "MARCHE-SIGNE-2026-04-12"
-    assert declaration_reader.list_for_case(
-        actor=SimpleNamespace(
-            actor_kind=ActorKind.PATRON_ADMIN,
-            membership_id=uuid4(),
-            tenant_id=uuid4(),
-        ),
-        case_id=case_id,
-    ) == ()
+    assert (
+        declaration_reader.list_for_case(
+            actor=SimpleNamespace(
+                actor_kind=ActorKind.PATRON_ADMIN,
+                membership_id=uuid4(),
+                tenant_id=uuid4(),
+            ),
+            case_id=case_id,
+        )
+        == ()
+    )
     with (
         Session(database_engine) as session,
         pytest.raises(sa.exc.DBAPIError),
@@ -461,12 +468,18 @@ def test_rectification_keeps_act_source_version_and_requests_requalification(
         resulting_contract_instrument_version_id=amendment_command.contract_instrument_version_id,
         rationale="Le Patron relie la déclaration à l’avenant référencé, sans conclure son applicabilité.",
     )
-    assert requalification_dispatcher.dispatch(
-        command=first_requalification, context=actor_context
-    ).result_code == "CONTRACT_EXECUTION_EVIDENCE_REQUALIFICATION_RECORDED"
-    assert requalification_dispatcher.dispatch(
-        command=first_requalification, context=actor_context
-    ).replayed is True
+    assert (
+        requalification_dispatcher.dispatch(
+            command=first_requalification, context=actor_context
+        ).result_code
+        == "CONTRACT_EXECUTION_EVIDENCE_REQUALIFICATION_RECORDED"
+    )
+    assert (
+        requalification_dispatcher.dispatch(
+            command=first_requalification, context=actor_context
+        ).replayed
+        is True
+    )
     stale_requalification = first_requalification.model_copy(
         update={
             "command_id": uuid4(),
@@ -492,7 +505,9 @@ def test_rectification_keeps_act_source_version_and_requests_requalification(
         CommandExecutionError,
         match="CONTRACT_EXECUTION_EVIDENCE_NOT_FOUND_OR_FORBIDDEN",
     ):
-        requalification_dispatcher.dispatch(command=other_case_requalification, context=actor_context)
+        requalification_dispatcher.dispatch(
+            command=other_case_requalification, context=actor_context
+        )
 
     follow_up_requalification = RecordContractExecutionEvidenceRequalificationCommand(
         command_id=uuid4(),
@@ -506,9 +521,7 @@ def test_rectification_keeps_act_source_version_and_requests_requalification(
         resulting_contract_instrument_version_id=None,
         rationale="Il manque une pièce pour terminer la revue humaine.",
     )
-    requalification_dispatcher.dispatch(
-        command=follow_up_requalification, context=actor_context
-    )
+    requalification_dispatcher.dispatch(command=follow_up_requalification, context=actor_context)
     retained_requalification = RecordContractExecutionEvidenceRequalificationCommand(
         command_id=uuid4(),
         idempotency_key=uuid4(),
@@ -521,9 +534,7 @@ def test_rectification_keeps_act_source_version_and_requests_requalification(
         resulting_contract_instrument_version_id=None,
         rationale="Le Patron conserve la référence initiale pour cette déclaration.",
     )
-    requalification_dispatcher.dispatch(
-        command=retained_requalification, context=actor_context
-    )
+    requalification_dispatcher.dispatch(command=retained_requalification, context=actor_context)
     requalification_reader = ContractExecutionEvidenceRequalificationReadService(
         session_factory=session_factory
     )
@@ -536,18 +547,24 @@ def test_rectification_keeps_act_source_version_and_requests_requalification(
     ]
     assert requalifications[0].resulting_version.version_reference == "AVENANT-1-2026-09-29"
     assert requalifications[1].resulting_version is None
-    assert requalifications[2].resulting_version.id == instrument_version_command.contract_instrument_version_id
-    assert service.list_for_case(actor=actor, case_id=case_id)[0].contract_instrument_version_relation == (
-        "REVIEW_REQUIRED"
+    assert (
+        requalifications[2].resulting_version.id
+        == instrument_version_command.contract_instrument_version_id
     )
-    assert requalification_reader.list_for_case(
-        actor=SimpleNamespace(
-            actor_kind=ActorKind.PATRON_ADMIN,
-            membership_id=uuid4(),
-            tenant_id=uuid4(),
-        ),
-        case_id=case_id,
-    ) == ()
+    assert service.list_for_case(actor=actor, case_id=case_id)[
+        0
+    ].contract_instrument_version_relation == ("REVIEW_REQUIRED")
+    assert (
+        requalification_reader.list_for_case(
+            actor=SimpleNamespace(
+                actor_kind=ActorKind.PATRON_ADMIN,
+                membership_id=uuid4(),
+                tenant_id=uuid4(),
+            ),
+            case_id=case_id,
+        )
+        == ()
+    )
     with (
         Session(database_engine) as session,
         pytest.raises(sa.exc.DBAPIError),

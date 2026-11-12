@@ -17,6 +17,8 @@ class DecisionContextReferenceRequest(BaseModel):
         "PRICING_SCENARIO",
         "BUSINESS_METHOD_PROFILE",
         "CONTRACT_BASELINE_IMPACT",
+        "ANALYSIS_ASSESSMENT",
+        "CAPACITY_RUN",
     ]
     aggregate_id: UUID
     aggregate_revision: int = Field(ge=0)
@@ -30,6 +32,14 @@ class DecisionContextReferenceRequest(BaseModel):
 
     @model_validator(mode="after")
     def require_profile_hash(self) -> DecisionContextReferenceRequest:
+        if self.aggregate_type == "CAPACITY_RUN" and (
+            self.aggregate_revision < 1 or self.content_hash is None
+        ):
+            raise ValueError("capacity references require revision and input hash")
+        if self.aggregate_type == "ANALYSIS_ASSESSMENT" and (
+            self.aggregate_revision < 1 or self.content_hash is None
+        ):
+            raise ValueError("analysis assessment references require revision and source hash")
         if self.aggregate_type == "BUSINESS_METHOD_PROFILE" and (
             self.aggregate_revision < 1 or self.content_hash is None
         ):
@@ -118,5 +128,29 @@ class ResolveDecisionConditionResponse(BaseModel):
     condition_id: UUID
     status: Literal["SATISFIED", "FAILED"]
     version: int = Field(ge=1)
+    event_ids: list[UUID]
+    replayed: bool
+
+
+class LinkDecisionConditionContractEvidenceRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    command_id: UUID
+    idempotency_key: UUID
+    correlation_id: UUID | None = None
+    link_id: UUID
+    contract_impact_id: UUID
+    proof_revision: int = Field(ge=1)
+    expected_decision_revision: int = Field(ge=1)
+
+
+class LinkDecisionConditionContractEvidenceResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    command_id: UUID
+    idempotency_key: UUID
+    result_code: Literal["DECISION_CONDITION_CONTRACT_EVIDENCE_LINKED"]
+    decision_id: UUID
+    condition_id: UUID
+    link_id: UUID
+    proof_revision: int = Field(ge=1)
     event_ids: list[UUID]
     replayed: bool
