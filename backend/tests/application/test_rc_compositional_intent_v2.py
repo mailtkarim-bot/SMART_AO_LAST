@@ -26,6 +26,7 @@ def test_v2_development_family_contract(case):
         assert result.intent is None
         return
     intent = result.intent
+    assert intent is not None
     assert {k: getattr(intent, k) for k in ["subject", "demand", "coverage"]} == {
         k: expected[k] for k in ["subject", "demand", "coverage"]
     }
@@ -53,7 +54,9 @@ def test_v2_development_family_contract(case):
 def test_v2_new_relations_keep_refusals(query):
     from app.modules.knowledge.application.rc_compositional_intent_v2 import recognize_rc_intent
 
-    assert recognize_rc_intent(query).intent.coverage != "COVERED"
+    result = recognize_rc_intent(query)
+    assert result.intent is not None
+    assert result.intent.coverage != "COVERED"
 
 
 @pytest.mark.parametrize(
@@ -73,6 +76,7 @@ def test_v2_retains_prior_development_not_prior_challenge(case):
         assert result.intent is None
         return
     intent = result.intent
+    assert intent is not None
     assert {k: getattr(intent, k) for k in ["subject", "demand", "coverage"]} == {
         k: expected[k] for k in ["subject", "demand", "coverage"]
     }
@@ -92,6 +96,7 @@ def test_v2_does_not_merge_two_active_questions_into_a_time_auxiliary(query):
 
     result = recognize_rc_intent(query)
     assert result.reason == "MULTIPLE_DEMANDS"
+    assert result.intent is not None
     assert result.intent.coverage == "AMBIGUOUS" and result.intent.demand == "UNKNOWN"
     assert not any(a.signal == "DEMAND" for a in result.intent.anchors)
 
@@ -108,5 +113,6 @@ def test_v2_local_reference_needs_matching_prior_antecedent(query):
     from app.modules.knowledge.application.rc_compositional_intent_v2 import recognize_rc_intent
 
     result = recognize_rc_intent(query)
+    assert result.intent is not None
     assert result.reason == "UNRESOLVED_REFERENCE" and result.intent.coverage == "UNKNOWN"
     assert not any(a.signal == "DEMAND" for a in result.intent.anchors)

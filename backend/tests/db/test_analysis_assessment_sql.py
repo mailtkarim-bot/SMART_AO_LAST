@@ -1,3 +1,4 @@
+from typing import Any, cast
 from uuid import uuid4
 
 import pytest
@@ -207,6 +208,7 @@ def test_assessment_sql_is_append_only_and_downgrade_refuses_data(
         "act_migration",
         Path(__file__).parents[2] / "alembic/versions/20261020_0137_case_analysis_assessments.py",
     )
+    assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     with (
@@ -288,7 +290,7 @@ def test_http_act_mfa_permissions_receipt_and_conflicts(session_factory, dossier
                 get_case_analysis_summary=lambda **kw: read(session_factory, seed),
             ),
             security_runtime=ConsultationSecurityRuntime(
-                context_resolver=SimpleNamespace(resolve=lambda **kw: current[0]),
+                context_resolver=cast(Any, SimpleNamespace(resolve=lambda **kw: current[0])),
                 policy=AuthorizationPolicy(),
             ),
         )

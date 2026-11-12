@@ -2,6 +2,7 @@
 
 from dataclasses import replace
 from types import SimpleNamespace
+from typing import Any, cast
 from uuid import uuid4
 
 import pytest
@@ -37,7 +38,7 @@ def attach_publication(session_factory, workflow):
                 reader=SqlAlchemyFinancialReportReader(session_factory), policy=policy
             ),
             line_service=_service(session_factory),
-            draft_creation_service=None,
+            draft_creation_service=cast(Any, None),
             publication_service=PatronFinancialReportPublicationService(
                 reader=SqlAlchemyFinancialReportSnapshotReader(session_factory),
                 dispatcher=CommandDispatcher(
@@ -47,8 +48,8 @@ def attach_publication(session_factory, workflow):
                 policy=policy,
             ),
             security_runtime=ConsultationSecurityRuntime(
-                context_resolver=SimpleNamespace(
-                    resolve=lambda **kw: client.position_actor_holder.actor
+                context_resolver=cast(
+                    Any, SimpleNamespace(resolve=lambda **kw: client.position_actor_holder.actor)
                 ),
                 policy=policy,
             ),

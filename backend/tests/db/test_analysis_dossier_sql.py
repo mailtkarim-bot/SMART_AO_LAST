@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from typing import Any, cast
 from uuid import uuid4
 
 import pytest
@@ -36,7 +37,9 @@ def test_prepare_treat_review_and_invalidate_exact_dossier(session_factory, doss
     runtime = SimpleNamespace(session_factory=session_factory)
 
     def read():
-        return AppRuntime.get_case_analysis_summary(runtime, tenant_id=seed[0], case_id=seed[1])
+        return AppRuntime.get_case_analysis_summary(
+            cast(Any, runtime), tenant_id=seed[0], case_id=seed[1]
+        )
 
     axes = [
         dict(
@@ -99,7 +102,7 @@ def test_prepare_treat_review_and_invalidate_exact_dossier(session_factory, doss
         and summary["dossier_review"]["axes"] == []
     )
     history = AppRuntime.get_case_analysis_dossier_history(
-        runtime, tenant_id=seed[0], case_id=seed[1]
+        cast(Any, runtime), tenant_id=seed[0], case_id=seed[1]
     )
     assert history["entries"][0]["state"] == "HISTORICAL"
     assert history["entries"][0]["snapshot"]["dce_version_id"] == str(seed[2])
@@ -154,7 +157,9 @@ def test_dossier_locks_draft_financial_snapshot_against_concurrent_publication(
             )
         )
     summary = AppRuntime.get_case_analysis_summary(
-        SimpleNamespace(session_factory=session_factory), tenant_id=seed[0], case_id=seed[1]
+        cast(Any, SimpleNamespace(session_factory=session_factory)),
+        tenant_id=seed[0],
+        case_id=seed[1],
     )
     cmd = RecordAnalysisDossierCommand(
         command_id=uuid4(),
@@ -217,7 +222,9 @@ def test_review_phase_and_populated_downgrade_are_enforced_in_postgresql(session
 
     seed, _, _, actor = record_setup(session_factory, dossier)
     summary = AppRuntime.get_case_analysis_summary(
-        SimpleNamespace(session_factory=session_factory), tenant_id=seed[0], case_id=seed[1]
+        cast(Any, SimpleNamespace(session_factory=session_factory)),
+        tenant_id=seed[0],
+        case_id=seed[1],
     )
     cmd = RecordAnalysisDossierCommand(
         command_id=uuid4(),
@@ -270,7 +277,9 @@ def test_concurrent_dossier_preparations_have_one_first_revision(
 
     seed, _, _, actor = record_setup(session_factory, dossier)
     summary = AppRuntime.get_case_analysis_summary(
-        SimpleNamespace(session_factory=session_factory), tenant_id=seed[0], case_id=seed[1]
+        cast(Any, SimpleNamespace(session_factory=session_factory)),
+        tenant_id=seed[0],
+        case_id=seed[1],
     )
     cmd = RecordAnalysisDossierCommand(
         command_id=uuid4(),
@@ -326,7 +335,9 @@ def test_history_pagination_preserves_scope_and_snapshot_integrity(session_facto
 
     seed, _, _, actor = record_setup(session_factory, dossier)
     runtime = SimpleNamespace(session_factory=session_factory)
-    summary = AppRuntime.get_case_analysis_summary(runtime, tenant_id=seed[0], case_id=seed[1])
+    summary = AppRuntime.get_case_analysis_summary(
+        cast(Any, runtime), tenant_id=seed[0], case_id=seed[1]
+    )
     dispatcher = CommandDispatcher(
         session_factory=session_factory,
         handlers={"RecordAnalysisDossier": RecordAnalysisDossierHandler(session_factory)},
@@ -351,18 +362,21 @@ def test_history_pagination_preserves_scope_and_snapshot_integrity(session_facto
         )
         dispatcher.dispatch(command=cmd, context=actor)
     first = AppRuntime.get_case_analysis_dossier_history(
-        runtime, tenant_id=seed[0], case_id=seed[1]
+        cast(Any, runtime), tenant_id=seed[0], case_id=seed[1]
     )
     assert len(first["entries"]) == 20
     second = AppRuntime.get_case_analysis_dossier_history(
-        runtime, tenant_id=seed[0], case_id=seed[1], before_revision=first["next_before_revision"]
+        cast(Any, runtime),
+        tenant_id=seed[0],
+        case_id=seed[1],
+        before_revision=first["next_before_revision"],
     )
     assert len(second["entries"]) == 2 and second["next_before_revision"] is None
     assert {e["revision"] for e in first["entries"] + second["entries"]} == set(range(1, 23))
     assert (
-        AppRuntime.get_case_analysis_dossier_history(runtime, tenant_id=uuid4(), case_id=seed[1])[
-            "entries"
-        ]
+        AppRuntime.get_case_analysis_dossier_history(
+            cast(Any, runtime), tenant_id=uuid4(), case_id=seed[1]
+        )["entries"]
         == []
     )
     with session_factory.begin() as s:
@@ -375,4 +389,6 @@ def test_history_pagination_preserves_scope_and_snapshot_integrity(session_facto
             {"id": seed[1]},
         )
     with pytest.raises(ValueError, match="HISTORICAL_DOSSIER_INTEGRITY_UNPROVEN"):
-        AppRuntime.get_case_analysis_dossier_history(runtime, tenant_id=seed[0], case_id=seed[1])
+        AppRuntime.get_case_analysis_dossier_history(
+            cast(Any, runtime), tenant_id=seed[0], case_id=seed[1]
+        )

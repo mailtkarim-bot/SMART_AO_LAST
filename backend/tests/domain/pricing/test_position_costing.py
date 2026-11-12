@@ -1,10 +1,11 @@
 from datetime import date
+from typing import Any
 
 
 def test_missing_cost_never_uses_imported_price_or_offer_total():
     from app.modules.pricing.domain.position_costing import project_position_costing
 
-    snapshot = {
+    snapshot: dict[str, Any] = {
         "import": {"total_minor": 50000, "unit": "m2"},
         "costs": [],
         "requirement": None,
@@ -28,7 +29,7 @@ def test_missing_cost_never_uses_imported_price_or_offer_total():
 def test_only_current_same_currency_costs_are_added_and_reuse_is_visible():
     from app.modules.pricing.domain.position_costing import project_position_costing
 
-    snapshot = {
+    snapshot: dict[str, Any] = {
         "import": {"unit": "m2"},
         "costs": [
             {"line_id": "a", "amount_minor": 100, "currency_code": "EUR", "unit": "m2"},
@@ -75,7 +76,7 @@ def test_stale_context_never_transfers_costs_to_current_projection():
 def test_quantities_and_multiple_economic_bases_are_not_silently_equated():
     from app.modules.pricing.domain.position_costing import project_position_costing
 
-    snapshot = {
+    snapshot: dict[str, Any] = {
         "import": {"unit": "u", "quantity_decimal": "2"},
         "costs": [
             {
@@ -107,7 +108,7 @@ def test_quantities_and_multiple_economic_bases_are_not_silently_equated():
 def test_equal_decimal_quantities_do_not_create_a_false_warning():
     from app.modules.pricing.domain.position_costing import project_position_costing
 
-    snapshot = {
+    snapshot: dict[str, Any] = {
         "import": {"unit": "m2", "quantity_decimal": "2"},
         "costs": [
             {

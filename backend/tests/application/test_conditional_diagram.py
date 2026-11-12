@@ -40,7 +40,7 @@ def case():
     tokens, nodes = [], []
     for i, (name, kind, text) in enumerate(specs):
         anchor = RegionAnchor(scope, (50 + i * 65, 100, 80 + i * 65, 125))
-        ids = () if not text else ("text-" + name,)
+        ids: tuple[str, ...] = () if not text else ("text-" + name,)
         if text:
             tokens.append(RegionToken(ids[0], text, anchor))
         nodes.append(

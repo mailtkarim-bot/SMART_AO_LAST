@@ -7,6 +7,7 @@ import os
 from dataclasses import replace
 from datetime import timedelta
 from types import SimpleNamespace
+from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
@@ -395,7 +396,7 @@ def test_human_contribution_native_draft_review_and_source_invalidation(
         ),
     )
     assert plan.status_code == 201, plan.text
-    body = dict(
+    body: dict[str, Any] = dict(
         command_id=str(uuid4()),
         idempotency_key=str(uuid4()),
         expected_package_revision=1,
@@ -420,7 +421,7 @@ def test_human_contribution_native_draft_review_and_source_invalidation(
             pytest.fail("An out-of-plan contribution must not touch source records")
 
         isolated.setattr(contribution_sources, "contribution_source_snapshots", forbidden_reader)
-        outside = dict(
+        outside: dict[str, Any] = dict(
             body,
             command_id=str(uuid4()),
             idempotency_key=str(uuid4()),
@@ -465,7 +466,7 @@ def test_human_contribution_native_draft_review_and_source_invalidation(
         capabilities=capabilities_for(ActorKind.PATRON_ADMIN),
     )
     headers = _headers(w.tokens, patron)
-    request = dict(
+    request: dict[str, Any] = dict(
         command_id=str(uuid4()),
         idempotency_key=str(uuid4()),
         review_id=str(uuid4()),
@@ -629,7 +630,9 @@ def test_selected_response_coverage_is_read_only_exact_and_invalidated(
                 TechnicalResponseDraftRecord.draft_id == draft_id,
             )
         )
-    selection = dict(draft_id=str(draft_id), version=1, content_sha256=native.content_sha256)
+    selection: dict[str, Any] = dict(
+        draft_id=str(draft_id), version=1, content_sha256=native.content_sha256
+    )
     url = f"/api/v1/preparation/{w.package_id}/response-coverage"
     response = w.client.post(url, headers=w.headers, json=selection)
     assert response.status_code == 200, response.text

@@ -11,6 +11,7 @@ def load():
     path = ROOT / "scripts/qualify_rc_actor_intent_v4.py"
     assert path.exists(), "V4 evaluator missing"
     spec = importlib.util.spec_from_file_location("actor_v4_qualifier", path)
+    assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module

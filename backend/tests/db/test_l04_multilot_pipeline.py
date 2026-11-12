@@ -6,6 +6,7 @@ import asyncio
 import json
 from hashlib import sha256
 from pathlib import Path
+from typing import Any, cast
 from uuid import UUID, uuid4
 
 import pytest
@@ -149,11 +150,11 @@ def complete_dossier(session_factory, tmp_path, request):
     args = dict(
         tenant_id=tenant,
         dce_version_id=version,
-        dce_rc_analysis_id=UUID(analysis.aggregate_refs[0]["aggregate_id"]),
+        dce_rc_analysis_id=UUID(cast(str, analysis.aggregate_refs[0]["aggregate_id"])),
         now=NOW,
     )
-    materializer.materialize(**args)
-    assert materializer.materialize(**args).replayed
+    materializer.materialize(**cast(Any, args))
+    assert materializer.materialize(**cast(Any, args)).replayed
     case_id = uuid4()
     with session_factory.begin() as s:
         from app.modules.dce.infrastructure.models.dce_version import DceVersionRecord

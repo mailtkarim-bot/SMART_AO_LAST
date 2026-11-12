@@ -1,3 +1,4 @@
+from typing import Any, cast
 from uuid import uuid4
 
 import pytest
@@ -32,11 +33,11 @@ def test_treatment_requires_meaningful_action_and_explicit_unknowns():
         dict(applicability_reason=" "),
     ]:
         with pytest.raises(ValidationError):
-            AnalysisTreatment(**dict(treatment(), **change))
+            AnalysisTreatment(**cast(Any, dict(treatment(), **cast(Any, change))))
 
 
 def test_dossier_requires_exactly_twelve_distinct_axis_reviews():
-    fields = dict(
+    fields: dict[str, Any] = dict(
         command_id=uuid4(),
         idempotency_key=uuid4(),
         review_id=uuid4(),

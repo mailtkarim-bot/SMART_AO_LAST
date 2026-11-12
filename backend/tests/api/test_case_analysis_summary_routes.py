@@ -1,5 +1,6 @@
 from dataclasses import replace
 from types import SimpleNamespace
+from typing import Any, cast
 from uuid import uuid4
 
 import pytest
@@ -36,7 +37,7 @@ def client(role=ActorKind.PATRON_ADMIN, allowed=True):
         get_case_tenant_id=lambda **kw: actor.tenant_id, get_case_analysis_summary=read
     )
     security = ConsultationSecurityRuntime(
-        context_resolver=SimpleNamespace(resolve=lambda **kw: actor), policy=policy
+        context_resolver=cast(Any, SimpleNamespace(resolve=lambda **kw: actor)), policy=policy
     )
     app = FastAPI()
     app.include_router(

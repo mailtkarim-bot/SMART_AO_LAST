@@ -2,6 +2,7 @@ from dataclasses import replace
 from hashlib import sha256
 from importlib import import_module
 from importlib.util import find_spec
+from typing import Any
 from uuid import UUID
 
 import pytest
@@ -192,7 +193,7 @@ def test_reread_hash_is_computed_from_crop_pixels():
     from PIL import Image
 
     d = case()
-    seen = []
+    seen: list[Any] = []
     r = api().qualify_candidate_ocr_coverage(**d, ocr_adapter=adapter(seen=seen))
     im = Image.open(BytesIO(d["png_bytes"]))
     crop = im.crop((37, 32, 103, 108)).resize((198, 228), Image.Resampling.LANCZOS)
@@ -282,7 +283,7 @@ def test_repaired_crop_hash_covers_contrast_and_white_border():
     from PIL import Image, ImageOps
 
     d = case()
-    seen = []
+    seen: list[Any] = []
     r = api().qualify_candidate_ocr_coverage(
         **d, ocr_adapter=sequence_adapter(("", "NON ELIGIBLE"), seen=seen)
     )
@@ -342,7 +343,7 @@ def test_line_reread_regions_hashes_and_order_are_preserved():
 
 def test_successful_original_crop_is_preserved_without_enhancement():
     d = case()
-    seen = []
+    seen: list[Any] = []
     r = api().qualify_candidate_ocr_coverage(**d, ocr_adapter=adapter(seen=seen))
     assert seen == [(228, 198, 3)]
     assert r.frames[0].readings[0].crop_recipe == "scale3-lanczos-v1"
@@ -370,7 +371,7 @@ def test_more_than_eight_pixel_lines_stays_unknown_without_line_ocr():
     d["expected_scope"] = scope
     d["diagram_region"] = replace(d["diagram_region"], scope=scope)
     d["tokens"] = (RegionToken("merged", "NON ELIGIBLE", RegionAnchor(scope, (44, 39, 96, 81))),)
-    seen = []
+    seen: list[Any] = []
     r = api().qualify_candidate_ocr_coverage(
         **d, ocr_adapter=sequence_adapter(("NONELIGIBLE",), seen=seen)
     )

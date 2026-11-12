@@ -1,5 +1,6 @@
 from dataclasses import replace
 from datetime import date
+from typing import Any, cast
 from uuid import UUID
 
 import pytest
@@ -47,7 +48,7 @@ def test_successive_work_reuses_capacity_but_overlap_is_a_dated_conflict():
 @pytest.mark.parametrize("field", ["period", "source", "required_units", "resource_type"])
 def test_missing_evidence_is_unknown_not_an_assignment(field):
     result = DatedCapacityOptimizer().solve(
-        demands=(replace(DEMAND, **{field: None}),), supplies=(SUPPLY,)
+        demands=(replace(DEMAND, **cast(Any, {field: None})),), supplies=(SUPPLY,)
     )
     assert result.status == SolverStatus.UNKNOWN
     assert result.assignments == {}
@@ -85,7 +86,7 @@ def test_empty_and_missing_are_distinct_and_invalid_inputs_are_refused():
 def test_results_are_deterministic_and_supply_identity_cannot_double_capacity():
     optimizer = DatedCapacityOptimizer()
     inputs = dict(demands=(DEMAND,), supplies=(SUPPLY, replace(SUPPLY, id=uid(20))))
-    assert optimizer.solve(**inputs) == optimizer.solve(**inputs)
+    assert optimizer.solve(**cast(Any, inputs)) == optimizer.solve(**cast(Any, inputs))
     with pytest.raises(ValueError):
         optimizer.solve(demands=(DEMAND,), supplies=(SUPPLY, SUPPLY))
 

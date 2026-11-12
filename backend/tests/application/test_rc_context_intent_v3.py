@@ -1,6 +1,7 @@
 import json
 from dataclasses import asdict
 from pathlib import Path
+from typing import Any, cast
 
 import pytest
 
@@ -16,6 +17,7 @@ def test_v3_original_intent_and_context_provenance(case):
 
     result = recognize_rc_intent(case["text"])
     intent = result.intent
+    assert intent is not None
     expected = case["expected_intent"]
     assert result.mechanism == "rc-context-v3" and result.anchor_convention == "lexical-cue-v3"
     assert result.reason == case["expected_reason"]
@@ -50,6 +52,7 @@ def test_v3_neutrality_does_not_promote_charged_or_unknown_context(query):
     from app.modules.knowledge.application.rc_context_intent_v3 import recognize_rc_intent
 
     result = recognize_rc_intent(query)
+    assert result.intent is not None
     assert result.intent.coverage != "COVERED"
     assert all(
         a.excerpt.lower() in ["pour préparer notre offre, ", "pour information, "]
@@ -61,6 +64,7 @@ def test_v3_legitimate_scope_is_retained_without_neutralizing_it():
     from app.modules.knowledge.application.rc_context_intent_v3 import recognize_rc_intent
 
     result = recognize_rc_intent("Pour le lot 33, le DC1 est-il requis ?")
+    assert result.intent is not None
     assert result.intent.scope.lot == 33 and result.intent.coverage == "COVERED"
     assert not result.context_evidence
 
@@ -106,6 +110,7 @@ def test_v3_timeout_does_not_fallback_to_raw_recognition(monkeypatch):
 
     monkeypatch.setattr(module, "_recognize_v2", unavailable)
     result = module.recognize_rc_intent("Pour préparer notre offre, le DC1 est-il requis ?")
+    assert result.intent is not None
     assert result.reason == "RECOGNIZER_UNAVAILABLE" and result.intent.coverage == "UNKNOWN"
     assert len(calls) == 1
 
@@ -121,6 +126,7 @@ def test_v3_rejects_fabricated_provenance(monkeypatch):
 
     def corrupt(view):
         result = base(view)
+        assert result.intent is not None
         return replace(
             result,
             intent=replace(result.intent, anchors=(RcSignalAnchor("SUBJECT", 0, 1, "FAKE"),)),
@@ -128,6 +134,7 @@ def test_v3_rejects_fabricated_provenance(monkeypatch):
 
     monkeypatch.setattr(module, "_recognize_v2", corrupt)
     result = module.recognize_rc_intent("Pour préparer notre offre, le DC1 est-il requis ?")
+    assert result.intent is not None
     assert result.reason == "INVALID_RECOGNIZER_OUTPUT" and result.intent.coverage == "UNKNOWN"
 
 
@@ -140,14 +147,17 @@ def test_v3_overlapping_contexts_and_incomplete_output_are_not_certified(monkeyp
     )
 
     result = module.recognize_rc_intent("Pour information, pour préparer notre offre ?")
+    assert result.intent is not None
     assert result.intent.coverage == "UNKNOWN" and not result.context_evidence
 
     def missing(view):
         result = base(view)
+        assert result.intent is not None
         return replace(result, intent=replace(result.intent, anchors=()))
 
     monkeypatch.setattr(module, "_recognize_v2", missing)
     result = module.recognize_rc_intent("Pour information, le DC1 est-il requis ?")
+    assert result.intent is not None
     assert result.reason == "INVALID_RECOGNIZER_OUTPUT" and result.intent.coverage == "UNKNOWN"
 
 
@@ -164,6 +174,7 @@ def test_v3_malformed_core_reason_abstains(monkeypatch):
 
     monkeypatch.setattr(module, "_recognize_v2", missing_reason)
     result = module.recognize_rc_intent("Pour information, le DC1 est-il requis ?")
+    assert result.intent is not None
     assert result.reason == "INVALID_RECOGNIZER_OUTPUT" and result.intent.coverage == "UNKNOWN"
 
 
@@ -186,6 +197,7 @@ def test_v3_preserves_v2_development_without_using_old_challenges(case):
         assert result.intent is None
         return
     intent = result.intent
+    assert intent is not None
     assert {k: getattr(intent, k) for k in ["subject", "demand", "coverage"]} == {
         k: expected[k] for k in ["subject", "demand", "coverage"]
     }
@@ -214,15 +226,17 @@ def test_v3_invalid_slot_types_or_classes_cannot_be_promoted(corruption, monkeyp
 
     def corrupt(view):
         result = base(view)
+        assert result.intent is not None
         intent = (
             replace(result.intent, scope=replace(result.intent.scope, lot=True))
             if corruption == "boolean-lot"
-            else replace(result.intent, subject="OTHER")
+            else replace(result.intent, subject=cast(Any, "OTHER"))
         )
         return replace(result, intent=intent)
 
     monkeypatch.setattr(module, "_recognize_v2", corrupt)
     result = module.recognize_rc_intent("Pour information, le DC1 est-il requis pour le lot 1 ?")
+    assert result.intent is not None
     assert result.reason == "INVALID_RECOGNIZER_OUTPUT" and result.intent.coverage == "UNKNOWN"
 
 
@@ -240,9 +254,12 @@ def test_v3_slots_reason_and_lexical_anchors_must_agree(corruption, monkeypatch)
     def corrupt(view):
         result = base(view)
         if corruption == "subject-mismatch":
+            assert result.intent is not None
             return replace(result, intent=replace(result.intent, subject="DC2"))
         if corruption == "coverage-enum":
-            return replace(result, intent=replace(result.intent, coverage="INVALID"))
+            assert result.intent is not None
+            return replace(result, intent=replace(result.intent, coverage=cast(Any, "INVALID")))
+        assert result.intent is not None
         changed = replace(result.intent, demand="DATE_TIME", coverage="UNSUPPORTED")
         return replace(
             result,
@@ -252,4 +269,5 @@ def test_v3_slots_reason_and_lexical_anchors_must_agree(corruption, monkeypatch)
 
     monkeypatch.setattr(module, "_recognize_v2", corrupt)
     result = module.recognize_rc_intent("Pour information, le DC1 est-il requis ?")
+    assert result.intent is not None
     assert result.reason == "INVALID_RECOGNIZER_OUTPUT" and result.intent.coverage == "UNKNOWN"

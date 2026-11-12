@@ -16,6 +16,7 @@ def test_sql_measurement_seed_fidelity_and_invalidations(database_engine, monkey
     spec = importlib.util.spec_from_file_location(
         "sql_trial", ROOT / "scripts/qualify_candidate_sql.py"
     )
+    assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     data = json.loads(
@@ -90,6 +91,7 @@ def test_candidate_sql_typed_scope_financial_guard_and_invalidation(
     result = service.retrieve(query=query, scope=scope)
     assert len(result.hits) == 1 and result.score_trace[0].decision == "RC_TYPED_RESCUE"
     if version in {8, 9}:
+        assert result.query_intent is not None
         assert result.query_intent.coverage == "COVERED" and result.query_intent.scope.lot == 17
     assert {c.subject for c in result.rc_projection.clauses} == {"DC2"}
     assert {c.subject for c in result.rc_unscoped_evidence} == {"DPGF"}

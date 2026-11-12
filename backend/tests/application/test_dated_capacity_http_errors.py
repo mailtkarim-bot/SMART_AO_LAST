@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from typing import Any, cast
 from uuid import uuid4
 
 import pytest
@@ -34,8 +35,11 @@ def test_uncertain_execution_never_becomes_editable_validation_failure(error, st
         build_patron_capacity_router(
             service=SimpleNamespace(record=fail),
             security_runtime=ConsultationSecurityRuntime(
-                context_resolver=SimpleNamespace(
-                    resolve=lambda **kwargs: SimpleNamespace(mfa_verified_at=datetime.now(UTC))
+                context_resolver=cast(
+                    Any,
+                    SimpleNamespace(
+                        resolve=lambda **kwargs: SimpleNamespace(mfa_verified_at=datetime.now(UTC))
+                    ),
                 ),
                 policy=AuthorizationPolicy(),
             ),

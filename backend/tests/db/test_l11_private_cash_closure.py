@@ -11,7 +11,7 @@ from tests.db.test_l10_private_cash_execution import (
 def test_repriced_changes_reach_closure_without_exposing_private_cash(
     session_factory, tmp_path, monkeypatch
 ):
-    private_values = []
+    private_values: list[str] = []
     checked = []
 
     def changes_runner(factory, root, patch, closure_qualifier=None):

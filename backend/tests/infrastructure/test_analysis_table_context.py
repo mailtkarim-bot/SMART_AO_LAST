@@ -3,6 +3,7 @@
 from dataclasses import asdict, replace
 from hashlib import sha256
 from types import SimpleNamespace
+from typing import Any, cast
 from uuid import uuid4
 
 import pytest
@@ -35,7 +36,7 @@ def test_table_context_requires_exact_fragment_identity(monkeypatch, fault):
         sha256(text.encode()).hexdigest(),
         locator,
     )
-    source = dict(asdict(a), locator_state="RESOLVED")
+    source: dict[str, Any] = dict(asdict(a), locator_state="RESOLVED")
     if fault == "source_locator":
         source = dict(
             source,
@@ -45,8 +46,8 @@ def test_table_context_requires_exact_fragment_identity(monkeypatch, fault):
         )
     if fault == "source_hash":
         source = dict(source, fragment_sha256="0" * 64)
-    item = dict(source_anchor=source)
-    changes = {
+    item: dict[str, Any] = dict(source_anchor=source)
+    changes: dict[str, Any] = {
         "none": {},
         "version": dict(dce_version_id=uuid4()),
         "identity": dict(source_anchor_id=uuid4()),
@@ -55,7 +56,7 @@ def test_table_context_requires_exact_fragment_identity(monkeypatch, fault):
         "source_locator": {},
         "source_hash": {},
     }
-    projected = replace(a, **changes[fault])
+    projected = replace(a, **cast(Any, changes[fault]))
 
     class Reader:
         def get_many(self, **kwargs):

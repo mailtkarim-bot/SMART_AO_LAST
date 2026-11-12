@@ -40,9 +40,9 @@ def test_submission_refuses_a_replaced_frozen_assessment_even_after_condition_sa
     assert resolved.status_code == 200, resolved.text
     reader = SqlAlchemySubmissionDecisionGateReader()
     with session_factory() as session:
-        assert evaluate_submission_gate(
-            reader.read(session=session, tenant_id=w.actor.tenant_id, case_id=w.case)
-        ).can_submit
+        snapshot = reader.read(session=session, tenant_id=w.actor.tenant_id, case_id=w.case)
+        assert snapshot is not None
+        assert evaluate_submission_gate(snapshot).can_submit
     changed = w.assessment.model_copy(
         update=dict(
             command_id=uuid4(), idempotency_key=uuid4(), assessment_id=uuid4(), expected_revision=1
@@ -50,8 +50,8 @@ def test_submission_refuses_a_replaced_frozen_assessment_even_after_condition_sa
     )
     w.dispatcher.dispatch(command=changed, context=w.context)
     with session_factory() as session:
-        gate = evaluate_submission_gate(
-            reader.read(session=session, tenant_id=w.actor.tenant_id, case_id=w.case)
-        )
+        snapshot = reader.read(session=session, tenant_id=w.actor.tenant_id, case_id=w.case)
+        assert snapshot is not None
+        gate = evaluate_submission_gate(snapshot)
         assert not gate.can_submit
         assert "DECISION_CONTEXT_NOT_FROZEN" in gate.reasons

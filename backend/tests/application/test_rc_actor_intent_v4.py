@@ -86,14 +86,21 @@ def test_v4_distinct_actor_object_and_obligation_proofs(query, subject, actor, o
 
     result = recognize_rc_intent(query)
     assert result.mechanism == "rc-actor-intent-v4"
+    assert result.intent is not None
     assert result.intent.coverage == "COVERED" and result.intent.demand == "OBLIGATION"
     assert result.intent.subject == subject and result.intent.scope.lot == lot
+    assert (
+        result.actor is not None
+        and result.object_evidence is not None
+        and result.action_evidence is not None
+    )
     assert result.actor.excerpt == actor and result.object_evidence.excerpt == obj
     assert result.action_evidence.excerpt == action
     assert result.intent.query_sha256 == sha256(query.encode()).hexdigest()
     anchors = [*result.intent.anchors, result.actor, result.object_evidence, result.action_evidence]
     anchors.extend(c.context for c in result.contexts)
     for a in anchors:
+        assert a is not None
         assert query.encode()[a.start_byte : a.end_byte] == a.excerpt.encode()
     assert result == recognize_rc_intent(query)
     if " sa candidature," in query or " son dossier," in query:
@@ -131,7 +138,9 @@ def test_v4_distinct_actor_object_and_obligation_proofs(query, subject, actor, o
 def test_v4_never_promotes_unproved_relations(query):
     from app.modules.knowledge.application.rc_actor_intent_v4 import recognize_rc_intent
 
-    assert recognize_rc_intent(query).intent.coverage != "COVERED"
+    result = recognize_rc_intent(query)
+    assert result.intent is not None
+    assert result.intent.coverage != "COVERED"
 
 
 def test_financial_query_is_refused_before_fallback(monkeypatch):
@@ -162,24 +171,27 @@ def test_invalid_budget_or_unicode_is_safe(query):
 def test_review_unproved_head_and_number_are_not_promoted(query):
     from app.modules.knowledge.application.rc_actor_intent_v4 import recognize_rc_intent
 
-    assert recognize_rc_intent(query).intent.coverage != "COVERED"
+    result = recognize_rc_intent(query)
+    assert result.intent is not None
+    assert result.intent.coverage != "COVERED"
 
 
 @pytest.mark.parametrize("space", ["\t", "\u00a0"])
 def test_review_explicit_plural_proof_accepts_unicode_whitespace(space):
     from app.modules.knowledge.application.rc_actor_intent_v4 import recognize_rc_intent
 
-    assert (
-        recognize_rc_intent(f"Les{space}candidats doivent-ils remettre le DC1 ?").intent.coverage
-        == "COVERED"
-    )
+    result = recognize_rc_intent(f"Les{space}candidats doivent-ils remettre le DC1 ?")
+    assert result.intent is not None
+    assert result.intent.coverage == "COVERED"
 
 
 def test_actorless_form_keeps_full_object_and_request_without_inventing_actor():
     from app.modules.knowledge.application.rc_actor_intent_v4 import recognize_rc_intent
 
     result = recognize_rc_intent("Pour préparer notre offre, le DC1 est-il requis ?")
+    assert result.intent is not None
     assert result.intent.coverage == "COVERED" and result.actor is None
+    assert result.object_evidence is not None
     assert result.object_evidence.excerpt == "le DC1"
     assert next(a.excerpt for a in result.intent.anchors if a.signal == "DEMAND") == "est-il requis"
     assert result.contexts[0].owner is None
@@ -189,6 +201,7 @@ def test_fallback_keeps_the_nominal_request_predicate():
     from app.modules.knowledge.application.rc_actor_intent_v4 import recognize_rc_intent
 
     r = recognize_rc_intent("Le DC1 est-il une pièce obligatoire ?")
+    assert r.intent is not None
     assert (
         next(a.excerpt for a in r.intent.anchors if a.signal == "DEMAND")
         == "est-il une pièce obligatoire"

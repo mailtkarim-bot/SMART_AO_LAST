@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 from datetime import UTC, datetime
-from typing import cast
+from typing import Any, cast
 from uuid import UUID, uuid4
 
 import pytest
@@ -160,7 +160,7 @@ def _run_a1_on_second_profile(
         headers=headers,
     )
     assert finalized.status_code == 200, finalized.text
-    link_body = {
+    link_body: dict[str, Any] = {
         "command_id": str(uuid4()),
         "idempotency_key": str(uuid4()),
         "correlation_id": str(uuid4()),
@@ -262,7 +262,7 @@ def test_a1_http_postgres_chain_is_idempotent_tenant_scoped_and_does_not_promote
     def decision_repository_factory(session):
         return SqlAlchemyDecisionRepository(session)
 
-    handlers = {
+    handlers: dict[str, Any] = {
         **contract_baseline_handlers(),
         **decision_lifecycle_handlers(
             lifecycle_repository=lifecycle_repository,
@@ -303,10 +303,10 @@ def test_a1_http_postgres_chain_is_idempotent_tenant_scoped_and_does_not_promote
         )
     )
     client = TestClient(app, raise_server_exceptions=False)
-    headers = {"Authorization": "Bearer a1-test-token"}
+    headers: dict[str, Any] = {"Authorization": "Bearer a1-test-token"}
 
     proof_id = uuid4()
-    impact_body = {
+    impact_body: dict[str, Any] = {
         "command_id": str(uuid4()),
         "idempotency_key": str(uuid4()),
         "correlation_id": str(uuid4()),
@@ -478,7 +478,7 @@ def test_a1_http_postgres_chain_is_idempotent_tenant_scoped_and_does_not_promote
                 created_by_actor_id=actor.actor_id,
             )
         )
-    link_body = {
+    link_body: dict[str, Any] = {
         "command_id": str(uuid4()),
         "idempotency_key": str(uuid4()),
         "correlation_id": str(uuid4()),
@@ -526,7 +526,7 @@ def test_a1_http_postgres_chain_is_idempotent_tenant_scoped_and_does_not_promote
 
     with Session(database_engine) as session:
         requirement = session.get(DceRequirementRecord, requirement_id)
-        item = dict(
+        item: dict[str, Any] = dict(
             item_id=requirement_id,
             kind="REQUIREMENT",
             native_state="CONFIRMED",

@@ -6,6 +6,7 @@ import asyncio
 import json
 from hashlib import sha256
 from types import SimpleNamespace
+from typing import cast
 from uuid import UUID, uuid4
 
 import pytest
@@ -110,8 +111,8 @@ def test_mixed_originals_keep_exact_anchors_and_unread_table(session_factory, mi
     assert len(points) == 3
     assert summary["coverage"]["unread_documents"] == 1
     assert not summary["analysis_complete"]
-    expected = {"pdf_page", "docx_paragraph", "xlsx_cell"}
-    assert {p["source_anchor"]["locator"]["kind"] for p in points} == expected
+    expected_kinds = {"pdf_page", "docx_paragraph", "xlsx_cell"}
+    assert {p["source_anchor"]["locator"]["kind"] for p in points} == expected_kinds
     for point in points:
         anchor = point["source_anchor"]
         assert anchor["dce_version_id"] == seed[2]
@@ -269,7 +270,7 @@ def test_rectificatif_invalidates_review_and_restarts_treatments(
     DceRequirementsService(session_factory=session_factory, dispatcher=dispatcher).materialize(
         tenant_id=seed[0],
         dce_version_id=new_version,
-        dce_rc_analysis_id=UUID(analysis.aggregate_refs[0]["aggregate_id"]),
+        dce_rc_analysis_id=UUID(cast(str, analysis.aggregate_refs[0]["aggregate_id"])),
         now=NOW,
     )
     successor = seed[0], seed[1], new_version, ids, manifest
@@ -341,7 +342,7 @@ def test_fresh_extraction_can_be_rematerialized_without_ghost_points(
     service.materialize(
         tenant_id=seed[0],
         dce_version_id=seed[2],
-        dce_rc_analysis_id=UUID(analysis.aggregate_refs[0]["aggregate_id"]),
+        dce_rc_analysis_id=UUID(cast(str, analysis.aggregate_refs[0]["aggregate_id"])),
         now=NOW + timedelta(seconds=3),
     )
     current = read(session_factory, seed)

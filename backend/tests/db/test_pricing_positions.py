@@ -1,6 +1,7 @@
 from dataclasses import replace
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from typing import Any, cast
 from uuid import uuid4
 
 import pytest
@@ -42,7 +43,7 @@ def workflow(session_factory):
         build_patron_pricing_positions_router(
             service=service,
             security_runtime=ConsultationSecurityRuntime(
-                context_resolver=resolver, policy=AuthorizationPolicy()
+                context_resolver=cast(Any, resolver), policy=AuthorizationPolicy()
             ),
         )
     )
@@ -519,7 +520,7 @@ def dce_workflow(session_factory, tmp_path, workflow, *, requirement=False):
         membership_id=uuid4(),
     )
     runtime = ConsultationSecurityRuntime(
-        context_resolver=SimpleNamespace(resolve=lambda **kwargs: actor),
+        context_resolver=cast(Any, SimpleNamespace(resolve=lambda **kwargs: actor)),
         policy=AuthorizationPolicy(),
     )
     app = FastAPI()

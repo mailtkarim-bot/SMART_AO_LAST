@@ -1,5 +1,6 @@
 from dataclasses import replace
 from datetime import UTC, datetime
+from typing import Any, cast
 from uuid import uuid4
 
 import pytest
@@ -115,7 +116,7 @@ def test_native_http_dated_assignment_replay_and_revision_conflict(workflow):
         build_patron_capacity_router(
             service=service,
             security_runtime=ConsultationSecurityRuntime(
-                context_resolver=SimpleNamespace(resolve=lambda **kwargs: actor),
+                context_resolver=cast(Any, SimpleNamespace(resolve=lambda **kwargs: actor)),
                 policy=AuthorizationPolicy(),
             ),
         )
@@ -158,6 +159,8 @@ def test_native_http_dated_assignment_replay_and_revision_conflict(workflow):
         projection = SqlAlchemyCaseResolutionReader(session).get(
             tenant_id=actor.tenant_id, case_id=case, membership_id=None
         )
+        assert projection is not None
+        assert projection.economic_coverage is not None
         assert projection.economic_coverage.capacity.state == "UNKNOWN"
     body["justification"] = "Intent différent même clé"
     assert client.post(url, headers=headers, json=body).status_code == 409

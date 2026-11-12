@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from dataclasses import replace
 from types import SimpleNamespace
 from uuid import UUID
@@ -45,7 +46,7 @@ class Encoder:
         self.profile_id = p.profile_id
         self.passages = []
         self.queries = []
-        self.after_query = lambda: None
+        self.after_query: Callable[[], object] = lambda: None
         self.query_vector = (1.0,) + (0.0,) * 383
 
     def encode_passages(self, texts):

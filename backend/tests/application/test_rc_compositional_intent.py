@@ -21,6 +21,7 @@ def test_compositional_development_contract(case):
         assert result.intent is None
         return
     intent = result.intent
+    assert intent is not None
     assert {k: getattr(intent, k) for k in ["subject", "demand", "coverage"]} == {
         k: expected[k] for k in ["subject", "demand", "coverage"]
     }
@@ -47,7 +48,9 @@ def test_compositional_development_contract(case):
 def test_independent_counterexamples_never_promote_a_request(query):
     from app.modules.knowledge.application.rc_compositional_intent import recognize_rc_intent
 
-    assert recognize_rc_intent(query).intent.coverage != "COVERED"
+    result = recognize_rc_intent(query)
+    assert result.intent is not None
+    assert result.intent.coverage != "COVERED"
 
 
 @pytest.mark.parametrize(
@@ -65,7 +68,9 @@ def test_independent_counterexamples_never_promote_a_request(query):
 def test_unconsumed_relation_or_scope_is_not_covered(query):
     from app.modules.knowledge.application.rc_compositional_intent import recognize_rc_intent
 
-    assert recognize_rc_intent(query).intent.coverage != "COVERED"
+    result = recognize_rc_intent(query)
+    assert result.intent is not None
+    assert result.intent.coverage != "COVERED"
 
 
 @pytest.mark.parametrize(
@@ -78,4 +83,6 @@ def test_unconsumed_relation_or_scope_is_not_covered(query):
 def test_subject_head_is_not_an_object_contained_in_the_recognized_document(query):
     from app.modules.knowledge.application.rc_compositional_intent import recognize_rc_intent
 
-    assert recognize_rc_intent(query).intent.coverage != "COVERED"
+    result = recognize_rc_intent(query)
+    assert result.intent is not None
+    assert result.intent.coverage != "COVERED"

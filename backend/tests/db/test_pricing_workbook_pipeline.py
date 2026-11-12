@@ -1,6 +1,7 @@
 """Complete native financial workflow, synthetic multi-lot workbook only."""
 
 from hashlib import sha256
+from typing import Any, cast
 from uuid import uuid4
 
 import pytest
@@ -42,7 +43,7 @@ def workflow(session_factory):
                 reader=SqlAlchemyImportPreviewReader(session_factory), policy=AuthorizationPolicy()
             ),
             security_runtime=ConsultationSecurityRuntime(
-                context_resolver=Resolver(), policy=AuthorizationPolicy()
+                context_resolver=cast(Any, Resolver()), policy=AuthorizationPolicy()
             ),
         )
     )

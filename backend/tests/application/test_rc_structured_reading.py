@@ -1,6 +1,7 @@
 # ruff: noqa: F401, F811
 import sys
 from pathlib import Path
+from typing import Any, cast
 from uuid import UUID, uuid4
 
 import pytest
@@ -96,8 +97,16 @@ def test_ambiguous_rectification_never_selects_new_or_old_date(session_factory, 
             tenant_id=tenant, dce_version_id=version
         )
         assert len(rows) == 2
-        assert all(x.structured_candidate.state == "REVIEW_REQUIRED" for x in rows)
-        assert all(x.structured_candidate.date_iso is None for x in rows)
+        assert all(x.structured_candidate is not None for x in rows)
+        assert all(
+            x.structured_candidate is not None and x.structured_candidate.state == "REVIEW_REQUIRED"
+            for x in rows
+        )
+        assert all(x.structured_candidate is not None for x in rows)
+        assert all(
+            x.structured_candidate is not None and x.structured_candidate.date_iso is None
+            for x in rows
+        )
 
 
 @pytest.mark.parametrize("second_lot,state", [(2, "REVIEW_REQUIRED"), (3, "CANDIDATES_ONLY")])
@@ -115,11 +124,21 @@ def test_conflicting_dates_are_not_chosen_for_the_same_scope(
             tenant_id=tenant, dce_version_id=version
         )
         assert len(rows) == 2
-        assert {x.structured_candidate.state for x in rows} == {state}
+        assert all(x.structured_candidate is not None for x in rows)
+        assert {
+            x.structured_candidate.state for x in rows if x.structured_candidate is not None
+        } == {state}
         if state == "REVIEW_REQUIRED":
-            assert all(x.structured_candidate.date_iso is None for x in rows)
+            assert all(x.structured_candidate is not None for x in rows)
+            assert all(
+                x.structured_candidate is not None and x.structured_candidate.date_iso is None
+                for x in rows
+            )
         else:
-            assert {x.structured_candidate.date_iso for x in rows} == {"2034-11-21", "2034-11-22"}
+            assert all(x.structured_candidate is not None for x in rows)
+            assert {
+                x.structured_candidate.date_iso for x in rows if x.structured_candidate is not None
+            } == {"2034-11-21", "2034-11-22"}
 
 
 @pytest.mark.parametrize("same_time", [False, True])
@@ -161,6 +180,7 @@ def test_new_review_extraction_hides_previously_parsed_values(session_factory, t
             tenant_id=tenant, dce_version_id=version
         )
         assert len(rows) == 1
+        assert rows[0].structured_candidate is not None
         assert rows[0].structured_candidate.state == "UNKNOWN"
         assert rows[0].structured_candidate.reason_code == "STALE_SOURCE"
         assert (
@@ -260,7 +280,7 @@ def test_http_reads_structured_values_from_real_case_and_source_registers(
             build_case_dce_reading_router(
                 runtime=Runtime(),
                 security_runtime=ConsultationSecurityRuntime(
-                    context_resolver=Resolver(), policy=_Policy(_Decision(True))
+                    context_resolver=cast(Any, Resolver()), policy=_Policy(_Decision(True))
                 ),
             )
         )

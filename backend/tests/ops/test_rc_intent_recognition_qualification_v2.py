@@ -5,6 +5,7 @@ from pathlib import Path
 def test_intent_measurement_distinguishes_abstention_from_positive_recall():
     path = Path(__file__).resolve().parents[3] / "scripts/qualify_rc_intent_recognition_v2.py"
     spec = importlib.util.spec_from_file_location("rc_recognition_qualifier", path)
+    assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     case = dict(
@@ -27,6 +28,7 @@ def test_sealed_challenge_is_not_read_without_freeze(tmp_path):
 
     path = Path(__file__).resolve().parents[3] / "scripts/qualify_rc_intent_recognition_v2.py"
     spec = importlib.util.spec_from_file_location("rc_recognition_sealed_guard", path)
+    assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     with pytest.raises(ValueError, match="freeze required"):
@@ -48,6 +50,7 @@ def test_report_has_separate_gates_and_sealed_freeze_requires_candidate(tmp_path
 
     path = Path(__file__).resolve().parents[3] / "scripts/qualify_rc_intent_recognition_v2.py"
     spec = importlib.util.spec_from_file_location("rc_recognition_gates", path)
+    assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     report = module.evaluate([])
@@ -75,6 +78,7 @@ def test_v2_report_names_anchor_convention_and_refuses_empty_measurement(tmp_pat
 
     path = Path(__file__).resolve().parents[3] / "scripts/qualify_rc_intent_recognition_v2.py"
     spec = importlib.util.spec_from_file_location("rc_recognition_v2_contract", path)
+    assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     assert module.evaluate([])["anchor_convention"] == "lexical-cue-v2"

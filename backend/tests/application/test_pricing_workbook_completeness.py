@@ -3,6 +3,7 @@
 from datetime import UTC, datetime
 from io import BytesIO
 from types import SimpleNamespace
+from typing import Any, cast
 from uuid import uuid4
 
 import pytest
@@ -35,7 +36,7 @@ def preview(payload):
     )
     policy = SimpleNamespace(authorize=lambda **kw: SimpleNamespace(allowed=True))
     return module.PricingImportPreviewService(policy=policy).preview(
-        actor=actor,
+        actor=cast(Any, actor),
         case_id=uuid4(),
         document_kind="DPGF",
         filename="dpgf.xlsx",

@@ -7,23 +7,25 @@ import pytest
 ROOT = Path(__file__).resolve().parents[3]
 
 
+class Encoder:
+    def __init__(self, **kwargs):
+        self.profile_id = kwargs["profile"].profile_id
+
+    def encode_passages(self, texts):
+        return [(1.0,) + (0.0,) * 383 for _ in texts]
+
+    def encode_query(self, text):
+        return (1.0,) + (0.0,) * 383
+
+
 def load(monkeypatch):
     monkeypatch.syspath_prepend(str(ROOT / "scripts"))
     spec = importlib.util.spec_from_file_location(
         "candidate_qualifier", ROOT / "scripts/qualify_candidate_retrieval.py"
     )
+    assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-
-    class Encoder:
-        def __init__(self, **kwargs):
-            self.profile_id = kwargs["profile"].profile_id
-
-        def encode_passages(self, texts):
-            return [(1.0,) + (0.0,) * 383 for _ in texts]
-
-        def encode_query(self, text):
-            return (1.0,) + (0.0,) * 383
 
     monkeypatch.setattr(module, "CpuCandidateEncoder", Encoder)
     return module
@@ -153,9 +155,8 @@ def test_v4_report_preserves_rejected_scores_and_rescue_provenance(tmp_path, mon
     from math import sqrt
 
     module = load(monkeypatch)
-    original = module.CpuCandidateEncoder
 
-    class LowEncoder(original):
+    class LowEncoder(Encoder):
         def encode_query(self, text):
             return (0.8, sqrt(1 - 0.8**2)) + (0.0,) * 382
 
@@ -233,9 +234,8 @@ def test_v6_report_proves_type_independently_and_does_not_assert_condition(tmp_p
     from math import sqrt
 
     module = load(monkeypatch)
-    original = module.CpuCandidateEncoder
 
-    class LowEncoder(original):
+    class LowEncoder(Encoder):
         def encode_query(self, text):
             return (0.8, sqrt(1 - 0.8**2)) + (0.0,) * 382
 
@@ -335,6 +335,7 @@ def test_sql_benchmark_refuses_unapproved_database_before_reading_fixture(
     spec = importlib.util.spec_from_file_location(
         "sql_benchmark", ROOT / "scripts/qualify_candidate_sql.py"
     )
+    assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     monkeypatch.setenv("SMART_AO_TEST_DATABASE_URL", url)
@@ -348,6 +349,7 @@ def test_sql_seed_rejects_non_synthetic_or_private_fixture_before_database(monke
     spec = importlib.util.spec_from_file_location(
         "sql_benchmark_seed", ROOT / "scripts/qualify_candidate_sql.py"
     )
+    assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     for data in [
@@ -368,6 +370,7 @@ def test_sql_benchmark_refuses_libpq_environment(tmp_path, monkeypatch):
     spec = importlib.util.spec_from_file_location(
         "sql_env", ROOT / "scripts/qualify_candidate_sql.py"
     )
+    assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     monkeypatch.setenv(

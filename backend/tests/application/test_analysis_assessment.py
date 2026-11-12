@@ -1,3 +1,4 @@
+from typing import Any, cast
 from uuid import uuid4
 
 import pytest
@@ -38,13 +39,13 @@ def test_human_assessment_command_validates_closed_unknown_states():
         dict(point_kind="FINANCIAL_EXPORT"),
     ]:
         with pytest.raises(ValidationError):
-            RecordAnalysisAssessmentCommand(**dict(fields(), **change))
+            RecordAnalysisAssessmentCommand(**cast(Any, dict(fields(), **cast(Any, change))))
 
 
 def test_source_context_fingerprint_tracks_scope_revision_and_region_only():
     from app.modules.case.application.analysis_assessment import source_context_digest
 
-    point = dict(
+    point: dict[str, Any] = dict(
         kind="RISK",
         item_id=str(uuid4()),
         native_revision=1,
@@ -52,7 +53,9 @@ def test_source_context_fingerprint_tracks_scope_revision_and_region_only():
         start_byte_offset=0,
         end_byte_offset=8,
     )
-    scope = dict(scope_kind="SINGLE_LOT", scope_json={"lot": "2"}, scope_fingerprint="b" * 64)
+    scope: dict[str, Any] = dict(
+        scope_kind="SINGLE_LOT", scope_json={"lot": "2"}, scope_fingerprint="b" * 64
+    )
     digest = source_context_digest(
         point=point, tenant_id=uuid4(), case_id=uuid4(), version_id=uuid4(), scope=scope
     )
@@ -74,7 +77,7 @@ def test_source_context_fingerprint_tracks_scope_revision_and_region_only():
     assert calculate(sc=dict(scope, scope_json={"lot": "9"})) != original
     assert calculate(dict(point, table_context=None)) == original
     assert calculate(dict(point, table_context={"state": "UNKNOWN", "cells": []})) != original
-    context = {"state": "EXACT_SOURCE", "cells": [{"text": "Ne pas intervenir"}]}
+    context: dict[str, Any] = {"state": "EXACT_SOURCE", "cells": [{"text": "Ne pas intervenir"}]}
     assert calculate(dict(point, table_context=context)) != calculate(
         dict(point, table_context={"state": "EXACT_SOURCE", "cells": [{"text": "Intervenir"}]})
     )

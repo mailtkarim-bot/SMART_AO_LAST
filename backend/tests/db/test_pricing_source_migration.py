@@ -51,6 +51,7 @@ def test_populated_downgrade_refuses_source_loss(session_factory):
         command.downgrade(config(), "20261021_0139")
     with session_factory() as s:
         assert s.scalar(sa.text("select version_num from alembic_version")) == EXPECTED_ALEMBIC_HEAD
+        assert row.source_locator is not None
         assert (
             s.scalar(
                 sa.select(PricingImportRowRecord.source_locator_json).where(

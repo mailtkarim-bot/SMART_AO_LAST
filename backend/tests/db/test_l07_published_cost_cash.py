@@ -3,6 +3,7 @@
 from copy import deepcopy
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from typing import Any, cast
 from uuid import UUID, uuid4
 
 from tests.db.test_l06_allocation_publication import publication_path
@@ -34,8 +35,8 @@ def cash_path(session_factory, workflow):
                 policy=policy,
             ),
             security_runtime=ConsultationSecurityRuntime(
-                context_resolver=SimpleNamespace(
-                    resolve=lambda **kw: client.position_actor_holder.actor
+                context_resolver=cast(
+                    Any, SimpleNamespace(resolve=lambda **kw: client.position_actor_holder.actor)
                 ),
                 policy=policy,
             ),
@@ -148,7 +149,7 @@ def cash_path(session_factory, workflow):
         ),
         now=datetime.now(UTC),
     )
-    new_report = UUID(receipt.aggregate_refs[0]["aggregate_id"])
+    new_report = UUID(cast(str, receipt.aggregate_refs[0]["aggregate_id"]))
     _service(session_factory).add_line(
         actor=actor,
         command=_command(case, new_report).model_copy(

@@ -1,3 +1,4 @@
+from typing import Any, cast
 from uuid import uuid4
 
 import pytest
@@ -118,7 +119,7 @@ def test_card_http_is_patron_financial_private_and_tenant_scoped(session_factory
         build_patron_commitment_card_router(
             service=service,
             security_runtime=ConsultationSecurityRuntime(
-                context_resolver=SimpleNamespace(resolve=lambda **kw: holder.actor),
+                context_resolver=cast(Any, SimpleNamespace(resolve=lambda **kw: holder.actor)),
                 policy=AuthorizationPolicy(),
             ),
         )

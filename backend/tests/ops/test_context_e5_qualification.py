@@ -12,6 +12,7 @@ def load(monkeypatch):
     path = ROOT / "scripts/qualify_context_e5_sql.py"
     assert path.exists(), "context E5 qualification harness missing"
     spec = importlib.util.spec_from_file_location("context_e5", path)
+    assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module

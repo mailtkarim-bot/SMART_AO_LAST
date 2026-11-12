@@ -11,7 +11,7 @@ from tests.db.test_l09_repriced_packet_handover import (
 def test_private_cash_never_enters_repriced_handover(
     session_factory, tmp_path, monkeypatch, change_qualifier=None
 ):
-    active_private = []
+    active_private: list[str] = []
     report_ids = set()
     stages = []
 

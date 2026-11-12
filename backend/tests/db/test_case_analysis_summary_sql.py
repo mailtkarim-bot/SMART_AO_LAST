@@ -2,6 +2,7 @@ from dataclasses import replace
 from datetime import timedelta
 from hashlib import sha256
 from types import SimpleNamespace
+from typing import Any, cast
 from uuid import UUID, uuid4
 
 import pytest
@@ -268,7 +269,7 @@ def test_http_sql_with_real_policy_refuses_foreign_role_and_missing_capability(
 
     runtime = SimpleNamespace(get_case_tenant_id=owner, get_case_analysis_summary=summary)
     security = ConsultationSecurityRuntime(
-        context_resolver=SimpleNamespace(resolve=lambda **kw: current[0]),
+        context_resolver=cast(Any, SimpleNamespace(resolve=lambda **kw: current[0])),
         policy=AuthorizationPolicy(),
     )
     app = FastAPI()
@@ -912,7 +913,9 @@ def test_runtime_price_axis_reads_exact_native_scenario_and_masks_stale_basis(
     runtime = SimpleNamespace(session_factory=session_factory)
 
     def read():
-        return AppRuntime.get_case_analysis_summary(runtime, tenant_id=seed[0], case_id=seed[1])
+        return AppRuntime.get_case_analysis_summary(
+            cast(Any, runtime), tenant_id=seed[0], case_id=seed[1]
+        )
 
     result = read()
     price = next(a for a in result["axes"] if a["code"] == "PRICE")
@@ -930,7 +933,7 @@ def test_runtime_price_axis_reads_exact_native_scenario_and_masks_stale_basis(
 
     CaseAnalysisSummaryResponse.model_validate(result)
     runtime.get_case_analysis_summary = lambda **kw: AppRuntime.get_case_analysis_summary(
-        runtime, **kw
+        cast(Any, runtime), **kw
     )
     runtime.get_case_tenant_id = lambda **kw: seed[0] if kw["case_id"] == seed[1] else None
     base = replace(
@@ -941,7 +944,7 @@ def test_runtime_price_axis_reads_exact_native_scenario_and_masks_stale_basis(
     )
     actor = [base]
     security = ConsultationSecurityRuntime(
-        context_resolver=SimpleNamespace(resolve=lambda **kw: actor[0]),
+        context_resolver=cast(Any, SimpleNamespace(resolve=lambda **kw: actor[0])),
         policy=AuthorizationPolicy(),
     )
     app = FastAPI()
@@ -967,7 +970,10 @@ def test_runtime_price_axis_reads_exact_native_scenario_and_masks_stale_basis(
         denied = client.get(url, headers=headers)
         assert denied.status_code == status
         assert str(snapshot_id) not in denied.text and "estimation utilisateur" not in denied.text
-    assert AppRuntime.get_case_analysis_summary(runtime, tenant_id=uuid4(), case_id=seed[1]) is None
+    assert (
+        AppRuntime.get_case_analysis_summary(cast(Any, runtime), tenant_id=uuid4(), case_id=seed[1])
+        is None
+    )
     with session_factory.begin() as s:
         s.execute(sa.text("SET session_replication_role = replica"))
         s.get(PricingScenarioRecord, scenario_id).source_snapshot_revision = 99

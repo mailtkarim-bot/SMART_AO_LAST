@@ -3,6 +3,7 @@
 import json
 from hashlib import sha256
 from types import SimpleNamespace
+from typing import Any, cast
 
 import pytest
 from app.modules.knowledge.infrastructure.dce_source import SqlAlchemyDceRetrievalSource
@@ -225,9 +226,7 @@ def test_context_refuses_discordant_sibling_proof(
 
     import app.modules.case.infrastructure.analysis_table_context as context
 
-    original = context.SqlAlchemyDceSourceAnchorReader
-
-    class DiscordantReader(original):
+    class DiscordantReader(context.SqlAlchemyDceSourceAnchorReader):
         def get_many(self, **kwargs):
             anchors = super().get_many(**kwargs)
             first = next(iter(anchors))
@@ -241,7 +240,7 @@ def test_context_refuses_discordant_sibling_proof(
                     "version": dict(dce_version_id=uuid4()),
                     "locator": dict(locator=None),
                 }[fault]
-                anchors[first] = replace(a, **change)
+                anchors[first] = replace(a, **cast(Any, change))
             return anchors
 
     monkeypatch.setattr(context, "SqlAlchemyDceSourceAnchorReader", DiscordantReader)

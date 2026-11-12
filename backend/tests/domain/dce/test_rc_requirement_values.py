@@ -183,8 +183,15 @@ def test_deadline_comparison_budget_is_not_reported_as_a_proven_conflict():
         for _ in range(257)
     )
     result = _refuse_conflicting_deadlines(rows)
-    assert {x.structured_candidate.reason_code for x in result} == {"COMPARISON_LIMIT"}
-    assert all(x.structured_candidate.date_state == "UNKNOWN" for x in result)
+    assert all(x.structured_candidate is not None for x in result)
+    assert {
+        x.structured_candidate.reason_code for x in result if x.structured_candidate is not None
+    } == {"COMPARISON_LIMIT"}
+    assert all(x.structured_candidate is not None for x in result)
+    assert all(
+        x.structured_candidate is not None and x.structured_candidate.date_state == "UNKNOWN"
+        for x in result
+    )
 
 
 @pytest.mark.parametrize("zone,value", [("UTC+02:30", "UTC+02:30"), ("UTC -01:00", "UTC-01:00")])

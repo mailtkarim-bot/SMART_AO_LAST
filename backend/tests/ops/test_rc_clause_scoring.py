@@ -1,6 +1,7 @@
 import importlib.util
 from hashlib import sha256
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -11,6 +12,7 @@ def load():
     spec = importlib.util.spec_from_file_location(
         "clause_score", ROOT / "scripts/score_rc_clauses.py"
     )
+    assert spec is not None and spec.loader is not None
     m = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(m)
     return m
@@ -44,7 +46,7 @@ def sample():
             kind="ASSERTION",
         ),
     ]
-    fixture = dict(
+    fixture: dict[str, Any] = dict(
         synthetic=True,
         held_out=True,
         documents=[dict(id="s", text=text)],
@@ -59,14 +61,18 @@ def sample():
             )
         ],
     )
-    a = {k: v for k, v in gold[0].items() if k != "id"} | dict(directive_signal="CANDIDATE")
-    b = {k: v for k, v in gold[1].items() if k != "id"} | dict(directive_signal="UNKNOWN")
+    a: dict[str, Any] = {k: v for k, v in gold[0].items() if k != "id"} | dict(
+        directive_signal="CANDIDATE"
+    )
+    b: dict[str, Any] = {k: v for k, v in gold[1].items() if k != "id"} | dict(
+        directive_signal="UNKNOWN"
+    )
     fixture["documents"][0].update(page=1, version_id="v")
     for e in (a, b):
         e.update(
             source_sha256=sha256(text.encode()).hexdigest(), locator={"page": 1}, dce_version_id="v"
         )
-    report = dict(
+    report: dict[str, Any] = dict(
         synthetic_only=True,
         held_out=True,
         fixture_sha256="h",

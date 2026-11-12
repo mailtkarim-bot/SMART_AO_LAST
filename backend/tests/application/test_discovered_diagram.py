@@ -40,7 +40,7 @@ def case():
     nodes = []
     for name, kind, box, text in specs:
         anchor = RegionAnchor(s, box)
-        ids = ()
+        ids: tuple[str, ...] = ()
         if text:
             ids = (f"t-{name}",)
             tokens.append(RegionToken(ids[0], text, anchor))
