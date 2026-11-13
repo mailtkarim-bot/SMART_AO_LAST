@@ -1,9 +1,9 @@
 # SMART AO — Plan de livraison vers un usage opérationnel
 
 **Réorganisé le :** 12 novembre 2026, sur demande Owner.
-**Statut global :** prototype métier étendu, qualifié par scénarios synthétiques ; exploitation réelle non démontrée.
-**Tranche active :** R0 — consolidation Git et baseline reproductible.
-**Prochaine étape unique :** R0 — intégrer et publier un socle Git traçable, résorber les contrôles CI bloquants puis figer une version reproductible pour la recette utilisateur complète.
+**Statut global :** socle Git intégré et qualifié techniquement ; recette utilisateur complète et exploitation réelle non démontrées.
+**Tranche active :** R1 — parcours utilisateur complet local.
+**Prochaine étape unique :** R1 — qualifier le parcours utilisateur complet sur le socle figé, corriger ses blocages puis livrer une recette locale reproductible sans console ni SQL.
 
 Ce fichier est l’unique statut opérationnel. L’ancien plan est conservé intégralement dans [l’historique](../../Archive/00_Pilotage/PLAN_GLOBAL_HISTORIQUE_AVANT_RECADRAGE_2026-11-12.md). Les cahiers v3.1 restent les autorités de périmètre et de droits. Les bilans et recettes datés sont des preuves, pas des files de tâches concurrentes.
 
@@ -19,7 +19,7 @@ Trois niveaux, sans les confondre :
 | Pilote encadré | Corpus autorisé représentatif, plusieurs utilisateurs/rôles, erreurs et reprises maîtrisées, sauvegarde/restauration démontrée | Non qualifié ; autorisations de corpus et environnement à obtenir à ce jalon |
 | Exploitable en production | Installation, sécurité, supervision, sauvegardes restaurables, support et critères métier acceptés par l’Owner | Non démontré ; aucun déploiement ni GO public autorisé par la seule demande de nettoyage Git |
 
-**Date de disponibilité : non engageable aujourd’hui.** Il manque une baseline CI et une mesure du travail réellement bloquant. R0 se termine avec une estimation en fourchette de R1, fondée sur les échecs observés ; R1 se termine par une démonstration utilisable et une estimation du pilote. Aucun délai n’est obtenu en additionnant les tests déjà passés.
+**Disponibilité :** le socle de recette est disponible. L’usage local complet se démontre en R1 ; la date du pilote et de la production reste à établir après les recettes R1/R2. Le premier passage utilisateur R1 doit produire les blocages mesurés et une estimation en fourchette ; aucun délai d’usage n’est déduit des seuls résultats CI.
 
 ## État fonctionnel consolidé
 
@@ -44,28 +44,28 @@ Les derniers travaux L09–L11 ont essentiellement raccordé des tests existants
 
 ## Reprise immédiate
 
-Suivre R0 jusqu’à ses critères de sortie ; les résultats courants sont consignés dans le relevé de revue.
+Reprendre R1 sur main dans le checkout principal. Référence de recette : `r0-recette-20261112`. Le socle R0 est intégré ; commencer par le parcours utilisateur complet et relever ses blocages, puis corriger ensemble ceux d’une même fonction. Ne pas relancer la boucle L01–L11 de qualifications élémentaires.
 
 ## Séquence de codage active V3.1
 
 Une seule file de livraison :
 
-- [>] R0 — intégrer et publier un socle Git traçable, résorber les contrôles CI bloquants puis figer une version reproductible pour la recette utilisateur complète.
+- [x] R0 — socle intégré sur main et figé : `r0-recette-20261112` (`ad2a0b42c5a1768df1f2de7de00e7a9f2af5c83d`).
 
-  Inventorier branches/worktrees/WIP ; conserver les variantes ; exclure archives et état local des commits ; contrôler secrets et dépendances ; consolider, committer et pousser sans force. Vérifier la CI réelle, corriger ses échecs bloquants et figer un SHA. Sortie : principal propre, intégration distante explicitement constatée, commandes reproductibles, preuves liées au SHA. **Constat R0 : consolidation et correctif de typage publiés (`c2474dd`, `0179552`), PR #1 ouverte ; mypy app+tests et script de couverture verts (1284 fichiers). Suite complète : 4236 réussites, 3 échecs, couverture89,16 %. Les trois écarts sont corrigés et les modules concernés repassent (50 tests), plus37 tests des noms/tailles. Audits corrigés, frontend et scans des deux images verts sur2219766 ; backend arrêté à45 min/67 %. Partition CI en quatre bases isolées en qualification :4254 tests collectés sans omission/doublon,70 tests ciblés verts, agrégation globale85,50 % inchangée. Pas encore de baseline CI complète verte ni de fusion main.**
-- [ ] **R1 — Parcours complet utilisable localement.** Depuis un démarrage propre : Patron + Préparateur + Conducteur, une Affaire de bout en bout, un remplacement de DCE/prix, une perte de réponse et une reprise. Faire l’inventaire des blocages utilisateur, corriger ensemble les blocages d’un même parcours puis rejouer une fois. Inclure la décision sur la pièce de prix publiable et le rattachement A1/C3 si nécessaires à cette première promesse. Sortie : démonstration reproductible sans console/API/SQL manuels, liste courte des limitations acceptées, guide de démarrage exact.
+  Inventorier branches/worktrees/WIP ; conserver les variantes ; exclure archives et état local des commits ; contrôler secrets et dépendances ; consolider, committer et pousser sans force. Vérifier la CI réelle, corriger ses échecs bloquants et figer un SHA. Sortie : principal propre, intégration distante explicitement constatée, commandes reproductibles, preuves liées au SHA. **Clôture R0 :** PR #1 fusionnée ; huit jobs CI verts,4254 tests backend réussis, couverture agrégée89,16 % pour seuil85,50 %. Frontend805 tests réussis/4 ignorés, types/lint/audits et scans des deux images verts. Arbre de main intégré identique à celui testé. Les variantes historiques sont conservées ; principal propre avant le suivi documentaire de clôture.
+- [>] R1 — qualifier le parcours utilisateur complet sur le socle figé, corriger ses blocages puis livrer une recette locale reproductible sans console ni SQL.
+
+  Depuis un démarrage propre : Patron + Préparateur + Conducteur, une Affaire de bout en bout, un remplacement de DCE/prix, une perte de réponse et une reprise. Faire l’inventaire des blocages utilisateur, corriger ensemble les blocages d’un même parcours puis rejouer une fois. Inclure la décision sur la pièce de prix publiable et le rattachement A1/C3 si nécessaires à cette première promesse. Sortie : démonstration reproductible sans console/API/SQL manuels, liste courte des limitations acceptées, guide de démarrage exact.
 - [ ] **R2 — Pilote représentatif et fiabilité.** Après autorisation du corpus/environnement : jeux représentatifs séparés des jeux de développement, rôles/permissions, gros fichiers et erreurs, reprise durable, données obsolètes, sauvegarde/restauration. Corriger les échecs mesurés ; ne pas optimiser des scores sans lien avec une tâche utilisateur. Sortie : recettes métier signées par l’Owner, échecs critiques fermés et budget d’exploitation mesuré.
 - [ ] **R3 — Exploitation encadrée.** Préparer une livraison versionnée et un runbook ; déployer seulement après autorisation explicite. Prouver migrations, restauration, supervision/alertes, authentification, gestion des incidents et droits sur les données. Sortie : décision Owner d’ouverture du pilote/production sur preuves, pas sur le nombre de tests.
 
 **Ordre après chaque livraison :** finir les critères du jalon actif ; fermer ses blocages ; seulement alors activer le jalon suivant. Une sous-tâche terminée ne déplace pas le marqueur. Un besoin découvert devient un défaut rattaché au jalon, avec impact utilisateur et preuve de sortie, pas automatiquement une nouvelle tranche documentaire.
 
-### Correction CI du socle R0
+### Preuves R0 et ordre de travail R1
 
-AS-IS : le job backend séquentiel est arrêté à45 min, après67 % des4239 tests collectés ; frontend et scans des deux images verts sur2219766. Aucun résultat de couverture complète n’est produit par ce timeout.
+[CI43328769583](https://github.com/mailtkarim-bot/SMART_AO_LAST/actions/runs/43328769583) : quatre partitions PostgreSQL isolées,4254 tests, union exacte des550 modules, source Git identique, agrégateur fail-closed et seuil global inchangé. Partition la plus longue :23min28 ; le job séquentiel antérieur était interrompu à45min/67 %. Les15 garde-fous de partition et de couverture incluent une preuve CLI complète et les refus UNKNOWN.
 
-Risques : collision PostgreSQL si plusieurs processus partagent une base, omission de modules, artefact manquant/dupliqué, couverture partielle présentée comme globale. Insertion : workflow CI et script existant `collect_coverage_diagnostics.py`, sans changement métier.
-
-Plan minimal : (1) tests rouges de partition et de refus des jeux d’artefacts incomplets ; (2) quatre partitions déterministes de modules, chacune sur son propre runner/PostgreSQL, sans découper un module ; (3) validation de leur union exacte et combinaison des données coverage.py ; (4) seuil global85,50 % inchangé, refus si un job ou un artefact manque ; (5) preuve locale de collecte complète et exercice de combinaison, puis CI réelle du SHA final. Les tests ciblés, types/lint et Semgrep précèdent la publication.
+R1 commence par une recette depuis un démarrage propre avec les trois rôles, un DCE synthétique, son remplacement et une reprise. Produire une liste finie de défauts avec effet utilisateur et reproduction, puis donner une fourchette d’effort sur ces seuls défauts. Les manques déjà repérés (pièce de prix publiable, continuité A1/C3, reprise durable) se traitent selon leur rôle dans ce parcours, dans les modules natifs. La sortie reste un parcours démontré sans console/API/SQL manuels, avec limitations acceptées ; une nouvelle variante de test ne clôt pas R1.
 
 ## Travail restant : catégories non interchangeables
 
@@ -95,6 +95,6 @@ Les sauvegardes `.local-proofs/`, corpus privés, secrets, caches et états d’
 
 ## Relevé de la réorientation du12/11
 
-Le principal est sur `codex/reconcile-smartao-20261009`, HEAD initial `30f2693`. Après fetch, origin/main est ancêtre de ce HEAD (13 commits d’avance, aucun commit distant manquant). Dix worktrees secondaires sont présents ; sept contiennent des WIP avec variantes divergentes. Leur sauvegarde et classement précèdent toute suppression. Aucun PR ouvert retrouvé par le connecteur. Le détail de l’intégration et des obstacles doit être consigné dans le relevé de livraison, sans inventer un merge ou un push réussi.
+Début de l’opération : branche `codex/reconcile-smartao-20261009`, HEAD `30f2693`,13 commits d’avance sur origin/main et aucun commit distant manquant. Dix worktrees secondaires étaient présents, dont sept avec WIP divergents. Clôture : PR #1 fusionnée, principal sur main, tag de recette publié ; les dix worktrees secondaires sont propres. Les variantes sont sauvegardées et committées localement, sans réintroduction aveugle des anciens contenus. Les contrôles et limites restent détaillés dans le relevé de revue.
 
-Prochaine étape : R0 — intégrer et publier un socle Git traçable, résorber les contrôles CI bloquants puis figer une version reproductible pour la recette utilisateur complète.
+Prochaine étape : R1 — qualifier le parcours utilisateur complet sur le socle figé, corriger ses blocages puis livrer une recette locale reproductible sans console ni SQL.

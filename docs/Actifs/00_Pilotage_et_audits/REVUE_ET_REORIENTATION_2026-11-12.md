@@ -81,3 +81,16 @@ TDD :12 tests rouges initiaux, puis15 garde-fous verts incluant identités UNKNO
 
 
 CI43324913879 du8287ffc : qualité/backend, frontend et images verts. Partitions1 et2 vertes ; partition3 termine1019 réussites/5 échecs en17min51 : le simulateur des extras du Dockerfile remplaçait seulement les commandes via PATH et essayait donc d’appeler `/usr/local/bin/python` de l’hôte. Le Dockerfile réel et ses scans passent. Le simulateur redirige maintenant ce chemin absolu vers son Python temporaire, avec citation shell stricte ; aucun installateur hôte n’est exécuté. Les cinq cas en échec et les autres contrats passent :68 tests ciblés, puis2 contrats d’architecture de l’image ;70 réussites distinctes au total. C’était un consommateur omis de la passe ciblée précédente, désormais inclus avec toutes les références au Dockerfile. La partition0 du run précédent est encore en cours ; aucune couverture globale verte n’est revendiquée par ces résultats partiels.
+
+
+## Clôture R0 — socle intégré et version de recette
+
+[PR #1](https://github.com/mailtkarim-bot/SMART_AO_LAST/pull/1) fusionnée : main `ad2a0b42c5a1768df1f2de7de00e7a9f2af5c83d`, tag annoté `r0-recette-20261112`. L’arbre intégré `777386f0b0701e6fc10a2d031dfdec7901f3c0ec` est strictement identique à l’arbre du commit de fusion testé `6ad3b7b515026b147946d7408d641391284d3ec8`. Aucun écart de code entre qualification et intégration.
+
+[CI43328769583](https://github.com/mailtkarim-bot/SMART_AO_LAST/actions/runs/43328769583) : huit jobs réussis. Backend :1217+926+1087+1024 =4254 tests réussis, zéro échec ; couverture globale89,16 %, seuil85,50 % conservé. Durées des partitions :23min28 /18min49 /17min33 /17min52. Frontend :805 réussites/4 ignorés, types/lint/build et audits verts. Les deux images sont construites et leurs scans passent. Qualité backend :1284 fichiers mypy, Ruff/format, secrets, audit des dépendances et Bandit verts.
+
+La reproduction part du tag avec Python3.12, Node22 et pnpm11, `uv sync --frozen --group dev --all-extras`, puis `pnpm install --frozen-lockfile` dans web. Les commandes de qualification et les images de base épinglées sont dans `.github/workflows/ci.yml` et `ops/docker/`. Pour les tests PostgreSQL, fournir exclusivement une base jetable explicite et `SMART_AO_TEST_DISPOSABLE_DATABASE=1`. Les données et preuves privées `.local-proofs/` restent locales. La reproductibilité est fonctionnelle, pas une promesse d’image binaire identique après les mises à jour de paquets système au build.
+
+Le principal est passé sur main propre ; dix worktrees conservés, sept WIP sauvegardés et committés localement. Les variantes obsolètes et le banc golden historique restent préservés pour examen motivé, sans fusion aveugle. Aucune porte métier, activation de candidat, transmission de données privées, recette humaine de conformité, mise en production ou GO public n’est déduit de ces contrôles.
+
+Le suivi de clôture porte sur le plan, l’index et ce bilan ; les contrats documentaires sont vérifiés localement. Le plan active R1 : recette utilisateur de bout en bout, défauts regroupés puis démonstration sans console/SQL. La disponibilité utilisateur et la production ne sont pas annoncées acquises par R0.
